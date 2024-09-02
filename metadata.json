@@ -1,0 +1,7 @@
+{
+  "name": "Chrono: Temporal Social Network",
+  "description": "Chrono is a social network that subverts the infinite vertical feed. The main navigation is a horizontal timeline. Users drag the timeline to explore moments in time, with 'today' as the starting point. The aesthetic is a cyberpunk/digital brutalism theme.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

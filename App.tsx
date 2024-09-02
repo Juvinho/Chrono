@@ -1,0 +1,1647 @@
+import React, { useState, useMemo, useEffect, useRef, Suspense, useCallback } from 'react';
+import { User, Page, Post, CyberpunkReaction, Notification, NotificationType, Conversation, Message, Story } from './types';
+import { CORE_USERS } from './constants';
+import { useLocalStorage } from './hooks/useLocalStorage';
+import { LanguageProvider } from './hooks/useTranslation';
+import { generatePostContent, generateReplyContent, generatePollVote, generateDirectMessageReply } from './services/geminiService';
+import { apiClient, mapApiUserToUser, mapApiPostToPost } from './services/api';
+import { NotificationManager } from './services/notificationManager';
+import { socketService } from './services/socketService';
+import NyxAI from './components/NyxAI';
+import LoadingSpinner from './components/LoadingSpinner';
+
+// Lazy load components for performance
+const LoginScreen = React.lazy(() => import('./components/LoginScreen'));
+const Dashboard = React.lazy(() => import('./components/Dashboard'));
+const ProfilePage = React.lazy(() => import('./components/ProfilePage'));
+const SettingsPage = React.lazy(() => import('./components/SettingsPage'));
+const Welcome = React.lazy(() => import('./components/Welcome'));
+const Register = React.lazy(() => import('./components/Register'));
+const Verify = React.lazy(() => import('./components/Verify'));
+const ForgotPassword = React.lazy(() => import('./components/ForgotPassword'));
+const ResetPassword = React.lazy(() => import('./components/ResetPassword'));
+const MessagesPage = React.lazy(() => import('./components/MessagesPage'));
+const DataSlicerPage = React.lazy(() => import('./components/DataSlicerPage'));
+const StoryViewer = React.lazy(() => import('./components/StoryViewer'));
+const StoryCreator = React.lazy(() => import('./components/StoryCreator'));
+const Marketplace = React.lazy(() => import('./components/Marketplace'));
+
+const placeholderVideos = [
+    'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+    'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+    'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
+    'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4'
+];
+// Helper function to play notification sound
+let sharedAudioCtx: AudioContext | null = null;
+
+const playNotificationSound = (type: 'notification' | 'post' | 'reply' = 'notification') => {
+    try {
+        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioContext) return;
+        
+        if (!sharedAudioCtx) {
+            sharedAudioCtx = new AudioContext();
+        }
+        
+        // Try to resume if suspended (requires user interaction previously)
+        if (sharedAudioCtx.state === 'suspended') {
+            sharedAudioCtx.resume().catch(() => {});
+        }
+        
+        const ctx = sharedAudioCtx;
+        const t = ctx.currentTime;
+        
+        if (type === 'notification') {
+            // Notification: High tech "ping"
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(800, t);
+            osc.frequency.exponentialRampToValueAtTime(400, t + 0.2);
+            
+            gain.gain.setValueAtTime(0.1, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+            
+            osc.start(t);
+            osc.stop(t + 0.2);
+        } else if (type === 'post') {
+            // Post: Digital "blip"
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(300, t);
+            osc.frequency.linearRampToValueAtTime(600, t + 0.1);
+            
+            gain.gain.setValueAtTime(0.05, t);
+            gain.gain.linearRampToValueAtTime(0, t + 0.15);
+            
+            osc.start(t);
+            osc.stop(t + 0.15);
+        } else if (type === 'reply') {
+            // Reply: Double chirp
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, t);
+            osc.frequency.linearRampToValueAtTime(800, t + 0.1);
+            
+            gain.gain.setValueAtTime(0.1, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+            
+            osc.start(t);
+            osc.stop(t + 0.1);
+            
+            // Second chirp
+            const osc2 = ctx.createOscillator();
+            const gain2 = ctx.createGain();
+            osc2.connect(gain2);
+            gain2.connect(ctx.destination);
+            
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(800, t + 0.15);
+            osc2.frequency.linearRampToValueAtTime(1200, t + 0.25);
+            
+            gain2.gain.setValueAtTime(0.1, t + 0.15);
+            gain2.gain.exponentialRampToValueAtTime(0.01, t + 0.25);
+            
+            osc2.start(t + 0.15);
+            osc2.stop(t + 0.25);
+        }
+    } catch (e) {
+        console.error("Audio error", e);
+    }
+}
+
+// Helper function to revive dates recursively from JSON strings
+const reviveDates = (data: any[], dateKeys: string[]): any[] => {
+    const revive = (obj: any): any => {
+        if (!obj || typeof obj !== 'object') return obj;
+
+        const revivedObj: any = { ...obj };
+
+        for (const key in revivedObj) {
+            if (dateKeys.includes(key) && revivedObj[key]) {
+                revivedObj[key] = new Date(revivedObj[key]);
+            } else if (Array.isArray(revivedObj[key])) {
+                 revivedObj[key] = revivedObj[key].map(revive);
+            } else if (typeof revivedObj[key] === 'object') {
+                 revivedObj[key] = revive(revivedObj[key]);
+            }
+        }
+        return revivedObj;
+    };
+    if (!Array.isArray(data)) return [];
+    return data.map(revive);
+};
+
+const App: React.FC = () => {
+    // Users are still partially local/hybrid as per instructions, but Posts/Convos are now fully API
+    const [users, setUsers] = useLocalStorage<User[]>('chrono_users_v2', CORE_USERS);
+    
+    // MIGRATION: Posts and Conversations now start empty and load from API
+    const [posts, setPosts] = useState<Post[]>([]);
+    const [displayedPosts, setDisplayedPosts] = useState<Post[]>([]);
+    const [pendingPosts, setPendingPosts] = useState<Post[]>([]);
+    const [conversations, setConversations] = useState<Conversation[]>([]);
+    
+    // Story State
+    const [viewingStoryUser, setViewingStoryUser] = useState<User | null>(null);
+    const [isCreatingStory, setIsCreatingStory] = useState(false);
+    const [isMarketplaceOpen, setIsMarketplaceOpen] = useState(false);
+
+    // Create refs to hold the current state to avoid stale closures in async callbacks
+    const usersRef = useRef(users);
+    useEffect(() => { usersRef.current = users; }, [users]);
+
+    // Mock stories for demo
+    useEffect(() => {
+        setUsers(prevUsers => {
+            const updated = prevUsers.map(u => {
+                if ((u.username === 'Kai' || u.username === 'Nova') && (!u.stories || u.stories.length === 0)) {
+                    return {
+                        ...u,
+                        stories: [
+                            {
+                                id: crypto.randomUUID(),
+                                userId: u.username,
+                                username: u.username,
+                                userAvatar: u.avatar,
+                                content: u.username === 'Kai' ? 'Checking out the new timeline update!' : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=1000&auto=format&fit=crop',
+                                type: u.username === 'Kai' ? 'text' : 'image',
+                                timestamp: new Date(),
+                                expiresAt: new Date(Date.now() + 86400000),
+                                viewers: []
+                            }
+                        ]
+                    };
+                }
+                return u;
+            });
+            if (JSON.stringify(updated) !== JSON.stringify(prevUsers)) {
+                return updated;
+            }
+            return prevUsers;
+        });
+    }, []);
+
+    const postsRef = useRef(posts);
+    useEffect(() => { postsRef.current = posts; }, [posts]);
+
+    // Sync posts to displayedPosts and pendingPosts
+    useEffect(() => {
+        if (posts.length === 0) return;
+
+        // Initial load
+        if (displayedPosts.length === 0) {
+            setDisplayedPosts(posts);
+            return;
+        }
+
+        const displayedIds = new Set(displayedPosts.map(p => p.id));
+        const postsMap = new Map(posts.map(p => [p.id, p]));
+
+        // Update existing posts in displayedPosts (edits, likes, replies)
+        // and remove deleted ones (not in postsMap)
+        const updatedDisplayed = displayedPosts
+            .filter(p => postsMap.has(p.id))
+            .map(p => postsMap.get(p.id)!);
+
+        setDisplayedPosts(updatedDisplayed);
+
+        // Find new posts that are not in displayedPosts
+        // We only care about posts that are NEWER than the newest displayed post
+        // to avoid re-adding old posts that might have been scrolled past? 
+        // Actually, just any ID not in displayed is a candidate.
+        // But we need to avoid adding "older" posts if pagination was involved.
+        // For now, assuming allPosts returns the full relevant feed or top N posts.
+        
+        const newItems = posts.filter(p => !displayedIds.has(p.id));
+        
+        if (newItems.length > 0) {
+            setPendingPosts(prev => {
+                const prevIds = new Set(prev.map(p => p.id));
+                const uniqueNewItems = newItems.filter(p => !prevIds.has(p.id));
+                if (uniqueNewItems.length === 0) return prev;
+                return [...uniqueNewItems, ...prev];
+            });
+        }
+    }, [posts]);
+
+    const handleShowNewPosts = () => {
+        setDisplayedPosts(prev => {
+            // Merge pending posts at the top
+            // Ensure no duplicates just in case
+            const currentIds = new Set(prev.map(p => p.id));
+            const uniquePending = pendingPosts.filter(p => !currentIds.has(p.id));
+            return [...uniquePending, ...prev];
+        });
+        setPendingPosts([]);
+    };
+
+    const conversationsRef = useRef(conversations);
+    useEffect(() => { conversationsRef.current = conversations; }, [conversations]);
+
+    // MIGRATION: Removed localStorage.setItem effects for posts and conversations
+    
+    const [currentUser, setCurrentUser] = useLocalStorage<User | null>('chrono_currentUser_v2', null);
+    const [isSessionLoading, setIsSessionLoading] = useState(true);
+
+    // Validate Session on Mount
+    useEffect(() => {
+        const validateSession = async () => {
+            const token = apiClient.getToken();
+            if (token) {
+                try {
+                    const result = await apiClient.getCurrentUser();
+                    if (result.data) {
+                        const mappedUser = mapApiUserToUser(result.data);
+                        setCurrentUser(mappedUser);
+                    } else {
+                        // Token invalid or expired
+                        console.warn("Session expired or invalid, logging out.");
+                        setCurrentUser(null);
+                        apiClient.setToken(null);
+                    }
+                } catch (error) {
+                    console.error("Session validation failed:", error);
+                    setCurrentUser(null); // Safety fallback
+                    apiClient.setToken(null);
+                }
+            }
+            setIsSessionLoading(false);
+        };
+        
+        validateSession();
+    }, []); // Run once on mount
+    
+    // Restore page from sessionStorage if user is logged in
+    const getInitialPage = (): Page => {
+        if (currentUser) {
+            const savedPage = sessionStorage.getItem('chrono_currentPage');
+            if (savedPage) {
+                const pageNum = parseInt(savedPage, 10);
+                if (pageNum >= 0 && pageNum < Object.keys(Page).length / 2) {
+                    return pageNum as Page;
+                }
+            }
+            return Page.Dashboard; // Default to Dashboard if logged in
+        }
+        return Page.Welcome;
+    };
+    
+    const [currentPage, setCurrentPage] = useState<Page>(getInitialPage());
+    const [profileUsername, setProfileUsername] = useState<string | null>(null);
+    const [animationKey, setAnimationKey] = useState(0);
+    const [selectedDate, setSelectedDate] = useState(new Date());
+    const [userToVerify, setUserToVerify] = useState<string | null>(null);
+    const [emailToReset, setEmailToReset] = useState<string | null>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [typingParentIds, setTypingParentIds] = useState(new Set<string>());
+    const [isDevil666Mode, setIsDevil666Mode] = useState(false);
+
+    const audioContextRef = useRef<AudioContext | null>(null);
+
+    // Global Audio Context Resume
+    useEffect(() => {
+        const unlockAudio = () => {
+            const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+            if (AudioContext && (!sharedAudioCtx || sharedAudioCtx.state === 'suspended')) {
+                if (!sharedAudioCtx) sharedAudioCtx = new AudioContext();
+                sharedAudioCtx.resume().then(() => {
+                    console.log("AudioContext unlocked");
+                    // Remove listeners once unlocked
+                    document.removeEventListener('click', unlockAudio);
+                    document.removeEventListener('keydown', unlockAudio);
+                    document.removeEventListener('touchstart', unlockAudio);
+                }).catch(e => console.error("Audio unlock failed", e));
+            }
+        };
+
+        document.addEventListener('click', unlockAudio);
+        document.addEventListener('keydown', unlockAudio);
+        document.addEventListener('touchstart', unlockAudio);
+
+        return () => {
+            document.removeEventListener('click', unlockAudio);
+            document.removeEventListener('keydown', unlockAudio);
+            document.removeEventListener('touchstart', unlockAudio);
+        };
+    }, []);
+
+    // Helper function to reload data from backend
+    const reloadBackendData = useCallback(async () => {
+        if (!currentUser) return;
+        
+        try {
+            // Reload Current User to ensure follow counts and lists are accurate
+            const userResult = await apiClient.getCurrentUser();
+            if (userResult.data) {
+                const mappedUser = mapApiUserToUser(userResult.data);
+                // Update local storage and state
+                setCurrentUser(mappedUser);
+                
+                // Update in users array if present
+                setUsers(prev => prev.map(u => u.username === mappedUser.username ? mappedUser : u));
+            }
+
+            // Reload posts
+            const postsResult = await apiClient.getPosts();
+            if (postsResult.data) {
+                // Deduplicate posts based on ID
+                const uniquePosts = postsResult.data.reduce((acc: any[], current: any) => {
+                    const x = acc.find(item => item.id === current.id);
+                    if (!x) {
+                        return acc.concat([current]);
+                    } else {
+                        return acc;
+                    }
+                }, []);
+
+                const mappedPosts = uniquePosts.map((p: any) => {
+                    const mapped = mapApiPostToPost(p);
+                    // Ensure timestamp is a Date object
+                    if (mapped.timestamp && typeof mapped.timestamp === 'string') {
+                        mapped.timestamp = new Date(mapped.timestamp);
+                    }
+                    return mapped;
+                });
+                setPosts(mappedPosts);
+            }
+
+            // Reload conversations
+            const conversationsResult = await apiClient.getConversations();
+            if (conversationsResult.data) {
+                const mappedConversations = conversationsResult.data.map((conv: any) => ({
+                    id: conv.id,
+                    participants: conv.participants.map((p: any) => typeof p === 'string' ? p : (p.username || p)),
+                    messages: (conv.messages || []).map((msg: any) => ({
+                        id: msg.id,
+                        senderUsername: msg.senderUsername || (msg.sender_id ? 'unknown' : 'unknown'),
+                        text: msg.text,
+                        timestamp: new Date(msg.createdAt || msg.created_at || Date.now()),
+                    })),
+                    lastMessageTimestamp: new Date(conv.lastMessageTimestamp || conv.updated_at || Date.now()),
+                    unreadCount: conv.unreadCount || {},
+                }));
+                setConversations(mappedConversations);
+            }
+
+            // Reload notifications
+            const notificationsResult = await apiClient.getNotifications();
+            if (notificationsResult.data) {
+                const notifications = notificationsResult.data.map((n: any) => ({
+                    ...n,
+                    timestamp: new Date(n.timestamp || Date.now())
+                }));
+
+                notifications.forEach((n: any) => {
+                    if (!n.isRead && !knownNotificationIds.current.has(n.id)) {
+                        if (!isFirstLoad.current) {
+                             try {
+                                 const message = NotificationManager.formatNotificationMessage(n.notificationType, n.actor, n.post);
+                                 NotificationManager.showNotification('Chrono', {
+                                    body: message,
+                                    tag: n.id
+                                 });
+                                 playNotificationSound();
+                             } catch (err) {
+                                 console.error("Error showing notification:", err);
+                             }
+                        }
+                        knownNotificationIds.current.add(n.id);
+                    } else {
+                         knownNotificationIds.current.add(n.id);
+                    }
+                });
+
+                if (currentUser) {
+                    setCurrentUser(prev => prev ? { ...prev, notifications } : prev);
+                }
+            }
+
+            // Reload stories
+            const storiesResult = await apiClient.getStories();
+            if (storiesResult.data) {
+                const stories = storiesResult.data.map((s: any) => ({
+                    id: s.id,
+                    userId: s.userId,
+                    username: s.author?.username || 'unknown',
+                    userAvatar: s.author?.avatar || null,
+                    content: s.content,
+                    type: s.type,
+                    timestamp: new Date(s.createdAt || s.created_at),
+                    expiresAt: new Date(s.expiresAt || s.expires_at),
+                    viewers: s.viewers || []
+                }));
+
+                // Group stories by user and update users state
+                const storiesByUser = new Map<string, Story[]>();
+                stories.forEach((s: Story) => {
+                    const existing = storiesByUser.get(s.username) || [];
+                    storiesByUser.set(s.username, [...existing, s]);
+                });
+
+                setUsers(currentUsers =>
+                    currentUsers.map(u => {
+                        if (storiesByUser.has(u.username)) {
+                            return { ...u, stories: storiesByUser.get(u.username) };
+                        }
+                        return u;
+                    })
+                );
+            }
+            
+            isFirstLoad.current = false;
+        } catch (error) {
+            console.error("Failed to reload backend data:", error);
+        }
+    }, [currentUser]);
+
+    // Socket.io Integration
+    useEffect(() => {
+        if (currentUser) {
+            socketService.connect();
+            // Assuming currentUser.id is available. If it's undefined, it won't join.
+            if (currentUser.id) {
+                socketService.joinUserRoom(currentUser.id);
+            }
+
+            const handleNewNotification = (payload: any) => {
+                 // Payload from backend might need mapping to Notification type
+                 // Backend sends: { ...notification, actor, post }
+                 // Frontend Notification type: id, userId, actorId, notificationType, postId, isRead, createdAt
+                 // But frontend usually needs enriched data for display?
+                 // The current frontend types seem to rely on separate fetching or enriched properties?
+                 // Let's check Notification type in frontend.
+                 
+                 // For now, assume payload is compatible or we use it directly for toast
+                 
+                 // Update state
+                 setCurrentUser(prev => {
+                     if (!prev) return prev;
+                     // Avoid duplicates
+                     if (prev.notifications?.some(n => n.id === payload.id)) return prev;
+                     
+                     // We need to ensure the notification matches the structure expected by the UI
+                     // The backend payload has { ...notification, actor, post }
+                     // The UI seems to expect Notification object.
+                     
+                     // Convert timestamp string to Date
+                     const notification = {
+                         ...payload,
+                         timestamp: new Date(payload.createdAt || Date.now())
+                     };
+
+                     return {
+                         ...prev,
+                         notifications: [notification, ...(prev.notifications || [])]
+                     };
+                 });
+
+                 // Play sound and show toast
+                  try {
+                      const message = NotificationManager.formatNotificationMessage(payload.notificationType, payload.actor, payload.post);
+                      NotificationManager.showNotification('Chrono', {
+                         body: message,
+                         tag: payload.id
+                      });
+                      
+                      if (payload.notificationType === 'reply') {
+                          playNotificationSound('reply');
+                      } else {
+                          playNotificationSound('notification');
+                      }
+                  } catch (err) {
+                      console.error("Error showing notification:", err);
+                  }
+             };
+
+             const handleNewMessage = async (payload: any) => {
+                  // Check if conversation exists locally
+                  const conversationExists = conversationsRef.current.some(c => c.id === payload.conversationId);
+                  
+                  if (!conversationExists) {
+                      // If it's a new conversation, we should fetch it
+                      try {
+                          // We don't have a direct endpoint to get one conversation by ID easily exposed in apiClient yet
+                          // But we can re-fetch all conversations for now, or just the new one if we add an endpoint
+                          // For efficiency, let's just re-fetch all for this prototype
+                          const conversationsResult = await apiClient.getConversations();
+                          if (conversationsResult.data) {
+                              const mappedConversations = conversationsResult.data.map((conv: any) => ({
+                                  id: conv.id,
+                                  participants: conv.participants.map((p: any) => typeof p === 'string' ? p : (p.username || p)),
+                                  messages: (conv.messages || []).map((msg: any) => ({
+                                      id: msg.id,
+                                      senderUsername: msg.senderUsername || (msg.sender_id ? 'unknown' : 'unknown'),
+                                      text: msg.text,
+                                      timestamp: new Date(msg.createdAt || msg.created_at || Date.now()),
+                                  })),
+                                  lastMessageTimestamp: new Date(conv.lastMessageTimestamp || conv.updated_at || Date.now()),
+                                  unreadCount: conv.unreadCount || {},
+                              }));
+                              setConversations(mappedConversations);
+                          }
+                      } catch (err) {
+                          console.error("Error fetching new conversation:", err);
+                      }
+                  } else {
+                      setConversations(prev => {
+                          return prev.map(conv => {
+                              if (conv.id === payload.conversationId) {
+                                  if (conv.messages.some(m => m.id === payload.id)) return conv;
+     
+                                  const newMessage = {
+                                      id: payload.id,
+                                      senderUsername: payload.senderUsername,
+                                      text: payload.text,
+                                      timestamp: new Date(payload.createdAt || Date.now())
+                                  };
+                                  
+                                  return {
+                                      ...conv,
+                                      messages: [newMessage, ...conv.messages],
+                                      lastMessageTimestamp: newMessage.timestamp,
+                                  };
+                              }
+                              return conv;
+                          });
+                      });
+                  }
+                  
+                  // Optional: Sound for message
+                  if (payload.senderUsername !== currentUser.username) {
+                      playNotificationSound();
+                  }
+              };
+
+              const handleNewPost = (payload: any) => {
+                  // Play sound for new posts (but not my own)
+                  if (payload.author?.username !== currentUser.username) {
+                       playNotificationSound('post');
+                  }
+                  
+                  // Reload data to ensure consistency
+                  reloadBackendData();
+              };
+ 
+              socketService.on('new_notification', handleNewNotification);
+              socketService.on('new_message', handleNewMessage);
+              socketService.on('new_post', handleNewPost);
+  
+              return () => {
+                  socketService.off('new_notification', handleNewNotification);
+                  socketService.off('new_message', handleNewMessage);
+                  socketService.off('new_post', handleNewPost);
+              };
+        } else {
+            socketService.disconnect();
+        }
+    }, [currentUser?.id, reloadBackendData]);
+    const isAudioInitialized = useRef(false);
+    const knownNotificationIds = useRef<Set<string>>(new Set());
+    const isFirstLoad = useRef(true);
+
+    // Restore page on mount if user is logged in but page is Welcome
+    useEffect(() => {
+        if (currentUser && currentPage === Page.Welcome) {
+            const savedPage = sessionStorage.getItem('chrono_currentPage');
+            if (savedPage) {
+                const pageNum = parseInt(savedPage, 10);
+                if (pageNum >= 0 && pageNum < Object.keys(Page).length / 2) {
+                    setCurrentPage(pageNum as Page);
+                } else {
+                    setCurrentPage(Page.Dashboard);
+                    sessionStorage.setItem('chrono_currentPage', Page.Dashboard.toString());
+                }
+            } else {
+                setCurrentPage(Page.Dashboard);
+                sessionStorage.setItem('chrono_currentPage', Page.Dashboard.toString());
+            }
+        }
+    }, [currentUser]); // Run when currentUser changes
+
+    // MIGRATION: Fetch initial data from Backend
+    useEffect(() => {
+        const loadBackendData = async () => {
+            if (!currentUser) return; // Only fetch if logged in
+
+            setIsGenerating(true); // Show loading state
+            try {
+                // Fetch Posts
+                const postsResult = await apiClient.getPosts();
+                if (postsResult.data) {
+                    const mappedPosts = postsResult.data.map((p: any) => mapApiPostToPost(p));
+                    setPosts(mappedPosts);
+                } else if (postsResult.error) {
+                    console.error("Failed to load posts:", postsResult.error);
+                }
+
+                // Fetch Conversations
+                const conversationsResult = await apiClient.getConversations();
+                if (conversationsResult.data) {
+                    const mappedConversations = conversationsResult.data.map((conv: any) => ({
+                        id: conv.id,
+                        participants: conv.participants.map((p: any) => typeof p === 'string' ? p : (p.username || p)),
+                        messages: (conv.messages || []).map((msg: any) => ({
+                            id: msg.id,
+                            senderUsername: msg.senderUsername || (msg.sender_id ? 'unknown' : 'unknown'),
+                            text: msg.text,
+                            timestamp: new Date(msg.createdAt || msg.created_at || Date.now()),
+                        })),
+                        lastMessageTimestamp: new Date(conv.lastMessageTimestamp || conv.updated_at || Date.now()),
+                        unreadCount: conv.unreadCount || {},
+                    }));
+                    setConversations(mappedConversations);
+                } else if (conversationsResult.error) {
+                    console.error("Failed to load conversations:", conversationsResult.error);
+                }
+            } catch (error) {
+                console.error("Failed to load data from backend:", error);
+            } finally {
+                setIsGenerating(false);
+            }
+        };
+
+        if (currentUser) {
+            loadBackendData();
+        }
+    }, [currentUser]); // Re-fetch on login
+
+    // One-time setup for audio context to comply with browser autoplay policies.
+    useEffect(() => {
+        const initializeAudio = () => {
+            if (!isAudioInitialized.current && typeof window !== 'undefined') {
+                const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+                if (AudioContext) {
+                    audioContextRef.current = new AudioContext();
+                    isAudioInitialized.current = true;
+                    // Clean up event listeners once initialized
+                    window.removeEventListener('click', initializeAudio);
+                    window.removeEventListener('keydown', initializeAudio);
+                }
+            }
+        };
+
+        window.addEventListener('click', initializeAudio);
+        window.addEventListener('keydown', initializeAudio);
+
+        return () => {
+            window.removeEventListener('click', initializeAudio);
+            window.removeEventListener('keydown', initializeAudio);
+        };
+    }, []);
+
+    // Polling for notifications and updates
+    useEffect(() => {
+        if (!currentUser) return;
+        
+        NotificationManager.requestPermission();
+        
+        const interval = setInterval(() => {
+            reloadBackendData();
+        }, 10000); // 10 seconds
+        
+        return () => clearInterval(interval);
+    }, [currentUser]);
+
+    const playNotificationSound = (type: 'notification' | 'post' | 'reply' = 'notification') => {
+        if (!audioContextRef.current) return;
+        
+        // Resume context if suspended (browser policy)
+        if (audioContextRef.current.state === 'suspended') {
+            audioContextRef.current.resume();
+        }
+    
+        const context = audioContextRef.current;
+        const now = context.currentTime;
+        
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+    
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+
+        if (type === 'reply') {
+            // Reply sound: Two quick high beeps
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(800, now);
+            oscillator.frequency.setValueAtTime(1200, now + 0.1);
+            
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.2);
+            
+            oscillator.start(now);
+            oscillator.stop(now + 0.2);
+        } else if (type === 'post') {
+             // Post sound: Soft low "pop"
+            oscillator.type = 'triangle';
+            oscillator.frequency.setValueAtTime(300, now);
+            oscillator.frequency.exponentialRampToValueAtTime(100, now + 0.15);
+            
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+            
+            oscillator.start(now);
+            oscillator.stop(now + 0.15);
+        } else {
+            // Default notification: A5 drop
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(880, now); // A5 note
+            oscillator.frequency.exponentialRampToValueAtTime(440, now + 0.1);
+        
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+        
+            oscillator.start(now);
+            oscillator.stop(now + 0.2);
+        }
+    };
+
+    const addNotification = (targetUser: User, actor: User, notificationType: NotificationType, post?: Post) => {
+        if (targetUser.username === actor.username) return; // Don't send notifications for own actions
+
+        // Play sound if the notification is for the current user
+        if (currentUser && targetUser.username === currentUser.username) {
+            playNotificationSound();
+        }
+
+        const newNotification: Notification = {
+            id: `notif-${Date.now()}-${Math.random()}`,
+            actor,
+            notificationType,
+            post,
+            read: false,
+            timestamp: new Date(),
+        };
+
+        setUsers(currentUsers =>
+            currentUsers.map(u => {
+                if (u.username === targetUser.username) {
+                    return {
+                        ...u,
+                        notifications: [newNotification, ...(u.notifications || [])],
+                    };
+                }
+                return u;
+            })
+        );
+    };
+
+
+
+    // Story Handlers
+    const usersWithStories = useMemo(() => {
+        return users.filter(u => u.stories && u.stories.length > 0 && u.username !== currentUser?.username);
+    }, [users, currentUser]);
+
+    const handleCreateStory = useCallback(async (storyData: Omit<Story, 'id' | 'timestamp' | 'expiresAt' | 'userId' | 'username' | 'userAvatar'>) => {
+        if (!currentUser) return;
+        
+        try {
+            const result = await apiClient.createStory(storyData.content, storyData.type);
+            if (result.error) {
+                console.error("Failed to create story via API:", result.error);
+                return;
+            }
+            
+            // Reload to get the new story properly
+            await reloadBackendData();
+        } catch (error) {
+            console.error("Failed to create story via API:", error);
+        }
+    }, [currentUser, reloadBackendData]);
+
+    const handleViewStory = useCallback(async (storyId: string) => {
+        if (!currentUser) return;
+        try {
+            await apiClient.viewStory(storyId);
+            // No need to reload everything just for a view count update, 
+            // but we might want to update local state to show it's viewed?
+            // For now, let's keep it simple and just fire-and-forget the API call.
+        } catch (error) {
+            console.error("Failed to view story via API:", error);
+        }
+    }, [currentUser]);
+
+    const handleSendMessage = async (recipientUsername: string, text: string, senderUsername?: string) => {
+        const sender = senderUsername || currentUser?.username;
+        if (!sender || recipientUsername === sender) return;
+
+        // MIGRATION: API Call
+        try {
+            const result = await apiClient.sendMessageToUser(recipientUsername, text);
+            if (result.error) {
+                console.error("Failed to send message via API:", result.error);
+                return;
+            }
+            
+            // Reload conversations to get the latest state
+            await reloadBackendData();
+        } catch (error) {
+            console.error("Failed to send message via API:", error);
+        }
+    };
+
+    const handleCreateOrFindConversation = (recipientUsername: string): string => {
+        if (!currentUser) return '';
+        
+        // Try to find existing conversation first
+        const conversationId = [currentUser.username, recipientUsername].sort().join('--');
+        const existingConvo = conversationsRef.current.find(c => c.id === conversationId);
+        
+        if (existingConvo) {
+            return existingConvo.id;
+        }
+        
+        // If not found, create it via API (async, but return ID immediately for compatibility)
+        (async () => {
+            try {
+                const result = await apiClient.getOrCreateConversation(recipientUsername);
+                if (result.data) {
+                    // Reload conversations to get the latest state
+                    await reloadBackendData();
+                }
+            } catch (error) {
+                console.error("Failed to get or create conversation:", error);
+            }
+        })();
+        
+        // Return local ID format for immediate use
+        return conversationId;
+    };
+
+    const handleMarkConversationAsRead = async (conversationId: string) => {
+        if (!currentUser) return;
+        
+        try {
+            await apiClient.markConversationAsRead(conversationId);
+            // Reload conversations to get updated unread counts
+            await reloadBackendData();
+        } catch (error) {
+            console.error("Failed to mark conversation as read:", error);
+            // Fallback to local update
+            setConversations(prev => prev.map(c => {
+                if (c.id === conversationId) {
+                    return { ...c, unreadCount: { ...c.unreadCount, [currentUser.username]: 0 } };
+                }
+                return c;
+            }));
+        }
+    };
+    
+    const findPostById = (posts: Post[], postId: string): Post | null => {
+        for (const post of posts) {
+            if (post.id === postId) {
+                return post;
+            }
+            if (post.replies) {
+                const foundInReplies = findPostById(post.replies, postId);
+                if (foundInReplies) return foundInReplies;
+            }
+            if (post.repostOf) {
+                const foundInRepost = findPostById([post.repostOf], postId);
+                if (foundInRepost) return foundInRepost;
+            }
+        }
+        return null;
+    };
+
+    const checkForTriggers = (post: Post) => {
+        if (!currentUser) return;
+
+        const triggerPhrase = "Eu faria tudo para ser famoso";
+        if (post.author.username === currentUser.username && post.content.toLowerCase().includes(triggerPhrase.toLowerCase())) {
+            console.log("Devil666 trigger activated by user:", currentUser.username);
+            setIsDevil666Mode(true);
+        }
+    };
+
+    const handleReply = async (parentPostId: string, content: string, isPrivate: boolean, media?: { imageUrl?: string, videoUrl?: string }, actor?: User) => {
+        const replier = actor || currentUser;
+        if (!replier) return;
+    
+        // MIGRATION: API Call
+        try {
+            const result = await apiClient.replyToPost(parentPostId, content, isPrivate, media);
+            if (result.error) {
+                console.error("Failed to reply via API:", result.error);
+                return;
+            }
+            
+            if (replier.username === currentUser.username) {
+                playNotificationSound('reply');
+            }
+
+            // Reload posts to get the updated state with the new reply
+            await reloadBackendData();
+        } catch (error) {
+            console.error("Failed to reply via API:", error);
+        }
+    };
+
+
+    const handleNavigate = (page: Page, data?: string) => {
+        if(page === Page.Profile && data) setProfileUsername(data);
+        else setProfileUsername(null);
+
+        if (page === Page.Verify && data) setUserToVerify(data);
+        if (page === Page.ResetPassword && data) setEmailToReset(data);
+        if (page === Page.Messages && data) sessionStorage.setItem('chrono_focus_conversation_user', data);
+        
+        setCurrentPage(page);
+        // Save current page to sessionStorage for refresh persistence
+        if (currentUser) {
+            sessionStorage.setItem('chrono_currentPage', page.toString());
+        }
+        setAnimationKey(prev => prev + 1);
+    }
+    
+    const handleLogin = (user: User) => { 
+        console.log('App.handleLogin called with:', user);
+        setCurrentUser(user); 
+        
+        // Reset state to avoid conflicts
+        setProfileUsername(null);
+        
+        const savedPage = sessionStorage.getItem('chrono_currentPage');
+        let pageToNavigate = savedPage ? (parseInt(savedPage, 10) as Page) : Page.Dashboard;
+        
+        // Safety check: If navigating to Profile without context, default to own profile
+        if (pageToNavigate === Page.Profile) {
+            console.log('Restoring Profile page, defaulting to current user');
+            setProfileUsername(user.username);
+        }
+
+        console.log('Navigating to:', pageToNavigate);
+        setCurrentPage(pageToNavigate);
+        sessionStorage.setItem('chrono_currentPage', pageToNavigate.toString());
+    };
+    
+    const handleLogout = () => { 
+        setCurrentUser(null); 
+        setCurrentPage(Page.Welcome); 
+        setPosts([]); 
+        setConversations([]);
+        sessionStorage.removeItem('chrono_currentPage');
+        apiClient.setToken(null);
+    };
+
+    const handleUpdateUser = async (updatedUser: User): Promise<boolean> => {
+        // Update local state immediately for responsive UI
+        setUsers(prevUsers => {
+            const exists = prevUsers.some(u => u.username === updatedUser.username);
+            if (exists) {
+                return prevUsers.map(u => u.username === updatedUser.username ? updatedUser : u);
+            } else {
+                return [...prevUsers, updatedUser];
+            }
+        });
+        
+        // Also update posts authored by this user locally to reflect avatar/bio changes immediately
+        setPosts(prevPosts => prevPosts.map(post => {
+            if (post.author.username === updatedUser.username) {
+                // Keep existing author fields but overwrite with updated user details that are relevant for display
+                return { 
+                    ...post, 
+                    author: { 
+                        ...post.author, 
+                        avatar: updatedUser.avatar,
+                        bio: updatedUser.bio,
+                        profileSettings: updatedUser.profileSettings,
+                        verificationBadge: updatedUser.verificationBadge,
+                        isVerified: updatedUser.isVerified
+                    } 
+                };
+            }
+            return post;
+        }));
+
+        if (currentUser?.username === updatedUser.username) {
+            setCurrentUser(updatedUser);
+        }
+        
+        // Save to backend
+        if (currentUser?.username === updatedUser.username) {
+            try {
+                // Prefer profileSettings.coverImage if available (new upload), fallback to root coverImage
+                const coverImageToUse = updatedUser.profileSettings?.coverImage || updatedUser.coverImage;
+                
+                const updates: any = {
+                    bio: updatedUser.bio,
+                    avatar: updatedUser.avatar,
+                    coverImage: coverImageToUse,
+                    birthday: updatedUser.birthday,
+                    location: updatedUser.location,
+                    website: updatedUser.website,
+                    pronouns: updatedUser.pronouns,
+                    isPrivate: updatedUser.isPrivate,
+                    profileSettings: updatedUser.profileSettings,
+                };
+                
+                const result = await apiClient.updateUser(updatedUser.username, updates);
+                if (result.error) {
+                    console.error("Failed to update user via API:", result.error);
+                    return false;
+                }
+                
+                if (result.data) {
+                    // Update with data from backend to ensure sync
+                    const mappedUser = mapApiUserToUser(result.data);
+                    setUsers(prevUsers => {
+                        const exists = prevUsers.some(u => u.username === updatedUser.username);
+                        if (exists) {
+                            return prevUsers.map(u => u.username === updatedUser.username ? mappedUser : u);
+                        } else {
+                            return [...prevUsers, mappedUser];
+                        }
+                    });
+                    
+                    // Update posts again with confirmed backend data
+                    setPosts(prevPosts => prevPosts.map(post => {
+                        if (post.author.username === mappedUser.username) {
+                            return { 
+                                ...post, 
+                                author: { 
+                                    ...post.author, 
+                                    avatar: mappedUser.avatar,
+                                    bio: mappedUser.bio,
+                                    profileSettings: mappedUser.profileSettings,
+                                    verificationBadge: mappedUser.verificationBadge,
+                                    isVerified: mappedUser.isVerified
+                                } 
+                            };
+                        }
+                        return post;
+                    }));
+
+                    if (currentUser?.username === updatedUser.username) {
+                        setCurrentUser(mappedUser);
+                    }
+                }
+                return true;
+            } catch (error) {
+                console.error("Failed to update user via API:", error);
+                return false;
+            }
+        }
+        return true; // If not current user, assume success (local update only)
+    };
+
+    const handleFollowToggle = async (usernameToToggle: string, actor?: User) => {
+         const follower = actor || currentUser;
+         if (!follower) return;
+        const isFollowing = follower.followingList?.includes(usernameToToggle);
+
+        // Optimistic Update
+        const updatedFollower = {
+            ...follower,
+            followingList: isFollowing
+                ? follower.followingList?.filter(u => u !== usernameToToggle)
+                : [...(new Set([...(follower.followingList || []), usernameToToggle]))], // Ensure uniqueness
+            following: isFollowing ? Math.max(0, follower.following - 1) : follower.following + 1,
+        };
+
+        // Update local state immediately
+        if (!actor) {
+            setCurrentUser(updatedFollower);
+        }
+
+        setUsers(currentUsers =>
+            currentUsers.map(u => {
+                if (u.username === follower.username) {
+                    return updatedFollower;
+                }
+                if (u.username === usernameToToggle) {
+                    const targetUser = u;
+                    const updatedTargetUser = {
+                        ...targetUser,
+                        followersList: isFollowing
+                            ? targetUser.followersList?.filter(u => u !== follower.username)
+                            : [...(new Set([...(targetUser.followersList || []), follower.username]))], // Ensure uniqueness
+                        followers: isFollowing ? Math.max(0, targetUser.followers - 1) : targetUser.followers + 1,
+                    };
+                    return updatedTargetUser;
+               }
+                return u;
+            })
+        );
+
+        // API Call
+        try {
+            if (follower.username === currentUser.username) {
+                const result = await apiClient.toggleFollow(usernameToToggle);
+                if (result.error) {
+                    console.error("Failed to toggle follow via API:", result.error);
+                    // Revert optimistic update if API fails
+                     setUsers(currentUsers =>
+                        currentUsers.map(u => {
+                            if (u.username === follower.username) return follower;
+                             if (u.username === usernameToToggle) {
+                                // Revert target user stats - ideally we would reload or revert carefully
+                                // For now, just reload backend data to fix state
+                                return u; 
+                            }
+                            return u;
+                        })
+                    );
+                    if (!actor) setCurrentUser(follower); // Revert current user
+                    await reloadBackendData(); // Force sync
+                    return;
+                }
+                
+                // Success: Reload backend data to ensure 100% consistency
+                // We do NOT update local state again here manually because reloadBackendData will do it properly
+                await reloadBackendData();
+            }
+        } catch (error) {
+             console.error("Failed to toggle follow via API:", error);
+             await reloadBackendData(); // Try to resync on error
+        }
+    };
+    
+    const simulateUserPostInteraction = (post: Post) => {
+        if (!currentUser) return;
+    
+        const aiUsers = usersRef.current.filter(u => u.username !== currentUser.username && !CORE_USERS.some(cu => cu.username === u.username));
+        if (aiUsers.length === 0) return;
+    
+        // Drastically reduced interaction for an "unknown" user feel.
+    
+        // Simulate 0 to 2 reactions, with a higher chance of 0.
+        const reactionRoll = Math.random();
+        let reactionCount = 0;
+        if (reactionRoll > 0.5) { // 50% chance of any reactions
+            reactionCount = Math.floor(Math.random() * 3); // 0, 1, or 2
+        }
+
+        for (let i = 0; i < reactionCount; i++) {
+            setTimeout(() => {
+                const reactor = aiUsers[Math.floor(Math.random() * aiUsers.length)];
+                const reactions: CyberpunkReaction[] = ['Glitch', 'Upload', 'Corrupt', 'Rewind', 'Static'];
+                const randomReaction = reactions[Math.floor(Math.random() * reactions.length)];
+                handleUpdateReaction(post.id, randomReaction, reactor);
+            }, 3000 + Math.random() * 10000); // Stagger reactions a bit more
+        }
+    
+        // Simulate 0 or 1 reply, with a low chance.
+        const replyRoll = Math.random();
+        if (replyRoll > 0.85) { // 15% chance of a reply
+             const replyDelay = 7000 + Math.random() * 15000; // 7-22s delay
+             setTimeout(() => {
+                const replierSkeleton = aiUsers[Math.floor(Math.random() * aiUsers.length)];
+                
+                setTypingParentIds(prev => new Set(prev).add(post.id));
+    
+                const typingDuration = 3000 + Math.random() * 4000;
+                setTimeout(async () => {
+                    try {
+                        const replyData = await generateReplyContent(post.content);
+                        if (replyData) {
+                            const replier = { ...replierSkeleton, username: replyData.username, bio: replyData.bio };
+                            handleReply(post.id, replyData.content, Math.random() < 0.1, replier);
+                        }
+                    } catch (error) {
+                        console.warn("User post interaction simulation: Failed to generate a reply due to API error.", error);
+                    } finally {
+                        setTypingParentIds(prev => {
+                            const newSet = new Set(prev);
+                            newSet.delete(post.id);
+                            return newSet;
+                        });
+                    }
+                }, typingDuration);
+                
+            }, replyDelay);
+        }
+
+        // No echoes for an unknown user.
+    };
+
+    const handleNewPost = async (post: Post) => {
+        // EchoFrame now calls the API, so 'post' here is the confirmed object from backend
+        // Reload all posts to ensure we have the latest state from backend
+        
+        if (post.author.username === currentUser?.username) {
+            playNotificationSound('post');
+        }
+
+        await reloadBackendData();
+        
+        // Check for triggers and simulate interactions
+        checkForTriggers(post);
+        if (post.author.username === currentUser?.username) {
+            simulateUserPostInteraction(post);
+        }
+    };
+    
+    const handleUpdateReaction = async (postId: string, reaction: CyberpunkReaction, actor?: User) => {
+        const reactor = actor || currentUser;
+        if (!reactor) return;
+
+        // MIGRATION: API Call
+        try {
+            const result = await apiClient.updateReaction(postId, reaction);
+            if (result.error) {
+                console.error("Failed to update reaction via API:", result.error);
+                return;
+            }
+            
+            // Reload posts to get updated reactions
+            await reloadBackendData();
+        } catch (error) {
+            console.error("Failed to update reaction via API:", error);
+        }
+    };
+
+    const handleEcho = async (postToEcho: Post, actor?: User) => {
+        const echoer = actor || currentUser;
+        if (!echoer) return;
+        if (postToEcho.repostOf) return; // Prevent echoing an echo
+
+        // MIGRATION: API Call
+        try {
+            const result = await apiClient.echoPost(postToEcho.id);
+            if (result.error) {
+                console.error("Failed to echo post via API:", result.error);
+                return;
+            }
+            
+            if (echoer.username === currentUser.username) {
+                playNotificationSound();
+            }
+
+            // Reload posts to get the updated state with the new echo
+            await reloadBackendData();
+        } catch (error) {
+            console.error("Failed to echo post via API:", error);
+        }
+    };
+
+    const handleDeletePost = async (postIdToDelete: string) => {
+        if (!currentUser) return;
+
+        // MIGRATION: API Call
+        try {
+            const result = await apiClient.deletePost(postIdToDelete);
+            if (result.error) {
+                console.error("Failed to delete post via API:", result.error);
+                return;
+            }
+            
+            // Reload posts to get updated state
+            await reloadBackendData();
+        } catch (error) {
+            console.error("Failed to delete post via API:", error);
+        }
+    };
+
+    const handleEditPost = async (postId: string, newPostData: Omit<Post, 'id' | 'author' | 'timestamp' | 'replies' | 'repostOf'>) => {
+         if (!currentUser) return;
+
+         // MIGRATION: API Call
+         try {
+             const updateData: any = {
+                 content: newPostData.content,
+                 isPrivate: newPostData.isPrivate,
+                 imageUrl: newPostData.imageUrl,
+                 videoUrl: newPostData.videoUrl,
+                 pollOptions: newPostData.pollOptions,
+                 pollEndsAt: newPostData.pollEndsAt,
+             };
+             
+             const result = await apiClient.updatePost(postId, updateData);
+             if (result.error) {
+                 console.error("Failed to update post via API:", result.error);
+                 return;
+             }
+             
+             // Reload posts to get updated state
+             await reloadBackendData();
+         } catch (error) {
+             console.error("Failed to update post via API:", error);
+         }
+    };
+
+     const handlePollVote = async (postId: string, optionIndex: number, actor?: User) => {
+        const voter = actor || currentUser;
+        if (!voter) return;
+
+        // MIGRATION: API Call
+        try {
+            const result = await apiClient.votePoll(postId, optionIndex);
+            if (result.error) {
+                console.error("Failed to vote via API:", result.error);
+                return;
+            }
+            
+            // Reload posts to get updated poll votes
+            await reloadBackendData();
+        } catch (error) {
+            console.error("Failed to vote via API:", error);
+        }
+    };
+
+    const handlePasswordReset = (email: string, newPass: string) => {
+        setUsers(prev => prev.map(u => u.email === email ? { ...u, password: newPass } : u));
+        sessionStorage.setItem('chrono_login_message', 'Password reset successfully. Please log in.');
+        handleNavigate(Page.Login);
+    }
+    
+    // AI Interactions - DISABLED to keep the timeline clean
+    /*
+    useEffect(() => {
+        // AI interaction logic removed for clarity and performance
+    }, [currentUser]);
+    */
+    
+
+    const handleNotificationClick = (notification: Notification) => {
+        if (!currentUser) return;
+
+        if (notification.post) {
+            setSelectedDate(notification.post.timestamp);
+            sessionStorage.setItem('chrono_focus_post_id', notification.post.id);
+            handleNavigate(Page.Dashboard);
+        } else if (notification.notificationType === 'follow') {
+            handleNavigate(Page.Profile, notification.actor.username);
+        }
+
+        // Mark as read
+        const updatedUser = {
+            ...currentUser,
+            notifications: currentUser.notifications?.map(n => n.id === notification.id ? { ...n, read: true } : n)
+        };
+        handleUpdateUser(updatedUser);
+    }
+
+    const memoizedUsers = useMemo(() => users, [users]);
+    const memoizedPosts = useMemo(() => displayedPosts, [displayedPosts]);
+    const memoizedAllPosts = useMemo(() => posts, [posts]);
+    
+    const combinedUsers = useMemo(() => {
+        const map = new Map<string, User>();
+        memoizedUsers.forEach(u => map.set(u.username.toLowerCase(), u));
+        const collect = (p: Post) => {
+            if (p.author) {
+                const key = p.author.username.toLowerCase();
+                if (!map.has(key)) map.set(key, p.author as User);
+            }
+            if (p.repostOf) collect(p.repostOf);
+            if (p.inReplyTo && p.inReplyTo.author) {
+                const key = p.inReplyTo.author.username.toLowerCase();
+                if (!map.has(key)) map.set(key, p.inReplyTo.author as unknown as User);
+            }
+            if (p.replies) p.replies.forEach(collect);
+        };
+        memoizedPosts.forEach(collect);
+        return Array.from(map.values());
+    }, [memoizedUsers, memoizedPosts]);
+
+    const renderPage = () => {
+        if (isSessionLoading) {
+            return (
+                <div className="fixed inset-0 bg-black flex flex-col items-center justify-center z-50">
+                     <div className="w-16 h-16 border-4 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin mb-4"></div>
+                     <p className="text-[var(--theme-primary)] font-mono animate-pulse">ESTABLISHING UPLINK...</p>
+                </div>
+            );
+        }
+
+        switch (currentPage) {
+            case Page.Welcome:
+                return <Welcome onNavigate={handleNavigate} />;
+            case Page.Login:
+                return <LoginScreen onLogin={handleLogin} users={users} onNavigate={handleNavigate} />;
+            case Page.Register:
+                return <Register users={users} setUsers={setUsers} onNavigate={handleNavigate} onLogin={handleLogin} />;
+            case Page.Verify:
+                const userToVerifyEmail = users.find(u => u.username === userToVerify)?.email;
+                return <Verify email={userToVerifyEmail || null} users={users} setUsers={setUsers} onNavigate={handleNavigate} />;
+            case Page.ForgotPassword:
+                return <ForgotPassword users={users} onNavigate={handleNavigate} />;
+            case Page.ResetPassword:
+                return <ResetPassword emailToReset={emailToReset} onPasswordReset={handlePasswordReset} onNavigate={handleNavigate} />;
+            case Page.Dashboard:
+                return currentUser ? (
+                    <Dashboard
+                        user={currentUser}
+                        onLogout={handleLogout}
+                        onNavigate={handleNavigate}
+                        onNotificationClick={handleNotificationClick}
+                        selectedDate={selectedDate}
+                        setSelectedDate={setSelectedDate}
+                        allUsers={combinedUsers}
+                        allPosts={memoizedPosts}
+                        allKnownPosts={memoizedAllPosts}
+                        newPostsCount={pendingPosts.length}
+                        onShowNewPosts={handleShowNewPosts}
+                        onNewPost={handleNewPost}
+                        onUpdateReaction={handleUpdateReaction}
+                        onReply={handleReply}
+                        onEcho={handleEcho}
+                        onDeletePost={handleDeletePost}
+                        onEditPost={handleEditPost}
+                        onPollVote={handlePollVote}
+                        isGenerating={isGenerating}
+                        typingParentIds={typingParentIds}
+                        conversations={conversations}
+                        usersWithStories={usersWithStories}
+                        onViewStory={setViewingStoryUser}
+                        onCreateStory={() => setIsCreatingStory(true)}
+                        onUpdateUser={handleUpdateUser}
+                        onOpenMarketplace={() => setIsMarketplaceOpen(true)}
+                    />
+                ) : (
+                    <LoginScreen onLogin={handleLogin} users={users} onNavigate={handleNavigate} />
+                );
+            case Page.Profile:
+                // Fallback to current user if profileUsername is missing but we are in Profile page
+                const targetProfile = profileUsername || currentUser?.username;
+                
+                return currentUser && targetProfile ? (
+                     <ProfilePage
+                        currentUser={currentUser}
+                        profileUsername={targetProfile}
+                        onLogout={handleLogout}
+                        onNavigate={handleNavigate}
+                        onNotificationClick={handleNotificationClick}
+                        users={memoizedUsers}
+                        onFollowToggle={handleFollowToggle}
+                        allUsers={combinedUsers}
+                        allPosts={memoizedPosts}
+                        onUpdateReaction={handleUpdateReaction}
+                        onReply={handleReply}
+                        onEcho={handleEcho}
+                        onDeletePost={handleDeletePost}
+                        onEditPost={handleEditPost}
+                        onPollVote={handlePollVote}
+                        selectedDate={selectedDate}
+                        setSelectedDate={setSelectedDate}
+                        typingParentIds={typingParentIds}
+                        conversations={conversations}
+                        onOpenMarketplace={() => setIsMarketplaceOpen(true)}
+                     />
+                ) : (
+                    <LoginScreen onLogin={handleLogin} users={users} onNavigate={handleNavigate} />
+                );
+             case Page.Settings:
+                return currentUser ? (
+                    <SettingsPage 
+                        user={currentUser}
+                        onLogout={handleLogout}
+                        onNavigate={handleNavigate}
+                        onNotificationClick={handleNotificationClick}
+                        onUpdateUser={handleUpdateUser}
+                        allUsers={combinedUsers}
+                        allPosts={memoizedPosts}
+                        conversations={conversations}
+                        onOpenMarketplace={() => setIsMarketplaceOpen(true)}
+                    />
+                ) : (
+                    <LoginScreen onLogin={handleLogin} users={users} onNavigate={handleNavigate} />
+                );
+            case Page.Messages:
+                return currentUser ? (
+                    <MessagesPage
+                        currentUser={currentUser}
+                        onLogout={handleLogout}
+                        onNavigate={handleNavigate}
+                        onNotificationClick={handleNotificationClick}
+                        allUsers={combinedUsers}
+                        allPosts={memoizedPosts}
+                        conversations={conversations}
+                        onSendMessage={handleSendMessage}
+                        onMarkConversationAsRead={handleMarkConversationAsRead}
+                        onCreateOrFindConversation={handleCreateOrFindConversation}
+                        onOpenMarketplace={() => setIsMarketplaceOpen(true)}
+                    />
+                ) : (
+                    <LoginScreen onLogin={handleLogin} users={users} onNavigate={handleNavigate} />
+                );
+             case Page.VideoAnalysis:
+                return currentUser ? (
+                    <DataSlicerPage
+                        user={currentUser}
+                        onLogout={handleLogout}
+                        onNavigate={handleNavigate}
+                        onNotificationClick={handleNotificationClick}
+                        allUsers={combinedUsers}
+                        allPosts={memoizedPosts}
+                        conversations={conversations}
+                        onOpenMarketplace={() => setIsMarketplaceOpen(true)}
+                    />
+                ) : (
+                    <LoginScreen onLogin={handleLogin} users={users} onNavigate={handleNavigate} />
+                );
+            default:
+                return <Welcome onNavigate={handleNavigate} />;
+        }
+    };
+
+    const [systemTheme, setSystemTheme] = useState<'light' | 'dark'>('light');
+
+    useEffect(() => {
+        if (typeof window !== 'undefined' && window.matchMedia) {
+            const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+            setSystemTheme(mediaQuery.matches ? 'dark' : 'light');
+            
+            const handler = (e: MediaQueryListEvent) => setSystemTheme(e.matches ? 'dark' : 'light');
+            mediaQuery.addEventListener('change', handler);
+            return () => mediaQuery.removeEventListener('change', handler);
+        }
+    }, []);
+
+    const activeTheme = currentUser?.profileSettings?.theme || systemTheme;
+    const activeAccent = currentUser?.profileSettings?.accentColor || 'purple';
+    const activeEffect = currentUser?.profileSettings?.effect || 'none';
+    const animationsDisabled = !(currentUser?.profileSettings?.animationsEnabled ?? true);
+
+    useEffect(() => {
+        // Remove all theme and effect classes first
+        document.body.classList.remove('theme-dark', 'theme-light');
+        document.body.classList.remove('accent-purple', 'accent-green', 'accent-amber', 'accent-red', 'accent-blue');
+        document.body.classList.remove('effect-scanline', 'effect-glitch_overlay');
+        document.body.classList.remove('animations-disabled');
+        
+        // Apply current theme and accent
+        document.body.classList.add(`theme-${activeTheme}`);
+        document.body.classList.add(`accent-${activeAccent}`);
+        
+        // Apply effect if not none (keep underscore as CSS uses it)
+        if (activeEffect !== 'none') {
+            document.body.classList.add(`effect-${activeEffect}`);
+        }
+        
+        // Apply animations disabled if needed
+        if (animationsDisabled) {
+            document.body.classList.add('animations-disabled');
+        }
+    }, [activeTheme, activeAccent, activeEffect, animationsDisabled]);
+
+    console.log('App Render: currentPage:', currentPage, 'currentUser:', currentUser ? currentUser.username : 'null');
+
+    return (
+        <LanguageProvider>
+            <div key={animationKey} className="page-transition">
+                <Suspense fallback={<LoadingSpinner />}>
+                    {renderPage()}
+                    {viewingStoryUser && viewingStoryUser.stories && (
+                        <StoryViewer
+                            user={viewingStoryUser}
+                            stories={viewingStoryUser.stories}
+                            onClose={() => setViewingStoryUser(null)}
+                            onViewStory={handleViewStory}
+                            onNextUser={() => {
+                                const currentIndex = usersWithStories.findIndex(u => u.username === viewingStoryUser.username);
+                                if (currentIndex < usersWithStories.length - 1) {
+                                    setViewingStoryUser(usersWithStories[currentIndex + 1]);
+                                } else {
+                                    setViewingStoryUser(null);
+                                }
+                            }}
+                            onPrevUser={() => {
+                                const currentIndex = usersWithStories.findIndex(u => u.username === viewingStoryUser.username);
+                                if (currentIndex > 0) {
+                                    setViewingStoryUser(usersWithStories[currentIndex - 1]);
+                                } else {
+                                    setViewingStoryUser(null);
+                                }
+                            }}
+                        />
+                    )}
+
+                    {isCreatingStory && currentUser && (
+                        <StoryCreator
+                            currentUser={currentUser}
+                            onClose={() => setIsCreatingStory(false)}
+                            onSave={handleCreateStory}
+                        />
+                    )}
+                    {isMarketplaceOpen && currentUser && (
+                        <Marketplace
+                            currentUser={currentUser}
+                            onClose={() => setIsMarketplaceOpen(false)}
+                            onUserUpdate={handleUpdateUser}
+                        />
+                    )}
+                </Suspense>
+                 {isDevil666Mode && currentUser && <NyxAI isDevil666Mode={true} onClose={() => setIsDevil666Mode(false)} currentUser={currentUser} />}
+            </div>
+        </LanguageProvider>
+    );
+};
+
+export default App;
