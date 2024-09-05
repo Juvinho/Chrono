@@ -1,207 +1,144 @@
-# Chrono - Rede Social Temporal
+# ⏳ CHRONO
 
-Uma rede social moderna com interface cyberpunk, construída com React, TypeScript, Node.js e PostgreSQL.
+<div align="center">
 
-## 🚀 Funcionalidades
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
 
-- **Autenticação completa**: Registro, login, verificação de email, recuperação de senha
-- **Timeline temporal**: Navegação por posts organizados por data
-- **Posts interativos**: Texto, imagens, vídeos, threads, enquetes
-- **Sistema de reações**: Reações cyberpunk (Glitch, Upload, Corrupt, Rewind, Static)
-- **Sistema de seguidores**: Seguir/deixar de seguir usuários
-- **Mensagens diretas**: Conversas privadas entre usuários
-- **Notificações**: Sistema completo de notificações em tempo real
-- **Perfis personalizáveis**: Temas, cores, efeitos visuais
-- **Echo (Repost)**: Compartilhar posts de outros usuários
+<br />
 
-## 📁 Estrutura do Projeto
+<img src="https://media.giphy.com/media/26tn33aiTi1jkl6H6/giphy.gif" width="100%" style="border-radius: 10px" />
 
-```
-Chrono/
-├── server/              # Backend API (Node.js + Express + PostgreSQL)
-│   ├── src/
-│   │   ├── db/         # Schema e migrations do banco de dados
-│   │   ├── routes/     # Rotas da API
-│   │   ├── services/   # Lógica de negócio
-│   │   └── middleware/ # Middlewares (autenticação, etc)
-│   └── package.json
-├── components/          # Componentes React do frontend
-├── services/           # Serviços do frontend (incluindo api.ts)
-├── types.ts            # Tipos TypeScript compartilhados
-└── package.json        # Dependências do frontend
-```
+<br />
 
-## 🛠️ Instalação e Configuração
+**Onde o tempo não é linear, e as conexões são eternas.**
 
-### Pré-requisitos
+[Funcionalidades](#-funcionalidades) • [Instalação](#-instalação) • [API](#-uso-da-api) • [Contribuição](#-contribuindo)
 
-- Node.js 18+
-- PostgreSQL 15+ (ou Docker)
-- npm ou yarn
+</div>
 
-### 1. Configurar o Backend
+---
+
+### 🚀 Sobre o Projeto
+
+**Chrono** não é apenas mais uma rede social. É uma experiência **Cyberpunk** imersiva que reimagina como interagimos com o tempo e com os outros. 
+
+Com uma interface futurista e recursos que brincam com a temporalidade, o Chrono permite que você compartilhe momentos, reaja com falhas na matrix e navegue por uma timeline que flui como um rio digital.
+
+> "O futuro já chegou, só não está uniformemente distribuído." - William Gibson
+
+---
+
+### ✨ Funcionalidades
+
+| Recurso | Descrição |
+| :--- | :--- |
+| 🔐 **Autenticação Segura** | Registro, login e recuperação de conta com criptografia de ponta a ponta (JWT + Bcrypt). |
+| 🕰️ **Timeline Temporal** | Navegue por posts organizados cronologicamente ou viaje para momentos específicos. |
+| 💬 **Interação em Tempo Real** | Mensagens diretas instantâneas e notificações push que te mantêm conectado. |
+| ⚡ **Reações Cyberpunk** | Esqueça o "Like". Aqui usamos **Glitch**, **Upload**, **Corrupt**, **Rewind** e **Static**. |
+| 🎨 **Personalização Total** | Temas visuais, avatares e banners para expressar sua identidade digital. |
+| 🔁 **Echo System** | Reposte conteúdos (Echos) e espalhe a informação pela rede. |
+
+---
+
+### 🛠️ Tech Stack
+
+O Chrono foi construído com as tecnologias mais modernas do mercado para garantir performance, escalabilidade e uma experiência de usuário fluida.
+
+*   **Frontend:** React, TypeScript, Tailwind CSS, Vite.
+*   **Backend:** Node.js, Express, Prisma (ORM).
+*   **Banco de Dados:** PostgreSQL.
+*   **DevOps:** Docker (opcional para setup rápido).
+
+---
+
+### 📦 Instalação
+
+Siga os passos abaixo para rodar o Chrono na sua máquina local.
+
+#### Pré-requisitos
+
+*   Node.js 18+
+*   PostgreSQL 15+ (ou Docker)
+*   npm ou yarn
+
+#### 1. Backend (O Coração)
 
 ```bash
+# Entre na pasta do servidor
 cd server
+
+# Instale as dependências
 npm install
-```
 
-Crie um arquivo `.env` na pasta `server/`:
+# Configure as variáveis de ambiente (.env)
+cp .env.example .env
+# Edite o .env com suas credenciais do banco de dados
 
-```env
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/chrono_db
-JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-JWT_EXPIRES_IN=7d
-PORT=3001
-NODE_ENV=development
-CORS_ORIGIN=http://localhost:5173
-```
-
-### 2. Configurar o Banco de Dados
-
-#### Opção A: Usando Docker (Recomendado)
-
-```bash
-docker-compose up -d
-```
-
-#### Opção B: PostgreSQL Local
-
-Instale PostgreSQL e crie o banco:
-
-```sql
-CREATE DATABASE chrono_db;
-```
-
-### 3. Executar Migrations
-
-```bash
-cd server
+# Rode as migrations
 npm run db:migrate
-```
 
-### 4. Iniciar o Backend
-
-```bash
-cd server
+# Inicie o servidor
 npm run dev
+# 🚀 Backend rodando em http://localhost:3001
 ```
 
-O servidor estará rodando em `http://localhost:3001`
-
-### 5. Configurar o Frontend
-
-Na raiz do projeto:
+#### 2. Frontend (A Face)
 
 ```bash
+# Volte para a raiz e entre na pasta do projeto (se necessário)
+cd ..
+
+# Instale as dependências
 npm install
-```
 
-Crie um arquivo `.env` na raiz:
+# Configure as variáveis de ambiente
+echo "VITE_API_URL=http://localhost:3001/api" > .env
 
-```env
-VITE_API_URL=http://localhost:3001/api
-```
-
-### 6. Iniciar o Frontend
-
-```bash
+# Inicie o frontend
 npm run dev
+# 🎨 Frontend rodando em http://localhost:5173
 ```
 
-O frontend estará rodando em `http://localhost:5173` (ou a porta configurada no vite.config.ts)
+---
 
-## 📚 Uso da API
+### 📚 Uso da API
 
-### Autenticação
+A API do Chrono é RESTful e protegida por tokens JWT.
 
-Todas as requisições (exceto registro/login) precisam do token JWT no header:
+**Exemplo de Rota: Criar um Post**
 
-```
-Authorization: Bearer <token>
-```
-
-### Exemplos de Uso
-
-#### Registrar Usuário
-```bash
-POST /api/auth/register
-{
-  "username": "usuario",
-  "email": "usuario@example.com",
-  "password": "senha123",
-  "avatar": "https://example.com/avatar.jpg" (opcional)
-}
-```
-
-#### Login
-```bash
-POST /api/auth/login
-{
-  "username": "usuario",
-  "password": "senha123"
-}
-```
-
-#### Criar Post
-```bash
+```http
 POST /api/posts
-Authorization: Bearer <token>
+Authorization: Bearer <seu_token_aqui>
+Content-Type: application/json
+
 {
-  "content": "Meu primeiro post!",
-  "imageUrl": "https://example.com/image.jpg" (opcional),
+  "content": "Hackeando a timeline... #ChronoLaunch",
   "isPrivate": false
 }
 ```
 
-## 🔧 Scripts Disponíveis
+> **Dica:** Confira a documentação completa das rotas na pasta `/server/routes`.
 
-### Backend
-- `npm run dev` - Inicia servidor em modo desenvolvimento
-- `npm run build` - Compila TypeScript para JavaScript
-- `npm start` - Inicia servidor em produção
-- `npm run db:migrate` - Executa migrations do banco
+---
 
-### Frontend
-- `npm run dev` - Inicia servidor de desenvolvimento
-- `npm run build` - Gera build de produção
-- `npm run preview` - Preview do build de produção
+### 🤝 Contribuindo
 
-## 🗄️ Estrutura do Banco de Dados
+Quer ajudar a construir o futuro das redes sociais?
 
-O banco de dados inclui as seguintes tabelas principais:
+1.  Faça um **Fork** do projeto.
+2.  Crie uma Branch para sua feature (`git checkout -b feature/NovaFuncionalidade`).
+3.  Commit suas mudanças (`git commit -m 'Adiciona NovaFuncionalidade'`).
+4.  Push para a Branch (`git push origin feature/NovaFuncionalidade`).
+5.  Abra um **Pull Request**.
 
-- `users` - Usuários do sistema
-- `posts` - Posts/tweets
-- `reactions` - Reações aos posts
-- `follows` - Relacionamentos de seguimento
-- `conversations` - Conversas de mensagens diretas
-- `messages` - Mensagens individuais
-- `notifications` - Notificações do sistema
-- `poll_votes` - Votos em enquetes
+---
 
-## 🔐 Segurança
-
-- Senhas são hasheadas usando bcrypt
-- Autenticação via JWT
-- Validação de dados em todas as rotas
-- Proteção contra SQL injection usando queries parametrizadas
-- CORS configurado
-
-## 📝 Notas
-
-- O frontend atualmente usa localStorage para dados locais. Para usar completamente o backend, você precisará atualizar os componentes para usar o `apiClient` do `services/api.ts` ao invés do localStorage.
-- As senhas são armazenadas como hash no banco de dados
-- O sistema de verificação de email está implementado mas não envia emails reais (para produção, adicione um serviço de email)
-
-## 🤝 Contribuindo
-
-1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
-
-## 📄 Licença
-
-Este projeto está sob licença MIT.
+<div align="center">
+  <sub>Desenvolvido com 💜 e muita cafeína por <a href="https://github.com/Juvinho">Juvinho</a>.</sub>
+</div>
