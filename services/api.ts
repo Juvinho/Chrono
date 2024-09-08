@@ -178,6 +178,7 @@ class ApiClient {
     repostOfId?: string;
     pollOptions?: { option: string; votes: number }[];
     pollEndsAt?: Date;
+    unlockAt?: Date;
     timestamp?: Date;
   }) {
     return this.request<any>('/posts', {
@@ -226,7 +227,13 @@ class ApiClient {
     return this.request<any[]>('/conversations');
   }
 
-  async getOrCreateConversation(username: string) {
+  async getOrCreateConversation(username: string, options?: { isEncrypted?: boolean, selfDestructTimer?: number }) {
+    if (options) {
+        return this.request<{ conversationId: string }>('/conversations', {
+            method: 'POST',
+            body: JSON.stringify({ username, ...options })
+        });
+    }
     return this.request<{ conversationId: string }>(`/conversations/with/${username}`);
   }
 
@@ -331,6 +338,25 @@ class ApiClient {
     return this.request<any>('/marketplace/subscription', {
       method: 'POST',
       body: JSON.stringify({ tier }),
+    });
+  }
+
+  // Companion endpoints
+  async getCompanion() {
+    return this.request<any>('/companions');
+  }
+
+  async createCompanion(name: string, type: string) {
+    return this.request<any>('/companions', {
+      method: 'POST',
+      body: JSON.stringify({ name, type }),
+    });
+  }
+
+  async interactWithCompanion(action: 'feed' | 'play' | 'pet') {
+    return this.request<any>('/companions/interact', {
+      method: 'POST',
+      body: JSON.stringify({ action }),
     });
   }
 }

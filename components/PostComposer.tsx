@@ -37,6 +37,7 @@ export const PostComposer: React.FC<PostComposerProps> = memo(({ currentUser, on
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [unlockAt, setUnlockAt] = useState<string>(''); // For Time Capsules
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -58,6 +59,9 @@ export const PostComposer: React.FC<PostComposerProps> = memo(({ currentUser, on
       if (postToEdit.pollOptions && postToEdit.pollOptions.length > 0) {
         setShowPoll(true);
         setPollOptions(postToEdit.pollOptions.map(opt => opt.option));
+      }
+      if (postToEdit.unlockAt) {
+          setUnlockAt(new Date(postToEdit.unlockAt).toISOString().slice(0, 16));
       }
     }
   }, [postToEdit]);
@@ -180,6 +184,7 @@ export const PostComposer: React.FC<PostComposerProps> = memo(({ currentUser, on
       imageUrl: generatedImageUrl || undefined,
       videoUrl: videoUrl || undefined,
       timestamp: postDate,
+      unlockAt: unlockAt ? new Date(unlockAt) : undefined,
     };
 
     if (showPoll) {
@@ -350,6 +355,23 @@ export const PostComposer: React.FC<PostComposerProps> = memo(({ currentUser, on
                     )}
                 </div>
             )}
+
+            {/* Time Capsule UI */}
+            {unlockAt !== '' && (
+                 <div className="mt-4 pl-14 animate-[fadeIn_0.3s_ease]">
+                    <div className="flex items-center space-x-2 text-[var(--theme-primary)] bg-[var(--theme-bg-tertiary)] p-2 rounded-sm border border-[var(--theme-border-primary)]">
+                        <LockClosedIcon className="w-5 h-5" />
+                        <span className="text-sm font-bold">Time Capsule:</span>
+                        <input 
+                            type="datetime-local" 
+                            value={unlockAt} 
+                            onChange={(e) => setUnlockAt(e.target.value)}
+                            className="bg-transparent border-none focus:outline-none text-[var(--theme-text-primary)] text-sm"
+                        />
+                        <button onClick={() => setUnlockAt('')} className="ml-auto text-red-500">&times;</button>
+                    </div>
+                 </div>
+            )}
         </div>
         
         <div className="flex justify-between items-center pt-2 border-t border-[var(--theme-border-primary)]">
@@ -379,7 +401,17 @@ export const PostComposer: React.FC<PostComposerProps> = memo(({ currentUser, on
                         <CalendarIcon className="w-6 h-6" />
                     </button>
                 </div>
-                <button title={t('encryptedPost')} className="p-2 hover:text-[var(--theme-primary)] transition-colors opacity-50 cursor-not-allowed"><LockClosedIcon className="w-6 h-6"/></button>
+                <div className="relative group">
+                    <input 
+                        type="datetime-local" 
+                        value={unlockAt} 
+                        onChange={(e) => setUnlockAt(e.target.value)}
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                    />
+                    <button title="Time Capsule (Unlock Date)" className={`p-2 transition-colors ${unlockAt ? 'text-[var(--theme-primary)]' : 'hover:text-[var(--theme-primary)]'}`}>
+                        <LockClosedIcon className="w-6 h-6"/>
+                    </button>
+                </div>
             </div>
             <div className="flex items-center space-x-4">
                  {isListening && <span className="text-sm text-red-500 animate-pulse">{t('listening')}</span>}

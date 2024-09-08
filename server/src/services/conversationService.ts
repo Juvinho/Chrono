@@ -3,33 +3,60 @@ import { Message, Conversation } from '../types/index.js';
 import { getIo } from '../socket.js';
 
 export class ConversationService {
-  async getOrCreateConversation(userId1: string, userId2: string): Promise<string> {
+  async getOrCreateConversation(userId1: string, userId2: string, options?: { isEncrypted?: boolean, selfDestructTimer?: number }): Promise<string> {
+    const isEncrypted = options?.isEncrypted || false;
+
     // Check if conversation exists
-    const existing = await pool.query(
-      `SELECT c.id FROM conversations c
+    let query = `
+       SELECT c.id FROM conversations c
        JOIN conversation_participants cp1 ON c.id = cp1.conversation_id
        JOIN conversation_participants cp2 ON c.id = cp2.conversation_id
-       WHERE cp1.user_id = $1 AND cp2.user_id = $2`,
-      [userId1, userId2]
-    );
+       LEFT JOIN encrypted_cords ec ON c.id = ec.conversation_id
+       WHERE cp1.user_id = $1 AND cp2.user_id = $2
+    `;
+
+    if (isEncrypted) {
+        query += ` AND ec.id IS NOT NULL`;
+    } else {
+        query += ` AND ec.id IS NULL`;
+    }
+
+    const existing = await pool.query(query, [userId1, userId2]);
 
     if (existing.rows.length > 0) {
       return existing.rows[0].id;
     }
 
     // Create new conversation
-    const convResult = await pool.query(
-      'INSERT INTO conversations DEFAULT VALUES RETURNING id'
-    );
-    const conversationId = convResult.rows[0].id;
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        const convResult = await client.query(
+            'INSERT INTO conversations DEFAULT VALUES RETURNING id'
+        );
+        const conversationId = convResult.rows[0].id;
 
-    await pool.query(
-      `INSERT INTO conversation_participants (conversation_id, user_id, unread_count)
-       VALUES ($1, $2, 0), ($1, $3, 0)`,
-      [conversationId, userId1, userId2]
-    );
+        await client.query(
+            `INSERT INTO conversation_participants (conversation_id, user_id, unread_count)
+             VALUES ($1, $2, 0), ($1, $3, 0)`,
+            [conversationId, userId1, userId2]
+        );
 
-    return conversationId;
+        if (isEncrypted) {
+            await client.query(
+                `INSERT INTO encrypted_cords (conversation_id, self_destruct_timer) VALUES ($1, $2)`,
+                [conversationId, options?.selfDestructTimer || 3600]
+            );
+        }
+
+        await client.query('COMMIT');
+        return conversationId;
+    } catch (e) {
+        await client.query('ROLLBACK');
+        throw e;
+    } finally {
+        client.release();
+    }
   }
 
   async sendMessage(
@@ -37,11 +64,18 @@ export class ConversationService {
     senderId: string,
     text: string
   ): Promise<Message> {
+    // Check if conversation is encrypted
+    const cordResult = await pool.query(
+      'SELECT is_active FROM encrypted_cords WHERE conversation_id = $1',
+      [conversationId]
+    );
+    const isEncrypted = cordResult.rows.length > 0;
+
     const result = await pool.query(
-      `INSERT INTO messages (conversation_id, sender_id, text)
-       VALUES ($1, $2, $3)
+      `INSERT INTO messages (conversation_id, sender_id, text, is_encrypted)
+       VALUES ($1, $2, $3, $4)
        RETURNING *`,
-      [conversationId, senderId, text]
+      [conversationId, senderId, text, isEncrypted]
     );
 
     // Update conversation timestamp
@@ -98,10 +132,13 @@ export class ConversationService {
                 (SELECT json_agg(m.* ORDER BY m.created_at DESC)
                  FROM messages m
                  WHERE m.conversation_id = c.id
+                 AND (m.delete_at IS NULL OR m.delete_at > CURRENT_TIMESTAMP)
                  LIMIT 50),
                 '[]'::json
               ) as messages,
-              (SELECT unread_count FROM conversation_participants WHERE conversation_id = c.id AND user_id = $1) as unread_count
+              (SELECT unread_count FROM conversation_participants WHERE conversation_id = c.id AND user_id = $1) as unread_count,
+              (SELECT CASE WHEN COUNT(*) > 0 THEN true ELSE false END FROM encrypted_cords ec WHERE ec.conversation_id = c.id) as is_encrypted,
+              (SELECT self_destruct_timer FROM encrypted_cords ec WHERE ec.conversation_id = c.id) as self_destruct_timer
        FROM conversations c
        JOIN conversation_participants cp ON c.id = cp.conversation_id
        JOIN users u ON cp.user_id = u.id
@@ -128,11 +165,29 @@ export class ConversationService {
         messages: messages.map((m: any) => this.mapMessageFromDb(m)),
         lastMessageTimestamp: row.updated_at,
         unreadCount: { [userId]: row.unread_count || 0 },
+        isEncrypted: row.is_encrypted,
+        selfDestructTimer: row.self_destruct_timer
       };
     });
   }
 
   async markAsRead(conversationId: string, userId: string): Promise<void> {
+    // Trigger self-destruct for encrypted messages
+    const cordResult = await pool.query(
+        'SELECT self_destruct_timer FROM encrypted_cords WHERE conversation_id = $1',
+        [conversationId]
+    );
+    
+    if (cordResult.rows.length > 0) {
+        const timer = cordResult.rows[0].self_destruct_timer || 60;
+        await pool.query(
+            `UPDATE messages 
+             SET delete_at = CURRENT_TIMESTAMP + ($2 || ' seconds')::interval
+             WHERE conversation_id = $1 AND delete_at IS NULL AND is_encrypted = TRUE`,
+            [conversationId, timer]
+        );
+    }
+
     await pool.query(
       `UPDATE conversation_participants
        SET unread_count = 0, last_read_at = CURRENT_TIMESTAMP

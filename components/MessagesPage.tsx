@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { User, Page, Post, Conversation, Message, Notification } from '../types';
 import Header from './Header';
 import { useTranslation } from '../hooks/useTranslation';
-import { MessageIcon, EditIcon } from './icons';
+import { MessageIcon, EditIcon, LockClosedIcon } from './icons';
 import NewMessageModal from './modals/NewMessageModal';
 import FramePreview, { getFrameShape } from './FramePreview';
 
@@ -16,7 +16,7 @@ interface MessagesPageProps {
   conversations: Conversation[];
   onSendMessage: (recipientUsername: string, text: string) => void;
   onMarkConversationAsRead: (conversationId: string) => void;
-  onCreateOrFindConversation: (recipientUsername: string) => string;
+  onCreateOrFindConversation: (recipientUsername: string, options?: { isEncrypted?: boolean, selfDestructTimer?: number }) => Promise<string>;
   onOpenMarketplace?: () => void;
 }
 
@@ -28,6 +28,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
   const [isNewMessageModalOpen, setIsNewMessageModalOpen] = useState(false);
+  const [isEncryptedMode, setIsEncryptedMode] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const sortedConversations = useMemo(() => {
@@ -44,13 +45,14 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
     return allUsers.find(u => u.username === otherUsername);
   }, [activeConversation, currentUser, allUsers]);
 
-  // Handle focusing on a conversation from a notification or direct link
+    // Handle focusing on a conversation from a notification or direct link
   useEffect(() => {
     const focusUser = sessionStorage.getItem('chrono_focus_conversation_user');
     if (focusUser) {
       sessionStorage.removeItem('chrono_focus_conversation_user');
-      const newConversationId = onCreateOrFindConversation(focusUser);
-      setSelectedConversationId(newConversationId);
+      onCreateOrFindConversation(focusUser).then(newConversationId => {
+          setSelectedConversationId(newConversationId);
+      });
     }
   }, [currentUser.username, onCreateOrFindConversation]);
 
@@ -145,9 +147,14 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
         <aside className="w-1/3 border-r-2 border-[var(--theme-border-primary)] flex flex-col">
           <div className="p-4 border-b-2 border-[var(--theme-border-primary)] flex justify-between items-center">
             <h1 className="text-xl font-bold text-[var(--theme-text-light)] glitch-effect" data-text={t('directMessagesTitle')}>{t('directMessagesTitle')}</h1>
-             <button onClick={() => setIsNewMessageModalOpen(true)} className="p-1 text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)]" title={t('newMessageTitle')}>
-                <EditIcon className="w-6 h-6" />
-            </button>
+             <div className="flex space-x-2">
+                <button onClick={() => { setIsEncryptedMode(true); setIsNewMessageModalOpen(true); }} className="p-1 text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)]" title={t('newEncryptedCord') || 'New Secure Cord'}>
+                    <LockClosedIcon className="w-6 h-6" />
+                </button>
+                <button onClick={() => { setIsEncryptedMode(false); setIsNewMessageModalOpen(true); }} className="p-1 text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)]" title={t('newMessageTitle')}>
+                    <EditIcon className="w-6 h-6" />
+                </button>
+             </div>
           </div>
           <div className="flex-grow overflow-y-auto">
             {sortedConversations.map(convo => <ConversationListItem key={convo.id} conversation={convo} />)}
@@ -228,10 +235,12 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
           allUsers={allUsers}
           currentUser={currentUser}
           onClose={() => setIsNewMessageModalOpen(false)}
-          onSelectUser={(username) => {
-              const newId = onCreateOrFindConversation(username);
-              setSelectedConversationId(newId);
-              setIsNewMessageModalOpen(false);
+          onSelectUser={async (username) => {
+            setIsNewMessageModalOpen(false);
+            const options = isEncryptedMode ? { isEncrypted: true, selfDestructTimer: 60 } : undefined;
+            const conversationId = await onCreateOrFindConversation(username, options);
+            handleSelectConversation(conversationId);
+            setIsEncryptedMode(false);
           }}
         />
       )}

@@ -13,6 +13,8 @@ export interface Conversation {
   messages: Message[];
   lastMessageTimestamp: Date;
   unreadCount: { [username: string]: number };
+  isEncrypted?: boolean;
+  selfDestructTimer?: number; // in seconds, 0 or undefined means no self-destruct
 }
 
 export type CyberpunkReaction = 'Glitch' | 'Upload' | 'Corrupt' | 'Rewind' | 'Static';
@@ -21,6 +23,7 @@ export interface ProfileSettings {
   theme: 'dark' | 'light';
   accentColor: 'purple' | 'green' | 'amber' | 'red' | 'blue';
   effect: 'none' | 'scanline' | 'glitch_overlay';
+  themeSkin?: string;
   coverImage: string;
   animationsEnabled?: boolean;
   borderRadius?: 'none' | 'sm' | 'md' | 'full';
@@ -107,17 +110,24 @@ export interface Post {
   content: string;
   imageUrl?: string;
   videoUrl?: string;
-  timestamp: Date;
-  reactions?: { [key in CyberpunkReaction]?: number };
-  isThread?: boolean;
-  isPrivate?: boolean;
-  inReplyTo?: { postId: string, author: User, content: string };
+  timestamp: string | Date; // Allow Date for internal usage before sending to API
+  likes: number;
   replies?: Post[];
+  reposts?: number;
+  likedBy: string[]; // usernames
+  isThread?: boolean;
   repostOf?: Post;
-  // New properties for polls
-  pollOptions?: { option: string, votes: number }[];
-  pollEndsAt?: Date;
-  voters?: { [username: string]: number };
+  reactions?: { [key in CyberpunkReaction]?: number }; // Count of each reaction type
+  userReaction?: CyberpunkReaction; // The current user's reaction
+  poll?: {
+    options: { option: string; votes: number }[];
+    totalVotes: number;
+    userVotedOption?: number | null; // Index of option voted by current user
+    endsAt?: Date;
+  };
+  isPrivate?: boolean;
+  viewCount?: number;
+  unlockAt?: string | Date; // Time Capsule
 }
 
 export enum Page {

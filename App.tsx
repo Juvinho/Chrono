@@ -25,6 +25,7 @@ const DataSlicerPage = React.lazy(() => import('./components/DataSlicerPage'));
 const StoryViewer = React.lazy(() => import('./components/StoryViewer'));
 const StoryCreator = React.lazy(() => import('./components/StoryCreator'));
 const Marketplace = React.lazy(() => import('./components/Marketplace'));
+const CyberCompanion = React.lazy(() => import('./components/CyberCompanion'));
 
 const placeholderVideos = [
     'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
@@ -855,32 +856,38 @@ const App: React.FC = () => {
         }
     };
 
-    const handleCreateOrFindConversation = (recipientUsername: string): string => {
+    const handleCreateOrFindConversation = async (recipientUsername: string, options?: { isEncrypted?: boolean, selfDestructTimer?: number }): Promise<string> => {
         if (!currentUser) return '';
         
         // Try to find existing conversation first
-        const conversationId = [currentUser.username, recipientUsername].sort().join('--');
-        const existingConvo = conversationsRef.current.find(c => c.id === conversationId);
+        // If encrypted, we rely on the backend to give us the right ID or create a new one.
+        // We can check local cache if we have encryption info.
+        const isEncrypted = options?.isEncrypted || false;
+
+        const existingConvo = conversationsRef.current.find(c => {
+             const hasParticipant = c.participants.includes(recipientUsername);
+             // Assume undefined isEncrypted means false
+             const convoIsEncrypted = c.isEncrypted || false;
+             return hasParticipant && convoIsEncrypted === isEncrypted;
+        });
         
         if (existingConvo) {
             return existingConvo.id;
         }
         
-        // If not found, create it via API (async, but return ID immediately for compatibility)
-        (async () => {
-            try {
-                const result = await apiClient.getOrCreateConversation(recipientUsername);
-                if (result.data) {
-                    // Reload conversations to get the latest state
-                    await reloadBackendData();
-                }
-            } catch (error) {
-                console.error("Failed to get or create conversation:", error);
+        // If not found, create it via API
+        try {
+            const result = await apiClient.getOrCreateConversation(recipientUsername, options);
+            if (result.data) {
+                // Reload conversations to get the latest state
+                await reloadBackendData();
+                return result.data.conversationId || '';
             }
-        })();
+        } catch (error) {
+            console.error("Failed to get or create conversation:", error);
+        }
         
-        // Return local ID format for immediate use
-        return conversationId;
+        return '';
     };
 
     const handleMarkConversationAsRead = async (conversationId: string) => {
@@ -1567,6 +1574,7 @@ const App: React.FC = () => {
     const activeTheme = currentUser?.profileSettings?.theme || systemTheme;
     const activeAccent = currentUser?.profileSettings?.accentColor || 'purple';
     const activeEffect = currentUser?.profileSettings?.effect || 'none';
+    const activeSkin = currentUser?.profileSettings?.themeSkin || 'default';
     const animationsDisabled = !(currentUser?.profileSettings?.animationsEnabled ?? true);
 
     useEffect(() => {
@@ -1575,6 +1583,7 @@ const App: React.FC = () => {
         document.body.classList.remove('accent-purple', 'accent-green', 'accent-amber', 'accent-red', 'accent-blue');
         document.body.classList.remove('effect-scanline', 'effect-glitch_overlay');
         document.body.classList.remove('animations-disabled');
+        document.body.classList.remove('skin-retro-terminal', 'skin-midnight-city', 'skin-solar-punk');
         
         // Apply current theme and accent
         document.body.classList.add(`theme-${activeTheme}`);
@@ -1584,12 +1593,17 @@ const App: React.FC = () => {
         if (activeEffect !== 'none') {
             document.body.classList.add(`effect-${activeEffect}`);
         }
+
+        // Apply skin
+        if (activeSkin !== 'default' && activeSkin) {
+             document.body.classList.add(`skin-${activeSkin.toLowerCase().replace(/ /g, '-')}`);
+        }
         
         // Apply animations disabled if needed
         if (animationsDisabled) {
             document.body.classList.add('animations-disabled');
         }
-    }, [activeTheme, activeAccent, activeEffect, animationsDisabled]);
+    }, [activeTheme, activeAccent, activeEffect, activeSkin, animationsDisabled]);
 
     console.log('App Render: currentPage:', currentPage, 'currentUser:', currentUser ? currentUser.username : 'null');
 
@@ -1636,6 +1650,12 @@ const App: React.FC = () => {
                             onClose={() => setIsMarketplaceOpen(false)}
                             onUserUpdate={handleUpdateUser}
                         />
+                    )}
+                    
+                    {currentUser && (
+                        <Suspense fallback={null}>
+                             <CyberCompanion notificationsCount={notifications.filter(n => !n.read).length} />
+                        </Suspense>
                     )}
                 </Suspense>
                  {isDevil666Mode && currentUser && <NyxAI isDevil666Mode={true} onClose={() => setIsDevil666Mode(false)} currentUser={currentUser} />}

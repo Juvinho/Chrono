@@ -17,12 +17,13 @@ export class PostService {
       repostOfId?: string;
       pollOptions?: { option: string; votes: number }[];
       pollEndsAt?: Date;
+      unlockAt?: Date;
     }
   ): Promise<Post> {
     const result = await pool.query(
       `INSERT INTO posts (author_id, content, image_url, video_url, is_thread, is_private, 
-                         in_reply_to_id, repost_of_id, poll_options, poll_ends_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10)
+                         in_reply_to_id, repost_of_id, poll_options, poll_ends_at, unlock_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11)
        RETURNING *`,
       [
         authorId,
@@ -35,6 +36,7 @@ export class PostService {
         options?.repostOfId || null,
         options?.pollOptions ? JSON.stringify(options.pollOptions) : null,
         options?.pollEndsAt || null,
+        options?.unlockAt || null,
       ]
     );
 
@@ -97,7 +99,27 @@ export class PostService {
     }
 
     const result = await pool.query(query, params);
-    return result.rows.map((row) => this.mapPostFromDb(row));
+    return result.rows.map((row) => {
+      const post = this.mapPostFromDb(row);
+      
+      // Scrub locked content for Time Capsules
+      if (post.unlockAt && new Date(post.unlockAt) > new Date()) {
+        // If userId is provided and matches author, allow viewing
+        if (userId && post.authorId === userId) {
+          return post;
+        }
+        // Otherwise hide content
+        return {
+          ...post,
+          content: '',
+          imageUrl: undefined,
+          videoUrl: undefined,
+          pollOptions: undefined
+        };
+      }
+      
+      return post;
+    });
   }
 
   async updatePost(
@@ -175,6 +197,7 @@ export class PostService {
       repostOfId: row.repost_of_id,
       pollOptions: row.poll_options,
       pollEndsAt: row.poll_ends_at,
+      unlockAt: row.unlock_at,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };

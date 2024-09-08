@@ -342,6 +342,7 @@ export class UserService {
         theme: row.theme || 'light',
         accentColor: row.accent_color || 'purple',
         effect: row.effect || 'none',
+        themeSkin: row.theme_skin || 'default',
         animationsEnabled: row.animations_enabled !== undefined ? row.animations_enabled : true,
       },
       equippedFrame: mapItem(row.equipped_frame),
