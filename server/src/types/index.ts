@@ -72,6 +72,8 @@ export interface Post {
   repostOfId: string | null;
   pollOptions?: { option: string; votes: number }[];
   pollEndsAt: Date | null;
+  unlockAt?: Date | null;
+  mood?: 'neon-joy' | 'void-despair' | 'rage-glitch' | 'zen-stream' | 'neutral';
   createdAt: Date;
   updatedAt: Date;
 }

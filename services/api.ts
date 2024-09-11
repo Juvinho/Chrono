@@ -3,7 +3,12 @@
 const getBaseUrl = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
   if (typeof window !== 'undefined') {
-    return `http://${window.location.hostname}:3001/api`;
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (isLocal) {
+      return `http://${window.location.hostname}:3001/api`;
+    }
+    // In production, use relative path since backend serves frontend
+    return '/api';
   }
   return 'http://localhost:3001/api';
 };

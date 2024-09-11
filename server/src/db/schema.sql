@@ -264,4 +264,9 @@ BEGIN
         is_private
     FROM users
     WHERE id NOT IN (SELECT user_id FROM user_settings);
+
+    -- Add mood column to posts if not exists
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='posts' AND column_name='mood') THEN
+        ALTER TABLE posts ADD COLUMN mood VARCHAR(20) DEFAULT 'neutral';
+    END IF;
 END $$;

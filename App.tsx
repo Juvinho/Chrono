@@ -7,7 +7,6 @@ import { generatePostContent, generateReplyContent, generatePollVote, generateDi
 import { apiClient, mapApiUserToUser, mapApiPostToPost } from './services/api';
 import { NotificationManager } from './services/notificationManager';
 import { socketService } from './services/socketService';
-import NyxAI from './components/NyxAI';
 import LoadingSpinner from './components/LoadingSpinner';
 
 // Lazy load components for performance
@@ -25,7 +24,7 @@ const DataSlicerPage = React.lazy(() => import('./components/DataSlicerPage'));
 const StoryViewer = React.lazy(() => import('./components/StoryViewer'));
 const StoryCreator = React.lazy(() => import('./components/StoryCreator'));
 const Marketplace = React.lazy(() => import('./components/Marketplace'));
-const CyberCompanion = React.lazy(() => import('./components/CyberCompanion'));
+
 
 const placeholderVideos = [
     'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
@@ -310,7 +309,6 @@ const App: React.FC = () => {
     const [emailToReset, setEmailToReset] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [typingParentIds, setTypingParentIds] = useState(new Set<string>());
-    const [isDevil666Mode, setIsDevil666Mode] = useState(false);
 
     const audioContextRef = useRef<AudioContext | null>(null);
 
@@ -618,6 +616,67 @@ const App: React.FC = () => {
     // Restore page on mount if user is logged in but page is Welcome
     useEffect(() => {
         if (currentUser && currentPage === Page.Welcome) {
+            if (typeof window !== 'undefined') {
+                const path = window.location.pathname || '/';
+                const segments = path.split('/').filter(Boolean);
+
+                if (segments.length > 0) {
+                    const first = segments[0];
+
+                    if (first.startsWith('@')) {
+                        const usernameFromPath = decodeURIComponent(first.substring(1));
+                        if (usernameFromPath) {
+                            setProfileUsername(usernameFromPath);
+                        }
+                        setCurrentPage(Page.Profile);
+                        sessionStorage.setItem('chrono_currentPage', Page.Profile.toString());
+                        return;
+                    }
+
+                    if (first === 'echo') {
+                        if (segments.length >= 2) {
+                            const dateSegment = segments[1];
+                            const parsed = parseDateSegment(dateSegment);
+                            if (parsed) {
+                                setSelectedDate(parsed);
+                            }
+                        }
+                        setCurrentPage(Page.Dashboard);
+                        sessionStorage.setItem('chrono_currentPage', Page.Dashboard.toString());
+                        return;
+                    }
+
+                    if (first === 'settings') {
+                        setCurrentPage(Page.Settings);
+                        sessionStorage.setItem('chrono_currentPage', Page.Settings.toString());
+                        return;
+                    }
+
+                    if (first === 'messages') {
+                        setCurrentPage(Page.Messages);
+                        sessionStorage.setItem('chrono_currentPage', Page.Messages.toString());
+                        return;
+                    }
+
+                    if (first.startsWith('$')) {
+                        const tag = `$${decodeURIComponent(first.substring(1))}`;
+                        sessionStorage.setItem('chrono_search_query', tag);
+
+                        if (segments.length >= 2) {
+                            const dateSegment = segments[1];
+                            const parsed = parseDateSegment(dateSegment);
+                            if (parsed) {
+                                setSelectedDate(parsed);
+                            }
+                        }
+
+                        setCurrentPage(Page.Dashboard);
+                        sessionStorage.setItem('chrono_currentPage', Page.Dashboard.toString());
+                        return;
+                    }
+                }
+            }
+
             const savedPage = sessionStorage.getItem('chrono_currentPage');
             if (savedPage) {
                 const pageNum = parseInt(savedPage, 10);
@@ -633,6 +692,24 @@ const App: React.FC = () => {
             }
         }
     }, [currentUser]); // Run when currentUser changes
+
+    useEffect(() => {
+        if (!currentUser) return;
+        if (currentPage !== Page.Dashboard) return;
+        if (typeof window === 'undefined' || !window.history || !window.location) return;
+
+        const today = new Date();
+        const isToday = today.toDateString() === selectedDate.toDateString();
+        const basePath = '/echo';
+        const path = isToday ? basePath : `${basePath}/${formatDateSegment(selectedDate)}`;
+
+        const currentFullPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        const nextFullPath = `${path}${window.location.search}${window.location.hash}`;
+
+        if (currentFullPath !== nextFullPath) {
+            window.history.pushState({ page: Page.Dashboard, date: selectedDate.toISOString() }, '', nextFullPath);
+        }
+    }, [selectedDate, currentPage, currentUser]);
 
     // MIGRATION: Fetch initial data from Backend
     useEffect(() => {
@@ -927,12 +1004,87 @@ const App: React.FC = () => {
     };
 
     const checkForTriggers = (post: Post) => {
-        if (!currentUser) return;
+        // Feature removed
+    };
 
-        const triggerPhrase = "Eu faria tudo para ser famoso";
-        if (post.author.username === currentUser.username && post.content.toLowerCase().includes(triggerPhrase.toLowerCase())) {
-            console.log("Devil666 trigger activated by user:", currentUser.username);
-            setIsDevil666Mode(true);
+    const monthSlugs = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
+    const formatDateSegment = (date: Date) => {
+        const month = monthSlugs[date.getMonth()];
+        const day = String(date.getDate()).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${month}-${day}-${year}`;
+    };
+
+    const parseDateSegment = (segment: string): Date | null => {
+        const parts = segment.split('-');
+        if (parts.length !== 3) return null;
+        const [mmm, dd, yyyy] = parts;
+        const monthIndex = monthSlugs.indexOf(mmm.toLowerCase());
+        if (monthIndex === -1) return null;
+        const day = parseInt(dd, 10);
+        const year = parseInt(yyyy, 10);
+        if (!day || !year) return null;
+        const d = new Date(year, monthIndex, day);
+        if (d.getFullYear() !== year || d.getMonth() !== monthIndex || d.getDate() !== day) return null;
+        return d;
+    };
+
+    const updateUrlForPage = (page: Page, data?: string) => {
+        if (typeof window === 'undefined' || !window.history || !window.location) return;
+
+        let path = '/';
+
+        switch (page) {
+            case Page.Dashboard:
+                if (selectedDate) {
+                    const today = new Date();
+                    const isToday = today.toDateString() === selectedDate.toDateString();
+                    path = isToday ? '/echo' : `/echo/${formatDateSegment(selectedDate)}`;
+                } else {
+                    path = '/echo';
+                }
+                break;
+            case Page.Profile: {
+                const username = data || profileUsername || currentUser?.username;
+                path = username ? `/@${encodeURIComponent(username)}` : '/profile';
+                break;
+            }
+            case Page.Settings:
+                path = '/settings';
+                break;
+            case Page.Messages:
+                path = '/messages';
+                break;
+            case Page.VideoAnalysis:
+                path = '/data-slicer';
+                break;
+            case Page.Login:
+                path = '/login';
+                break;
+            case Page.Register:
+                path = '/register';
+                break;
+            case Page.Verify:
+                path = '/verify';
+                break;
+            case Page.ForgotPassword:
+                path = '/forgot-password';
+                break;
+            case Page.ResetPassword:
+                path = '/reset-password';
+                break;
+            case Page.Welcome:
+            default:
+                path = '/welcome';
+                break;
+        }
+
+        const currentFullPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        const nextFullPath = `${path}${window.location.search}${window.location.hash}`;
+
+        if (currentFullPath !== nextFullPath) {
+            window.history.pushState({ page, data }, '', nextFullPath);
         }
     };
 
@@ -974,6 +1126,7 @@ const App: React.FC = () => {
             sessionStorage.setItem('chrono_currentPage', page.toString());
         }
         setAnimationKey(prev => prev + 1);
+        updateUrlForPage(page, data);
     }
     
     const handleLogin = (user: User) => { 
@@ -1652,13 +1805,8 @@ const App: React.FC = () => {
                         />
                     )}
                     
-                    {currentUser && (
-                        <Suspense fallback={null}>
-                             <CyberCompanion notificationsCount={notifications.filter(n => !n.read).length} />
-                        </Suspense>
-                    )}
+
                 </Suspense>
-                 {isDevil666Mode && currentUser && <NyxAI isDevil666Mode={true} onClose={() => setIsDevil666Mode(false)} currentUser={currentUser} />}
             </div>
         </LanguageProvider>
     );

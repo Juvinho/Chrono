@@ -198,6 +198,7 @@ export class PostService {
       pollOptions: row.poll_options,
       pollEndsAt: row.poll_ends_at,
       unlockAt: row.unlock_at,
+      mood: row.mood,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };

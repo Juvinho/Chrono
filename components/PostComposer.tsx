@@ -177,56 +177,85 @@ export const PostComposer: React.FC<PostComposerProps> = memo(({ currentUser, on
     setIsGeneratingImage(false);
   };
 
-  const handleSubmit = () => {
-    const postData: Omit<Post, 'id' | 'author' | 'timestamp' | 'replies' | 'repostOf'> & { timestamp?: Date } = {
-      content: content.trim(),
-      isPrivate: isPrivate,
-      imageUrl: generatedImageUrl || undefined,
-      videoUrl: videoUrl || undefined,
-      timestamp: postDate,
-      unlockAt: unlockAt ? new Date(unlockAt) : undefined,
-    };
+  const handleSubmit = async () => {
+    // Basic validation
+    if (!content.trim() && !generatedImageUrl && !videoUrl && !postToEdit) return;
 
-    if (showPoll) {
-      const validPollOptions = pollOptions
-        .map(opt => opt.trim())
-        .filter(opt => opt !== '');
-      
-      if (validPollOptions.length >= 2) {
-        const oldOptions = postToEdit?.pollOptions?.map(o => o.option).join('||');
-        const newOptions = validPollOptions.join('||');
-        const optionsChanged = oldOptions !== newOptions;
+    setIsLocalSubmitting(true);
 
-        postData.pollOptions = validPollOptions.map(option => ({ 
-            option, 
-            votes: optionsChanged ? 0 : postToEdit?.pollOptions?.find(p => p.option === option)?.votes || 0
-        }));
-
-        if (optionsChanged) {
-            postData.voters = {};
-        } else {
-            postData.voters = postToEdit?.voters;
+    try {
+        // Determine mood (Neural Moods)
+        let mood: 'neon-joy' | 'void-despair' | 'rage-glitch' | 'zen-stream' | 'neutral' = 'neutral';
+        if (content.trim()) {
+            mood = await analyzeSentiment(content.trim());
         }
 
-        const pollEndsAt = postToEdit?.pollEndsAt || new Date();
-        if (!postToEdit?.pollEndsAt) {
-            pollEndsAt.setDate(pollEndsAt.getDate() + 1);
+        const postData: Omit<Post, 'id' | 'author' | 'timestamp' | 'replies' | 'repostOf'> & { timestamp?: Date; mood?: any } = {
+          content: content.trim(),
+          isPrivate: isPrivate,
+          imageUrl: generatedImageUrl || undefined,
+          videoUrl: videoUrl || undefined,
+          timestamp: postDate,
+          unlockAt: unlockAt ? new Date(unlockAt) : undefined,
+          mood: mood,
+        };
+
+        if (showPoll) {
+          const validPollOptions = pollOptions
+            .map(opt => opt.trim())
+            .filter(opt => opt !== '');
+          
+          if (validPollOptions.length >= 2) {
+            const oldOptions = postToEdit?.pollOptions?.map(o => o.option).join('||');
+            const newOptions = validPollOptions.join('||');
+            const optionsChanged = oldOptions !== newOptions;
+
+            postData.pollOptions = validPollOptions.map(option => ({ 
+                option, 
+                votes: optionsChanged ? 0 : postToEdit?.pollOptions?.find(p => p.option === option)?.votes || 0
+            }));
+
+            if (optionsChanged) {
+                postData.voters = {};
+            } else {
+                postData.voters = postToEdit?.voters;
+            }
+
+            const pollEndsAt = postToEdit?.pollEndsAt || new Date();
+            if (!postToEdit?.pollEndsAt) {
+                pollEndsAt.setDate(pollEndsAt.getDate() + 1);
+            }
+            postData.pollEndsAt = pollEndsAt;
+          } else {
+            // Signal to remove the poll by clearing options
+            postData.pollOptions = undefined;
+            postData.pollEndsAt = undefined;
+            postData.voters = undefined;
+          }
+        } else if (postToEdit?.pollOptions) {
+            // Poll UI is hidden, but original post had one, so preserve it
+            postData.pollOptions = postToEdit.pollOptions;
+            postData.pollEndsAt = postToEdit.pollEndsAt;
+            postData.voters = postToEdit.voters;
         }
-        postData.pollEndsAt = pollEndsAt;
-      } else {
-        // Signal to remove the poll by clearing options
-        postData.pollOptions = undefined;
-        postData.pollEndsAt = undefined;
-        postData.voters = undefined;
-      }
-    } else if (postToEdit?.pollOptions) {
-        // Poll UI is hidden, but original post had one, so preserve it
-        postData.pollOptions = postToEdit.pollOptions;
-        postData.pollEndsAt = postToEdit.pollEndsAt;
-        postData.voters = postToEdit.voters;
+        
+        await onSubmit(postData, postToEdit?.id);
+        
+        if (!postToEdit) {
+          setContent('');
+          setGeneratedImageUrl(null);
+          setVideoUrl(null);
+          setPollOptions(['', '']);
+          setShowPoll(false);
+          setImagePrompt('');
+          setShowImageGenerator(false);
+          setUnlockAt('');
+        }
+    } catch (error) {
+        console.error("Error submitting post:", error);
+    } finally {
+        setIsLocalSubmitting(false);
     }
-    
-    onSubmit(postData, postToEdit?.id);
   };
 
   const charPercentage = (content.length / MAX_CHARACTERS) * 100;
