@@ -1,13 +1,20 @@
 // API Client for Chrono Backend
 
 const getBaseUrl = () => {
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (import.meta.env.VITE_API_URL) {
+    // If explicitly set, use it. But ensure we don't use HTTP in production if possible.
+    // Actually, trust the env var if it's there.
+    return import.meta.env.VITE_API_URL;
+  }
   if (typeof window !== 'undefined') {
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const hostname = window.location.hostname;
+    const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+    
     if (isLocal) {
-      return `http://${window.location.hostname}:3001/api`;
+      return `http://${hostname}:3001/api`;
     }
-    // In production, use relative path since backend serves frontend
+    // In production (Railway), use relative path to avoid Mixed Content errors.
+    // The backend serves the frontend, so /api works perfectly and respects HTTPS.
     return '/api';
   }
   return 'http://localhost:3001/api';

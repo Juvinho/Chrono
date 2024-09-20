@@ -14,6 +14,10 @@ import companionRoutes from './routes/companionRoutes.js';
 
 dotenv.config();
 
+// Define __dirname for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 const httpServer = createServer(app);
 const PORT = process.env.PORT || 3001;
