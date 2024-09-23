@@ -255,10 +255,6 @@ class ApiClient {
     });
   }
 
-  async echoPost(postId: string) {
-    return this.createPost({ content: '', repostOfId: postId });
-  }
-
   async sendMessage(conversationId: string, text: string) {
     return this.request<any>(`/conversations/${conversationId}/messages`, {
       method: 'POST',

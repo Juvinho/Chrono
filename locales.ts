@@ -410,6 +410,7 @@ export const translations = {
     settingsBio: 'Bio',
     settingsPronouns: 'Pronomes',
     settingsPronounsPlaceholder: 'ex: ele/dele, ela/dela',
+    settingsUpload: 'Carregar Imagem',
     settingsBirthday: 'Aniversário',
     settingsLocation: 'Localização',
     settingsWebsite: 'Website',
