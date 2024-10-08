@@ -45,8 +45,8 @@ router.post('/register', async (req, res) => {
 
     const token = jwt.sign(
       { id: user.id, username: user.username },
-      process.env.JWT_SECRET || 'fallback-secret',
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      (process.env.JWT_SECRET || 'fallback-secret') as any,
+      { expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as any }
     );
 
     res.status(201).json({
@@ -92,8 +92,8 @@ router.post('/login', async (req, res) => {
 
     const token = jwt.sign(
       { id: user.id, username: user.username },
-      process.env.JWT_SECRET || 'fallback-secret',
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+      (process.env.JWT_SECRET || 'fallback-secret') as any,
+      { expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as any }
     );
 
     res.json({
@@ -178,7 +178,7 @@ router.get('/health', (req, res) => {
 // Get current user
 router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const user = await userService.getUserById(req.userId);
+    const user = await userService.getUserById(req.userId!);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }

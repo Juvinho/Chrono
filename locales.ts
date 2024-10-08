@@ -139,7 +139,6 @@ export const translations = {
     profileFollowers: 'Followers',
     profileEchoesFrom: 'Echoes from',
     profileIsPrivate: 'This profile is private.',
-    messageButton: 'Message',
     
     // Settings Page
     settingsTitle: 'SETTINGS',
@@ -410,7 +409,6 @@ export const translations = {
     settingsBio: 'Bio',
     settingsPronouns: 'Pronomes',
     settingsPronounsPlaceholder: 'ex: ele/dele, ela/dela',
-    settingsUpload: 'Carregar Imagem',
     settingsBirthday: 'Aniversário',
     settingsLocation: 'Localização',
     settingsWebsite: 'Website',
