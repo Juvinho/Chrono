@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User, Page, Post, ProfileSettings, Notification, Conversation, Item } from '../types';
 import Header from './Header';
+import { Avatar } from './Avatar';
 import { BlockIcon, FlagIcon } from './icons';
 import { useTranslation } from '../hooks/useTranslation';
 import { ImageCropper } from './ImageCropper';
@@ -113,26 +114,37 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout, onNavigate,
   };
   
   const handleSave = async () => {
-      const success = await onUpdateUser(draftUser);
+      // Check for large payload
+      if (draftUser.avatar && draftUser.avatar.length > 5 * 1024 * 1024 * 1.33) {
+        setErrorMsg(t('settingsImageTooLarge') || "Image too large. Please crop it smaller or choose a different image.");
+        return;
+      }
+
+      const result = await onUpdateUser(draftUser);
+      const success = typeof result === 'object' ? result.success : result;
+      const resultError = typeof result === 'object' ? result.error : undefined;
+
       if (success) {
           setSaved(true);
           setTimeout(() => setSaved(false), 2000);
       } else {
-          alert(t('settingsSaveError') || "Failed to save settings. Please try again.");
+          setErrorMsg(resultError || t('settingsSaveError') || "Failed to save settings. Please try again.");
       }
   };
   
   const handlePasscodeUpdate = () => {
+    setErrorMsg(null);
     if (passcode.current === user.password) {
         if(passcode.new.length < 6) {
-            alert(t('settingsPasswordTooShort'));
+            setErrorMsg(t('settingsPasswordTooShort') || "Password must be at least 6 characters.");
             return;
         }
         onUpdateUser({...draftUser, password: passcode.new});
         setPasscode({current: '', new: ''});
-        alert(t('settingsPasswordUpdated'));
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
     } else {
-        alert(t('settingsPasswordIncorrect'));
+        setErrorMsg(t('settingsPasswordIncorrect') || "Incorrect current password.");
     }
   }
   
@@ -235,6 +247,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout, onNavigate,
             </div>
             <div className="flex items-center space-x-4">
                  {saved && <span className="text-[var(--theme-primary)] font-bold animate-pulse uppercase tracking-widest">{t('settingsSaved')}</span>}
+                 {errorMsg && <span className="text-red-500 font-bold animate-pulse">{errorMsg}</span>}
                  <button onClick={handleSave} className={`px-6 py-2 rounded-sm font-bold transition-colors ${saved ? 'bg-green-600 text-white' : 'bg-[var(--theme-primary)] text-white hover:bg-[var(--theme-secondary)]'}`}>
                     {saved ? t('settingsSaved') : t('settingsSaveChanges')}
                 </button>
@@ -254,7 +267,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout, onNavigate,
                         const avatarShape = draftUser.equippedFrame ? getFrameShape(draftUser.equippedFrame.name) : 'rounded-full';
                         return (
                             <>
-                                <img src={draftUser.avatar} alt="Avatar Preview" className={`w-full h-full ${avatarShape} object-cover`}/>
+                                <Avatar src={draftUser.avatar} username={draftUser.username} className={`w-full h-full ${avatarShape} object-cover`} />
                                 {draftUser.equippedEffect && (
                                     <div className={`absolute inset-0 pointer-events-none z-10 mix-blend-screen opacity-60 ${avatarShape} overflow-hidden`}>
                                       <img 
@@ -312,27 +325,13 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout, onNavigate,
                        </div>
                    )}
 
-                   <div className="flex items-center space-x-4">
-                     <img 
-                       key={draftUser.coverImage || draftUser.profileSettings.coverImage || 'default'}
+                   <div className="w-32 h-16 rounded-sm border border-[var(--theme-border-primary)] overflow-hidden relative">
+                     <Avatar 
                        src={draftUser.coverImage || draftUser.profileSettings.coverImage || 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&h=400&fit=crop&q=80'} 
-                       alt="Cover Preview" 
-                       className="w-32 h-16 object-cover rounded-sm border border-[var(--theme-border-primary)]"
-                       onError={(e) => {
-                         const target = e.target as HTMLImageElement;
-                         target.src = `data:image/svg+xml,${encodeURIComponent(`
-                           <svg width="1200" height="400" xmlns="http://www.w3.org/2000/svg">
-                             <defs>
-                               <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                 <stop offset="0%" style="stop-color:#8A2BE2;stop-opacity:1" />
-                                 <stop offset="100%" style="stop-color:#9400FF;stop-opacity:1" />
-                               </linearGradient>
-                             </defs>
-                             <rect width="100%" height="100%" fill="url(#grad)"/>
-                           </svg>
-                         `)}`;
-                       }}
+                       username={draftUser.username}
+                       className="w-full h-full object-cover"
                      />
+                   </div>
                      <input type="file" accept="image/*" ref={coverInputRef} onChange={(e) => handleFileChange(e, 'coverImage')} className="hidden" />
                      <button onClick={() => coverInputRef.current?.click()} className="follow-btn px-4 py-1 text-sm">{t('settingsUpload')}</button>
                    </div>
@@ -396,7 +395,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout, onNavigate,
                                   <div className="aspect-square relative p-4 flex items-center justify-center bg-[var(--theme-bg-primary)]">
                                       {/* Avatar Preview Background for Context */}
                                       <div className="w-16 h-16 rounded-full overflow-hidden relative opacity-50 grayscale group-hover:grayscale-0 transition-all">
-                                          <img src={draftUser.avatar} alt="" className="w-full h-full object-cover" />
+                                          <Avatar src={draftUser.avatar} username={draftUser.username} className="w-full h-full object-cover" />
                                       </div>
                                       
                                       {/* Item Preview */}

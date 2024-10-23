@@ -9,6 +9,7 @@ import { useTranslation } from '../hooks/useTranslation';
 import UserListModal from './modals/UserListModal';
 import { VerifiedIcon, MessageIcon } from './icons';
 import FramePreview, { getFrameShape } from './FramePreview';
+import { Avatar } from './Avatar';
 
 interface ProfilePageProps {
   currentUser: User;
@@ -221,31 +222,20 @@ const ProfilePage: React.FC<ProfilePageProps> = ({
         <div className={`max-w-4xl mx-auto ${borderRadius === 'none' ? '' : 'my-4'} animate-fade-in`}>
           <div className={`relative ${getRadiusClass('container')} shadow-lg`}>
             <div className={`relative h-48 md:h-64 w-full overflow-hidden ${getRadiusClass('container')}`}>
-                <img 
-                  key={profileUser.coverImage || profileUser.profileSettings?.coverImage || 'default-cover'}
+                <Avatar 
                   src={profileUser.coverImage || profileUser.profileSettings?.coverImage || 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&h=400&fit=crop&q=80'} 
-                  alt="Cover" 
+                  username={profileUser.username}
                   className="w-full h-full object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = `data:image/svg+xml,${encodeURIComponent(`
-                      <svg width="1200" height="400" xmlns="http://www.w3.org/2000/svg">
-                        <defs>
-                          <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#8A2BE2;stop-opacity:1" />
-                            <stop offset="100%" style="stop-color:#9400FF;stop-opacity:1" />
-                          </linearGradient>
-                        </defs>
-                        <rect width="100%" height="100%" fill="url(#grad)"/>
-                      </svg>
-                    `)}`;
-                  }}
                 />
             </div>
             <div className="absolute -bottom-16 left-4 md:left-8 flex items-end z-10">
                 <div className="relative w-24 h-24">
                     <div className={`w-full h-full ${avatarShape} border-4 border-[var(--theme-bg-primary)] overflow-hidden bg-[var(--theme-bg-primary)] relative z-10`}>
-                        <img src={profileUser.avatar} alt="Avatar" className="w-full h-full object-cover" loading="lazy" />
+                        <Avatar 
+                          src={profileUser.avatar} 
+                          username={profileUser.username}
+                          className="w-full h-full object-cover" 
+                        />
                         
                          {/* Effect Overlay */}
                         {profileUser.equippedEffect && (

@@ -150,9 +150,9 @@ const Timeline: React.FC<TimelineProps> = ({ selectedDate, setSelectedDate, onNa
                                             }}
                                             title={`@${author.username}`}
                                         >
-                                            <img
+                                            <Avatar
                                                 src={author.avatar}
-                                                alt={author.username}
+                                                username={author.username}
                                                 className={`w-full h-full ${avatarShape} border-2 border-[var(--theme-bg-primary)] group-hover:border-[var(--theme-secondary)] transition-all object-cover relative z-0`}
                                             />
                                             {author.equippedEffect && (

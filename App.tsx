@@ -1010,6 +1010,7 @@ const App: React.FC = () => {
     const monthSlugs = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
     const formatDateSegment = (date: Date) => {
+        if (!date || !(date instanceof Date) || isNaN(date.getTime())) return '';
         const month = monthSlugs[date.getMonth()];
         const day = String(date.getDate()).padStart(2, '0');
         const year = date.getFullYear();
@@ -1037,10 +1038,11 @@ const App: React.FC = () => {
 
         switch (page) {
             case Page.Dashboard:
-                if (selectedDate) {
+                if (selectedDate && selectedDate instanceof Date && !isNaN(selectedDate.getTime())) {
                     const today = new Date();
                     const isToday = today.toDateString() === selectedDate.toDateString();
-                    path = isToday ? '/echo' : `/echo/${formatDateSegment(selectedDate)}`;
+                    const segment = formatDateSegment(selectedDate);
+                    path = (isToday || !segment) ? '/echo' : `/echo/${segment}`;
                 } else {
                     path = '/echo';
                 }
@@ -1159,7 +1161,7 @@ const App: React.FC = () => {
         apiClient.setToken(null);
     };
 
-    const handleUpdateUser = async (updatedUser: User): Promise<boolean> => {
+    const handleUpdateUser = async (updatedUser: User): Promise<{ success: boolean; error?: string }> => {
         // Update local state immediately for responsive UI
         setUsers(prevUsers => {
             const exists = prevUsers.some(u => u.username === updatedUser.username);
@@ -1195,69 +1197,91 @@ const App: React.FC = () => {
         
         // Save to backend
         if (currentUser?.username === updatedUser.username) {
-            try {
-                // Prefer profileSettings.coverImage if available (new upload), fallback to root coverImage
-                const coverImageToUse = updatedUser.profileSettings?.coverImage || updatedUser.coverImage;
-                
-                const updates: any = {
-                    bio: updatedUser.bio,
-                    avatar: updatedUser.avatar,
-                    coverImage: coverImageToUse,
-                    birthday: updatedUser.birthday,
-                    location: updatedUser.location,
-                    website: updatedUser.website,
-                    pronouns: updatedUser.pronouns,
-                    isPrivate: updatedUser.isPrivate,
-                    profileSettings: updatedUser.profileSettings,
-                };
-                
-                const result = await apiClient.updateUser(updatedUser.username, updates);
-                if (result.error) {
-                    console.error("Failed to update user via API:", result.error);
-                    return false;
-                }
-                
-                if (result.data) {
-                    // Update with data from backend to ensure sync
-                    const mappedUser = mapApiUserToUser(result.data);
-                    setUsers(prevUsers => {
-                        const exists = prevUsers.some(u => u.username === updatedUser.username);
-                        if (exists) {
-                            return prevUsers.map(u => u.username === updatedUser.username ? mappedUser : u);
-                        } else {
-                            return [...prevUsers, mappedUser];
-                        }
-                    });
-                    
-                    // Update posts again with confirmed backend data
-                    setPosts(prevPosts => prevPosts.map(post => {
-                        if (post.author.username === mappedUser.username) {
-                            return { 
-                                ...post, 
-                                author: { 
-                                    ...post.author, 
-                                    avatar: mappedUser.avatar,
-                                    bio: mappedUser.bio,
-                                    profileSettings: mappedUser.profileSettings,
-                                    verificationBadge: mappedUser.verificationBadge,
-                                    isVerified: mappedUser.isVerified
-                                } 
-                            };
-                        }
-                        return post;
-                    }));
+            let attempt = 0;
+            const maxAttempts = 3;
+            let lastError = "Unknown error";
 
-                    if (currentUser?.username === updatedUser.username) {
-                        setCurrentUser(mappedUser);
+            while (attempt < maxAttempts) {
+                try {
+                    // Prefer profileSettings.coverImage if available (new upload), fallback to root coverImage
+                    const coverImageToUse = updatedUser.profileSettings?.coverImage || updatedUser.coverImage;
+                    
+                    const updates: any = {
+                        bio: updatedUser.bio,
+                        avatar: updatedUser.avatar,
+                        coverImage: coverImageToUse,
+                        birthday: updatedUser.birthday,
+                        location: updatedUser.location,
+                        website: updatedUser.website,
+                        pronouns: updatedUser.pronouns,
+                        isPrivate: updatedUser.isPrivate,
+                        profileSettings: updatedUser.profileSettings,
+                    };
+                    
+                    const result = await apiClient.updateUser(updatedUser.username, updates);
+                    if (result.error) {
+                        lastError = result.error;
+                        console.error(`Failed to update user via API (Attempt ${attempt + 1}/${maxAttempts}):`, result.error);
+                        if (attempt === maxAttempts - 1) return { success: false, error: lastError };
+                        attempt++;
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        continue;
                     }
+                    
+                    if (result.data) {
+                        // Update with data from backend to ensure sync
+                        const mappedUser = mapApiUserToUser(result.data);
+
+                        // SAFEGUARD: If backend returns null/empty avatar but we had one, keep ours.
+                        // This handles cases where backend update succeeded but didn't return the large field, or DB issue.
+                        if (!mappedUser.avatar && updatedUser.avatar) {
+                             console.warn("Backend returned empty avatar after update. Preserving local avatar.");
+                             mappedUser.avatar = updatedUser.avatar;
+                        }
+
+                        setUsers(prevUsers => {
+                            const exists = prevUsers.some(u => u.username === updatedUser.username);
+                            if (exists) {
+                                return prevUsers.map(u => u.username === updatedUser.username ? mappedUser : u);
+                            } else {
+                                return [...prevUsers, mappedUser];
+                            }
+                        });
+                        
+                        // Update posts again with confirmed backend data
+                        setPosts(prevPosts => prevPosts.map(post => {
+                            if (post.author.username === mappedUser.username) {
+                                return { 
+                                    ...post, 
+                                    author: { 
+                                        ...post.author, 
+                                        avatar: mappedUser.avatar,
+                                        bio: mappedUser.bio,
+                                        profileSettings: mappedUser.profileSettings,
+                                        verificationBadge: mappedUser.verificationBadge,
+                                        isVerified: mappedUser.isVerified
+                                    } 
+                                };
+                            }
+                            return post;
+                        }));
+
+                        if (currentUser?.username === updatedUser.username) {
+                            setCurrentUser(mappedUser);
+                        }
+                    }
+                    return { success: true };
+                } catch (error: any) {
+                    lastError = error.message || "Network error";
+                    console.error(`Failed to update user via API (Attempt ${attempt + 1}/${maxAttempts}):`, error);
+                    if (attempt === maxAttempts - 1) return { success: false, error: lastError };
+                    attempt++;
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                 }
-                return true;
-            } catch (error) {
-                console.error("Failed to update user via API:", error);
-                return false;
             }
+            return { success: false, error: lastError };
         }
-        return true; // If not current user, assume success (local update only)
+        return { success: true }; // If not current user, assume success (local update only)
     };
 
     const handleFollowToggle = async (usernameToToggle: string, actor?: User) => {

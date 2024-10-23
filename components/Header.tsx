@@ -102,7 +102,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, onViewProfile, onNaviga
                             const avatarShape = user.equippedFrame ? getFrameShape(user.equippedFrame.name) : 'rounded-full';
                             return (
                                 <>
-                                    <img src={user.avatar} alt={user.username} className={`w-full h-full ${avatarShape} border-2 border-[var(--theme-border-primary)] group-hover:border-[var(--theme-primary)] transition-colors object-cover`} />
+                                    <Avatar src={user.avatar} username={user.username} className={`w-full h-full ${avatarShape} border-2 border-[var(--theme-border-primary)] group-hover:border-[var(--theme-primary)] transition-colors object-cover`} />
                                     
                                     {/* Effect Overlay */}
                                     {user.equippedEffect && (

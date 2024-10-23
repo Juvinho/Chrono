@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Item, User } from '../types';
 import { apiClient } from '../services/api';
 import { CloseIcon, SearchIcon } from './icons';
+import { Avatar } from './Avatar';
 import { useTranslation } from '../hooks/useTranslation';
 import FramePreview, { getFrameShape } from './FramePreview';
 
