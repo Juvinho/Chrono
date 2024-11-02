@@ -16,6 +16,42 @@ interface SearchOverlayProps {
     currentUser: User;
 }
 
+const NoSignal: React.FC<{ message?: string }> = ({ message }) => (
+    <div className="flex flex-col items-center justify-center h-64 w-full bg-black relative overflow-hidden border border-[var(--theme-border-primary)] rounded-sm my-4">
+      {/* Static Noise Layer */}
+      <div className="absolute inset-0 opacity-30 pointer-events-none mix-blend-screen" 
+           style={{
+             backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E")`,
+           }}
+      />
+      <style>{`
+        @keyframes staticShift {
+            0% { background-position: 0 0; }
+            20% { background-position: 10px -5px; }
+            40% { background-position: -10px 5px; }
+            60% { background-position: 5px -10px; }
+            80% { background-position: -5px 10px; }
+            100% { background-position: 0 0; }
+        }
+        .animate-static {
+            animation: staticShift 0.2s infinite steps(4);
+        }
+      `}</style>
+      
+      {/* Glitch Text */}
+      <div className="relative z-10 text-center space-y-2 p-4 bg-black/50 backdrop-blur-sm border border-red-900/50">
+          <h3 className="text-3xl font-bold text-red-500 tracking-[0.2em] animate-pulse glitch-effect" data-text="NO SIGNAL">NO SIGNAL</h3>
+          <p className="text-[var(--theme-text-secondary)] font-mono text-sm uppercase tracking-widest">{message || "Target not found in timeline"}</p>
+      </div>
+      
+      {/* Scanlines */}
+      <div className="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.8)_50%)] bg-[length:100%_4px] pointer-events-none z-20 opacity-30"></div>
+      
+      {/* Vignette */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_50%,black_100%)] pointer-events-none z-20"></div>
+    </div>
+);
+
 const SearchOverlay: React.FC<SearchOverlayProps> = ({ onClose, onSearch, onViewProfile, allUsers, allPosts, currentUser }) => {
     const { t } = useTranslation();
     const [searchTerm, setSearchTerm] = useState('');
@@ -27,7 +63,7 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ onClose, onSearch, onView
         }
     };
 
-    const { popularCords, popularPosts, relevantUsers, foundUsers, foundCords, foundPosts } = useMemo(() => {
+    const { popularCords, popularPosts, relevantUsers, foundUsers, foundCords, foundPosts, hasResults } = useMemo(() => {
         const getPopularity = (post: Post) => post.reactions ? Object.values(post.reactions).reduce((a, c) => a + c, 0) : 0;
 
         const popularCords = [...allPosts]
@@ -47,6 +83,7 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ onClose, onSearch, onView
         let foundUsers: User[] = [];
         let foundCords: Post[] = [];
         let foundPosts: Post[] = [];
+        let hasResults = false;
 
         if (searchTerm.trim()) {
             const lowerQuery = searchTerm.toLowerCase();
@@ -62,9 +99,11 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ onClose, onSearch, onView
 
             foundCords = matchingPosts.filter(p => p.isThread);
             foundPosts = matchingPosts.filter(p => !p.isThread);
+            
+            hasResults = foundUsers.length > 0 || foundCords.length > 0 || foundPosts.length > 0;
         }
 
-        return { popularCords, popularPosts, relevantUsers, foundUsers, foundCords, foundPosts };
+        return { popularCords, popularPosts, relevantUsers, foundUsers, foundCords, foundPosts, hasResults };
     }, [allPosts, allUsers, currentUser, searchTerm]);
 
     return (
@@ -85,7 +124,8 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ onClose, onSearch, onView
                 </form>
 
                 {searchTerm.trim() ? (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                    hasResults ? (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
                          <div className="space-y-4">
                             <h2 className="search-section-header">:: {t('foundUsers')}</h2>
                             {foundUsers.length > 0 ? (
@@ -150,6 +190,46 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ onClose, onSearch, onView
                             )}
                         </div>
                     </div>
+                    ) : (
+                        <div className="flex flex-col space-y-8 animate-[fadeIn_0.5s_ease-out]">
+                            <NoSignal message={t('noResultsFound') || "NO DATA FOUND IN ARCHIVES"} />
+                            
+                            <div className="border-t border-[var(--theme-border-primary)] pt-8">
+                                <h3 className="text-xl font-bold text-[var(--theme-secondary)] mb-6 text-center glitch-effect" data-text={t('recommendedForYou')}>:: {t('recommendedForYou') || "ALTERNATIVE TIMELINES"}</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                    <div className="space-y-4">
+                                        <h2 className="search-section-header">:: {t('relevantUsers')}</h2>
+                                        {relevantUsers.map(user => (
+                                            <div key={user.username} onClick={() => onViewProfile(user.username)} className="flex items-center space-x-3 cursor-pointer group">
+                                                <div className="relative w-8 h-8 flex-shrink-0">
+                                                    <Avatar src={user.avatar} username={user.username} className="w-full h-full rounded-full object-cover" />
+                                                </div>
+                                                <span className="text-[var(--theme-text-primary)] group-hover:text-[var(--theme-secondary)]">@{user.username}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="space-y-2">
+                                        <h2 className="search-section-header">:: {t('popularCords')}</h2>
+                                        {popularCords.map(cord => (
+                                           <div key={cord.id} onClick={() => onSearch(`${cord.id}`)} className="search-result-item text-sm">
+                                                <p className="truncate text-[var(--theme-text-primary)]">{cord.content}</p>
+                                                <p className="text-xs text-[var(--theme-text-secondary)]">{t('byUser', { username: cord.author.username })}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                     <div className="space-y-2">
+                                        <h2 className="search-section-header">:: {t('popularPosts')}</h2>
+                                        {popularPosts.map(post => (
+                                            <div key={post.id} onClick={() => onSearch(`${post.id}`)} className="search-result-item text-sm">
+                                                <p className="truncate text-[var(--theme-text-primary)]">{post.content}</p>
+                                                <p className="text-xs text-[var(--theme-text-secondary)]">{t('byUser', { username: post.author.username })}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         <div className="space-y-4">

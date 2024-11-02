@@ -152,8 +152,6 @@ export const translations = {
     settingsBio: 'Bio',
     settingsPronouns: 'Pronouns',
     settingsPronounsPlaceholder: 'e.g. he/him, she/her',
-    settingsAvatar: 'Avatar',
-    settingsUpload: 'Upload Image',
     settingsBirthday: 'Birthday',
     settingsAppearance: 'APPEARANCE',
     settingsTheme: 'Theme',
@@ -208,6 +206,8 @@ export const translations = {
     popularPosts: 'POPULAR POSTS',
     recentPosts: 'Recent Posts',
     byUser: 'by @{username}',
+    recommendedForYou: 'RECOMMENDED SIGNALS',
+    noResultsFound: 'NO DATA FOUND IN ARCHIVES',
 
     // Calendar
     dayS: 'S', dayM: 'M', dayT: 'T', dayW: 'W', dayTh: 'T', dayF: 'F', daySa: 'S',
@@ -462,6 +462,8 @@ export const translations = {
     popularPosts: 'POSTS POPULARES',
     recentPosts: 'Posts mais Recentes',
     byUser: 'por @{username}',
+    recommendedForYou: 'PERFIS RELACIONADOS DETECTADOS',
+    noResultsFound: 'NADA FOI ENCONTRADO',
 
     // Calendar
     dayS: 'D', dayM: 'S', dayT: 'T', dayW: 'W', dayTh: 'Q', dayF: 'S', daySa: 'S',
