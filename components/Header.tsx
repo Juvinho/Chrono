@@ -7,6 +7,7 @@ import NotificationsPanel from './NotificationsPanel';
 import ConfirmationModal from './modals/ConfirmationModal';
 import { useTranslation } from '../hooks/useTranslation';
 import FramePreview, { getFrameShape } from './FramePreview';
+import { Avatar } from './Avatar';
 
 interface HeaderProps {
     user: User;

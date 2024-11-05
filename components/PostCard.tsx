@@ -6,7 +6,6 @@ import { useTranslation } from '../hooks/useTranslation';
 import { Avatar } from './Avatar';
 import TypingIndicatorCard from './TypingIndicatorCard';
 import FramePreview, { getFrameShape } from './FramePreview';
-import { Avatar } from './Avatar';
 
 interface PostCardProps {
     post: Post;
