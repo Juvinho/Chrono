@@ -1,11 +1,12 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Post, User } from '../types';
 import { SearchIcon } from './icons';
 import PostCard from './PostCard';
 import { useTranslation } from '../hooks/useTranslation';
 import FramePreview, { getFrameShape } from './FramePreview';
 import { Avatar } from './Avatar';
+import { apiClient } from '../services/api';
 
 interface SearchOverlayProps {
     onClose: () => void;
@@ -55,6 +56,33 @@ const NoSignal: React.FC<{ message?: string }> = ({ message }) => (
 const SearchOverlay: React.FC<SearchOverlayProps> = ({ onClose, onSearch, onViewProfile, allUsers, allPosts, currentUser }) => {
     const { t } = useTranslation();
     const [searchTerm, setSearchTerm] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [searchResults, setSearchResults] = useState<User[]>([]);
+
+    useEffect(() => {
+        const timer = setTimeout(async () => {
+            if (searchTerm.trim().length >= 2) {
+                setIsLoading(true);
+                try {
+                    const response = await apiClient.searchUsers(searchTerm.trim());
+                    if (response.data) {
+                        setSearchResults(response.data);
+                    } else {
+                        setSearchResults([]);
+                    }
+                } catch (error) {
+                    console.error("Search failed", error);
+                    setSearchResults([]);
+                } finally {
+                    setIsLoading(false);
+                }
+            } else {
+                setSearchResults([]);
+            }
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
 
     const handleSearchSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -86,12 +114,11 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ onClose, onSearch, onView
         let hasResults = false;
 
         if (searchTerm.trim()) {
-            const lowerQuery = searchTerm.toLowerCase();
-            foundUsers = allUsers.filter(u => 
-                u.username.toLowerCase().includes(lowerQuery) || 
-                (u.displayName && u.displayName.toLowerCase().includes(lowerQuery))
-            );
+            // Use API results for users
+            foundUsers = searchResults;
             
+            // Keep client-side filtering for posts (or implement API search for posts later)
+            const lowerQuery = searchTerm.toLowerCase();
             const matchingPosts = allPosts.filter(p => 
                 p.content.toLowerCase().includes(lowerQuery) || 
                 p.author.username.toLowerCase().includes(lowerQuery)
@@ -104,7 +131,7 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ onClose, onSearch, onView
         }
 
         return { popularCords, popularPosts, relevantUsers, foundUsers, foundCords, foundPosts, hasResults };
-    }, [allPosts, allUsers, currentUser, searchTerm]);
+    }, [allPosts, allUsers, currentUser, searchTerm, searchResults]);
 
     return (
         <div className="search-overlay" onClick={onClose}>
@@ -119,12 +146,21 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ onClose, onSearch, onView
                         className="search-input"
                     />
                     <button type="submit" aria-label={t('search')} className="absolute right-4 top-1/2 -translate-y-1/2">
-                        <SearchIcon className="w-8 h-8 text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)] transition-colors" />
+                        {isLoading ? (
+                            <div className="w-5 h-5 border-2 border-[var(--theme-text-secondary)] border-t-[var(--theme-primary)] rounded-full animate-spin"></div>
+                        ) : (
+                            <SearchIcon className="w-8 h-8 text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)] transition-colors" />
+                        )}
                     </button>
                 </form>
 
                 {searchTerm.trim() ? (
-                    hasResults ? (
+                    isLoading ? (
+                        <div className="flex flex-col items-center justify-center h-64 animate-pulse space-y-4">
+                             <div className="w-16 h-16 border-4 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin"></div>
+                             <p className="text-[var(--theme-primary)] font-mono tracking-widest glitch-effect" data-text="ACCESSING MAINFRAME...">ACCESSING MAINFRAME...</p>
+                        </div>
+                    ) : hasResults ? (
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
                          <div className="space-y-4">
                             <h2 className="search-section-header">:: {t('foundUsers')}</h2>
@@ -132,7 +168,13 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ onClose, onSearch, onView
                                 foundUsers.map(user => {
                                     const avatarShape = user.equippedFrame ? getFrameShape(user.equippedFrame.name) : 'rounded-full';
                                     return (
-                                        <div key={user.username} onClick={() => onViewProfile(user.username)} className="flex items-center space-x-3 cursor-pointer group p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-sm transition-colors">
+                                        <div 
+                                            key={user.username} 
+                                            onClick={() => onViewProfile(user.username)} 
+                                            tabIndex={0}
+                                            onKeyDown={(e) => e.key === 'Enter' && onViewProfile(user.username)}
+                                            className="flex items-center space-x-3 cursor-pointer group p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--theme-primary)]"
+                                        >
                                             <div className="relative w-10 h-10 flex-shrink-0">
                                                 <Avatar src={user.avatar} username={user.username} className={`w-full h-full ${avatarShape} object-cover`} />
                                                 {user.equippedFrame && (
@@ -150,9 +192,13 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ onClose, onSearch, onView
                                                     </div>
                                                 )}
                                             </div>
-                                            <div>
-                                                <p className="font-bold text-[var(--theme-text-light)] group-hover:text-[var(--theme-primary)] transition-colors">@{user.username}</p>
-                                                {user.displayName && <p className="text-sm text-[var(--theme-text-secondary)]">{user.displayName}</p>}
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-bold text-[var(--theme-text-light)] group-hover:text-[var(--theme-primary)] transition-colors truncate">@{user.username}</p>
+                                                {user.displayName && <p className="text-sm text-[var(--theme-text-secondary)] truncate">{user.displayName}</p>}
+                                                <div className="flex space-x-3 mt-1 text-xs text-[var(--theme-text-secondary)]">
+                                                    <span><span className="font-bold text-[var(--theme-text-primary)]">{user.followers || 0}</span> followers</span>
+                                                    <span><span className="font-bold text-[var(--theme-text-primary)]">{user.following || 0}</span> following</span>
+                                                </div>
                                             </div>
                                         </div>
                                     );
@@ -166,7 +212,13 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ onClose, onSearch, onView
                             <h2 className="search-section-header">:: {t('foundCords')}</h2>
                             {foundCords.length > 0 ? (
                                 foundCords.map(cord => (
-                                    <div key={cord.id} onClick={() => onSearch(`${cord.id}`)} className="search-result-item text-sm cursor-pointer p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-sm transition-colors">
+                                    <div 
+                                        key={cord.id} 
+                                        onClick={() => onSearch(`${cord.id}`)} 
+                                        tabIndex={0}
+                                        onKeyDown={(e) => e.key === 'Enter' && onSearch(`${cord.id}`)}
+                                        className="search-result-item text-sm cursor-pointer p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--theme-primary)]"
+                                    >
                                         <p className="truncate font-bold text-[var(--theme-text-primary)]">{cord.content}</p>
                                         <p className="text-xs text-[var(--theme-text-secondary)]">{t('byUser', { username: cord.author.username })}</p>
                                     </div>
@@ -180,7 +232,13 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ onClose, onSearch, onView
                             <h2 className="search-section-header">:: {t('foundEchoes')}</h2>
                             {foundPosts.length > 0 ? (
                                 foundPosts.map(post => (
-                                    <div key={post.id} onClick={() => onSearch(`${post.id}`)} className="search-result-item text-sm cursor-pointer p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-sm transition-colors">
+                                    <div 
+                                        key={post.id} 
+                                        onClick={() => onSearch(`${post.id}`)} 
+                                        tabIndex={0}
+                                        onKeyDown={(e) => e.key === 'Enter' && onSearch(`${post.id}`)}
+                                        className="search-result-item text-sm cursor-pointer p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--theme-primary)]"
+                                    >
                                         <p className="truncate text-[var(--theme-text-primary)]">{post.content}</p>
                                         <p className="text-xs text-[var(--theme-text-secondary)]">{t('byUser', { username: post.author.username })}</p>
                                     </div>
