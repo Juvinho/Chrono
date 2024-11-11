@@ -37,13 +37,16 @@ interface EchoFrameProps {
     usersWithStories?: User[];
     onViewStory?: (user: User) => void;
     onCreateStory?: () => void;
+    nextAutoRefresh?: Date | null;
+    isAutoRefreshPaused?: boolean;
 }
 
 const EchoFrame: React.FC<EchoFrameProps> = ({ 
     selectedDate, currentUser, posts: allPosts, onViewProfile, onTagClick, 
     onNewPost, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost, onPollVote, searchQuery, focusPostId, isGenerating,
     typingParentIds, activeCordTag, setActiveCordTag, composerDate, setComposerDate, allKnownPosts,
-    usersWithStories = [], onViewStory = () => {}, onCreateStory = () => {}
+    usersWithStories = [], onViewStory = () => {}, onCreateStory = () => {},
+    nextAutoRefresh, isAutoRefreshPaused
 }) => {
     const { t } = useTranslation();
     const [displayedPosts, setDisplayedPosts] = useState<Post[]>([]);
@@ -55,6 +58,31 @@ const EchoFrame: React.FC<EchoFrameProps> = ({
     const [activePostId, setActivePostId] = useState<string | null>(null);
     const [activeFilter, setActiveFilter] = useState<'All' | 'Following' | 'Media' | 'Polls'>('All');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [timeToRefresh, setTimeToRefresh] = useState<string>('');
+
+    useEffect(() => {
+        if (!nextAutoRefresh) {
+            setTimeToRefresh('');
+            return;
+        }
+
+        const updateTimer = () => {
+            const now = new Date();
+            const diff = nextAutoRefresh.getTime() - now.getTime();
+            
+            if (diff <= 0) {
+                setTimeToRefresh('SYNCING...');
+            } else {
+                const minutes = Math.floor(diff / 60000);
+                const seconds = Math.floor((diff % 60000) / 1000);
+                setTimeToRefresh(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+            }
+        };
+
+        updateTimer();
+        const interval = setInterval(updateTimer, 1000);
+        return () => clearInterval(interval);
+    }, [nextAutoRefresh]);
 
     useEffect(() => {
         if (composerDate) {
@@ -366,8 +394,23 @@ const EchoFrame: React.FC<EchoFrameProps> = ({
             </div>
         );
 
+        const renderAutoRefreshStatus = () => {
+            if (!nextAutoRefresh || !timeToRefresh) return null;
+            
+            return (
+                <div className="flex justify-between items-center bg-[var(--theme-bg-tertiary)]/50 border border-[var(--theme-border-secondary)] px-3 py-1 mb-4 text-xs font-mono text-[var(--theme-text-secondary)] rounded-sm">
+                    <span className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${isAutoRefreshPaused ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`}></span>
+                        <span className="uppercase tracking-wider">{isAutoRefreshPaused ? (t('autoRefreshPaused') || 'PAUSADO (ATIVO)') : (t('autoRefreshActive') || 'AUTO-REFRESH ON')}</span>
+                    </span>
+                    <span className="font-bold">SYNC: {timeToRefresh}</span>
+                </div>
+            );
+        };
+
         return (
             <>
+                {renderAutoRefreshStatus()}
                 {isToday && !searchQuery && (
                     <div className="bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] p-4 mb-4 flex items-center space-x-4">
                         <div className="relative w-10 h-10 flex-shrink-0">

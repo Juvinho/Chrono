@@ -27,6 +27,8 @@ export interface ProfileSettings {
   coverImage: string;
   animationsEnabled?: boolean;
   borderRadius?: 'none' | 'sm' | 'md' | 'full';
+  autoRefreshEnabled?: boolean;
+  autoRefreshInterval?: number;
 }
 
 export type NotificationType = 'reply' | 'reaction' | 'follow' | 'mention' | 'repost' | 'directMessage';
