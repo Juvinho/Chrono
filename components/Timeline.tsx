@@ -4,6 +4,7 @@ import React, { useRef, useEffect, useMemo, useState } from 'react';
 import { formatRelativeDate } from '../utils/date';
 import { Post, User, Page } from '../types';
 import { CalendarIcon } from './icons';
+import { Avatar } from './Avatar';
 import CalendarModal from './modals/CalendarModal';
 import { useTranslation } from '../hooks/useTranslation';
 import FramePreview, { getFrameShape } from './FramePreview';

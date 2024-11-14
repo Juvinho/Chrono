@@ -269,4 +269,24 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='posts' AND column_name='mood') THEN
         ALTER TABLE posts ADD COLUMN mood VARCHAR(20) DEFAULT 'neutral';
     END IF;
+
+    -- Add is_encrypted to messages
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='is_encrypted') THEN
+        ALTER TABLE messages ADD COLUMN is_encrypted BOOLEAN DEFAULT FALSE;
+    END IF;
+
+    -- Add delete_at to messages
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='delete_at') THEN
+        ALTER TABLE messages ADD COLUMN delete_at TIMESTAMP;
+    END IF;
 END $$;
+
+-- Encrypted Cords table (for secure conversations)
+CREATE TABLE IF NOT EXISTS encrypted_cords (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+    self_destruct_timer INTEGER DEFAULT 3600,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(conversation_id)
+);
