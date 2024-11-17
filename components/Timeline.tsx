@@ -18,7 +18,7 @@ interface TimelineProps {
     onOpenComposer?: (date: Date) => void;
 }
 
-const Timeline: React.FC<TimelineProps> = ({ selectedDate, setSelectedDate, onNavigate, allPosts, onOpenComposer }) => {
+function Timeline({ selectedDate, setSelectedDate, onNavigate, allPosts, onOpenComposer }: TimelineProps) {
     const { t } = useTranslation();
     const timelineRef = useRef<HTMLDivElement>(null);
     const [isDragging, setIsDragging] = useState(false);

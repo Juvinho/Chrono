@@ -8,7 +8,7 @@ interface AvatarProps {
     onClick?: () => void;
 }
 
-export const Avatar: React.FC<AvatarProps> = ({ src, alt, className, username, onClick }) => {
+export function Avatar({ src, alt, className, username, onClick }: AvatarProps) {
     const [error, setError] = useState(false);
     
     // Reset error state when src changes

@@ -8,7 +8,7 @@ interface CalendarModalProps {
   onClose: () => void;
 }
 
-const CalendarModal: React.FC<CalendarModalProps> = ({ selectedDate, onDateSelect, onClose }) => {
+function CalendarModal({ selectedDate, onDateSelect, onClose }: CalendarModalProps) {
   const { t } = useTranslation();
   const [viewDate, setViewDate] = useState(new Date(selectedDate));
 
