@@ -12,7 +12,7 @@ interface StoryTrayProps {
     variant?: 'row' | 'grid';
 }
 
-const StoryTray: React.FC<StoryTrayProps> = ({ currentUser, usersWithStories, onViewStory, onCreateStory, variant = 'row' }) => {
+function StoryTray({ currentUser, usersWithStories, onViewStory, onCreateStory, variant = 'row' }: StoryTrayProps) {
     const { t } = useTranslation();
     const [isExpanded, setIsExpanded] = useState(false);
 
