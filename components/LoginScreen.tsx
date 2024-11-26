@@ -12,7 +12,7 @@ interface LoginScreenProps {
     onNavigate: (page: Page) => void;
 }
 
-const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, users, onNavigate }) => {
+function LoginScreen({ onLogin, users, onNavigate }: LoginScreenProps) {
     const { t } = useTranslation();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');

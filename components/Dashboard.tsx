@@ -38,12 +38,12 @@ interface DashboardProps {
     isAutoRefreshPaused?: boolean;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ 
+function Dashboard({ 
     user, onLogout, onNavigate, onNotificationClick, selectedDate, setSelectedDate, allUsers, allPosts,
     onNewPost, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost, onPollVote, isGenerating, typingParentIds,
     conversations, newPostsCount = 0, onShowNewPosts, allKnownPosts, usersWithStories = [], onViewStory = () => {}, onCreateStory = () => {}, onUpdateUser = () => {}, onOpenMarketplace,
     nextAutoRefresh, isAutoRefreshPaused
-}) => {
+}: DashboardProps) {
     const { t } = useTranslation();
     const [searchQuery, setSearchQuery] = useState('');
     const [focusPostId, setFocusPostId] = useState<string | null>(null);
