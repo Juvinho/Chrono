@@ -41,13 +41,13 @@ interface EchoFrameProps {
     isAutoRefreshPaused?: boolean;
 }
 
-const EchoFrame: React.FC<EchoFrameProps> = ({ 
+function EchoFrame({ 
     selectedDate, currentUser, posts: allPosts, onViewProfile, onTagClick, 
     onNewPost, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost, onPollVote, searchQuery, focusPostId, isGenerating,
     typingParentIds, activeCordTag, setActiveCordTag, composerDate, setComposerDate, allKnownPosts,
     usersWithStories = [], onViewStory = () => {}, onCreateStory = () => {},
     nextAutoRefresh, isAutoRefreshPaused
-}) => {
+}: EchoFrameProps) {
     const { t } = useTranslation();
     const [displayedPosts, setDisplayedPosts] = useState<Post[]>([]);
     const [isLoading, setIsLoading] = useState(false);

@@ -7,7 +7,7 @@ import NotificationsPanel from './NotificationsPanel';
 import ConfirmationModal from './modals/ConfirmationModal';
 import { useTranslation } from '../hooks/useTranslation';
 import FramePreview, { getFrameShape } from './FramePreview';
-import { Avatar } from './Avatar';
+import Avatar from './Avatar';
 
 interface HeaderProps {
     user: User;
@@ -22,7 +22,7 @@ interface HeaderProps {
     conversations: Conversation[];
 }
 
-const Header: React.FC<HeaderProps> = ({ user, onLogout, onViewProfile, onNavigate, onNotificationClick, onSearch, onOpenMarketplace, allUsers, allPosts, conversations }) => {
+function Header({ user, onLogout, onViewProfile, onNavigate, onNotificationClick, onSearch, onOpenMarketplace, allUsers, allPosts, conversations }: HeaderProps) {
     const { t } = useTranslation();
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
