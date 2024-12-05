@@ -146,7 +146,7 @@ const reviveDates = (data: any[], dateKeys: string[]): any[] => {
     return data.map(revive);
 };
 
-const App: React.FC = () => {
+export default function App() {
     // Users are still partially local/hybrid as per instructions, but Posts/Convos are now fully API
     const [users, setUsers] = useLocalStorage<User[]>('chrono_users_v2', CORE_USERS);
     
@@ -1897,6 +1897,4 @@ const App: React.FC = () => {
             </div>
         </LanguageProvider>
     );
-};
-
-export default App;
+}

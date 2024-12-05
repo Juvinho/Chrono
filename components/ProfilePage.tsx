@@ -34,11 +34,11 @@ interface ProfilePageProps {
   onOpenMarketplace?: () => void;
 }
 
-const ProfilePage: React.FC<ProfilePageProps> = ({ 
+export default function ProfilePage({ 
   currentUser, profileUsername, onLogout, onNavigate, onNotificationClick, users, onFollowToggle, 
   allPosts, allUsers, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost,
   onPollVote, selectedDate, setSelectedDate, typingParentIds, conversations, onOpenMarketplace
-}) => {
+}: ProfilePageProps) {
   const { t } = useTranslation();
   
   // Prioritize currentUser if it matches the profileUsername to ensure we show the latest state (e.g. after profile updates)
@@ -486,6 +486,4 @@ const ProfilePage: React.FC<ProfilePageProps> = ({
       )}
     </div>
   );
-};
-
-export default ProfilePage;
+}

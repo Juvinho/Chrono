@@ -1,6 +1,6 @@
 import React from 'react';
 
-const LoadingSpinner: React.FC = () => {
+export default function LoadingSpinner() {
     return (
         <div className="flex flex-col items-center justify-center h-full min-h-[200px] w-full p-8">
             <div className="flex items-end space-x-2 h-16 mb-4">
@@ -12,6 +12,4 @@ const LoadingSpinner: React.FC = () => {
             <p className="text-[var(--theme-primary)] animate-pulse font-bold tracking-widest text-lg">:: LOADING SYSTEM ::</p>
         </div>
     );
-};
-
-export default LoadingSpinner;
+}

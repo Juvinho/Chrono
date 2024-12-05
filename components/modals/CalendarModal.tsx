@@ -8,7 +8,7 @@ interface CalendarModalProps {
   onClose: () => void;
 }
 
-function CalendarModal({ selectedDate, onDateSelect, onClose }: CalendarModalProps) {
+export default function CalendarModal({ selectedDate, onDateSelect, onClose }: CalendarModalProps) {
   const { t } = useTranslation();
   const [viewDate, setViewDate] = useState(new Date(selectedDate));
 
@@ -89,6 +89,4 @@ function CalendarModal({ selectedDate, onDateSelect, onClose }: CalendarModalPro
       </div>
     </div>
   );
-};
-
-export default CalendarModal;
+}

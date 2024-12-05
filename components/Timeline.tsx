@@ -18,7 +18,7 @@ interface TimelineProps {
     onOpenComposer?: (date: Date) => void;
 }
 
-function Timeline({ selectedDate, setSelectedDate, onNavigate, allPosts, onOpenComposer }: TimelineProps) {
+export default function Timeline({ selectedDate, setSelectedDate, onNavigate, allPosts, onOpenComposer }: TimelineProps) {
     const { t } = useTranslation();
     const timelineRef = useRef<HTMLDivElement>(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -222,6 +222,4 @@ function Timeline({ selectedDate, setSelectedDate, onNavigate, allPosts, onOpenC
             )}
         </div>
     );
-};
-
-export default Timeline;
+}

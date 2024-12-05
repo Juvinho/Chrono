@@ -9,7 +9,7 @@ interface ResetPasswordProps {
     onNavigate: (page: Page) => void;
 }
 
-const ResetPassword: React.FC<ResetPasswordProps> = ({ emailToReset, onPasswordReset, onNavigate }) => {
+export default function ResetPassword({ emailToReset, onPasswordReset, onNavigate }: ResetPasswordProps) {
     const { t } = useTranslation();
     const [securityCode, setSecurityCode] = useState('');
     const [newPassword, setNewPassword] = useState('');
@@ -89,6 +89,4 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ emailToReset, onPasswordR
             </div>
         </div>
     );
-};
-
-export default ResetPassword;
+}

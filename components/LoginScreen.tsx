@@ -12,7 +12,7 @@ interface LoginScreenProps {
     onNavigate: (page: Page) => void;
 }
 
-function LoginScreen({ onLogin, users, onNavigate }: LoginScreenProps) {
+export default function LoginScreen({ onLogin, users, onNavigate }: LoginScreenProps) {
     const { t } = useTranslation();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
@@ -210,6 +210,4 @@ function LoginScreen({ onLogin, users, onNavigate }: LoginScreenProps) {
             </div>
         </div>
     );
-};
-
-export default LoginScreen;
+}

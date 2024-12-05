@@ -8,7 +8,7 @@ interface ForgotPasswordProps {
     onNavigate: (page: Page, data?: string) => void;
 }
 
-const ForgotPassword: React.FC<ForgotPasswordProps> = ({ users, onNavigate }) => {
+export default function ForgotPassword({ users, onNavigate }: ForgotPasswordProps) {
     const { t } = useTranslation();
     const [email, setEmail] = useState('');
     const [error, setError] = useState('');
@@ -63,6 +63,4 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ users, onNavigate }) =>
             </div>
         </div>
     );
-};
-
-export default ForgotPassword;
+}

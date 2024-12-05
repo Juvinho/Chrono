@@ -41,7 +41,7 @@ interface EchoFrameProps {
     isAutoRefreshPaused?: boolean;
 }
 
-function EchoFrame({ 
+export default function EchoFrame({ 
     selectedDate, currentUser, posts: allPosts, onViewProfile, onTagClick, 
     onNewPost, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost, onPollVote, searchQuery, focusPostId, isGenerating,
     typingParentIds, activeCordTag, setActiveCordTag, composerDate, setComposerDate, allKnownPosts,
@@ -579,6 +579,4 @@ function EchoFrame({
 
         </main>
     );
-};
-
-export default EchoFrame;
+}

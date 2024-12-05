@@ -16,9 +16,9 @@ interface DataSlicerPageProps {
   onOpenMarketplace?: () => void;
 }
 
-const DataSlicerPage: React.FC<DataSlicerPageProps> = ({
+export default function DataSlicerPage({
   user, onLogout, onNavigate, onNotificationClick, allUsers, allPosts, conversations, onOpenMarketplace
-}) => {
+}: DataSlicerPageProps) {
   const { t } = useTranslation();
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
@@ -160,6 +160,4 @@ const DataSlicerPage: React.FC<DataSlicerPageProps> = ({
       </main>
     </div>
   );
-};
-
-export default DataSlicerPage;
+}

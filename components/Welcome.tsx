@@ -7,7 +7,7 @@ interface WelcomeProps {
     onNavigate: (page: Page) => void;
 }
 
-const Welcome: React.FC<WelcomeProps> = ({ onNavigate }) => {
+export default function Welcome({ onNavigate }: WelcomeProps) {
     const { t } = useTranslation();
     const [showVerificationSuccess, setShowVerificationSuccess] = useState(false);
 
@@ -80,6 +80,4 @@ const Welcome: React.FC<WelcomeProps> = ({ onNavigate }) => {
             </div>
         </div>
     );
-};
-
-export default Welcome;
+}

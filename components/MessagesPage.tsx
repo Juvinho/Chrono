@@ -20,10 +20,10 @@ interface MessagesPageProps {
   onOpenMarketplace?: () => void;
 }
 
-const MessagesPage: React.FC<MessagesPageProps> = ({
+export default function MessagesPage({
   currentUser, onLogout, onNavigate, onNotificationClick, allUsers, allPosts,
   conversations, onSendMessage, onMarkConversationAsRead, onCreateOrFindConversation, onOpenMarketplace
-}) => {
+}: MessagesPageProps) {
   const { t } = useTranslation();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
@@ -83,7 +83,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
     onNavigate(Page.Dashboard);
   };
 
-  const ConversationListItem: React.FC<{ conversation: Conversation }> = ({ conversation }) => {
+  const ConversationListItem = ({ conversation }: { conversation: Conversation }) => {
     const otherParticipantUsername = conversation.participants.find(p => p !== currentUser.username);
     const participant = allUsers.find(u => u.username === otherParticipantUsername);
     const lastMessage = conversation.messages[conversation.messages.length - 1];
@@ -246,6 +246,4 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
       )}
     </div>
   );
-};
-
-export default MessagesPage;
+}

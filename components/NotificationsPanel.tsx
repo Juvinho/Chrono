@@ -9,7 +9,7 @@ interface NotificationsPanelProps {
     onNotificationClick: (notification: Notification) => void;
 }
 
-const NotificationItem: React.FC<{ notification: Notification, onNotificationClick: (notification: Notification) => void }> = ({ notification, onNotificationClick }) => {
+function NotificationItem({ notification, onNotificationClick }: { notification: Notification, onNotificationClick: (notification: Notification) => void }) {
     const { t } = useTranslation();
     const renderIcon = () => {
         switch (notification.notificationType) {
@@ -49,9 +49,9 @@ const NotificationItem: React.FC<{ notification: Notification, onNotificationCli
             </div>
         </div>
     );
-};
+}
 
-const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ notifications, onClose, onNotificationClick }) => {
+export default function NotificationsPanel({ notifications, onClose, onNotificationClick }: NotificationsPanelProps) {
     const { t } = useTranslation();
     return (
         <div className="notifications-panel">
@@ -71,6 +71,5 @@ const NotificationsPanel: React.FC<NotificationsPanelProps> = ({ notifications, 
             )}
         </div>
     );
-};
+}
 
-export default NotificationsPanel;

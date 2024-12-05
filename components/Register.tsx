@@ -22,7 +22,7 @@ const defaultSettings: ProfileSettings = {
     animationsEnabled: true,
 };
 
-const Register: React.FC<RegisterProps> = ({ users, setUsers, onNavigate, onLogin }) => {
+export default function Register({ users, setUsers, onNavigate, onLogin }: RegisterProps) {
     const { t } = useTranslation();
     const [email, setEmail] = useState('');
     const [username, setUsername] = useState('');
@@ -163,6 +163,4 @@ const Register: React.FC<RegisterProps> = ({ users, setUsers, onNavigate, onLogi
             </div>
         </div>
     );
-};
-
-export default Register;
+}

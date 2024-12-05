@@ -38,7 +38,7 @@ interface DashboardProps {
     isAutoRefreshPaused?: boolean;
 }
 
-function Dashboard({ 
+export default function Dashboard({ 
     user, onLogout, onNavigate, onNotificationClick, selectedDate, setSelectedDate, allUsers, allPosts,
     onNewPost, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost, onPollVote, isGenerating, typingParentIds,
     conversations, newPostsCount = 0, onShowNewPosts, allKnownPosts, usersWithStories = [], onViewStory = () => {}, onCreateStory = () => {}, onUpdateUser = () => {}, onOpenMarketplace,
@@ -222,6 +222,4 @@ function Dashboard({
             />
         </div>
     );
-};
-
-export default Dashboard;
+}

@@ -1,6 +1,6 @@
 import React from 'react';
 
-const TypingIndicatorCard: React.FC = () => {
+export default function TypingIndicatorCard() {
     return (
         <div className="reply-container animate-[fadeIn_0.5s_ease-in-out]">
             <div className="flex items-center space-x-3 p-3 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-secondary)]">
@@ -15,6 +15,4 @@ const TypingIndicatorCard: React.FC = () => {
             </div>
         </div>
     );
-};
-
-export default TypingIndicatorCard;
+}

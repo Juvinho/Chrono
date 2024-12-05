@@ -18,7 +18,7 @@ interface PostComposerProps {
   initialContent?: string;
 }
 
-export const PostComposer: React.FC<PostComposerProps> = memo(({ currentUser, onClose, onSubmit, postToEdit, isSubmitting, initialDate, inline = false, initialContent = '' }) => {
+function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmitting, initialDate, inline = false, initialContent = '' }: PostComposerProps) {
   const { t, language } = useTranslation();
   const [content, setContent] = useState(initialContent);
   const [isPrivate, setIsPrivate] = useState(false);
@@ -497,4 +497,6 @@ export const PostComposer: React.FC<PostComposerProps> = memo(({ currentUser, on
       {contentElement}
     </div>
   );
-});
+}
+
+export const PostComposer = memo(PostComposerInner);

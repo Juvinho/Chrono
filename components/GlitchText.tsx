@@ -6,12 +6,10 @@ interface GlitchTextProps {
   className?: string;
 }
 
-const GlitchText: React.FC<GlitchTextProps> = ({ text, className }) => {
+export default function GlitchText({ text, className }: GlitchTextProps) {
   return (
     <div data-text={text} className={`glitch-effect ${className}`}>
       {text}
     </div>
   );
-};
-
-export default GlitchText;
+}
