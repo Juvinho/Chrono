@@ -1,7 +1,6 @@
 import React, { useState, ReactNode, useRef, useEffect } from 'react';
 import { Post, CyberpunkReaction, User } from '../types';
-import { ReactIcon, GlitchIcon, UploadIcon, CorruptIcon, RewindIcon, StaticIcon, ReplyIcon, EchoIcon, EditIcon, VerifiedIcon, CheckCircleIcon } from './icons';
-import { LockClosedIcon, DotsHorizontalIcon, TrashIcon } from './icons'; // Assuming these are added to icons.tsx
+import { ReactIcon, GlitchIcon, UploadIcon, CorruptIcon, RewindIcon, StaticIcon, ReplyIcon, EchoIcon, EditIcon, VerifiedIcon, CheckCircleIcon, LockClosedIcon, DotsHorizontalIcon, TrashIcon } from './icons';
 import { useTranslation } from '../hooks/useTranslation';
 import Avatar from './Avatar';
 import TypingIndicatorCard from './TypingIndicatorCard';
