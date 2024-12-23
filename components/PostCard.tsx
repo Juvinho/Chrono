@@ -180,6 +180,12 @@ function PostCard({ post, currentUser, onViewProfile, onUpdateReaction, onReply,
     const reactions: CyberpunkReaction[] = ['Glitch', 'Upload', 'Corrupt', 'Rewind', 'Static'];
     const isAuthor = currentUser.username === post.author.username;
     
+    // Extract tags for separate display
+    const tags = React.useMemo(() => {
+        const uniqueTags = new Set(post.content.match(/\$[\w]+/g) || []);
+        return Array.from(uniqueTags);
+    }, [post.content]);
+
     // Neural Mood Styling
     const moodColors = {
         'neon-joy': 'border-l-4 border-l-[#00ff9d] shadow-[inset_4px_0_10px_-2px_rgba(0,255,157,0.3)]',
@@ -260,8 +266,8 @@ function PostCard({ post, currentUser, onViewProfile, onUpdateReaction, onReply,
         <div className={`${rootClasses} ${compact ? 'p-3' : 'p-4'} ${isDeleting ? 'post-disintegrate' : ''}`}>
             <div className="flex justify-between items-start">
                 <div className="flex items-center mb-3">
-                    <div className={`relative ${compact ? 'w-8 h-8' : 'w-10 h-10'} flex-shrink-0 cursor-pointer hover:scale-105 transition-transform`} onClick={() => onViewProfile(post.author.username)}>
-                         <div className={`w-full h-full overflow-hidden border border-[var(--theme-border-primary)] shadow-[0_0_10px_rgba(0,243,255,0.2)] ${getFrameShape(post.author.equippedFrame?.name || '')}`}>
+                    <div className={`relative ${compact ? 'w-8 h-8' : 'w-10 h-10'} flex-shrink-0 cursor-pointer hover:scale-105 transition-transform mr-3`} onClick={() => onViewProfile(post.author.username)}>
+                         <div className={`w-full h-full overflow-hidden border border-[var(--theme-border-primary)] shadow-[0_0_10px_rgba(0,243,255,0.2)] ${post.author.equippedFrame ? getFrameShape(post.author.equippedFrame.name) : 'rounded-full'}`}>
                             <Avatar 
                                 src={post.author.avatar || 'https://picsum.photos/seed/user/100/100'} 
                                 username={post.author.username}
@@ -355,6 +361,21 @@ function PostCard({ post, currentUser, onViewProfile, onUpdateReaction, onReply,
                         <video src={post.videoUrl} controls muted loop className="w-full object-cover rounded-sm mt-2 bg-black"></video>
                     )}
                     {renderPoll()}
+                    
+                    {/* Cords / Tags Section */}
+                    {tags.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                            {tags.map(tag => (
+                                <button 
+                                    key={tag}
+                                    onClick={(e) => { e.stopPropagation(); onTagClick(tag); }}
+                                    className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-[var(--theme-bg-tertiary)] text-[var(--theme-secondary)] border border-[var(--theme-border-secondary)] hover:bg-[var(--theme-bg-primary)] hover:border-[var(--theme-secondary)] hover:shadow-[0_0_8px_rgba(0,243,255,0.3)] transition-all"
+                                >
+                                    {tag}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </>
             )}
             
