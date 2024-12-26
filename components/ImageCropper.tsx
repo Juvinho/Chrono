@@ -87,29 +87,38 @@ export function ImageCropper({ imageSrc, aspectRatio, onCrop, onCancel, isCircul
   }
 
   const handleSave = () => {
-    if (!imageRef.current) return;
+    try {
+        if (!imageRef.current) return;
 
-    const canvas = document.createElement('canvas');
-    canvas.width = OUTPUT_WIDTH;
-    canvas.height = OUTPUT_HEIGHT;
-    const ctx = canvas.getContext('2d');
+        const canvas = document.createElement('canvas');
+        canvas.width = OUTPUT_WIDTH;
+        canvas.height = OUTPUT_HEIGHT;
+        const ctx = canvas.getContext('2d');
 
-    if (!ctx) return;
-    
-    // Scale factor between display and output
-    const scale = OUTPUT_WIDTH / DISPLAY_WIDTH;
+        if (!ctx) {
+            console.error('Failed to get canvas context');
+            return;
+        }
+        
+        // Scale factor between display and output
+        const scale = OUTPUT_WIDTH / DISPLAY_WIDTH;
 
-    // 1. Translate to center of canvas
-    ctx.translate(OUTPUT_WIDTH / 2, OUTPUT_HEIGHT / 2);
-    // 2. Scale (zoom * resolution scale)
-    ctx.scale(zoom * scale, zoom * scale);
-    // 3. Translate based on user drag (position is in display pixels, so divided by zoom it remains consistent)
-    ctx.translate(position.x / zoom, position.y / zoom);
-    // 4. Draw image centered at 0,0
-    ctx.drawImage(imageRef.current, -imageRef.current.naturalWidth / 2, -imageRef.current.naturalHeight / 2);
-    
-    // Use JPEG with 0.9 quality to reduce size
-    onCrop(canvas.toDataURL('image/jpeg', 0.9));
+        // 1. Translate to center of canvas
+        ctx.translate(OUTPUT_WIDTH / 2, OUTPUT_HEIGHT / 2);
+        // 2. Scale (zoom * resolution scale)
+        ctx.scale(zoom * scale, zoom * scale);
+        // 3. Translate based on user drag (position is in display pixels, so divided by zoom it remains consistent)
+        ctx.translate(position.x / zoom, position.y / zoom);
+        // 4. Draw image centered at 0,0
+        ctx.drawImage(imageRef.current, -imageRef.current.naturalWidth / 2, -imageRef.current.naturalHeight / 2);
+        
+        // Use JPEG with 0.9 quality to reduce size
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        onCrop(dataUrl);
+    } catch (error) {
+        console.error('Error applying crop:', error);
+        alert('Failed to crop image. Please try again with a different image.');
+    }
   };
 
   return (

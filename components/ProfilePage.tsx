@@ -6,6 +6,7 @@ import Timeline from './Timeline';
 import { PostComposer } from './PostComposer';
 import { isSameDay } from '../utils/date';
 import { useTranslation } from '../hooks/useTranslation';
+import { useSound } from '../contexts/SoundContext';
 import UserListModal from './modals/UserListModal';
 import { VerifiedIcon, MessageIcon } from './icons';
 import FramePreview, { getFrameShape } from './FramePreview';
@@ -40,12 +41,15 @@ export default function ProfilePage({
   onPollVote, selectedDate, setSelectedDate, typingParentIds, conversations, onOpenMarketplace
 }: ProfilePageProps) {
   const { t } = useTranslation();
+  const { playSound } = useSound();
   
   // Prioritize currentUser if it matches the profileUsername to ensure we show the latest state (e.g. after profile updates)
   const isOwnProfile = currentUser.username.toLowerCase() === profileUsername.toLowerCase();
   
   const profileUser = isOwnProfile ? currentUser : (allUsers.find(u => u.username.toLowerCase() === profileUsername.toLowerCase()) || users.find(u => u.username.toLowerCase() === profileUsername.toLowerCase()) || currentUser)!;
   
+  const isFollowing = currentUser.followingList?.includes(profileUser.username);
+
   const [userListModal, setUserListModal] = useState<{title: string, users: User[]} | null>(null);
   const [postToEdit, setPostToEdit] = useState<Post | null>(null);
   const [activeTab, setActiveTab] = useState<'posts' | 'media' | 'temporal'>('posts');
@@ -159,6 +163,9 @@ export default function ProfilePage({
   };
   
   const handleFollowClick = () => {
+      if (!isFollowing) {
+          playSound('follow');
+      }
       onFollowToggle(profileUser.username);
       if (followButtonRef.current) {
           followButtonRef.current.classList.add('pulse-click');
@@ -173,7 +180,6 @@ export default function ProfilePage({
         setPostToEdit(null);
     };
 
-  const isFollowing = currentUser.followingList?.includes(profileUser.username);
   const canViewPosts = !profileUser.isPrivate || isFollowing || isOwnProfile;
   
   const getFullUsersFromList = (usersOrUsernames: (string | User)[] = []) => {

@@ -69,6 +69,8 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
 
   const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'appearance' | 'feed'>('account');
   const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [saveMessage, setSaveMessage] = useState('');
   const [showCropper, setShowCropper] = useState(false);
   const [pendingImage, setPendingImage] = useState<string | null>(null);
   const [cropperType, setCropperType] = useState<'avatar' | 'cover'>('avatar');
@@ -126,18 +128,44 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
 
   const handleSave = async () => {
     setIsSaving(true);
+    setSaveStatus('idle');
+    setSaveMessage('');
+    
     try {
+      // Basic validation
+      if (!draftUser.username) {
+          setSaveStatus('error');
+          setSaveMessage('Username is required');
+          return;
+      }
+
+      if (!draftUser.email) {
+        setSaveStatus('error');
+        setSaveMessage('Email is required');
+        return;
+      }
+
       // Ensure birthday is formatted correctly if it was edited
       const userToSave = {
           ...draftUser,
-          // If birthday is empty string, send null or keep it empty? API likely expects YYYY-MM-DD or ISO
           birthday: draftUser.birthday || undefined
       };
       
-      const success = await onUpdateUser(userToSave);
-      if (success) {
-        // Show success feedback?
+      const result = await onUpdateUser(userToSave);
+      
+      if (result === true || (typeof result === 'object' && (result as any).success)) {
+        setSaveStatus('success');
+        setSaveMessage(t('settingsSaved') || 'Settings saved successfully');
+        
+        setTimeout(() => setSaveStatus('idle'), 3000);
+      } else {
+        setSaveStatus('error');
+        setSaveMessage((result as any).error || 'Failed to save settings');
       }
+    } catch (error: any) {
+        console.error('Save error:', error);
+        setSaveStatus('error');
+        setSaveMessage(error.message || 'An unexpected error occurred');
     } finally {
       setIsSaving(false);
     }
@@ -535,7 +563,17 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
         </div>
         
         {/* Actions */}
-        <div className="flex justify-end pt-6">
+        <div className="flex flex-col items-end pt-6">
+            {saveStatus === 'success' && (
+                <div className="mb-4 p-3 bg-green-900/50 border border-green-500 text-green-200 rounded animate-fade-in flex items-center">
+                    <span className="mr-2">✓</span> {saveMessage}
+                </div>
+            )}
+            {saveStatus === 'error' && (
+                <div className="mb-4 p-3 bg-red-900/50 border border-red-500 text-red-200 rounded animate-fade-in flex items-center">
+                    <span className="mr-2">⚠</span> {saveMessage}
+                </div>
+            )}
             <button 
                 onClick={handleSave}
                 disabled={isSaving}
