@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { migrate } from './db/migrate.js';
+import { pool } from './db/connection.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import postRoutes from './routes/posts.js';
@@ -90,8 +91,19 @@ app.use('/api/marketplace', marketplaceRoutes);
 app.use('/api/companions', companionRoutes);
 
 // Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+app.get('/health', async (req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.json({ status: 'ok', db: 'connected', timestamp: new Date().toISOString() });
+  } catch (err: any) {
+    console.error('Health check failed:', err);
+    res.status(500).json({ 
+      status: 'error', 
+      db: 'disconnected', 
+      error: err.message,
+      timestamp: new Date().toISOString() 
+    });
+  }
 });
 
 // Serve static files from the React app
