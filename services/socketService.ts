@@ -2,19 +2,16 @@ import { io, Socket } from 'socket.io-client';
 
 // Use the same base URL as the API, removing '/api' if present or just the host
 const getSocketUrl = () => {
-    if (import.meta.env.VITE_API_URL) {
-        // Remove '/api' from the end if present
-        return import.meta.env.VITE_API_URL.replace(/\/api\/?$/, '');
-    }
     if (typeof window !== 'undefined') {
         const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
         if (isLocal) {
-            return `http://${window.location.hostname}:3001`;
+            // Force local socket when running locally
+            return `http://127.0.0.1:3001`;
         }
         // In production, socket is on the same origin
         return window.location.origin;
     }
-    return 'http://localhost:3001';
+    return 'http://127.0.0.1:3001';
 };
 
 class SocketService {
