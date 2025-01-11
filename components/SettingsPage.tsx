@@ -204,18 +204,24 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
       }
   };
 
+  const handleSearch = (query: string) => {
+    sessionStorage.setItem('chrono_search_query', query);
+    onNavigate(Page.Dashboard);
+  };
+
   return (
     <div className="min-h-screen bg-[var(--theme-bg-primary)] text-[var(--theme-text-primary)] font-sans">
       <Header 
         user={user} 
         onLogout={onLogout} 
-        onViewProfile={(username) => onNavigate('profile', username)}
+        onViewProfile={(username) => onNavigate(Page.Profile, username)}
         onNavigate={onNavigate}
         onNotificationClick={onNotificationClick}
         allUsers={allUsers}
         allPosts={allPosts}
         conversations={conversations}
         onOpenMarketplace={onOpenMarketplace}
+        onSearch={handleSearch}
       />
 
       <main className="pt-20 pb-20 px-4 max-w-4xl mx-auto space-y-6">
@@ -589,7 +595,7 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
           <ImageCropper 
               imageSrc={pendingImage}
               aspectRatio={cropperType === 'avatar' ? 1 : 3}
-              onCropComplete={handleCropComplete}
+              onCrop={handleCropComplete}
               onCancel={() => { setShowCropper(false); setPendingImage(null); }}
           />
       )}

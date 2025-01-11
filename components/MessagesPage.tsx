@@ -83,7 +83,7 @@ export default function MessagesPage({
     onNavigate(Page.Dashboard);
   };
 
-  const ConversationListItem = ({ conversation }: { conversation: Conversation }) => {
+  const ConversationListItem: React.FC<{ conversation: Conversation }> = ({ conversation }) => {
     const otherParticipantUsername = conversation.participants.find(p => p !== currentUser.username);
     const participant = allUsers.find(u => u.username === otherParticipantUsername);
     const lastMessage = conversation.messages[conversation.messages.length - 1];

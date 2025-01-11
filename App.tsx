@@ -1339,7 +1339,7 @@ export default function App() {
         }
     };
 
-    const handleEditPost = async (postId: string, newPostData: Omit<Post, 'id' | 'author' | 'timestamp' | 'replies' | 'repostOf'>) => {
+    const handleEditPost = async (postId: string, newPostData: Omit<Post, 'id' | 'author' | 'timestamp' | 'replies' | 'repostOf' | 'likes' | 'likedBy'>) => {
          if (!currentUser) return;
 
          // MIGRATION: API Call
@@ -1349,8 +1349,7 @@ export default function App() {
                  isPrivate: newPostData.isPrivate,
                  imageUrl: newPostData.imageUrl,
                  videoUrl: newPostData.videoUrl,
-                 pollOptions: newPostData.pollOptions,
-                 pollEndsAt: newPostData.pollEndsAt,
+                 poll: newPostData.poll,
              };
              
              const result = await apiClient.updatePost(postId, updateData);
@@ -1403,7 +1402,7 @@ export default function App() {
         if (!currentUser) return;
 
         if (notification.post) {
-            setSelectedDate(notification.post.timestamp);
+            setSelectedDate(new Date(notification.post.timestamp));
             sessionStorage.setItem('chrono_focus_post_id', notification.post.id);
             handleNavigate(Page.Dashboard);
         } else if (notification.notificationType === 'follow') {

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, memo } from 'react';
 import { Post, User } from '../types';
 import { useTranslation } from '../hooks/useTranslation';
 import { CameraIcon, PollIcon, CalendarIcon, LockClosedIcon, MicrophoneIcon, ImageIcon, SparklesIcon } from './icons';
-import { generateImage } from '../services/geminiService';
+import { generateImage, analyzeSentiment } from '../services/geminiService';
 import FramePreview, { getFrameShape } from './FramePreview';
 
 const MAX_CHARACTERS = 512;
@@ -10,7 +10,7 @@ const MAX_CHARACTERS = 512;
 interface PostComposerProps {
   currentUser: User;
   onClose: () => void;
-  onSubmit: (postData: Omit<Post, 'id' | 'author' | 'timestamp' | 'replies' | 'repostOf'>, existingPostId?: string) => void;
+  onSubmit: (postData: Omit<Post, 'id' | 'author' | 'timestamp' | 'replies' | 'repostOf' | 'likes' | 'likedBy'>, existingPostId?: string) => void;
   postToEdit?: Post | null;
   isSubmitting?: boolean;
   initialDate?: Date;
@@ -27,6 +27,7 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
   const composerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isListening, setIsListening] = useState(false);
+  const [isLocalSubmitting, setIsLocalSubmitting] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const [postDate, setPostDate] = useState<Date>(initialDate || new Date());
 
@@ -56,9 +57,9 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
       setIsPrivate(postToEdit.isPrivate || false);
       setGeneratedImageUrl(postToEdit.imageUrl || null);
       setVideoUrl(postToEdit.videoUrl || null);
-      if (postToEdit.pollOptions && postToEdit.pollOptions.length > 0) {
+      if (postToEdit.poll?.options && postToEdit.poll.options.length > 0) {
         setShowPoll(true);
-        setPollOptions(postToEdit.pollOptions.map(opt => opt.option));
+        setPollOptions(postToEdit.poll.options.map(opt => opt.option));
       }
       if (postToEdit.unlockAt) {
           setUnlockAt(new Date(postToEdit.unlockAt).toISOString().slice(0, 16));
@@ -190,7 +191,7 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
             mood = await analyzeSentiment(content.trim());
         }
 
-        const postData: Omit<Post, 'id' | 'author' | 'timestamp' | 'replies' | 'repostOf'> & { timestamp?: Date; mood?: any } = {
+        const postData: Omit<Post, 'id' | 'author' | 'timestamp' | 'replies' | 'repostOf' | 'likes' | 'likedBy'> & { timestamp?: Date; mood?: any } = {
           content: content.trim(),
           isPrivate: isPrivate,
           imageUrl: generatedImageUrl || undefined,
@@ -206,37 +207,31 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
             .filter(opt => opt !== '');
           
           if (validPollOptions.length >= 2) {
-            const oldOptions = postToEdit?.pollOptions?.map(o => o.option).join('||');
+            const oldOptions = postToEdit?.poll?.options?.map(o => o.option).join('||');
             const newOptions = validPollOptions.join('||');
             const optionsChanged = oldOptions !== newOptions;
 
-            postData.pollOptions = validPollOptions.map(option => ({ 
-                option, 
-                votes: optionsChanged ? 0 : postToEdit?.pollOptions?.find(p => p.option === option)?.votes || 0
-            }));
-
-            if (optionsChanged) {
-                postData.voters = {};
-            } else {
-                postData.voters = postToEdit?.voters;
-            }
-
-            const pollEndsAt = postToEdit?.pollEndsAt || new Date();
-            if (!postToEdit?.pollEndsAt) {
+            const pollEndsAt = postToEdit?.poll?.endsAt || new Date();
+            if (!postToEdit?.poll?.endsAt) {
                 pollEndsAt.setDate(pollEndsAt.getDate() + 1);
             }
-            postData.pollEndsAt = pollEndsAt;
+
+            postData.poll = {
+                options: validPollOptions.map(option => ({ 
+                    option, 
+                    votes: optionsChanged ? 0 : postToEdit?.poll?.options?.find(p => p.option === option)?.votes || 0
+                })),
+                totalVotes: optionsChanged ? 0 : postToEdit?.poll?.totalVotes || 0,
+                endsAt: pollEndsAt,
+                userVotedOption: optionsChanged ? undefined : postToEdit?.poll?.userVotedOption
+            };
           } else {
             // Signal to remove the poll by clearing options
-            postData.pollOptions = undefined;
-            postData.pollEndsAt = undefined;
-            postData.voters = undefined;
+            postData.poll = undefined;
           }
-        } else if (postToEdit?.pollOptions) {
+        } else if (postToEdit?.poll) {
             // Poll UI is hidden, but original post had one, so preserve it
-            postData.pollOptions = postToEdit.pollOptions;
-            postData.pollEndsAt = postToEdit.pollEndsAt;
-            postData.voters = postToEdit.voters;
+            postData.poll = postToEdit.poll;
         }
         
         await onSubmit(postData, postToEdit?.id);

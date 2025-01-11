@@ -26,7 +26,7 @@ export interface ProfileSettings {
   themeSkin?: string;
   coverImage: string;
   animationsEnabled?: boolean;
-  borderRadius?: 'none' | 'sm' | 'md' | 'full';
+  borderRadius?: 'none' | 'sm' | 'md' | 'lg' | 'full';
   autoRefreshEnabled?: boolean;
   autoRefreshInterval?: number;
 }
@@ -68,8 +68,8 @@ export interface User {
   followers: number;
   following: number;
   profileSettings?: ProfileSettings;
-  followingList?: User[];
-  followersList?: User[];
+  followingList?: string[];
+  followersList?: string[];
   notifications?: Notification[];
   blockedUsers?: string[];
   isPrivate?: boolean;
@@ -119,6 +119,7 @@ export interface Post {
   likedBy: string[]; // usernames
   isThread?: boolean;
   repostOf?: Post;
+  inReplyTo?: Post;
   reactions?: { [key in CyberpunkReaction]?: number }; // Count of each reaction type
   userReaction?: CyberpunkReaction; // The current user's reaction
   poll?: {

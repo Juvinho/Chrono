@@ -69,7 +69,8 @@ describe('SettingsPage', () => {
         animationsEnabled: true,
         borderRadius: 'md',
         autoRefreshEnabled: false,
-        autoRefreshInterval: 5
+        autoRefreshInterval: 5,
+        coverImage: ''
     }
   };
 

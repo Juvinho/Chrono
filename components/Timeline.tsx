@@ -41,7 +41,7 @@ export default function Timeline({ selectedDate, setSelectedDate, onNavigate, al
     const postsByDate = useMemo(() => {
         const map = new Map<string, User[]>();
         allPosts.forEach(post => {
-            const dateString = post.timestamp.toDateString();
+            const dateString = new Date(post.timestamp).toDateString();
             if (!map.has(dateString)) {
                 map.set(dateString, []);
             }

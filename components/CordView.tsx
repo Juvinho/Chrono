@@ -57,7 +57,7 @@ export default function CordView({
     const recentPosts = useMemo(() => {
         return allPosts
             .filter(post => post.content.includes(cordTag))
-            .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     }, [allPosts, cordTag]);
 
     const handlePostSubmit = (postData: Omit<Post, 'id' | 'author' | 'timestamp' | 'replies' | 'repostOf'>, existingPostId?: string) => {
