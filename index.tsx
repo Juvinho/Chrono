@@ -3,6 +3,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { SoundProvider } from './contexts/SoundContext';
+import { ToastProvider } from './contexts/ToastContext';
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
   state = { hasError: false, error: null as Error | null };
@@ -87,7 +88,9 @@ root.render(
   <React.StrictMode>
     <ErrorBoundary>
       <SoundProvider>
-        <App />
+        <ToastProvider>
+          <App />
+        </ToastProvider>
       </SoundProvider>
     </ErrorBoundary>
   </React.StrictMode>

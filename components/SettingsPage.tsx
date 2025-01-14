@@ -117,13 +117,18 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
   };
 
   const handleCropComplete = (croppedImage: string) => {
-    if (cropperType === 'avatar') {
-      setDraftUser(prev => ({ ...prev, avatar: croppedImage }));
-    } else {
-      handleProfileSettingChange('coverImage', croppedImage);
+    try {
+        if (cropperType === 'avatar') {
+          setDraftUser(prev => ({ ...prev, avatar: croppedImage }));
+        } else {
+          handleProfileSettingChange('coverImage', croppedImage);
+        }
+        setShowCropper(false);
+        setPendingImage(null);
+    } catch (error) {
+        console.error('Error handling crop completion:', error);
+        alert('Failed to update image preview. Please try again.');
     }
-    setShowCropper(false);
-    setPendingImage(null);
   };
 
   const handleSave = async () => {
@@ -131,18 +136,18 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
     setSaveStatus('idle');
     setSaveMessage('');
     
+    // Scroll to bottom to show status
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    
     try {
       // Basic validation
-      if (!draftUser.username) {
-          setSaveStatus('error');
-          setSaveMessage('Username is required');
-          return;
+      if (!draftUser.username?.trim()) {
+          throw new Error('Username is required');
       }
 
-      if (!draftUser.email) {
-        setSaveStatus('error');
-        setSaveMessage('Email is required');
-        return;
+      // Only validate email if it's being updated or if we are in the account tab
+      if (activeTab === 'account' && !draftUser.email?.trim()) {
+        throw new Error('Email is required');
       }
 
       // Ensure birthday is formatted correctly if it was edited
@@ -151,21 +156,32 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
           birthday: draftUser.birthday || undefined
       };
       
+      console.log('Saving user settings...', userToSave);
       const result = await onUpdateUser(userToSave);
+      console.log('Save result:', result);
       
       if (result === true || (typeof result === 'object' && (result as any).success)) {
         setSaveStatus('success');
         setSaveMessage(t('settingsSaved') || 'Settings saved successfully');
         
+        // Scroll again to ensure success message is seen
+        setTimeout(() => {
+             window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }, 100);
+
         setTimeout(() => setSaveStatus('idle'), 3000);
       } else {
-        setSaveStatus('error');
-        setSaveMessage((result as any).error || 'Failed to save settings');
+        throw new Error((result as any).error || 'Failed to save settings');
       }
     } catch (error: any) {
         console.error('Save error:', error);
         setSaveStatus('error');
         setSaveMessage(error.message || 'An unexpected error occurred');
+        
+        // Scroll to error
+        setTimeout(() => {
+             window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }, 100);
     } finally {
       setIsSaving(false);
     }

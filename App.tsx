@@ -4,10 +4,11 @@ import { CORE_USERS } from './constants';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { LanguageProvider } from './hooks/useTranslation';
 import { generatePostContent, generateReplyContent, generatePollVote, generateDirectMessageReply } from './services/geminiService';
-import { apiClient, mapApiUserToUser, mapApiPostToPost } from './services/api';
+import { apiClient, mapApiUserToUser, mapApiPostToPost, mapApiStoryToStory } from './services/api';
 import { NotificationManager } from './services/notificationManager';
 import { socketService } from './services/socketService';
 import { useSound } from './contexts/SoundContext';
+import { useToast } from './contexts/ToastContext';
 import LoadingSpinner from './components/LoadingSpinner';
 
 // Lazy load components for performance
@@ -70,6 +71,7 @@ export default function App() {
     const [conversations, setConversations] = useState<Conversation[]>([]);
     
     // Story State
+    const [stories, setStories] = useState<Story[]>([]);
     const [viewingStoryUser, setViewingStoryUser] = useState<User | null>(null);
     const [isCreatingStory, setIsCreatingStory] = useState(false);
     const [isMarketplaceOpen, setIsMarketplaceOpen] = useState(false);
@@ -78,36 +80,58 @@ export default function App() {
     const usersRef = useRef(users);
     useEffect(() => { usersRef.current = users; }, [users]);
 
-    // Mock stories for demo
-    useEffect(() => {
-        setUsers(prevUsers => {
-            const updated = prevUsers.map(u => {
-                if ((u.username === 'Kai' || u.username === 'Nova') && (!u.stories || u.stories.length === 0)) {
-                    return {
-                        ...u,
-                        stories: [
-                            {
-                                id: crypto.randomUUID(),
-                                userId: u.username,
-                                username: u.username,
-                                userAvatar: u.avatar,
-                                content: u.username === 'Kai' ? 'Checking out the new timeline update!' : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=1000&auto=format&fit=crop',
-                                type: u.username === 'Kai' ? 'text' : 'image',
-                                timestamp: new Date(),
-                                expiresAt: new Date(Date.now() + 86400000),
-                                viewers: []
-                            }
-                        ]
-                    };
-                }
-                return u;
-            });
-            if (JSON.stringify(updated) !== JSON.stringify(prevUsers)) {
-                return updated;
+    // Derived state for users with stories
+    const usersWithStories = useMemo(() => {
+        if (!currentUser) return [];
+        
+        // Group stories by user
+        const storiesByUser = new Map<string, Story[]>();
+        stories.forEach(story => {
+            const userId = story.userId; // userId is string (username in frontend types sometimes, but ID in backend)
+            // Wait, frontend Story type uses userId as string.
+            // Let's assume userId is the user's ID or username.
+            // Based on mapApiStoryToStory, userId is userId.
+            
+            if (!storiesByUser.has(userId)) {
+                storiesByUser.set(userId, []);
             }
-            return prevUsers;
+            storiesByUser.get(userId)!.push(story);
         });
-    }, []);
+
+        // Map to Users
+        const usersWithStoriesList: User[] = [];
+        
+        // Add current user if they have stories
+        // (Actually Dashboard handles current user separately usually, but let's see StoryTray)
+        // StoryTray takes currentUser and usersWithStories.
+        
+        storiesByUser.forEach((userStories, userId) => {
+             // Find user in users array or maybe from story author
+             // Ideally story has author field.
+             const firstStory = userStories[0];
+             if (firstStory.author && firstStory.author.username !== currentUser.username) {
+                 // Enhance user with stories
+                 usersWithStoriesList.push({
+                     ...firstStory.author,
+                     stories: userStories
+                 });
+             } else if (userId === currentUser.username || userId === currentUser.id) {
+                 // It's me
+             }
+        });
+        
+        return usersWithStoriesList;
+    }, [stories, currentUser]);
+
+    // Update current user stories
+    useEffect(() => {
+        if (currentUser) {
+            const myStories = stories.filter(s => s.userId === currentUser.id || s.userId === currentUser.username);
+            if (JSON.stringify(currentUser.stories) !== JSON.stringify(myStories)) {
+                setCurrentUser(prev => prev ? { ...prev, stories: myStories } : null);
+            }
+        }
+    }, [stories]); // Be careful with loops here
 
     const postsRef = useRef(posts);
     useEffect(() => { postsRef.current = posts; }, [posts]);
@@ -181,6 +205,12 @@ export default function App() {
                     if (result.data) {
                         const mappedUser = mapApiUserToUser(result.data);
                         setCurrentUser(mappedUser);
+
+                        // Fetch Stories
+                        const storiesResult = await apiClient.getStories();
+                        if (storiesResult.data) {
+                            setStories(storiesResult.data.map(mapApiStoryToStory));
+                        }
                     } else {
                         // Token invalid or expired
                         console.warn("Session expired or invalid, logging out.");
@@ -227,6 +257,7 @@ export default function App() {
     const lastInteractionRef = useRef<number>(Date.now());
 
     const { playSound } = useSound();
+    const { showToast } = useToast();
     const knownNotificationIds = useRef<Set<string>>(new Set());
     const isFirstLoad = useRef(true);
 
@@ -270,6 +301,12 @@ export default function App() {
                 
                 // Update in users array if present
                 setUsers(prev => prev.map(u => u.username === mappedUser.username ? mappedUser : u));
+            }
+
+            // Reload stories
+            const storiesResult = await apiClient.getStories();
+            if (storiesResult.data) {
+                setStories(storiesResult.data.map(mapApiStoryToStory));
             }
 
             // Reload posts
@@ -440,14 +477,44 @@ export default function App() {
             }
 
             const handleNewNotification = (payload: any) => {
-                 // Payload from backend might need mapping to Notification type
-                 // Backend sends: { ...notification, actor, post }
-                 // Frontend Notification type: id, userId, actorId, notificationType, postId, isRead, createdAt
-                 // But frontend usually needs enriched data for display?
-                 // The current frontend types seem to rely on separate fetching or enriched properties?
-                 // Let's check Notification type in frontend.
-                 
-                 // For now, assume payload is compatible or we use it directly for toast
+                 console.log("New notification received:", payload);
+                 // Refresh notifications or add to state
+                 // For now, we rely on polling or reload, but we should optimize later.
+                 // Ideally: notificationManager.add(payload);
+                 playSound('notification');
+            };
+
+            const handleNewPost = (newPost: Post) => {
+                console.log("New post received via socket:", newPost.id);
+                // Map if necessary, but enrichedPost from server should match Post type mostly
+                const mappedPost = mapApiPostToPost(newPost);
+                
+                // Update posts state
+                setPosts(prevPosts => {
+                    // Avoid duplicates
+                    if (prevPosts.some(p => p.id === mappedPost.id)) return prevPosts;
+                    
+                    // If it's my own post, it might already be there via optimistic update or re-fetch?
+                    // But usually socket comes after.
+                    // We add it to the list.
+                    return [mappedPost, ...prevPosts];
+                });
+
+                if (newPost.author.username !== currentUser.username) {
+                    playSound('notification'); // Or a different sound for posts
+                }
+            };
+
+            socketService.on('new_notification', handleNewNotification);
+            socketService.on('new_post', handleNewPost);
+
+            return () => {
+                socketService.off('new_notification', handleNewNotification);
+                socketService.off('new_post', handleNewPost);
+                socketService.disconnect();
+            };
+        }
+    }, [currentUser]);                 // For now, assume payload is compatible or we use it directly for toast
                  
                  // Update state
                  setCurrentUser(prev => {
@@ -675,6 +742,59 @@ export default function App() {
         }
     }, [selectedDate, currentPage, currentUser]);
 
+    // Handle Browser Back/Forward Buttons
+    useEffect(() => {
+        const handlePopState = (event: PopStateEvent) => {
+            if (event.state) {
+                const { page, data, date } = event.state;
+                
+                if (page !== undefined) {
+                    setCurrentPage(page);
+                    sessionStorage.setItem('chrono_currentPage', page.toString());
+                    
+                    if (page === Page.Profile && data) {
+                        setProfileUsername(data);
+                    } else {
+                         // Don't nullify if we are just navigating back to dashboard?
+                         // Actually, if we go back to dashboard, profileUsername should be null.
+                         setProfileUsername(null);
+                    }
+                    
+                    if (date) {
+                        setSelectedDate(new Date(date));
+                    }
+                }
+            } else {
+                // If no state (e.g., initial load or external link), try to parse URL
+                 if (typeof window !== 'undefined') {
+                    const path = window.location.pathname || '/';
+                    const segments = path.split('/').filter(Boolean);
+                    
+                    if (segments.length > 0) {
+                         const first = segments[0];
+                         if (first.startsWith('@')) {
+                             setProfileUsername(decodeURIComponent(first.substring(1)));
+                             setCurrentPage(Page.Profile);
+                         } else if (first === 'echo') {
+                             setCurrentPage(Page.Dashboard);
+                         } else if (first === 'settings') {
+                             setCurrentPage(Page.Settings);
+                         } else if (first === 'messages') {
+                             setCurrentPage(Page.Messages);
+                         } else if (first === 'data-slicer') {
+                             setCurrentPage(Page.VideoAnalysis);
+                         }
+                    } else {
+                        setCurrentPage(Page.Dashboard);
+                    }
+                }
+            }
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, []);
+
     // MIGRATION: Fetch initial data from Backend
     useEffect(() => {
         if (currentUser) {
@@ -727,10 +847,8 @@ export default function App() {
 
 
 
-    // Story Handlers
-    const usersWithStories = useMemo(() => {
-        return users.filter(u => u.stories && u.stories.length > 0 && u.username !== currentUser?.username);
-    }, [users, currentUser]);
+    // Story Handlers - usersWithStories is already defined above
+
 
     const handleCreateStory = useCallback(async (storyData: Omit<Story, 'id' | 'timestamp' | 'expiresAt' | 'userId' | 'username' | 'userAvatar'>) => {
         if (!currentUser) return;
@@ -751,13 +869,23 @@ export default function App() {
 
     const handleViewStory = useCallback(async (storyId: string) => {
         if (!currentUser) return;
+        
+        // Optimistically update local state
+        setStories(prevStories => prevStories.map(story => {
+            if (story.id === storyId) {
+                const viewers = story.viewers || [];
+                if (!viewers.includes(currentUser.id || '')) {
+                    return { ...story, viewers: [...viewers, currentUser.id || ''] };
+                }
+            }
+            return story;
+        }));
+
         try {
             await apiClient.viewStory(storyId);
-            // No need to reload everything just for a view count update, 
-            // but we might want to update local state to show it's viewed?
-            // For now, let's keep it simple and just fire-and-forget the API call.
         } catch (error) {
             console.error("Failed to view story via API:", error);
+            // We could revert here, but for a view receipt it's probably fine to ignore failure
         }
     }, [currentUser]);
 
@@ -1173,7 +1301,10 @@ export default function App() {
         // API Call
         try {
             if (follower.username === currentUser.username) {
-                const result = await apiClient.toggleFollow(usernameToToggle);
+                const result = isFollowing 
+                    ? await apiClient.unfollowUser(usernameToToggle)
+                    : await apiClient.followUser(usernameToToggle);
+
                 if (result.error) {
                     console.error("Failed to toggle follow via API:", result.error);
                     // Revert optimistic update if API fails
@@ -1267,6 +1398,7 @@ export default function App() {
         
         if (post.author.username === currentUser?.username) {
             playSound('post');
+            showToast('Post publicado com sucesso!', 'success');
         }
 
         await reloadBackendData();
@@ -1286,7 +1418,7 @@ export default function App() {
         try {
             const result = await apiClient.updateReaction(postId, reaction);
             if (result.error) {
-                console.error("Failed to update reaction via API:", result.error);
+                if (reactor.username === currentUser?.username) showToast(result.error, 'error');
                 return;
             }
             
@@ -1294,6 +1426,7 @@ export default function App() {
             await reloadBackendData();
         } catch (error) {
             console.error("Failed to update reaction via API:", error);
+            if (reactor.username === currentUser?.username) showToast('Falha ao reagir ao post.', 'error');
         }
     };
 
@@ -1306,18 +1439,20 @@ export default function App() {
         try {
             const result = await apiClient.echoPost(postToEcho.id);
             if (result.error) {
-                console.error("Failed to echo post via API:", result.error);
+                if (echoer.username === currentUser?.username) showToast(result.error, 'error');
                 return;
             }
             
             if (echoer.username === currentUser.username) {
                 playSound('notification');
+                showToast('Post ecoado!', 'success');
             }
 
             // Reload posts to get the updated state with the new echo
             await reloadBackendData();
         } catch (error) {
             console.error("Failed to echo post via API:", error);
+            if (echoer.username === currentUser?.username) showToast('Falha ao ecoar post.', 'error');
         }
     };
 
@@ -1328,14 +1463,16 @@ export default function App() {
         try {
             const result = await apiClient.deletePost(postIdToDelete);
             if (result.error) {
-                console.error("Failed to delete post via API:", result.error);
+                showToast(result.error, 'error');
                 return;
             }
             
+            showToast('Post deletado.', 'info');
             // Reload posts to get updated state
             await reloadBackendData();
         } catch (error) {
             console.error("Failed to delete post via API:", error);
+            showToast('Falha ao deletar post.', 'error');
         }
     };
 
@@ -1354,14 +1491,16 @@ export default function App() {
              
              const result = await apiClient.updatePost(postId, updateData);
              if (result.error) {
-                 console.error("Failed to update post via API:", result.error);
+                 showToast(result.error, 'error');
                  return;
              }
              
+             showToast('Post atualizado.', 'success');
              // Reload posts to get updated state
              await reloadBackendData();
          } catch (error) {
              console.error("Failed to update post via API:", error);
+             showToast('Falha ao atualizar post.', 'error');
          }
     };
 
@@ -1525,6 +1664,7 @@ export default function App() {
                         typingParentIds={typingParentIds}
                         conversations={conversations}
                         onOpenMarketplace={() => setIsMarketplaceOpen(true)}
+                        onUpdateUser={handleUpdateUser}
                      />
                 ) : (
                     <LoginScreen onLogin={handleLogin} users={users} onNavigate={handleNavigate} />

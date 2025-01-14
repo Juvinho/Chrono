@@ -53,7 +53,11 @@ export default function NewMessageModal({ allUsers, currentUser, onClose, onSele
               {filteredUsers.map(user => {
                 const avatarShape = user.equippedFrame ? getFrameShape(user.equippedFrame.name) : 'rounded-full';
                 return (
-                  <div key={user.username} onClick={() => onSelectUser(user.username)} className="flex items-center space-x-3 p-2 hover:bg-[var(--theme-bg-tertiary)] cursor-pointer">
+                  <button 
+                    key={user.username} 
+                    onClick={() => onSelectUser(user.username)} 
+                    className="flex items-center space-x-3 p-2 hover:bg-[var(--theme-bg-tertiary)] cursor-pointer w-full text-left transition-colors"
+                  >
                     <div className="relative w-10 h-10 flex-shrink-0">
                       <img src={user.avatar} alt={user.username} className={`w-full h-full ${avatarShape} object-cover`} />
                       {user.equippedFrame && (
@@ -71,11 +75,11 @@ export default function NewMessageModal({ allUsers, currentUser, onClose, onSele
                         </div>
                       )}
                     </div>
-                    <div>
-                      <p className="font-bold text-[var(--theme-text-light)]">@{user.username}</p>
+                    <div className="flex-grow min-w-0">
+                      <p className="font-bold text-[var(--theme-text-light)] truncate">@{user.username}</p>
                       <p className="text-sm text-[var(--theme-text-secondary)] truncate">{user.bio}</p>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>

@@ -170,11 +170,13 @@ export default function SearchOverlay({ onClose, onSearch, onViewProfile, allUse
                                 foundUsers.map(user => {
                                     const avatarShape = user.equippedFrame ? getFrameShape(user.equippedFrame.name) : 'rounded-full';
                                     return (
-                                        <div 
+                                        <a 
                                             key={user.username} 
-                                            onClick={() => onViewProfile(user.username)} 
-                                            tabIndex={0}
-                                            onKeyDown={(e) => e.key === 'Enter' && onViewProfile(user.username)}
+                                            href={`/@${user.username}`}
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                onViewProfile(user.username);
+                                            }}
                                             className="flex items-center space-x-3 cursor-pointer group p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--theme-primary)]"
                                         >
                                             <div className="relative w-10 h-10 flex-shrink-0">
@@ -202,7 +204,7 @@ export default function SearchOverlay({ onClose, onSearch, onViewProfile, allUse
                                                     <span><span className="font-bold text-[var(--theme-text-primary)]">{user.following || 0}</span> following</span>
                                                 </div>
                                             </div>
-                                        </div>
+                                        </a>
                                     );
                                 })
                             ) : (
@@ -260,12 +262,20 @@ export default function SearchOverlay({ onClose, onSearch, onViewProfile, allUse
                                     <div className="space-y-4">
                                         <h2 className="search-section-header">:: {t('relevantUsers')}</h2>
                                         {relevantUsers.map(user => (
-                                            <div key={user.username} onClick={() => onViewProfile(user.username)} className="flex items-center space-x-3 cursor-pointer group">
+                                            <a 
+                                                key={user.username} 
+                                                href={`/@${user.username}`}
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    onViewProfile(user.username);
+                                                }}
+                                                className="flex items-center space-x-3 cursor-pointer group"
+                                            >
                                                 <div className="relative w-8 h-8 flex-shrink-0">
                                                     <Avatar src={user.avatar} username={user.username} className="w-full h-full rounded-full object-cover" />
                                                 </div>
                                                 <span className="text-[var(--theme-text-primary)] group-hover:text-[var(--theme-secondary)]">@{user.username}</span>
-                                            </div>
+                                            </a>
                                         ))}
                                     </div>
                                     <div className="space-y-2">
@@ -295,7 +305,15 @@ export default function SearchOverlay({ onClose, onSearch, onViewProfile, allUse
                         <div className="space-y-4">
                             <h2 className="search-section-header">:: {t('relevantUsers')}</h2>
                             {relevantUsers.map(user => (
-                                <div key={user.username} onClick={() => onViewProfile(user.username)} className="flex items-center space-x-3 cursor-pointer group">
+                                <a 
+                                    key={user.username} 
+                                    href={`/@${user.username}`}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        onViewProfile(user.username);
+                                    }}
+                                    className="flex items-center space-x-3 cursor-pointer group"
+                                >
                                     <div className="relative w-8 h-8 flex-shrink-0">
                                         {(() => {
                                             const avatarShape = user.equippedFrame ? getFrameShape(user.equippedFrame.name) : 'rounded-full';
@@ -312,7 +330,7 @@ export default function SearchOverlay({ onClose, onSearch, onViewProfile, allUse
                                         })()}
                                     </div>
                                     <span className="text-[var(--theme-text-primary)] group-hover:text-[var(--theme-secondary)]">@{user.username}</span>
-                                </div>
+                                </a>
                             ))}
                         </div>
                         <div className="space-y-2">

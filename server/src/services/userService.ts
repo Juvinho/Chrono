@@ -41,7 +41,7 @@ export class UserService {
           username,
           email,
           passwordHash,
-          avatar || `https://picsum.photos/seed/${username}/100/100`
+          avatar || '' // Empty string triggers frontend initials fallback
         ]
       );
       const userId = userResult.rows[0].id;
@@ -87,7 +87,7 @@ export class UserService {
   }
 
   async getUserByUsername(username: string, includeFollows: boolean = false): Promise<User | null> {
-    const result = await pool.query(`${FULL_USER_SELECT} WHERE u.username = $1`, [username]);
+    const result = await pool.query(`${FULL_USER_SELECT} WHERE LOWER(u.username) = LOWER($1)`, [username]);
     if (result.rows.length === 0) return null;
     const user = this.mapUserFromDb(result.rows[0]);
     
@@ -101,7 +101,7 @@ export class UserService {
   }
 
   async getUserByEmail(email: string): Promise<User | null> {
-    const result = await pool.query(`${FULL_USER_SELECT} WHERE u.email = $1`, [email]);
+    const result = await pool.query(`${FULL_USER_SELECT} WHERE LOWER(u.email) = LOWER($1)`, [email]);
     if (result.rows.length === 0) return null;
     const user = this.mapUserFromDb(result.rows[0]);
     // Optimization: Don't fetch lists for auth/email checks unless needed
@@ -131,7 +131,7 @@ export class UserService {
     try {
       await client.query('BEGIN');
 
-      // 1. Update users table (avatar)
+      // 1. Update users table (avatar, counts if provided but usually they are managed by followService)
       if (updates.avatar !== undefined) {
         await client.query('UPDATE users SET avatar = $1 WHERE id = $2', [updates.avatar, id]);
       }
@@ -142,7 +142,12 @@ export class UserService {
       let pIdx = 1;
 
       if (updates.bio !== undefined) { profileFields.push(`bio = $${pIdx++}`); profileValues.push(updates.bio); }
-      if (updates.birthday !== undefined) { profileFields.push(`birthday = $${pIdx++}`); profileValues.push(updates.birthday); }
+      if (updates.birthday !== undefined) { 
+        // Ensure birthday is stored as Date or NULL
+        const bday = updates.birthday ? new Date(updates.birthday) : null;
+        profileFields.push(`birthday = $${pIdx++}`); 
+        profileValues.push(bday); 
+      }
       if (updates.location !== undefined) { profileFields.push(`location = $${pIdx++}`); profileValues.push(updates.location); }
       if (updates.website !== undefined) { profileFields.push(`website = $${pIdx++}`); profileValues.push(updates.website); }
       if (updates.coverImage !== undefined) { profileFields.push(`cover_image = $${pIdx++}`); profileValues.push(updates.coverImage); }

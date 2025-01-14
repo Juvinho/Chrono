@@ -15,6 +15,7 @@ export function ImageCropper({ imageSrc, aspectRatio, onCrop, onCancel, isCircul
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [isProcessing, setIsProcessing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
 
@@ -86,9 +87,14 @@ export function ImageCropper({ imageSrc, aspectRatio, onCrop, onCancel, isCircul
     setIsDragging(false);
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (isProcessing) return;
+    setIsProcessing(true);
+
     try {
-        if (!imageRef.current) return;
+        if (!imageRef.current) {
+            throw new Error('Image not loaded');
+        }
 
         const canvas = document.createElement('canvas');
         canvas.width = OUTPUT_WIDTH;
@@ -96,8 +102,7 @@ export function ImageCropper({ imageSrc, aspectRatio, onCrop, onCancel, isCircul
         const ctx = canvas.getContext('2d');
 
         if (!ctx) {
-            console.error('Failed to get canvas context');
-            return;
+            throw new Error('Failed to get canvas context');
         }
         
         // Scale factor between display and output
@@ -114,10 +119,17 @@ export function ImageCropper({ imageSrc, aspectRatio, onCrop, onCancel, isCircul
         
         // Use JPEG with 0.9 quality to reduce size
         const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        
+        if (dataUrl === 'data:,') {
+             throw new Error('Canvas produced empty data');
+        }
+
         onCrop(dataUrl);
     } catch (error) {
         console.error('Error applying crop:', error);
-        alert('Failed to crop image. Please try again with a different image.');
+        alert('Failed to crop image. Please try again or use a different image.');
+    } finally {
+        setIsProcessing(false);
     }
   };
 
@@ -191,13 +203,25 @@ export function ImageCropper({ imageSrc, aspectRatio, onCrop, onCancel, isCircul
         <div className="flex space-x-4">
           <button 
             onClick={onCancel}
-            className="px-4 py-2 rounded text-white hover:bg-white/10 transition-colors"
+            disabled={isProcessing}
+            className="px-4 py-2 rounded text-white hover:bg-white/10 transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
           <button 
             onClick={handleSave}
-            className="px-4 py-2 rounded bg-[#8A2BE2] text-white hover:bg-[#7a25c9] transition-colors font-bold"
+            disabled={isProcessing}
+            className="px-4 py-2 rounded bg-[#8A2BE2] text-white hover:bg-[#7a25c9] transition-colors font-bold disabled:opacity-50 flex items-center gap-2"
+          >
+            {isProcessing ? (
+                <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Processing...
+                </>
+            ) : (
+                'Apply Crop'
+            )}
+          </button>
           >
             Apply Crop
           </button>

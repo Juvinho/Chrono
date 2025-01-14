@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Post, User, CyberpunkReaction } from '../types';
 import PostCard from './PostCard';
 import { PostComposer } from './PostComposer';
@@ -49,8 +49,6 @@ export default function EchoFrame({
     nextAutoRefresh, isAutoRefreshPaused
 }: EchoFrameProps) {
     const { t } = useTranslation();
-    const [displayedPosts, setDisplayedPosts] = useState<Post[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
     const [isComposerOpen, setIsComposerOpen] = useState(false);
     const [postToEdit, setPostToEdit] = useState<Post | null>(null);
     const [isCordModalOpen, setIsCordModalOpen] = useState(false);
@@ -58,31 +56,7 @@ export default function EchoFrame({
     const [activePostId, setActivePostId] = useState<string | null>(null);
     const [activeFilter, setActiveFilter] = useState<'All' | 'Following' | 'Media' | 'Polls'>('All');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [timeToRefresh, setTimeToRefresh] = useState<string>('');
-
-    useEffect(() => {
-        if (!nextAutoRefresh) {
-            setTimeToRefresh('');
-            return;
-        }
-
-        const updateTimer = () => {
-            const now = new Date();
-            const diff = nextAutoRefresh.getTime() - now.getTime();
-            
-            if (diff <= 0) {
-                setTimeToRefresh('SYNCING...');
-            } else {
-                const minutes = Math.floor(diff / 60000);
-                const seconds = Math.floor((diff % 60000) / 1000);
-                setTimeToRefresh(`${minutes}:${seconds.toString().padStart(2, '0')}`);
-            }
-        };
-
-        updateTimer();
-        const interval = setInterval(updateTimer, 1000);
-        return () => clearInterval(interval);
-    }, [nextAutoRefresh]);
+    // Removed local timeToRefresh state to prevent re-renders
 
     useEffect(() => {
         if (composerDate) {
@@ -96,28 +70,10 @@ export default function EchoFrame({
         }
     }, [focusPostId]);
 
-    const prevSelectedDate = useRef(selectedDate);
-    const prevSearchQuery = useRef(searchQuery);
-    const prevFilter = useRef(activeFilter);
+    // Use useMemo for filtering to avoid unnecessary effects and state updates
+    const displayedPosts = useMemo(() => {
+        if (isGenerating) return [];
 
-    useEffect(() => {
-        if (isGenerating) return;
-
-        const isContextSwitch = 
-            !isSameDay(prevSelectedDate.current, selectedDate) || 
-            prevSearchQuery.current !== searchQuery || 
-            prevFilter.current !== activeFilter;
-
-        if (isContextSwitch) {
-            setIsLoading(true);
-            prevSelectedDate.current = selectedDate;
-            prevSearchQuery.current = searchQuery;
-            prevFilter.current = activeFilter;
-        }
-        
-        if (!focusPostId) {
-            setActivePostId(null);
-        }
         let filteredPosts: Post[];
         const lowercasedQuery = searchQuery.toLowerCase();
 
@@ -160,22 +116,17 @@ export default function EchoFrame({
             if (p.author.username === currentUser.username) return true;
             if (currentUser.followingList?.includes(p.author.username)) return true;
             return false;
-        })
+        });
 
-        setDisplayedPosts(visiblePosts.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
-        
-        if (isContextSwitch) {
-            const timer = setTimeout(() => setIsLoading(false), 500);
-            return () => clearTimeout(timer);
-        }
-    }, [selectedDate, searchQuery, allPosts, currentUser, isGenerating, activeFilter, focusPostId]);
+        return visiblePosts.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    }, [selectedDate, searchQuery, allPosts, currentUser, isGenerating, activeFilter, allKnownPosts]);
 
-    const handleStartEdit = (post: Post) => {
+    const handleStartEdit = useCallback((post: Post) => {
         setPostToEdit(post);
         setIsComposerOpen(true);
-    };
+    }, []);
 
-    const handlePostSubmit = async (postData: Omit<Post, 'id' | 'author' | 'timestamp' | 'replies' | 'repostOf' | 'likes' | 'likedBy'>, existingPostId?: string) => {
+    const handlePostSubmit = useCallback(async (postData: Omit<Post, 'id' | 'author' | 'timestamp' | 'replies' | 'repostOf' | 'likes' | 'likedBy'>, existingPostId?: string) => {
         if (existingPostId) {
             onEditPost(existingPostId, postData);
             setIsComposerOpen(false);
@@ -210,9 +161,9 @@ export default function EchoFrame({
             setIsSubmitting(false);
             setPostToEdit(null);
         }
-    };
+    }, [onEditPost, onNewPost, currentUser]);
 
-    const handleCordSubmit = async () => {
+    const handleCordSubmit = useCallback(async () => {
         if (!cordContent.trim()) return;
 
         // MIGRATION: Sending cord to Backend
@@ -247,7 +198,7 @@ export default function EchoFrame({
         } finally {
             setIsSubmitting(false);
         }
-    }
+    }, [cordContent, onNewPost, currentUser]);
 
     const isToday = isSameDay(selectedDate, new Date());
     
@@ -307,12 +258,12 @@ export default function EchoFrame({
         );
     }
 
-    const handleComposerClose = () => {
+    const handleComposerClose = useCallback(() => {
         setIsComposerOpen(false);
         if (setComposerDate) {
             setComposerDate(null);
         }
-    };
+    }, [setComposerDate]);
 
     const renderMobileHeader = () => (
         <div className="lg:hidden mb-6 space-y-4">
@@ -362,20 +313,6 @@ export default function EchoFrame({
            );
         }
 
-        if (isLoading) {
-            return (
-                 <div className="text-center p-10 flex flex-col items-center justify-center space-y-4 h-96">
-                    <div className="flex space-x-2 items-end h-10">
-                        <div className="w-2 h-4 bg-[var(--theme-primary)] animate-pulse"></div>
-                        <div className="w-2 h-8 bg-[var(--theme-primary)] animate-pulse" style={{animationDelay: '0.2s'}}></div>
-                        <div className="w-2 h-6 bg-[var(--theme-primary)] animate-pulse" style={{animationDelay: '0.4s'}}></div>
-                        <div className="w-2 h-10 bg-[var(--theme-primary)] animate-pulse" style={{animationDelay: '0.6s'}}></div>
-                    </div>
-                    <p className="text-[var(--theme-primary)] animate-pulse font-bold tracking-widest">{t('loadingEchoes')}</p>
-                </div>
-            );
-        }
-
         const renderFilterBar = () => (
             <div className="mb-4 flex items-center justify-center space-x-2 border border-[var(--theme-border-primary)] bg-[var(--theme-bg-secondary)] p-1 rounded-sm">
                 {(['All', 'Following', 'Media', 'Polls'] as const).map(filter => (
@@ -394,23 +331,9 @@ export default function EchoFrame({
             </div>
         );
 
-        const renderAutoRefreshStatus = () => {
-            if (!nextAutoRefresh || !timeToRefresh) return null;
-            
-            return (
-                <div className="flex justify-between items-center bg-[var(--theme-bg-tertiary)]/50 border border-[var(--theme-border-secondary)] px-3 py-1 mb-4 text-xs font-mono text-[var(--theme-text-secondary)] rounded-sm">
-                    <span className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${isAutoRefreshPaused ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`}></span>
-                        <span className="uppercase tracking-wider">{isAutoRefreshPaused ? (t('autoRefreshPaused') || 'PAUSADO (ATIVO)') : (t('autoRefreshActive') || 'AUTO-REFRESH ON')}</span>
-                    </span>
-                    <span className="font-bold">SYNC: {timeToRefresh}</span>
-                </div>
-            );
-        };
-
         return (
             <>
-                {renderAutoRefreshStatus()}
+                <RefreshTimer nextAutoRefresh={nextAutoRefresh} isPaused={isAutoRefreshPaused} />
                 {isToday && !searchQuery && (
                     <div className="bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] p-4 mb-4 flex items-center space-x-4">
                         <div className="relative w-10 h-10 flex-shrink-0">
@@ -454,13 +377,12 @@ export default function EchoFrame({
                 )}
                 {!searchQuery && renderFilterBar()}
                 {displayedPosts.length > 0 ? (
-                    displayedPosts.map((post, index) => (
+                    displayedPosts.map((post) => (
                         <div 
                             id={`post-${post.id}`}
                             key={post.id} 
                             onClick={() => setActivePostId(post.id)}
-                            className={`animate-fade-in ${activePostId === post.id ? 'bg-[var(--theme-bg-tertiary)]/30' : ''}`}
-                            style={{ animationDelay: `${index * 0.05}s` }}
+                            className={`${activePostId === post.id ? 'bg-[var(--theme-bg-tertiary)]/30' : ''}`}
                         >
                             <PostCard 
                                 post={post} 
@@ -578,5 +500,46 @@ export default function EchoFrame({
             )}
 
         </main>
+    );
+}
+
+function RefreshTimer({ nextAutoRefresh, isPaused }: { nextAutoRefresh?: Date | null, isPaused?: boolean }) {
+    const { t } = useTranslation();
+    const [timeToRefresh, setTimeToRefresh] = useState<string>('');
+
+    useEffect(() => {
+        if (!nextAutoRefresh) {
+            setTimeToRefresh('');
+            return;
+        }
+
+        const updateTimer = () => {
+            const now = new Date();
+            const diff = nextAutoRefresh.getTime() - now.getTime();
+            
+            if (diff <= 0) {
+                setTimeToRefresh('SYNCING...');
+            } else {
+                const minutes = Math.floor(diff / 60000);
+                const seconds = Math.floor((diff % 60000) / 1000);
+                setTimeToRefresh(`${minutes}:${seconds.toString().padStart(2, '0')}`);
+            }
+        };
+
+        updateTimer();
+        const interval = setInterval(updateTimer, 1000);
+        return () => clearInterval(interval);
+    }, [nextAutoRefresh]);
+
+    if (!nextAutoRefresh || !timeToRefresh) return null;
+
+    return (
+        <div className="flex justify-between items-center bg-[var(--theme-bg-tertiary)]/50 border border-[var(--theme-border-secondary)] px-3 py-1 mb-4 text-xs font-mono text-[var(--theme-text-secondary)] rounded-sm">
+            <span className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${isPaused ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`}></span>
+                <span className="uppercase tracking-wider">{isPaused ? (t('autoRefreshPaused') || 'PAUSADO (ATIVO)') : (t('autoRefreshActive') || 'AUTO-REFRESH ON')}</span>
+            </span>
+            <span className="font-bold">SYNC: {timeToRefresh}</span>
+        </div>
     );
 }

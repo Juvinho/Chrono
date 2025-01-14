@@ -54,5 +54,28 @@ export class ReactionService {
 
     return reactions;
   }
+
+  async getReactionsForPosts(postIds: string[]): Promise<{ [postId: string]: { [key in CyberpunkReaction]?: number } }> {
+    if (postIds.length === 0) return {};
+
+    const result = await pool.query(
+      `SELECT post_id, reaction_type, COUNT(*) as count
+       FROM reactions
+       WHERE post_id = ANY($1)
+       GROUP BY post_id, reaction_type`,
+      [postIds]
+    );
+
+    const postReactions: { [postId: string]: { [key in CyberpunkReaction]?: number } } = {};
+    result.rows.forEach((row) => {
+      const postId = row.post_id;
+      if (!postReactions[postId]) {
+        postReactions[postId] = {};
+      }
+      postReactions[postId][row.reaction_type as CyberpunkReaction] = parseInt(row.count);
+    });
+
+    return postReactions;
+  }
 }
 

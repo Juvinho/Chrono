@@ -98,65 +98,51 @@ class ApiClient {
   }
 
   // Auth endpoints
-  async register(username: string, email: string, password: string, avatar?: string, captchaVerified?: boolean) {
-    return this.request<{ user: any; token: string }>('/auth/register', {
+  async login(credentials: any) {
+    return this.request<any>('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ username, email, password, avatar, captchaVerified }),
+      body: JSON.stringify(credentials),
     });
   }
 
-  async login(username: string, password: string) {
-    return this.request<{ user: any; token: string }>('/auth/login', {
+  async register(userData: any) {
+    return this.request<any>('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ username, password }),
+      body: JSON.stringify(userData),
     });
   }
 
-  async verify(email: string) {
-    return this.request<{ user: any }>('/auth/verify', {
-      method: 'POST',
-      body: JSON.stringify({ email }),
-    });
+  async logout() {
+    this.setToken(null);
+    return { data: { success: true } };
   }
 
-  async forgotPassword(email: string) {
-    return this.request<{ message: string }>('/auth/forgot-password', {
-      method: 'POST',
-      body: JSON.stringify({ email }),
-    });
-  }
-
-  async resetPassword(email: string, newPassword: string) {
-    return this.request<{ message: string }>('/auth/reset-password', {
-      method: 'POST',
-      body: JSON.stringify({ email, newPassword }),
-    });
-  }
-
-  async changePassword(currentPassword: string, newPassword: string) {
-    return this.request<{ message: string }>('/auth/change-password', {
-      method: 'POST',
-      body: JSON.stringify({ currentPassword, newPassword }),
-    });
+  async getMe() {
+    return this.request<any>('/auth/me');
   }
 
   async getCurrentUser() {
-    return this.request<any>('/auth/me');
+    return this.getMe();
   }
-  
-  async replyToPost(parentPostId: string, content: string, isPrivate: boolean, media?: { imageUrl?: string, videoUrl?: string }) {
-    return this.createPost({
-      content,
-      isPrivate,
-      inReplyToId: parentPostId,
-      ...media
+
+  async updateProfile(data: any) {
+    return this.request<any>('/auth/update-profile', {
+      method: 'PUT',
+      body: JSON.stringify(data),
     });
   }
-  
-  async echoPost(postId: string) {
-    return this.createPost({
-      content: '',
-      repostOfId: postId,
+
+  async updateUser(username: string, data: any) {
+    return this.request<any>(`/users/${username}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async checkUsername(username: string) {
+    return this.request<any>('/auth/check-username', {
+      method: 'POST',
+      body: JSON.stringify({ username }),
     });
   }
 
@@ -166,90 +152,66 @@ class ApiClient {
   }
 
   async searchUsers(query: string) {
-    return this.request<any[]>(`/users/search/${encodeURIComponent(query)}`);
+    return this.request<any[]>(`/users/search?q=${encodeURIComponent(query)}`);
   }
 
-  async updateUser(username: string, updates: any) {
-    return this.request<any>(`/users/${username}`, {
-      method: 'PUT',
-      body: JSON.stringify(updates),
+  async followUser(userId: string) {
+    return this.request<any>(`/users/${userId}/follow`, {
+      method: 'POST',
     });
   }
 
-  async followUser(username: string) {
-    return this.request<{ message: string; isFollowing: boolean }>(`/users/${username}/follow`, {
+  async unfollowUser(userId: string) {
+    return this.request<any>(`/users/${userId}/unfollow`, {
       method: 'POST',
     });
   }
 
   // Post endpoints
-  async getPosts(options?: { limit?: number; offset?: number; author?: string; inReplyTo?: string | null }) {
-    const params = new URLSearchParams();
-    if (options?.limit) params.append('limit', options.limit.toString());
-    if (options?.offset) params.append('offset', options.offset.toString());
-    if (options?.author) params.append('author', options.author);
-    if (options?.inReplyTo !== undefined) params.append('inReplyTo', options.inReplyTo || 'null');
+  async getPosts(options: any = {}) {
+    const queryParams = new URLSearchParams();
+    if (options.limit) queryParams.append('limit', options.limit.toString());
+    if (options.offset) queryParams.append('offset', options.offset.toString());
+    if (options.author) queryParams.append('author', options.author);
+    if (options.inReplyTo) queryParams.append('inReplyTo', options.inReplyTo);
 
-    const query = params.toString();
-    return this.request<any[]>(`/posts${query ? `?${query}` : ''}`);
+    return this.request<any[]>(`/posts?${queryParams.toString()}`);
   }
 
   async getPost(id: string) {
     return this.request<any>(`/posts/${id}`);
   }
 
-  async createPost(post: {
-    content: string;
-    imageUrl?: string;
-    videoUrl?: string;
-    isThread?: boolean;
-    isPrivate?: boolean;
-    inReplyToId?: string;
-    repostOfId?: string;
-    pollOptions?: { option: string; votes: number }[];
-    pollEndsAt?: Date;
-    unlockAt?: Date;
-    timestamp?: Date;
-  }) {
+  async createPost(postData: any) {
     return this.request<any>('/posts', {
       method: 'POST',
-      body: JSON.stringify(post),
+      body: JSON.stringify(postData),
     });
   }
 
-  async updatePost(id: string, updates: any) {
-    return this.request<any>(`/posts/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(updates),
-    });
-  }
-
-  async deletePost(id: string) {
-    return this.request<{ message: string }>(`/posts/${id}`, {
+  async deletePost(postId: string) {
+    return this.request<any>(`/posts/${postId}`, {
       method: 'DELETE',
     });
   }
-  
-  async updateReaction(postId: string, reactionType: string) {
-    return this.addReaction(postId, reactionType);
-  }
 
-  async addReaction(postId: string, reactionType: string) {
-    return this.request<{ reactions: any }>(`/posts/${postId}/reactions`, {
+  async likePost(postId: string) {
+    return this.request<any>(`/posts/${postId}/like`, {
       method: 'POST',
-      body: JSON.stringify({ reactionType }),
     });
   }
 
-  async voteOnPoll(postId: string, optionIndex: number) {
-    return this.request<{ voters: any }>(`/posts/${postId}/vote`, {
+  async echoPost(postId: string) {
+    return this.request<any>(`/posts/${postId}/echo`, {
       method: 'POST',
-      body: JSON.stringify({ optionIndex }),
     });
   }
-  
-  async votePoll(postId: string, optionIndex: number) {
-    return this.voteOnPoll(postId, optionIndex);
+
+  async replyPost(postId: string, content: string) {
+    return this.request<any>(`/posts/${postId}/reply`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    });
   }
 
   // Conversation endpoints
@@ -257,66 +219,63 @@ class ApiClient {
     return this.request<any[]>('/conversations');
   }
 
-  async getOrCreateConversation(username: string, options?: { isEncrypted?: boolean, selfDestructTimer?: number }) {
-    if (options) {
-        return this.request<{ conversationId: string }>('/conversations', {
-            method: 'POST',
-            body: JSON.stringify({ username, ...options })
-        });
-    }
-    return this.request<{ conversationId: string }>(`/conversations/with/${username}`);
+  async getMessages(conversationId: string) {
+    return this.request<any[]>(`/conversations/${conversationId}/messages`);
   }
 
-  async toggleFollow(username: string) {
-    return this.request<{ message: string; isFollowing: boolean }>(`/users/${username}/follow`, {
-      method: 'POST',
-    });
-  }
-
-  async sendMessage(conversationId: string, text: string) {
+  async sendMessage(conversationId: string, content: string) {
     return this.request<any>(`/conversations/${conversationId}/messages`, {
       method: 'POST',
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ content }),
     });
   }
-  
-  async sendMessageToUser(username: string, text: string) {
-    const conv = await this.getOrCreateConversation(username);
-    const conversationId = (conv.data && conv.data.conversationId) || '';
-    if (!conversationId) {
-      return { error: 'Failed to create or find conversation' };
-    }
-    return this.sendMessage(conversationId, text);
-  }
 
-  async markConversationAsRead(conversationId: string) {
-    return this.request<{ message: string }>(`/conversations/${conversationId}/read`, {
+  async createConversation(userId: string) {
+    return this.request<any>('/conversations', {
       method: 'POST',
+      body: JSON.stringify({ userId }),
     });
   }
 
-  // Notifications
+  // Notification endpoints
   async getNotifications() {
     return this.request<any[]>('/notifications');
   }
 
-  async markNotificationRead(id: string) {
-    return this.request<{ message: string }>(`/notifications/${id}/read`, {
-      method: 'PUT',
-    });
-  }
-
-  async markAllNotificationsRead() {
-    return this.request<{ message: string }>('/notifications/read-all', {
+  async markNotificationRead(notificationId: string) {
+    return this.request<any>(`/notifications/${notificationId}/read`, {
       method: 'POST',
     });
   }
 
-  // Stories endpoints
-  async getStories() {
-    return this.request<any[]>('/stories', {
-      method: 'GET',
+  async markAllNotificationsRead() {
+    return this.request<any>('/notifications/read-all', {
+      method: 'POST',
     });
+  }
+
+  // Marketplace endpoints
+  async getMarketplaceItems() {
+    return this.request<any[]>('/marketplace');
+  }
+
+  async buyItem(itemId: string) {
+    return this.request<any>(`/marketplace/${itemId}/buy`, {
+      method: 'POST',
+    });
+  }
+
+  // Companion endpoints
+  async interactWithCompanion(action: 'feed' | 'play' | 'pet') {
+    return this.request<any>('/companions/interact', {
+      method: 'POST',
+      body: JSON.stringify({ action }),
+    });
+  }
+
+  // Stories
+  async getStories() {
+    return this.request<any[]>('/stories');
   }
 
   async createStory(content: string, type: 'image' | 'video' | 'text') {
@@ -327,62 +286,8 @@ class ApiClient {
   }
 
   async viewStory(storyId: string) {
-    return this.request<{ success: boolean }>(`/stories/${storyId}/view`, {
+    return this.request<any>(`/stories/${storyId}/view`, {
       method: 'POST',
-    });
-  }
-
-  // Marketplace endpoints
-  async getItems(type?: string) {
-    const query = type ? `?type=${type}` : '';
-    return this.request<any[]>(`/marketplace/items${query}`);
-  }
-
-  async getUserInventory() {
-    return this.request<any[]>('/marketplace/inventory');
-  }
-
-  async purchaseItem(itemId: string) {
-    return this.request<any>(`/marketplace/items/${itemId}/purchase`, {
-      method: 'POST',
-    });
-  }
-
-  async equipItem(itemId: string) {
-    return this.request<any>(`/marketplace/items/${itemId}/equip`, {
-      method: 'POST',
-    });
-  }
-
-  async unequipItem(itemId: string) {
-    return this.request<any>(`/marketplace/items/${itemId}/unequip`, {
-      method: 'POST',
-    });
-  }
-
-  async purchaseSubscription(tier: 'pro' | 'pro_plus') {
-    return this.request<any>('/marketplace/subscription', {
-      method: 'POST',
-      body: JSON.stringify({ tier }),
-    });
-  }
-
-  // Companion endpoints
-  async getCompanion() {
-    return this.request<any>('/companions');
-  }
-
-  async createCompanion(name: string, type: string) {
-    return this.request<any>('/companions', {
-      method: 'POST',
-      body: JSON.stringify({ name, type }),
-    });
-  }
-
-  async interactWithCompanion(action: 'feed' | 'play' | 'pet') {
-    return this.request<any>('/companions/interact', {
-      method: 'POST',
-      body: JSON.stringify({ action }),
     });
   }
 }
@@ -424,6 +329,7 @@ export function mapApiUserToUser(apiUser: any): any {
     blockedUsers: apiUser.blockedUsers || apiUser.blocked_users || [],
     notifications: apiUser.notifications || [],
     createdAt: apiUser.createdAt || apiUser.created_at,
+    stories: apiUser.stories ? apiUser.stories.map(mapApiStoryToStory) : [],
   };
 }
 
@@ -449,5 +355,19 @@ export function mapApiPostToPost(apiPost: any): any {
     pollOptions: apiPost.pollOptions || apiPost.poll_options,
     pollEndsAt: apiPost.pollEndsAt || apiPost.poll_ends_at ? new Date(apiPost.pollEndsAt || apiPost.poll_ends_at) : undefined,
     voters: apiPost.voters || {},
+  };
+}
+
+// Helper to map API story format to frontend Story type
+export function mapApiStoryToStory(apiStory: any): any {
+  return {
+    id: apiStory.id,
+    userId: apiStory.userId || apiStory.user_id,
+    content: apiStory.content,
+    type: apiStory.type,
+    timestamp: new Date(apiStory.createdAt || apiStory.created_at),
+    expiresAt: new Date(apiStory.expiresAt || apiStory.expires_at),
+    viewers: apiStory.viewers || [],
+    author: apiStory.author ? mapApiUserToUser(apiStory.author) : undefined,
   };
 }

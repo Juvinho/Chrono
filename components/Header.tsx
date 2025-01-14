@@ -137,7 +137,10 @@ export default function Header({ user, onLogout, onViewProfile, onNavigate, onNo
                 <SearchOverlay 
                     onClose={() => setIsSearchOpen(false)}
                     onSearch={handlePerformSearch}
-                    onViewProfile={onViewProfile}
+                    onViewProfile={(username) => {
+                        setIsSearchOpen(false);
+                        onViewProfile(username);
+                    }}
                     allUsers={allUsers}
                     allPosts={allPosts}
                     currentUser={user}
