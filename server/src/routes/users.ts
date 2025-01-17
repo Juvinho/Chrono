@@ -16,22 +16,22 @@ router.get('/search/:query', optionalAuthenticateToken, async (req: AuthRequest,
     const { query } = req.params;
     
     // Log search attempt
-    console.log(\[Search] User \ searching for: "\"\);
+    console.log(`[Search] User ${req.userId || 'guest'} searching for: "${query}"`);
 
     if (!query || query.length < 2) {
       return res.json([]);
     }
 
     const result = await pool.query(
-      \SELECT id, username, avatar, bio, followers_count, following_count, is_verified, is_private 
+      `SELECT id, username, avatar, bio, followers_count, following_count, is_verified, is_private 
        FROM users 
-       WHERE username ILIKE  
+       WHERE username ILIKE $1 
        ORDER BY is_verified DESC, followers_count DESC 
-       LIMIT 20\,
-      [\%\%\]
+       LIMIT 20`,
+      [`%${query}%`]
     );
 
-    console.log(\[Search] Found \ results for "\"\);
+    console.log(`[Search] Found ${result.rows.length} results for "${query}"`);
 
     const users = result.rows.map(row => ({
       id: row.id,
@@ -46,7 +46,7 @@ router.get('/search/:query', optionalAuthenticateToken, async (req: AuthRequest,
 
     res.json(users);
   } catch (error: any) {
-    console.error(\[Search] Error processing query "\":\, error);
+    console.error(`[Search] Error processing query "${req.params.query}":`, error);
     res.status(500).json({ error: error.message || 'Failed to search users' });
   }
 });
@@ -57,12 +57,12 @@ router.get('/:username', optionalAuthenticateToken, async (req: AuthRequest, res
     const { username } = req.params;
     const requesterId = req.userId;
 
-    console.log(\[Profile Access] User \ accessing \\);
+    console.log(`[Profile Access] User ${requesterId || 'guest'} accessing ${username}`);
 
     const user = await userService.getUserByUsername(username);
 
     if (!user) {
-      console.warn(\[Profile Access] Failed: User \ not found.\);
+      console.warn(`[Profile Access] Failed: User ${username} not found.`);
       return res.status(404).json({ error: 'User not found' });
     }
 
@@ -97,7 +97,7 @@ router.get('/:username', optionalAuthenticateToken, async (req: AuthRequest, res
     });
 
   } catch (error: any) {
-    console.error(\[Profile Access] Error retrieving \:\, error);
+    console.error(`[Profile Access] Error retrieving ${req.params.username}:`, error);
     res.status(500).json({ error: error.message || 'Failed to get user' });
   }
 });

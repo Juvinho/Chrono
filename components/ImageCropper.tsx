@@ -222,9 +222,6 @@ export function ImageCropper({ imageSrc, aspectRatio, onCrop, onCancel, isCircul
                 'Apply Crop'
             )}
           </button>
-          >
-            Apply Crop
-          </button>
         </div>
       </div>
     </div>

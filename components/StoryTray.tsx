@@ -64,7 +64,7 @@ export default function StoryTray({ currentUser, usersWithStories, onViewStory, 
                 <span className="text-xs text-[var(--theme-text-secondary)] truncate w-full text-center">
                     {isCurrentUser ? (t('yourStory') || 'Seu Story') : user.username}
                 </span>
-            </div>
+            </button>
         );
     };
 
