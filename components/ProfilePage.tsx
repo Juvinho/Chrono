@@ -132,6 +132,7 @@ export default function ProfilePage({
 
   const [postToEdit, setPostToEdit] = useState<Post | null>(null);
   const [activeTab, setActiveTab] = useState<'posts' | 'media' | 'temporal'>('posts');
+  const [visiblePostsCount, setVisiblePostsCount] = useState(10);
   
   const followButtonRef = useRef<HTMLButtonElement>(null);
 
