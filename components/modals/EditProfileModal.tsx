@@ -31,17 +31,28 @@ export default function EditProfileModal({ user, onClose, onSave }: EditProfileM
         setIsLoading(true);
         setError(null);
 
+        // Basic URL validation if provided
+        let websiteToSave = formData.website.trim();
+        if (websiteToSave && !websiteToSave.startsWith('http://') && !websiteToSave.startsWith('https://')) {
+            websiteToSave = `https://${websiteToSave}`;
+        }
+
         try {
             const updatedUser = {
                 ...user,
                 ...formData,
+                website: websiteToSave,
                 birthday: formData.birthday ? new Date(formData.birthday) : undefined
             };
 
             await onSave(updatedUser);
             onClose();
         } catch (err: any) {
-            setError(err.message || 'Failed to update profile');
+            if (err.message?.includes('429')) {
+                setError('Você está fazendo muitas requisições. Aguarde um momento antes de tentar novamente.');
+            } else {
+                setError(err.message || 'Failed to update profile');
+            }
         } finally {
             setIsLoading(false);
         }
@@ -111,13 +122,13 @@ export default function EditProfileModal({ user, onClose, onSave }: EditProfileM
                             {t('website') || 'Website'}
                         </label>
                         <input
-                            type="url"
+                            type="text"
                             name="website"
                             value={formData.website}
                             onChange={handleChange}
                             maxLength={100}
                             className="w-full bg-[var(--theme-bg-primary)] border border-[var(--theme-border-primary)] rounded p-2 text-[var(--theme-text-primary)] focus:border-[var(--theme-primary)] focus:outline-none"
-                            placeholder="https://example.com"
+                            placeholder="example.com"
                         />
                     </div>
 

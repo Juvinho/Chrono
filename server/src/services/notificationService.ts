@@ -8,7 +8,34 @@ export class NotificationService {
     actorId: string,
     notificationType: NotificationType,
     postId?: string
-  ): Promise<Notification> {
+  ): Promise<Notification | null> {
+    // Avoid self-notification
+    if (userId === actorId) return null;
+
+    // Aggregation/Deduplication logic:
+    // If it's a 'follow', don't create a new one if an unread follow already exists from the same actor
+    // If it's a 'reaction' or 'reply', don't create if an unread one already exists for the same actor and post
+    let existingQuery = '';
+    let params: any[] = [userId, actorId, notificationType];
+
+    if (notificationType === 'follow') {
+        existingQuery = `SELECT id FROM notifications 
+                         WHERE user_id = $1 AND actor_id = $2 AND notification_type = $3 AND is_read = FALSE`;
+    } else if (postId) {
+        existingQuery = `SELECT id FROM notifications 
+                         WHERE user_id = $1 AND actor_id = $2 AND notification_type = $3 AND post_id = $4 AND is_read = FALSE`;
+        params.push(postId);
+    }
+
+    if (existingQuery) {
+        const existing = await pool.query(existingQuery, params);
+        if (existing.rows.length > 0) {
+            // Update timestamp of existing notification to bring it to top
+            await pool.query('UPDATE notifications SET created_at = NOW() WHERE id = $1', [existing.rows[0].id]);
+            return null; 
+        }
+    }
+
     const result = await pool.query(
       `INSERT INTO notifications (user_id, actor_id, notification_type, post_id)
        VALUES ($1, $2, $3, $4)

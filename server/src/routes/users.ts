@@ -14,21 +14,69 @@ const notificationService = new NotificationService();
 router.get('/search/:query', optionalAuthenticateToken, async (req: AuthRequest, res) => {
   try {
     const { query } = req.params;
+    const requesterId = req.userId;
     
-    // Log search attempt
-    console.log(`[Search] User ${req.userId || 'guest'} searching for: "${query}"`);
+    console.log(`[Search] User ${requesterId || 'guest'} searching for: "${query}"`);
 
-    if (!query || query.length < 2) {
-      return res.json([]);
+    // If query is empty or too short, return recommended content
+    if (!query || query.trim().length < 1) {
+        // 1. Get users the requester follows
+        let recommendedUsers: any[] = [];
+        if (requesterId) {
+            const followingIds = await followService.getFollowingIds(requesterId);
+            if (followingIds.length > 0) {
+                const followingResult = await pool.query(
+                    `SELECT id, username, avatar, bio, followers_count, following_count, is_verified, is_private 
+                     FROM users 
+                     WHERE id = ANY($1) 
+                     LIMIT 10`,
+                    [followingIds]
+                );
+                recommendedUsers = followingResult.rows;
+            }
+        }
+
+        // 2. Get popular users if not enough recommended
+        if (recommendedUsers.length < 5) {
+            const popularResult = await pool.query(
+                `SELECT id, username, avatar, bio, followers_count, following_count, is_verified, is_private 
+                 FROM users 
+                 WHERE id != $1
+                 ORDER BY followers_count DESC 
+                 LIMIT $2`,
+                [requesterId || '00000000-0000-0000-0000-000000000000', 10 - recommendedUsers.length]
+            );
+            recommendedUsers = [...recommendedUsers, ...popularResult.rows];
+        }
+
+        const users = recommendedUsers.map(row => ({
+            id: row.id,
+            username: row.username,
+            avatar: row.avatar,
+            bio: row.bio,
+            followers: parseInt(row.followers_count || '0'),
+            following: parseInt(row.following_count || '0'),
+            isVerified: row.is_verified,
+            isPrivate: row.is_private,
+        }));
+
+        return res.json(users);
     }
 
     const result = await pool.query(
       `SELECT id, username, avatar, bio, followers_count, following_count, is_verified, is_private 
        FROM users 
        WHERE username ILIKE $1 
-       ORDER BY is_verified DESC, followers_count DESC 
+       ORDER BY 
+         CASE 
+           WHEN username ILIKE $2 THEN 1 -- Exact match
+           WHEN username ILIKE $3 THEN 2 -- Starts with
+           ELSE 3 
+         END,
+         is_verified DESC, 
+         followers_count DESC 
        LIMIT 20`,
-      [`%${query}%`]
+      [`%${query}%`, query, `${query}%`]
     );
 
     console.log(`[Search] Found ${result.rows.length} results for "${query}"`);
