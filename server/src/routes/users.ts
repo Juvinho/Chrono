@@ -11,15 +11,13 @@ const followService = new FollowService();
 const notificationService = new NotificationService();
 
 // Search users
-router.get('/search/:query', optionalAuthenticateToken, async (req: AuthRequest, res) => {
+router.get(['/search/:query', '/search/'], optionalAuthenticateToken, async (req: AuthRequest, res) => {
   try {
-    const { query } = req.params;
+    let query = req.params.query || '';
     const requesterId = req.userId;
     
-    console.log(`[Search] User ${requesterId || 'guest'} searching for: "${query}"`);
-
-    // If query is empty or too short, return recommended content
-    if (!query || query.trim().length < 1) {
+    // Check if it's a request for recommended users
+    if (query === 'recommended' || !query.trim()) {
         // 1. Get users the requester follows
         let recommendedUsers: any[] = [];
         if (requesterId) {

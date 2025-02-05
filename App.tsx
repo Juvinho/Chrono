@@ -62,18 +62,11 @@ const reviveDates = (data: any[], dateKeys: string[]): any[] => {
 
 export default function App() {
     // 1. Basic User State (used by almost everything)
-    const [users, setUsers] = useLocalStorage<User[]>('chrono_users_v2', []); 
-    const [currentUser, setCurrentUser] = useLocalStorage<User | null>('chrono_currentUser_v2', null);
+    const [users, setUsers] = useLocalStorage<User[]>('chrono_users_v4', []); 
+    const [currentUser, setCurrentUser] = useLocalStorage<User | null>('chrono_currentUser_v4', null);
     const [isSessionLoading, setIsSessionLoading] = useState(true);
 
-    // Persist to local storage for extra safety
-    useEffect(() => {
-        if (currentUser) {
-            localStorage.setItem('chrono_currentUser_v2', JSON.stringify(currentUser));
-        }
-    }, [currentUser]);
-
-    // 2. Navigation State (depends on currentUser)
+    // Navigation State (depends on currentUser)
     const getInitialPage = (): Page => {
         if (currentUser) {
             const savedPage = sessionStorage.getItem('chrono_currentPage');
