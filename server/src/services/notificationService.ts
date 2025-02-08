@@ -13,26 +13,32 @@ export class NotificationService {
     if (userId === actorId) return null;
 
     // Aggregation/Deduplication logic:
-    // If it's a 'follow', don't create a new one if an unread follow already exists from the same actor
-    // If it's a 'reaction' or 'reply', don't create if an unread one already exists for the same actor and post
+    // If a notification for the same action already exists (even if read), 
+    // update it instead of creating a new one to avoid spam.
     let existingQuery = '';
     let params: any[] = [userId, actorId, notificationType];
 
     if (notificationType === 'follow') {
         existingQuery = `SELECT id FROM notifications 
-                         WHERE user_id = $1 AND actor_id = $2 AND notification_type = $3 AND is_read = FALSE`;
+                         WHERE user_id = $1 AND actor_id = $2 AND notification_type = $3`;
     } else if (postId) {
         existingQuery = `SELECT id FROM notifications 
-                         WHERE user_id = $1 AND actor_id = $2 AND notification_type = $3 AND post_id = $4 AND is_read = FALSE`;
+                         WHERE user_id = $1 AND actor_id = $2 AND notification_type = $3 AND post_id = $4`;
         params.push(postId);
     }
 
     if (existingQuery) {
         const existing = await pool.query(existingQuery, params);
         if (existing.rows.length > 0) {
-            // Update timestamp of existing notification to bring it to top
-            await pool.query('UPDATE notifications SET created_at = NOW() WHERE id = $1', [existing.rows[0].id]);
-            return null; 
+            // Update timestamp and mark as unread to bring it to top and notify again
+            await pool.query(
+                'UPDATE notifications SET created_at = NOW(), is_read = FALSE WHERE id = $1', 
+                [existing.rows[0].id]
+            );
+            
+            // Return the updated notification for real-time emission
+            const updated = await pool.query('SELECT * FROM notifications WHERE id = $1', [existing.rows[0].id]);
+            return this.mapNotificationFromDb(updated.rows[0]);
         }
     }
 
@@ -106,7 +112,7 @@ export class NotificationService {
       actorId: row.actor_id,
       notificationType: row.notification_type,
       postId: row.post_id,
-      isRead: row.is_read,
+      read: row.is_read,
       createdAt: row.created_at,
     };
   }

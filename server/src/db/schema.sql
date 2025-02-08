@@ -290,6 +290,16 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='delete_at') THEN
         ALTER TABLE messages ADD COLUMN delete_at TIMESTAMP;
     END IF;
+
+    -- Clean up duplicate notifications (same user, actor, type, post)
+    -- Keep only the most recent one
+    DELETE FROM notifications n1
+    USING notifications n2
+    WHERE n1.id < n2.id 
+    AND n1.user_id = n2.user_id 
+    AND n1.actor_id = n2.actor_id 
+    AND n1.notification_type = n2.notification_type 
+    AND (n1.post_id = n2.post_id OR (n1.post_id IS NULL AND n2.post_id IS NULL));
 END $$;
 
 -- Encrypted Cords table (for secure conversations)
