@@ -73,6 +73,9 @@ class ApiClient {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
+        if (response.status === 429) {
+          return { error: 'rateLimitError' }; // Use translation key
+        }
         const data = await response.json().catch(() => ({}));
         const errorMessage = data.error || data.details || `Request failed with status ${response.status}`;
         if (data.details) console.error('API Error Details:', data.details);

@@ -7,6 +7,7 @@ import { useTranslation } from '../hooks/useTranslation';
 import { ImageCropper } from './ImageCropper';
 import FramePreview, { getFrameShape } from './FramePreview';
 import { apiClient } from '../services/api';
+import { generateBio } from '../services/geminiService';
 
 // FIX: Add a default settings object to fall back on.
 const defaultSettings: Omit<ProfileSettings, 'coverImage'> = {
@@ -82,6 +83,7 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isGeneratingBio, setIsGeneratingBio] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -142,7 +144,16 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
     try {
       // Basic validation
       if (!draftUser.username?.trim()) {
-          throw new Error('Username is required');
+          throw new Error(t('errorUsernameRequired') || 'Username is required');
+      }
+
+      if (draftUser.bio && draftUser.bio.length > 160) {
+          throw new Error(t('errorBioTooLong') || 'Bio must be under 160 characters');
+      }
+
+      if (draftUser.website && !draftUser.website.startsWith('http')) {
+          // Auto-fix website if missing protocol
+          draftUser.website = `https://${draftUser.website}`;
       }
 
       // Only validate email if it's being updated or if we are in the account tab
@@ -176,7 +187,9 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
     } catch (error: any) {
         console.error('Save error:', error);
         setSaveStatus('error');
-        setSaveMessage(error.message || 'An unexpected error occurred');
+        const errorMessage = error.message || t('settingsSaveError');
+        // If error message matches a translation key, translate it
+        setSaveMessage(t(errorMessage) || errorMessage);
         
         // Scroll to error
         setTimeout(() => {
@@ -184,6 +197,32 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
         }, 100);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleGenerateBio = async () => {
+    setIsGeneratingBio(true);
+    try {
+      // Pass recent posts to give more context to AI
+      const userPosts = allPosts.filter(p => p.author.username === draftUser.username);
+      const newBio = await generateBio({
+        ...draftUser,
+        posts: userPosts
+      });
+      
+      if (newBio) {
+        setDraftUser(prev => ({ ...prev, bio: newBio }));
+        setSaveStatus('success');
+        setSaveMessage(t('aiBioSuccess'));
+        setTimeout(() => setSaveStatus('idle'), 3000);
+      } else {
+        throw new Error(t('aiBioError'));
+      }
+    } catch (error: any) {
+      setSaveStatus('error');
+      setSaveMessage(error.message || t('aiBioError'));
+    } finally {
+      setIsGeneratingBio(false);
     }
   };
   
@@ -354,7 +393,7 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
             {/* Profile Settings */}
             {activeTab === 'profile' && (
                 <div className="space-y-6">
-                    <h2 className="text-xl font-bold text-[var(--theme-primary)] mb-4">{t('settingsProfile')}</h2>
+                    <h2 className="text-xl font-bold text-[var(--theme-primary)] mb-4 glitch-text" data-text={t('settingProfile')}>{t('settingProfile')}</h2>
                     
                     {/* Avatar & Cover */}
                     <div className="space-y-4">
@@ -369,7 +408,7 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
                                     onClick={() => coverInputRef.current?.click()}
                                     className="bg-black/70 text-white px-4 py-2 rounded-full backdrop-blur-sm border border-white/20 hover:bg-white/20 transition-colors"
                                 >
-                                    Change Cover
+                                    {t('changeCover')}
                                 </button>
                             </div>
                         </div>
@@ -381,7 +420,7 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
                                 </div>
                                 <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
                                      onClick={() => fileInputRef.current?.click()}>
-                                    <span className="text-xs text-white font-bold">EDIT</span>
+                                    <span className="text-xs text-white font-bold">{t('editProfile')}</span>
                                 </div>
                             </div>
                             <div className="pb-2">
@@ -392,7 +431,7 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
 
                         {/* Preset Covers */}
                         <div className="mt-4">
-                            <label className="text-sm text-[var(--theme-text-secondary)] font-mono uppercase block mb-2">Preset Covers</label>
+                            <label className="text-sm text-[var(--theme-text-secondary)] font-mono uppercase block mb-2">{t('presetCovers')}</label>
                             <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
                                 {COVER_PRESETS.map((url, i) => (
                                     <button 
@@ -400,7 +439,7 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
                                         onClick={() => handleProfileSettingChange('coverImage', url)}
                                         className="w-20 h-12 rounded overflow-hidden border border-[var(--theme-border)] hover:border-[var(--theme-primary)] flex-shrink-0 transition-all"
                                     >
-                                        <img src={url} alt={`Preset ${i+1}`} className="w-full h-full object-cover" />
+                                        <img src={url} alt={`${t('presetCovers')} ${i+1}`} className="w-full h-full object-cover" />
                                     </button>
                                 ))}
                             </div>
@@ -411,7 +450,20 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-sm text-[var(--theme-text-secondary)] font-mono uppercase">{t('bio')}</label>
+                        <div className="flex justify-between items-center">
+                            <label className="text-sm text-[var(--theme-text-secondary)] font-mono uppercase">{t('bio')}</label>
+                            <button 
+                                onClick={handleGenerateBio}
+                                disabled={isGeneratingBio}
+                                className="text-xs flex items-center gap-1 text-[var(--theme-primary)] hover:underline disabled:opacity-50"
+                            >
+                                {isGeneratingBio ? t('generatingBio') : (
+                                    <>
+                                        <span className="text-lg">✨</span> {t('generateWithAI')}
+                                    </>
+                                )}
+                            </button>
+                        </div>
                         <textarea
                             name="bio"
                             value={draftUser.bio || ''}

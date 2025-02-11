@@ -67,20 +67,35 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // Rate Limiting
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // Limit each IP to 500 requests per windowMs
+  max: 2000, // Increased for smoother dev experience
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const profileUpdateLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 30, // Allow 30 profile updates per minute (more than enough for a human)
+  message: { error: 'Você está atualizando seu perfil muito rápido. Aguarde um momento.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
 const postLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 10, // Limit each IP to 10 posts per minute (prevents echo spam)
+  max: 20, // Increased to 20 posts per minute
   message: { error: 'Você está postando muito rápido. Aguarde um momento.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
 
 app.use('/api', apiLimiter);
+app.use('/api/users/:username', (req, res, next) => {
+  if (req.method === 'PUT') {
+    profileUpdateLimiter(req, res, next);
+  } else {
+    next();
+  }
+});
 app.use('/api/posts', (req, res, next) => {
   if (req.method === 'POST') {
     postLimiter(req, res, next);

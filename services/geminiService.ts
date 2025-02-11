@@ -403,3 +403,38 @@ export const analyzeVideo = async (prompt: string, videoFile: File): Promise<str
         return "Error: Could not analyze the video.";
     }
 };
+
+export const generateBio = async (userData: any): Promise<string | null> => {
+    try {
+        const { username, bio, location, website, birthday, posts } = userData;
+        
+        const context = `
+            Username: ${username}
+            Bio atual: ${bio || 'Nenhuma'}
+            Localização: ${location || 'Desconhecida'}
+            Website: ${website || 'Nenhum'}
+            Data de Nascimento: ${birthday || 'Desconhecida'}
+            Atividades recentes (posts): ${posts ? posts.slice(0, 5).map((p: any) => p.content).join(' | ') : 'Nenhuma'}
+        `;
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-flash-lite-latest',
+            contents: `Você é um especialista em marketing pessoal e branding digital para a rede social cyberpunk Chrono.
+Sua tarefa é gerar uma biografia atrativa, coerente e envolvente para o usuário com base nas informações fornecidas.
+A bio deve ter no máximo 160 caracteres e ser escrita em PORTUGUÊS.
+Use um tom que combine com a estética cyberpunk/futurista do Chrono, mas que ainda pareça autêntico para o usuário.
+Informações do usuário:
+${context}
+
+Responda APENAS com o texto da nova bio, sem aspas ou explicações.`,
+            config: {
+                responseMimeType: 'text/plain',
+            }
+        });
+
+        return response.text?.trim() || null;
+    } catch (error) {
+        console.error("Error generating AI bio:", error);
+        return null;
+    }
+};

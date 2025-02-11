@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { User } from '../../types';
 import { useTranslation } from '../../hooks/useTranslation';
+import { generateBio } from '../../services/geminiService';
 
 interface EditProfileModalProps {
     user: User;
@@ -11,6 +12,7 @@ interface EditProfileModalProps {
 export default function EditProfileModal({ user, onClose, onSave }: EditProfileModalProps) {
     const { t } = useTranslation();
     const [isLoading, setIsLoading] = useState(false);
+    const [isGeneratingBio, setIsGeneratingBio] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const [formData, setFormData] = useState({
@@ -20,6 +22,27 @@ export default function EditProfileModal({ user, onClose, onSave }: EditProfileM
         birthday: user.birthday ? (typeof user.birthday === 'string' ? user.birthday.split('T')[0] : new Date(user.birthday).toISOString().split('T')[0]) : '',
         pronouns: user.pronouns || ''
     });
+
+    const handleGenerateBio = async () => {
+        setIsGeneratingBio(true);
+        setError(null);
+        try {
+            const newBio = await generateBio({
+                ...user,
+                ...formData
+            });
+            
+            if (newBio) {
+                setFormData(prev => ({ ...prev, bio: newBio }));
+            } else {
+                throw new Error(t('aiBioError') || 'Failed to generate bio');
+            }
+        } catch (err: any) {
+            setError(err.message || 'Error generating bio');
+        } finally {
+            setIsGeneratingBio(false);
+        }
+    };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -83,20 +106,34 @@ export default function EditProfileModal({ user, onClose, onSave }: EditProfileM
 
                     {/* Bio */}
                     <div>
-                        <label className="block text-sm font-medium text-[var(--theme-text-secondary)] mb-1">
-                            {t('bio') || 'Bio'}
-                        </label>
+                        <div className="flex justify-between items-center mb-1">
+                            <label className="block text-sm font-medium text-[var(--theme-text-secondary)]">
+                                {t('bio') || 'Bio'}
+                            </label>
+                            <button 
+                                type="button"
+                                onClick={handleGenerateBio}
+                                disabled={isGeneratingBio}
+                                className="text-xs flex items-center gap-1 text-[var(--theme-primary)] hover:underline disabled:opacity-50"
+                            >
+                                {isGeneratingBio ? t('generatingBio') : (
+                                    <>
+                                        <span className="text-lg">✨</span> {t('generateWithAI')}
+                                    </>
+                                )}
+                            </button>
+                        </div>
                         <textarea
                             name="bio"
                             value={formData.bio}
                             onChange={handleChange}
-                            maxLength={500}
+                            maxLength={160}
                             rows={4}
                             className="w-full bg-[var(--theme-bg-primary)] border border-[var(--theme-border-primary)] rounded p-2 text-[var(--theme-text-primary)] focus:border-[var(--theme-primary)] focus:outline-none resize-none"
                             placeholder={t('bioPlaceholder') || "Tell us about yourself..."}
                         />
                         <div className="text-right text-xs text-[var(--theme-text-secondary)] mt-1">
-                            {formData.bio.length}/500
+                            {formData.bio.length}/160
                         </div>
                     </div>
 
