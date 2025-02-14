@@ -56,9 +56,13 @@ vi.mock('./icons', () => ({
 
 describe('SettingsPage', () => {
   const mockUser: User = {
+    id: 'test-id',
     username: 'testuser',
     email: 'test@example.com',
     avatar: 'avatar.jpg',
+    bio: 'Test bio',
+    birthday: '1990-01-01',
+    coverImage: 'cover.jpg',
     followingList: [],
     followers: 10,
     following: 5,

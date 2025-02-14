@@ -35,7 +35,7 @@ export default function DataSlicerPage({
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (videoFile) {
-        const msg = "É permitido apenas um vídeo por vez. Por favor, remova o vídeo atual antes de adicionar um novo.";
+        const msg = t('dataSlicer_errorOnlyOneVideo');
         setError(msg);
         setTimeout(() => setError(null), 5000);
         // Reset the input value so the same file can be selected again if needed after removal
@@ -44,7 +44,7 @@ export default function DataSlicerPage({
     }
 
     if (event.target.files && event.target.files.length > 1) {
-        const msg = "É permitido apenas um vídeo por vez. Por favor, remova o vídeo atual antes de adicionar um novo.";
+        const msg = t('dataSlicer_errorOnlyOneVideo');
         setError(msg);
         setTimeout(() => setError(null), 5000);
         return;
@@ -76,6 +76,19 @@ export default function DataSlicerPage({
     
     setAnalysisResult(result);
     setIsLoading(false);
+  };
+
+  const handleRemoveVideo = () => {
+    setVideoFile(null);
+    if (videoPreview) {
+      URL.revokeObjectURL(videoPreview);
+      setVideoPreview(null);
+    }
+    setAnalysisResult(null);
+    setError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   return (

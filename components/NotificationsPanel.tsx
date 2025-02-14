@@ -1,5 +1,5 @@
 import React from 'react';
-import { Notification } from '../types';
+import { Notification, NotificationType } from '../types';
 import { ReplyIcon, EchoIcon, GlitchIcon, UserIcon } from './icons';
 import { useTranslation } from '../hooks/useTranslation';
 
