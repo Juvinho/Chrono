@@ -9,10 +9,12 @@ import net from 'net';
 import { promisify } from 'util';
 
 import { validateNoEmojis } from '../utils/validation.js';
+import { SecurityService } from '../services/securityService.js';
 
 const resolveMx = promisify(dns.resolveMx);
 const router = express.Router();
 const userService = new UserService();
+const securityService = new SecurityService();
 
 // Helper to check SMTP handshake (deep verification)
 const checkSmtp = async (domain: string, email: string): Promise<boolean> => {
@@ -276,12 +278,14 @@ router.post('/login', async (req, res) => {
 
     const user = await userService.getUserByUsername(username, true);
     if (!user) {
+      await securityService.logAction(null, 'login', 'user', null, 'failure', { username, reason: 'user_not_found' }, req);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     // Check verification status
     const verificationCheck = await pool.query('SELECT is_verified FROM users WHERE id = $1', [user.id]);
     if (verificationCheck.rows.length > 0 && !verificationCheck.rows[0].is_verified) {
+         await securityService.logAction(user.id, 'login', 'user', user.id, 'failure', { username, reason: 'email_not_verified' }, req);
          return res.status(403).json({ error: 'Email not verified. Please check your inbox.' });
     }
 
@@ -290,14 +294,18 @@ router.post('/login', async (req, res) => {
     
     if (!dbUser.rows[0] || !dbUser.rows[0].password_hash) {
       console.error(`Login failed: No password hash found for user ${username} (ID: ${user.id})`);
+      await securityService.logAction(user.id, 'login', 'user', user.id, 'failure', { username, reason: 'missing_password_hash' }, req);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const isValid = await userService.verifyPassword(password, dbUser.rows[0].password_hash);
 
     if (!isValid) {
+      await securityService.logAction(user.id, 'login', 'user', user.id, 'failure', { username, reason: 'invalid_password' }, req);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
+
+    await securityService.logAction(user.id, 'login', 'user', user.id, 'success', { username }, req);
 
     const token = jwt.sign(
       { id: user.id, username: user.username },

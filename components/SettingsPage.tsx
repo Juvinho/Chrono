@@ -33,14 +33,15 @@ interface SettingsPageProps {
   onLogout: () => void;
   onNavigate: (page: Page, username?: string) => void;
   onNotificationClick: (notification: Notification) => void;
-  onUpdateUser: (user: User) => Promise<boolean>;
+  onUpdateUser: (user: User) => Promise<{ success: boolean; error?: string }>;
   allUsers: User[];
   allPosts: Post[];
   conversations: Conversation[];
   onOpenMarketplace?: () => void;
+  onBack?: () => void;
 }
 
-export default function SettingsPage({ user, onLogout, onNavigate, onNotificationClick, onUpdateUser, allUsers, allPosts, conversations, onOpenMarketplace }: SettingsPageProps) {
+export default function SettingsPage({ user, onLogout, onNavigate, onNotificationClick, onUpdateUser, allUsers, allPosts, conversations, onOpenMarketplace, onBack }: SettingsPageProps) {
   const { t, setLanguage, language } = useTranslation();
 
   // FIX: Safely initialize draftUser state to ensure profileSettings always exists.
@@ -97,7 +98,7 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
     setDraftUser(prev => ({
       ...prev,
       profileSettings: {
-        ...prev.profileSettings!,
+        ...(prev.profileSettings || defaultSettings),
         [setting]: value
       }
     }));
@@ -151,9 +152,10 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
           throw new Error(t('errorBioTooLong') || 'Bio must be under 160 characters');
       }
 
-      if (draftUser.website && !draftUser.website.startsWith('http')) {
+      let websiteToSave = draftUser.website;
+      if (websiteToSave && !websiteToSave.startsWith('http')) {
           // Auto-fix website if missing protocol
-          draftUser.website = `https://${draftUser.website}`;
+          websiteToSave = `https://${websiteToSave}`;
       }
 
       // Only validate email if it's being updated or if we are in the account tab
@@ -164,6 +166,7 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
       // Ensure birthday is formatted correctly if it was edited
       const userToSave = {
           ...draftUser,
+          website: websiteToSave,
           birthday: draftUser.birthday || undefined
       };
       
@@ -277,6 +280,7 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
         conversations={conversations}
         onOpenMarketplace={onOpenMarketplace}
         onSearch={handleSearch}
+        onBack={onBack}
       />
 
       <main className="pt-20 pb-20 px-4 max-w-4xl mx-auto space-y-6">
@@ -536,6 +540,35 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
                                     PT
                                 </button>
                             </div>
+                         </div>
+
+                         <div className="flex items-center justify-between p-4 bg-black/20 rounded border border-[var(--theme-border)]">
+                            <div>
+                                <h3 className="font-bold">Glitchis</h3>
+                                <p className="text-sm text-[var(--theme-text-secondary)]">Permitir receber efeitos visuais Glitchi de outros usuários</p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    checked={draftUser.profileSettings?.canReceiveGlitchis ?? true}
+                                    onChange={(e) => handleProfileSettingChange('canReceiveGlitchis', e.target.checked)}
+                                    className="sr-only peer" 
+                                />
+                                <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--theme-primary)]"></div>
+                            </label>
+                         </div>
+
+                         <div className="flex items-center justify-between p-4 bg-black/20 rounded border border-[var(--theme-border)]">
+                            <div>
+                                <h3 className="font-bold">2FA (Autenticação de Dois Fatores)</h3>
+                                <p className="text-sm text-[var(--theme-text-secondary)]">Adicionar uma camada extra de segurança à sua conta</p>
+                            </div>
+                            <button 
+                                className={`px-4 py-2 rounded font-bold transition-all ${draftUser.twoFactorEnabled ? 'bg-red-500/20 text-red-500 border border-red-500' : 'bg-green-500/20 text-green-500 border border-green-500'}`}
+                                onClick={() => {/* TODO: Implement 2FA setup flow */}}
+                            >
+                                {draftUser.twoFactorEnabled ? 'Desativar 2FA' : 'Ativar 2FA'}
+                            </button>
                          </div>
 
                          <div className="flex items-center justify-between p-4 bg-black/20 rounded border border-[var(--theme-border)]">

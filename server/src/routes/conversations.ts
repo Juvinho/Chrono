@@ -118,16 +118,15 @@ router.get('/with/:username', authenticateToken, async (req: AuthRequest, res) =
 router.post('/:id/messages', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
-    const { text } = req.body;
+    const { text, media } = req.body;
 
-    if (!text) {
-      return res.status(400).json({ error: 'Message text is required' });
+    if (!text && !media) {
+      return res.status(400).json({ error: 'Message text or media is required' });
     }
 
-    const message = await conversationService.sendMessage(id, req.userId!, text);
+    const message = await conversationService.sendMessage(id, req.userId!, text, media);
 
     // Create notification for recipient
-    // Get conversation participants
     const conv = await pool.query(
       'SELECT user_id FROM conversation_participants WHERE conversation_id = $1 AND user_id != $2',
       [id, req.userId]
@@ -148,6 +147,24 @@ router.post('/:id/messages', authenticateToken, async (req: AuthRequest, res) =>
     console.error('Send message error:', error);
     res.status(500).json({ error: error.message || 'Failed to send message' });
   }
+});
+
+// Update message status (delivered/read)
+router.post('/:id/messages/:messageId/status', authenticateToken, async (req: AuthRequest, res) => {
+    try {
+        const { messageId } = req.params;
+        const { status } = req.body;
+
+        if (!['delivered', 'read'].includes(status)) {
+            return res.status(400).json({ error: 'Invalid status' });
+        }
+
+        await conversationService.updateMessageStatus(messageId, req.userId!, status);
+        res.json({ success: true });
+    } catch (error: any) {
+        console.error('Update status error:', error);
+        res.status(500).json({ error: error.message || 'Failed to update status' });
+    }
 });
 
 // Mark conversation as read

@@ -4,6 +4,10 @@ export interface Message {
   id: string;
   senderUsername: string;
   text: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  metadata?: any;
+  status?: 'sent' | 'delivered' | 'read';
   timestamp: Date;
 }
 

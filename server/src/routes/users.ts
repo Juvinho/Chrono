@@ -2,6 +2,7 @@
 import { UserService } from '../services/userService.js';
 import { FollowService } from '../services/followService.js';
 import { NotificationService } from '../services/notificationService.js';
+import { SecurityService } from '../services/securityService.js';
 import { authenticateToken, optionalAuthenticateToken, AuthRequest } from '../middleware/auth.js';
 import { pool } from '../db/connection.js';
 
@@ -9,6 +10,34 @@ const router = express.Router();
 const userService = new UserService();
 const followService = new FollowService();
 const notificationService = new NotificationService();
+const securityService = new SecurityService();
+
+// Get audit logs
+router.get('/me/audit-logs', authenticateToken, async (req: AuthRequest, res) => {
+    try {
+        const logs = await securityService.getAuditLogs(req.userId!);
+        res.json(logs);
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Send Glitchi
+router.post('/:username/glitchi', authenticateToken, async (req: AuthRequest, res) => {
+    try {
+        const { username } = req.params;
+        const targetUser = await userService.getUserByUsername(username);
+        
+        if (!targetUser) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        await userService.sendGlitchi(req.userId!, targetUser.id);
+        res.json({ success: true });
+    } catch (error: any) {
+        res.status(400).json({ error: error.message });
+    }
+});
 
 // Search users
 router.get(['/search/:query', '/search/'], optionalAuthenticateToken, async (req: AuthRequest, res) => {

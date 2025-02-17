@@ -26,6 +26,7 @@ const DataSlicerPage = React.lazy(() => import('./components/DataSlicerPage'));
 const StoryViewer = React.lazy(() => import('./components/StoryViewer'));
 const StoryCreator = React.lazy(() => import('./components/StoryCreator'));
 const Marketplace = React.lazy(() => import('./components/Marketplace'));
+const GlitchiOverlay = React.lazy(() => import('./components/GlitchiOverlay'));
 
 
 const placeholderVideos = [
@@ -142,6 +143,8 @@ export default function App() {
     const [userToVerify, setUserToVerify] = useState<string | null>(null);
     const [emailToReset, setEmailToReset] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isInitialLoading, setIsInitialLoading] = useState(true);
+    const [activeGlitchi, setActiveGlitchi] = useState<{ senderUsername: string } | null>(null);
     const [typingParentIds, setTypingParentIds] = useState(new Set<string>());
     const [nextAutoRefresh, setNextAutoRefresh] = useState<Date | null>(null);
     const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false);
@@ -564,14 +567,22 @@ export default function App() {
                 reloadBackendData();
             };
 
+            const handleGlitchiReceived = (payload: any) => {
+                console.log("Glitchi received from:", payload.senderUsername);
+                setActiveGlitchi({ senderUsername: payload.senderUsername });
+                playSound('notification');
+            };
+
             socketService.on('new_notification', handleNewNotification);
             socketService.on('new_message', handleNewMessage);
             socketService.on('new_post', handleNewPost);
+            socketService.on('glitchi_received', handleGlitchiReceived);
 
             return () => {
                 socketService.off('new_notification', handleNewNotification);
                 socketService.off('new_message', handleNewMessage);
                 socketService.off('new_post', handleNewPost);
+                socketService.off('glitchi_received', handleGlitchiReceived);
                 socketService.disconnect();
             };
         } else {
@@ -734,10 +745,21 @@ export default function App() {
     // MIGRATION: Fetch initial data from Backend
     useEffect(() => {
         if (currentUser) {
-            setIsGenerating(true);
-            reloadBackendData().finally(() => setIsGenerating(false));
+            // Only show the "generating reality" loading state on the very first load
+            // to prevent the "flashing" effect during background refreshes or socket updates.
+            if (isInitialLoading) {
+                setIsGenerating(true);
+                reloadBackendData()
+                    .finally(() => {
+                        setIsGenerating(false);
+                        setIsInitialLoading(false);
+                    });
+            } else {
+                // Background refresh without showing loading spinner
+                reloadBackendData();
+            }
         }
-    }, [currentUser, reloadBackendData]); // Re-fetch on login
+    }, [currentUser, reloadBackendData, isInitialLoading]); // Re-fetch on login
 
     // Polling for notifications is now handled by the configurable auto-refresh
     useEffect(() => {
@@ -825,22 +847,28 @@ export default function App() {
         }
     }, [currentUser]);
 
-    const handleSendMessage = async (recipientUsername: string, text: string, senderUsername?: string) => {
-        const sender = senderUsername || currentUser?.username;
-        if (!sender || recipientUsername === sender) return;
+    const handleSendMessage = async (recipientUsername: string, text: string, media?: { imageUrl?: string, videoUrl?: string }) => {
+        if (!currentUser || recipientUsername === currentUser.username) return;
 
         // MIGRATION: API Call
         try {
-            const result = await apiClient.sendMessageToUser(recipientUsername, text);
-            if (result.error) {
-                console.error("Failed to send message via API:", result.error);
-                return;
+            // Find or create conversation first
+            const convResult = await apiClient.getOrCreateConversation(recipientUsername);
+            if (convResult.data) {
+                const conversationId = convResult.data.id;
+                const result = await apiClient.sendMessage(conversationId, text, media);
+                if (result.error) {
+                    console.error("Failed to send message via API:", result.error);
+                    showToast(t('errorSendMessage'), 'error');
+                    return;
+                }
+                
+                // Reload conversations to get the latest state
+                await reloadBackendData();
             }
-            
-            // Reload conversations to get the latest state
-            await reloadBackendData();
         } catch (error) {
             console.error("Failed to send message via API:", error);
+            showToast(t('errorSendMessage'), 'error');
         }
     };
 
@@ -1024,6 +1052,14 @@ export default function App() {
         }
     };
 
+
+    const handleBack = () => {
+        if (typeof window !== 'undefined' && window.history.length > 1) {
+            window.history.back();
+        } else {
+            handleNavigate(Page.Dashboard);
+        }
+    };
 
     const handleNavigate = (page: Page, data?: string) => {
         if(page === Page.Profile && data) setProfileUsername(data);
@@ -1459,6 +1495,27 @@ export default function App() {
         }
     };
 
+    const handleSendGlitchi = async (recipientUsername: string) => {
+        if (!currentUser) return;
+        
+        try {
+            const result = await apiClient.sendGlitchi(recipientUsername);
+            if (result.error) {
+                showToast(result.error, 'error');
+                return;
+            }
+            
+            showToast('Você mandou um glitchi!', 'success');
+            playSound('glitch'); 
+            
+            // Re-fetch user data to update sent count
+            await reloadBackendData();
+        } catch (error) {
+            console.error("Failed to send glitchi:", error);
+            showToast('Failed to send glitchi', 'error');
+        }
+    };
+
     const handlePasswordReset = (email: string, newPass: string) => {
         setUsers(prev => prev.map(u => u.email === email ? { ...u, password: newPass } : u));
         sessionStorage.setItem('chrono_login_message', 'Password reset successfully. Please log in.');
@@ -1527,10 +1584,22 @@ export default function App() {
 
         switch (currentPage) {
             case Page.Welcome:
+                if (currentUser) {
+                    handleNavigate(Page.Dashboard);
+                    return <LoadingSpinner />;
+                }
                 return <Welcome onNavigate={handleNavigate} />;
             case Page.Login:
+                if (currentUser) {
+                    handleNavigate(Page.Dashboard);
+                    return <LoadingSpinner />;
+                }
                 return <LoginScreen onLogin={handleLogin} users={users} onNavigate={handleNavigate} />;
             case Page.Register:
+                if (currentUser) {
+                    handleNavigate(Page.Dashboard);
+                    return <LoadingSpinner />;
+                }
                 return <Register users={users} setUsers={setUsers} onNavigate={handleNavigate} onLogin={handleLogin} />;
             case Page.Verify:
                 const userToVerifyEmail = users.find(u => u.username === userToVerify)?.email;
@@ -1570,6 +1639,7 @@ export default function App() {
                         onOpenMarketplace={() => setIsMarketplaceOpen(true)}
                         nextAutoRefresh={nextAutoRefresh}
                         isAutoRefreshPaused={isAutoRefreshPaused}
+                        onBack={handleBack}
                     />
                 ) : (
                     <LoginScreen onLogin={handleLogin} users={users} onNavigate={handleNavigate} />
@@ -1601,6 +1671,7 @@ export default function App() {
                         conversations={conversations}
                         onOpenMarketplace={() => setIsMarketplaceOpen(true)}
                         onUpdateUser={handleUpdateUser}
+                        onBack={handleBack}
                      />
                 ) : (
                     <LoginScreen onLogin={handleLogin} users={users} onNavigate={handleNavigate} />
@@ -1617,6 +1688,7 @@ export default function App() {
                         allPosts={memoizedPosts}
                         conversations={conversations}
                         onOpenMarketplace={() => setIsMarketplaceOpen(true)}
+                        onBack={handleBack}
                     />
                 ) : (
                     <LoginScreen onLogin={handleLogin} users={users} onNavigate={handleNavigate} />
@@ -1635,6 +1707,7 @@ export default function App() {
                         onMarkConversationAsRead={handleMarkConversationAsRead}
                         onCreateOrFindConversation={handleCreateOrFindConversation}
                         onOpenMarketplace={() => setIsMarketplaceOpen(true)}
+                        onBack={handleBack}
                     />
                 ) : (
                     <LoginScreen onLogin={handleLogin} users={users} onNavigate={handleNavigate} />
@@ -1650,6 +1723,7 @@ export default function App() {
                         allPosts={memoizedPosts}
                         conversations={conversations}
                         onOpenMarketplace={() => setIsMarketplaceOpen(true)}
+                        onBack={handleBack}
                     />
                 ) : (
                     <LoginScreen onLogin={handleLogin} users={users} onNavigate={handleNavigate} />
@@ -1750,6 +1824,13 @@ export default function App() {
                             currentUser={currentUser}
                             onClose={() => setIsMarketplaceOpen(false)}
                             onUserUpdate={handleUpdateUser}
+                        />
+                    )}
+                    
+                    {activeGlitchi && (
+                        <GlitchiOverlay 
+                            senderUsername={activeGlitchi.senderUsername}
+                            onComplete={() => setActiveGlitchi(null)}
                         />
                     )}
                     

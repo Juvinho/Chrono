@@ -19,7 +19,10 @@ export default function StoryTray({ currentUser, usersWithStories, onViewStory, 
     const hasMyStory = currentUser.stories && currentUser.stories.length > 0;
 
     const renderStoryItem = (user: User, isCurrentUser: boolean) => {
-        const hasUnviewedStories = user.stories?.some(s => !s.viewers?.includes(currentUser.id || ''));
+        // FIX: Ensure stories and viewers exist before checking unviewed status.
+        // Use username as fallback for ID if needed for viewer tracking.
+        const userId = currentUser.id || currentUser.username;
+        const hasUnviewedStories = user.stories?.some(s => !(s.viewers || []).includes(userId));
         const avatarShape = user.equippedFrame ? getFrameShape(user.equippedFrame.name) : 'rounded-full';
         
         return (
@@ -39,13 +42,15 @@ export default function StoryTray({ currentUser, usersWithStories, onViewStory, 
                             src={user.avatar || 'https://via.placeholder.com/150'} 
                             alt={user.username} 
                             className={`w-full h-full ${avatarShape} object-cover`}
+                            onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/150'; }}
                         />
-                        {user.equippedEffect && (
+                        {user.equippedEffect && user.equippedEffect.imageUrl && (
                             <div className={`absolute inset-0 pointer-events-none z-10 mix-blend-screen opacity-60 ${avatarShape} overflow-hidden`}>
                                 <img 
                                     src={user.equippedEffect.imageUrl} 
                                     alt="" 
                                     className="w-full h-full object-cover animate-pulse-soft"
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                 />
                             </div>
                         )}

@@ -17,6 +17,8 @@ export default function LoginScreen({ onLogin, users, onNavigate }: LoginScreenP
     const { t } = useTranslation();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [twoFactorCode, setTwoFactorCode] = useState('');
+    const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
     const [error, setError] = useState('');
     const [dbError, setDbError] = useState('');
     const [message, setMessage] = useState('');
@@ -85,10 +87,19 @@ export default function LoginScreen({ onLogin, users, onNavigate }: LoginScreenP
 
         try {
             console.log('Calling API login...');
-            const response = await apiClient.login({ username, password });
+            const response = await apiClient.login({ 
+                username, 
+                password,
+                twoFactorCode: requiresTwoFactor ? twoFactorCode : undefined
+            });
             console.log('API response:', response);
             
             if (response.error) {
+                if (response.error === '2fa_required') {
+                    setRequiresTwoFactor(true);
+                    setIsLoading(false);
+                    return;
+                }
                 setError(response.error);
                 setIsLoading(false);
                 return;
@@ -179,6 +190,26 @@ export default function LoginScreen({ onLogin, users, onNavigate }: LoginScreenP
                             className="w-full px-3 py-2 mt-1 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"
                         />
                     </div>
+
+                    {requiresTwoFactor && (
+                        <div className="animate-fade-in">
+                            <label htmlFor="2fa" className="text-sm font-bold text-[var(--theme-primary)] block uppercase tracking-widest">
+                                Digite o código de 6 dígitos
+                            </label>
+                            <input
+                                id="2fa"
+                                type="text"
+                                value={twoFactorCode}
+                                onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                required
+                                placeholder="000000"
+                                className="w-full px-3 py-3 mt-1 text-center text-2xl font-mono tracking-[0.5em] text-[var(--theme-primary)] bg-black/50 border-2 border-[var(--theme-primary)] focus:outline-none shadow-[0_0_10px_rgba(var(--theme-primary-rgb),0.3)]"
+                            />
+                            <p className="text-[10px] text-[var(--theme-text-secondary)] mt-2 text-center">
+                                VERIFICAÇÃO DE IDENTIDADE NECESSÁRIA
+                            </p>
+                        </div>
+                    )}
 
                     {error && <p className="text-red-500 text-sm text-center glitch-effect" data-text={error}>{error}</p>}
                     {message && <p className="text-green-400 text-sm text-center">{message}</p>}

@@ -193,6 +193,12 @@ class ApiClient {
     });
   }
 
+  async sendGlitchi(username: string) {
+    return this.request<any>(`/users/${username}/glitchi`, {
+      method: 'POST',
+    });
+  }
+
   // Post endpoints
   async getPosts(options: any = {}) {
     const queryParams = new URLSearchParams();

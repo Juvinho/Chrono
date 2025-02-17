@@ -36,13 +36,14 @@ interface DashboardProps {
     onOpenMarketplace?: () => void;
     nextAutoRefresh?: Date | null;
     isAutoRefreshPaused?: boolean;
+    onBack?: () => void;
 }
 
 export default function Dashboard({ 
     user, onLogout, onNavigate, onNotificationClick, selectedDate, setSelectedDate, allUsers, allPosts,
     onNewPost, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost, onPollVote, isGenerating, typingParentIds,
     conversations, newPostsCount = 0, onShowNewPosts, allKnownPosts, usersWithStories = [], onViewStory = () => {}, onCreateStory = () => {}, onUpdateUser = () => {}, onOpenMarketplace,
-    nextAutoRefresh, isAutoRefreshPaused
+    nextAutoRefresh, isAutoRefreshPaused, onBack
 }: DashboardProps) {
     const { t } = useTranslation();
     const [searchQuery, setSearchQuery] = useState('');
@@ -169,16 +170,9 @@ export default function Dashboard({
                 allPosts={postsForSearch} 
                 allUsers={allUsers} 
                 conversations={conversations}
+                onBack={onBack}
             />
             <div className="flex-grow overflow-y-auto relative">
-                <div className="mb-2">
-                    <StoryTray 
-                        currentUser={user}
-                        usersWithStories={usersWithStories}
-                        onViewStory={onViewStory}
-                        onCreateStory={onCreateStory}
-                    />
-                </div>
                 {newPostsCount > 0 && onShowNewPosts && (
                     <div className="sticky top-4 z-50 flex justify-center w-full pointer-events-none mb-[-40px]">
                         <button 

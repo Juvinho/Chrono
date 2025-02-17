@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { User, Post, Page, Notification, Conversation } from '../types';
 import GlitchText from './GlitchText';
-import { SearchIcon, LogoutIcon, BellIcon, SettingsIcon, MessageIcon, FilmIcon, ShoppingBagIcon } from './icons';
+import { SearchIcon, LogoutIcon, BellIcon, SettingsIcon, MessageIcon, FilmIcon, ShoppingBagIcon, ChevronLeftIcon } from './icons';
 import SearchOverlay from './SearchOverlay';
 import NotificationsPanel from './NotificationsPanel';
 import ConfirmationModal from './modals/ConfirmationModal';
@@ -17,12 +17,13 @@ interface HeaderProps {
     onNotificationClick: (notification: Notification) => void;
     onSearch: (query: string) => void;
     onOpenMarketplace?: () => void;
+    onBack?: () => void;
     allUsers: User[];
     allPosts: Post[];
     conversations: Conversation[];
 }
 
-export default function Header({ user, onLogout, onViewProfile, onNavigate, onNotificationClick, onSearch, onOpenMarketplace, allUsers, allPosts, conversations }: HeaderProps) {
+export default function Header({ user, onLogout, onViewProfile, onNavigate, onNotificationClick, onSearch, onOpenMarketplace, onBack, allUsers, allPosts, conversations }: HeaderProps) {
     const { t } = useTranslation();
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -46,8 +47,19 @@ export default function Header({ user, onLogout, onViewProfile, onNavigate, onNo
 
     return (
         <header className="h-16 bg-[var(--theme-bg-primary)] border-b-2 border-[var(--theme-border-primary)] z-50 relative flex items-center justify-between px-6 flex-shrink-0">
-            <div className="cursor-pointer" onClick={() => onNavigate(Page.Dashboard)}>
-              <GlitchText text="C." className="logo-glitch text-4xl font-bold tracking-tighter" />
+            <div className="flex items-center space-x-4">
+                {onBack && (
+                    <button 
+                        onClick={onBack} 
+                        className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)] p-1 rounded-full hover:bg-[var(--theme-bg-tertiary)] transition-all"
+                        title={t('back') || 'Voltar'}
+                    >
+                        <ChevronLeftIcon className="w-6 h-6" />
+                    </button>
+                )}
+                <div className="cursor-pointer" onClick={() => onNavigate(Page.Dashboard)}>
+                  <GlitchText text="C." className="logo-glitch text-4xl font-bold tracking-tighter" />
+                </div>
             </div>
             
             <div className="relative w-1/3">
