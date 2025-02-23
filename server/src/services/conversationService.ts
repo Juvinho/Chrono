@@ -233,6 +233,18 @@ export class ConversationService {
        WHERE conversation_id = $1 AND user_id = $2`,
       [conversationId, userId]
     );
+
+    // Also mark all messages as read for this user in this conversation
+    const unreadMessages = await pool.query(
+        `SELECT m.id FROM messages m
+         JOIN message_status ms ON m.id = ms.message_id
+         WHERE m.conversation_id = $1 AND ms.user_id = $2 AND ms.status != 'read'`,
+        [conversationId, userId]
+    );
+
+    for (const msg of unreadMessages.rows) {
+        await this.updateMessageStatus(msg.id, userId, 'read');
+    }
   }
 
   mapMessageFromDb(row: any): Message {
