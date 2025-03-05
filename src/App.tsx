@@ -883,7 +883,7 @@ export default function App() {
         }
     }, [currentUser]);
 
-    const handleSendMessage = async (recipientUsername: string, text: string, media?: { imageUrl?: string, videoUrl?: string }) => {
+    const handleSendMessage = async (recipientUsername: string, text: string, media?: { imageUrl?: string, videoUrl?: string, glitchiType?: string }) => {
         if (!currentUser || recipientUsername === currentUser.username) return;
 
         // MIGRATION: API Call
@@ -892,6 +892,8 @@ export default function App() {
             const convResult = await apiClient.getOrCreateConversation(recipientUsername);
             if (convResult.data) {
                 const conversationId = convResult.data.conversationId || convResult.data.id;
+                
+                // If it's a glitchi share, we might want to handle it specially or just pass it in media/metadata
                 const result = await apiClient.sendMessage(conversationId, text, media);
                 if (result.error) {
                     console.error("Failed to send message via API:", result.error);
@@ -899,6 +901,11 @@ export default function App() {
                     return;
                 }
                 
+                // If it's a glitchi, also trigger the glitchi API for the effect
+                if (media?.glitchiType) {
+                    await apiClient.sendGlitchi(recipientUsername);
+                }
+
                 // Reload conversations to get the latest state
                 await reloadBackendData();
             }
@@ -1198,6 +1205,11 @@ export default function App() {
                         website: updatedUser.website,
                         pronouns: updatedUser.pronouns,
                         isPrivate: updatedUser.isPrivate,
+                        profileType: updatedUser.profileType,
+                        headline: updatedUser.headline,
+                        skills: updatedUser.skills,
+                        workExperience: updatedUser.workExperience,
+                        education: updatedUser.education,
                         profileSettings: updatedUser.profileSettings,
                     };
                     
@@ -1676,7 +1688,7 @@ export default function App() {
                     handleNavigate(Page.Dashboard);
                     return <LoadingSpinner />;
                 }
-                return <LoginScreen onLogin={handleLogin} users={users} onNavigate={handleNavigate} />;
+                return <LoginScreen onLogin={handleLogin} onNavigate={handleNavigate} />;
             case Page.Register:
                 if (currentUser) {
                     handleNavigate(Page.Dashboard);
@@ -1697,8 +1709,6 @@ export default function App() {
                         onLogout={handleLogout}
                         onNavigate={handleNavigate}
                         onNotificationClick={handleNotificationClick}
-                        onAcceptConnection={handleAcceptConnection}
-                        onDeclineConnection={handleDeclineConnection}
                         selectedDate={selectedDate}
                         setSelectedDate={setSelectedDate}
                         allUsers={combinedUsers}
@@ -1726,7 +1736,7 @@ export default function App() {
                         onBack={handleBack}
                     />
                 ) : (
-                    <LoginScreen onLogin={handleLogin} users={users} onNavigate={handleNavigate} />
+                    <LoginScreen onLogin={handleLogin} onNavigate={handleNavigate} />
                 );
             case Page.Profile:
                 // Fallback to current user if profileUsername is missing but we are in Profile page
@@ -1756,13 +1766,10 @@ export default function App() {
                         onOpenMarketplace={() => setIsMarketplaceOpen(true)}
                         onUpdateUser={handleUpdateUser}
                         onSendGlitchi={handleSendGlitchi}
-                        onRequestConnection={handleRequestConnection}
-                        onAcceptConnection={handleAcceptConnection}
-                        onDeclineConnection={handleDeclineConnection}
                         onBack={handleBack}
-                     />
+                    />
                 ) : (
-                    <LoginScreen onLogin={handleLogin} users={users} onNavigate={handleNavigate} />
+                    <LoginScreen onLogin={handleLogin} onNavigate={handleNavigate} />
                 );
              case Page.Settings:
                 return currentUser ? (
@@ -1779,7 +1786,7 @@ export default function App() {
                         onBack={handleBack}
                     />
                 ) : (
-                    <LoginScreen onLogin={handleLogin} users={users} onNavigate={handleNavigate} />
+                    <LoginScreen onLogin={handleLogin} onNavigate={handleNavigate} />
                 );
             case Page.Messages:
                 return currentUser ? (
@@ -1798,7 +1805,7 @@ export default function App() {
                         onBack={handleBack}
                     />
                 ) : (
-                    <LoginScreen onLogin={handleLogin} users={users} onNavigate={handleNavigate} />
+                    <LoginScreen onLogin={handleLogin} onNavigate={handleNavigate} />
                 );
              case Page.VideoAnalysis:
                 return currentUser ? (
@@ -1814,7 +1821,7 @@ export default function App() {
                         onBack={handleBack}
                     />
                 ) : (
-                    <LoginScreen onLogin={handleLogin} users={users} onNavigate={handleNavigate} />
+                    <LoginScreen onLogin={handleLogin} onNavigate={handleNavigate} />
                 );
             default:
                 return <Welcome onNavigate={handleNavigate} />;

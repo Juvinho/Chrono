@@ -36,9 +36,6 @@ interface ProfilePageProps {
   conversations: Conversation[];
   onOpenMarketplace?: () => void;
   onSendGlitchi: (username: string) => void;
-  onRequestConnection: (username: string) => void;
-  onAcceptConnection: (requestId: string) => void;
-  onDeclineConnection: (requestId: string) => void;
   onBack?: () => void;
 }
 
@@ -46,7 +43,7 @@ export default function ProfilePage({
   currentUser, profileUsername, onLogout, onNavigate, onNotificationClick, users, onFollowToggle, 
   allPosts, allUsers, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost,
   onPollVote, selectedDate, setSelectedDate, typingParentIds, conversations, onOpenMarketplace, 
-  onSendGlitchi, onRequestConnection, onAcceptConnection, onDeclineConnection, onUpdateUser, onBack
+  onSendGlitchi, onUpdateUser, onBack
 }: ProfilePageProps & { onUpdateUser?: (user: User) => Promise<{ success: boolean; error?: string }> }) {
   const { t } = useTranslation();
   const { playSound } = useSound();
@@ -133,13 +130,7 @@ export default function ProfilePage({
   }
   
   const isFollowing = profileUser ? currentUser.followingList?.includes(profileUser.username) : false;
-  const isConnected = profileUser ? currentUser.connectionList?.includes(profileUser.username) : false;
-  const hasPendingRequest = currentUser.notifications?.some(n => 
-      n.notificationType === 'follow' && // Reusing follow for now or I should add a connectionRequest type
-      n.actor.username === profileUser.username && 
-      !n.read
-  );
-
+  
   const [userListModal, setUserListModal] = useState<{title: string, users: User[]} | null>(null);
 
   const [postToEdit, setPostToEdit] = useState<Post | null>(null);
@@ -166,13 +157,18 @@ export default function ProfilePage({
                   return;
               }
               if (tabSegment === 'professional') {
-                  setActiveTab('professional');
+                  // Only allow professional tab if user has professional profile enabled
+                  if (profileUser.profileType === 'professional') {
+                    setActiveTab('professional');
+                  } else {
+                    onNavigate(Page.Dashboard);
+                  }
                   return;
               }
           }
           setActiveTab('posts');
       }
-  }, [profileUser.username]);
+  }, [profileUser.username, profileUser.profileType, onNavigate]);
 
   const handleTabChange = (tab: 'posts' | 'media' | 'temporal' | 'professional') => {
       setActiveTab(tab);
@@ -441,7 +437,7 @@ export default function ProfilePage({
                         <span className="text-sm text-[var(--theme-text-secondary)] bg-[var(--theme-bg-tertiary)] px-2 py-0.5 rounded-full">{profileUser.pronouns}</span>
                     )}
                 </div>
-                {profileUser.headline && (
+                {profileUser.profileType === 'professional' && profileUser.headline && (
                   <p className="text-lg text-[var(--theme-primary)] font-semibold mt-1">{profileUser.headline}</p>
                 )}
                 {profileUser.bio && (
@@ -530,19 +526,6 @@ export default function ProfilePage({
                       >
                         <span className="group-hover:animate-pulse">GLITCHI</span>
                       </button>
-                      {!isOwnProfile && (
-                        <button 
-                            onClick={() => onRequestConnection(profileUser.username)}
-                            disabled={isConnected}
-                            className={`px-4 py-1 rounded-sm transition-colors ${
-                                isConnected 
-                                    ? 'bg-green-600/30 border border-green-500 text-green-500 cursor-default' 
-                                    : 'bg-[var(--theme-primary)] text-white hover:brightness-110'
-                            }`}
-                        >
-                            {isConnected ? (t('connected') || 'Conectado') : (t('connect') || 'Conectar')}
-                        </button>
-                      )}
                       <button ref={followButtonRef} onClick={handleFollowClick} className={`${isFollowing ? 'following-btn' : 'follow-btn'} px-4 py-1 rounded-sm transition-colors`}>
                         {isFollowing ? t('profileFollowing') : t('profileFollow')}
                       </button>
@@ -556,9 +539,6 @@ export default function ProfilePage({
                 </button>
                 <button onClick={() => setUserListModal({title: t('profileFollowing'), users: getFullUsersFromList(profileUser.followingList || [])})}>
                   <span className="font-bold text-[var(--theme-text-light)]">{profileUser.following}</span> {t('profileFollowing')}
-                </button>
-                <button onClick={() => setUserListModal({title: t('profileConnections') || 'Conexões', users: getFullUsersFromList(profileUser.connectionList || [])})}>
-                  <span className="font-bold text-[var(--theme-text-light)]">{profileUser.connections || 0}</span> {t('profileConnections') || 'Conexões'}
                 </button>
             </div>
           </div>
@@ -604,12 +584,14 @@ export default function ProfilePage({
                         >
                             {t('tabMedia') || "Mídias"}
                         </button>
-                        <button 
-                            className={`flex-1 py-3 text-center font-bold transition-colors ${activeTab === 'professional' ? 'bg-[var(--theme-bg-tertiary)] text-[var(--theme-primary)] border-b-2 border-[var(--theme-primary)]' : 'text-[var(--theme-text-secondary)] hover:bg-[var(--theme-bg-tertiary)]'}`}
-                            onClick={() => handleTabChange('professional')}
-                        >
-                            {t('tabProfessional') || "Profissional"}
-                        </button>
+                        {profileUser.profileType === 'professional' && (
+                            <button 
+                                className={`flex-1 py-3 text-center font-bold transition-colors ${activeTab === 'professional' ? 'bg-[var(--theme-bg-tertiary)] text-[var(--theme-primary)] border-b-2 border-[var(--theme-primary)]' : 'text-[var(--theme-text-secondary)] hover:bg-[var(--theme-bg-tertiary)]'}`}
+                                onClick={() => handleTabChange('professional')}
+                            >
+                                {t('tabProfessional') || "Profissional"}
+                            </button>
+                        )}
                         <button 
                             className={`flex-1 py-3 text-center font-bold transition-colors ${activeTab === 'temporal' ? 'bg-[var(--theme-bg-tertiary)] text-[var(--theme-primary)] border-b-2 border-[var(--theme-primary)]' : 'text-[var(--theme-text-secondary)] hover:bg-[var(--theme-bg-tertiary)]'}`}
                             onClick={() => handleTabChange('temporal')}
@@ -723,7 +705,7 @@ export default function ProfilePage({
                                 </p>
                             )}
 
-                            {profileUser.skills && profileUser.skills.length > 0 && (
+                            {profileUser.profileType === 'professional' && profileUser.skills && profileUser.skills.length > 0 && (
                                 <div className="mt-4 pt-4 border-t border-[var(--theme-border-primary)]">
                                     <h4 className="text-xs font-mono uppercase text-[var(--theme-text-secondary)] mb-2">:: Skills ::</h4>
                                     <div className="flex flex-wrap gap-2">

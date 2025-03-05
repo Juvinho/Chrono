@@ -22,6 +22,12 @@ export interface User {
   coverImage: string | null;
   followers: number;
   following: number;
+  profileType?: 'personal' | 'professional';
+  headline?: string;
+  connectionsCount?: number;
+  skills?: string[];
+  workExperience?: any[];
+  education?: any[];
   isPrivate: boolean;
   isVerified: boolean;
   verificationBadge?: {
@@ -85,6 +91,7 @@ export interface Message {
   text: string;
   imageUrl?: string | null;
   videoUrl?: string | null;
+  glitchiType?: string | null;
   metadata?: any;
   status?: 'sent' | 'delivered' | 'read';
   isEncrypted?: boolean;

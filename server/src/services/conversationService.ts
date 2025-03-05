@@ -67,7 +67,7 @@ export class ConversationService {
     conversationId: string,
     senderId: string,
     text: string,
-    media?: { imageUrl?: string, videoUrl?: string, metadata?: any }
+    media?: { imageUrl?: string, videoUrl?: string, glitchiType?: string, metadata?: any }
   ): Promise<Message> {
     // Check if user is a participant
     const participantCheck = await pool.query(
@@ -86,6 +86,12 @@ export class ConversationService {
     );
     const isEncrypted = cordResult.rows.length > 0;
 
+    // Merge glitchiType into metadata if present
+    const finalMetadata = {
+        ...(media?.metadata || {}),
+        glitchiType: media?.glitchiType || null
+    };
+
     const result = await pool.query(
       `INSERT INTO messages (conversation_id, sender_id, text, is_encrypted, image_url, video_url, metadata, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -97,7 +103,7 @@ export class ConversationService {
         isEncrypted, 
         media?.imageUrl || null, 
         media?.videoUrl || null, 
-        media?.metadata ? JSON.stringify(media.metadata) : '{}',
+        JSON.stringify(finalMetadata),
         'sent'
       ]
     );
@@ -274,6 +280,7 @@ export class ConversationService {
   }
 
   mapMessageFromDb(row: any): Message {
+    const metadata = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : (row.metadata || {});
     return {
       id: row.id,
       conversationId: row.conversation_id,
@@ -281,6 +288,7 @@ export class ConversationService {
       text: row.text,
       imageUrl: row.image_url,
       videoUrl: row.video_url,
+      glitchiType: metadata.glitchiType || null,
       metadata: row.metadata,
       status: row.status,
       isEncrypted: row.is_encrypted,

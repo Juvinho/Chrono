@@ -43,7 +43,53 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'subscription_expires_at') THEN
         ALTER TABLE users ADD COLUMN subscription_expires_at TIMESTAMP;
     END IF;
+
+    -- Add professional fields to users
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'profile_type') THEN
+        ALTER TABLE users ADD COLUMN profile_type VARCHAR(20) DEFAULT 'personal';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'headline') THEN
+        ALTER TABLE users ADD COLUMN headline VARCHAR(255);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'connections_count') THEN
+        ALTER TABLE users ADD COLUMN connections_count INTEGER DEFAULT 0;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'skills') THEN
+        ALTER TABLE users ADD COLUMN skills TEXT[] DEFAULT '{}';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'work_experience') THEN
+        ALTER TABLE users ADD COLUMN work_experience JSONB DEFAULT '[]'::jsonb;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'education') THEN
+        ALTER TABLE users ADD COLUMN education JSONB DEFAULT '[]'::jsonb;
+    END IF;
 END $$;
+
+-- Images table for multimedia content
+CREATE TABLE IF NOT EXISTS images (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    url TEXT NOT NULL,
+    format VARCHAR(20),
+    size_bytes BIGINT,
+    width INTEGER,
+    height INTEGER,
+    uploader_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Videos table for multimedia content
+CREATE TABLE IF NOT EXISTS videos (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    url TEXT NOT NULL,
+    thumbnail_url TEXT,
+    duration_seconds INTEGER,
+    codec VARCHAR(50),
+    size_bytes BIGINT,
+    width INTEGER,
+    height INTEGER,
+    uploader_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
 -- Items table (Cosmetics)
 CREATE TABLE IF NOT EXISTS items (

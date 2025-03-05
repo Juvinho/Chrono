@@ -4,16 +4,14 @@ import GlitchText from '../../../components/ui/GlitchText';
 import { User, Page } from '../../../types/index';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { apiClient, mapApiUserToUser } from '../../../api';
-import FramePreview, { getFrameShape } from '../../profile/components/FramePreview';
 import { validateNoEmojis } from '../../../utils/emojiValidation';
 
 interface LoginScreenProps {
     onLogin: (user: User) => void;
-    users: User[];
     onNavigate: (page: Page) => void;
 }
 
-export default function LoginScreen({ onLogin, users, onNavigate }: LoginScreenProps) {
+export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
     const { t } = useTranslation();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
@@ -132,13 +130,6 @@ export default function LoginScreen({ onLogin, users, onNavigate }: LoginScreenP
         }
     };
 
-    const handleQuickLogin = (user: User) => {
-        setUsername(user.username);
-        setPassword(user.password || '');
-        // Optional: Auto-submit
-        // onLogin(user);
-    }
-
     return (
         <div className="flex items-center justify-center min-h-screen bg-[var(--theme-bg-primary)] transition-colors duration-300">
             <div className="w-full max-w-md p-8 space-y-8 border-2 border-[var(--theme-border-primary)] bg-[var(--theme-bg-primary)] shadow-[0_0_20px_rgba(138,43,226,0.2)]">
@@ -235,45 +226,6 @@ export default function LoginScreen({ onLogin, users, onNavigate }: LoginScreenP
                         {isLoading ? '[ CONNECTING... ]' : `[ ${t('loginConnectButton')} ]`}
                     </button>
                 </form>
-
-                {users.length > 0 && (
-                    <div className="pt-4 border-t border-[var(--theme-border-secondary)]">
-                        <p className="text-xs text-center text-[var(--theme-text-secondary)] mb-3 tracking-widest">{t('loginDetectedIdentities')}</p>
-                        <div className="grid grid-cols-2 gap-2">
-                            {users.slice(0, 4).map(u => {
-                                const avatarShape = u.equippedFrame ? getFrameShape(u.equippedFrame.name) : 'rounded-full';
-                                return (
-                                    <button
-                                        key={u.username}
-                                        onClick={() => handleQuickLogin(u)}
-                                        className="flex items-center space-x-2 p-2 border border-[var(--theme-border-primary)] bg-[var(--theme-bg-tertiary)] hover:border-[var(--theme-primary)] hover:bg-[var(--theme-bg-secondary)] transition-all text-left"
-                                    >
-                                        <div className="relative w-8 h-8 flex-shrink-0">
-                                            <img src={u.avatar} alt={u.username} className={`w-full h-full ${avatarShape} border border-[var(--theme-border-secondary)] object-cover`} />
-                                            {u.equippedEffect && (
-                                                <div className={`absolute inset-0 pointer-events-none z-10 mix-blend-screen opacity-60 ${avatarShape} overflow-hidden`}>
-                                                    <img 
-                                                        src={u.equippedEffect.imageUrl} 
-                                                        alt="" 
-                                                        className="w-full h-full object-cover animate-pulse-soft"
-                                                    />
-                                                </div>
-                                            )}
-                                            {u.equippedFrame && (
-                                                <div className="absolute -inset-1 z-20 pointer-events-none">
-                                                    <FramePreview item={u.equippedFrame} />
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="overflow-hidden">
-                                            <p className="text-xs font-bold text-[var(--theme-text-light)] truncate">@{u.username}</p>
-                                        </div>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
 
                 <div className="text-center text-sm">
                     <span className="text-[var(--theme-text-secondary)]">{t('loginNoAccount')} </span>

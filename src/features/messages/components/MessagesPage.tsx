@@ -15,7 +15,7 @@ interface MessagesPageProps {
   allUsers: User[];
   allPosts: Post[];
   conversations: Conversation[];
-  onSendMessage: (recipientUsername: string, text: string, media?: { imageUrl?: string, videoUrl?: string }) => void;
+  onSendMessage: (recipientUsername: string, text: string, media?: { imageUrl?: string, videoUrl?: string, glitchiType?: string }) => void;
   onSendGlitchi: (username: string) => void;
   onMarkConversationAsRead: (conversationId: string) => void;
   onCreateOrFindConversation: (recipientUsername: string, options?: { isEncrypted?: boolean, selfDestructTimer?: number }) => Promise<string>;
@@ -238,6 +238,19 @@ export default function MessagesPage({
                       )}
                       {msg.videoUrl && (
                         <video src={msg.videoUrl} controls className="max-w-full rounded-sm mb-2 bg-black" />
+                      )}
+                      {msg.glitchiType && (
+                        <div className="bg-red-900/40 border border-red-500 p-3 mb-2 rounded-sm relative group cursor-pointer" onClick={() => onSendGlitchi(otherUser.username)}>
+                            <div className="absolute inset-0 bg-red-500/10 animate-pulse pointer-events-none"></div>
+                            <p className="text-[10px] font-mono text-red-400 uppercase tracking-tighter mb-1">Incoming Glitchi Data</p>
+                            <div className="flex items-center space-x-2">
+                                <div className="w-8 h-8 bg-red-500/20 flex items-center justify-center border border-red-500/50">
+                                    <span className="text-red-500 animate-bounce">⚡</span>
+                                </div>
+                                <p className="text-xs font-bold text-red-200 uppercase">{msg.glitchiType} Protocol</p>
+                            </div>
+                            <p className="text-[9px] text-red-400 mt-2 italic underline group-hover:text-white transition-colors">Execute protocol by clicking here</p>
+                        </div>
                       )}
                       <p className="text-sm">{msg.text}</p>
                       <div className="flex items-center justify-between mt-1">

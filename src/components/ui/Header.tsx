@@ -15,8 +15,6 @@ interface HeaderProps {
     onViewProfile: (username: string) => void;
     onNavigate: (page: Page, data?: string) => void;
     onNotificationClick: (notification: Notification) => void;
-    onAcceptConnection?: (requestId: string) => void;
-    onDeclineConnection?: (requestId: string) => void;
     onSearch: (query: string) => void;
     onOpenMarketplace?: () => void;
     onBack?: () => void;
@@ -25,7 +23,7 @@ interface HeaderProps {
     conversations: Conversation[];
 }
 
-export default function Header({ user, onLogout, onViewProfile, onNavigate, onNotificationClick, onAcceptConnection, onDeclineConnection, onSearch, onOpenMarketplace, onBack, allUsers, allPosts, conversations }: HeaderProps) {
+export default function Header({ user, onLogout, onViewProfile, onNavigate, onNotificationClick, onSearch, onOpenMarketplace, onBack, allUsers, allPosts, conversations }: HeaderProps) {
     const { t } = useTranslation();
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -105,8 +103,6 @@ export default function Header({ user, onLogout, onViewProfile, onNavigate, onNo
                             notifications={user.notifications}
                             onClose={() => setIsNotificationsOpen(false)}
                             onNotificationClick={onNotificationClick}
-                            onAcceptConnection={onAcceptConnection}
-                            onDeclineConnection={onDeclineConnection}
                         />
                     )}
                  </div>

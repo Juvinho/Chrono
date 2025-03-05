@@ -8,6 +8,7 @@ const FULL_USER_SELECT = `
   SELECT 
     u.id, u.username, u.email, u.password_hash, u.avatar, 
     u.followers_count, u.following_count, u.is_verified, u.verification_badge_label, u.verification_badge_color, u.blocked_users, u.created_at, u.updated_at,
+    u.profile_type, u.headline, u.connections_count, u.skills, u.work_experience, u.education,
     p.bio, p.birthday, p.location, p.website, p.cover_image, p.pronouns,
     s.theme, s.accent_color, s.effect, s.animations_enabled, s.is_private,
     (SELECT row_to_json(i) FROM user_items ui JOIN items i ON ui.item_id = i.id WHERE ui.user_id = u.id AND ui.is_equipped = true AND i.type = 'frame' LIMIT 1) as equipped_frame,
@@ -131,9 +132,21 @@ export class UserService {
     try {
       await client.query('BEGIN');
 
-      // 1. Update users table (avatar, counts if provided but usually they are managed by followService)
-      if (updates.avatar !== undefined) {
-        await client.query('UPDATE users SET avatar = $1 WHERE id = $2', [updates.avatar, id]);
+      // 1. Update users table
+      const userFields: string[] = [];
+      const userValues: any[] = [];
+      let uIdx = 1;
+
+      if (updates.avatar !== undefined) { userFields.push(`avatar = $${uIdx++}`); userValues.push(updates.avatar); }
+      if (updates.profileType !== undefined) { userFields.push(`profile_type = $${uIdx++}`); userValues.push(updates.profileType); }
+      if (updates.headline !== undefined) { userFields.push(`headline = $${uIdx++}`); userValues.push(updates.headline); }
+      if (updates.skills !== undefined) { userFields.push(`skills = $${uIdx++}`); userValues.push(updates.skills); }
+      if (updates.workExperience !== undefined) { userFields.push(`work_experience = $${uIdx++}`); userValues.push(JSON.stringify(updates.workExperience)); }
+      if (updates.education !== undefined) { userFields.push(`education = $${uIdx++}`); userValues.push(JSON.stringify(updates.education)); }
+
+      if (userFields.length > 0) {
+        userValues.push(id);
+        await client.query(`UPDATE users SET ${userFields.join(', ')} WHERE id = $${uIdx}`, userValues);
       }
 
       // 2. Update user_profiles table
@@ -384,6 +397,12 @@ export class UserService {
       coverImage: row.cover_image,
       followers: parseInt(row.followers_count || '0'),
       following: parseInt(row.following_count || '0'),
+      profileType: row.profile_type || 'personal',
+      headline: row.headline || '',
+      connections: parseInt(row.connections_count || '0'),
+      skills: row.skills || [],
+      workExperience: row.work_experience || [],
+      education: row.education || [],
       isPrivate: row.is_private, // From user_settings join
       isVerified: isJuvinho ? true : row.is_verified,
       verificationBadge: isJuvinho
