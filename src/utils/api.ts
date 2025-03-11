@@ -11,8 +11,8 @@ const getBaseUrl = () => {
       return 'http://127.0.0.1:3001/api';
     }
     
-    // Production: Always use relative path.
-    return '/api';
+    // Production: Use the Render backend URL
+    return 'https://chrono-pisx.onrender.com/api';
   }
   
   // Fallback for non-browser environments

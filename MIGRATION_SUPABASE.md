@@ -44,10 +44,10 @@ O Supabase não hospeda servidores Node.js (Express), por isso usaremos o **Rend
 
 ## Passo 3: Atualizar o Frontend
 
-Após o Render terminar o deploy, ele te dará uma URL (ex: `https://chrono-backend.onrender.com`).
+Agora que o seu backend está no Render (`https://chrono-pisx.onrender.com`), o frontend precisa saber para onde enviar os dados.
 
-1.  No seu código frontend, procure onde o `apiClient` é configurado (geralmente em `src/api/index.ts` ou `.env`).
-2.  Atualize a `BASE_URL` para a nova URL do Render.
+1.  Abra o arquivo [client.ts](src/api/client.ts).
+2.  A `API_BASE_URL` já foi atualizada para você apontar para o Render.
 
 ---
 
