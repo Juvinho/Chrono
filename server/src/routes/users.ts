@@ -1,4 +1,4 @@
-﻿﻿import express from 'express';
+﻿﻿import express, { Response } from 'express';
 import { UserService } from '../services/userService.js';
 import { FollowService } from '../services/followService.js';
 import { NotificationService } from '../services/notificationService.js';
@@ -13,7 +13,7 @@ const notificationService = new NotificationService();
 const securityService = new SecurityService();
 
 // Get audit logs
-router.get('/me/audit-logs', authenticateToken, async (req: AuthRequest, res) => {
+router.get('/me/audit-logs', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const logs = await securityService.getAuditLogs(req.userId!);
         res.json(logs);
@@ -23,7 +23,7 @@ router.get('/me/audit-logs', authenticateToken, async (req: AuthRequest, res) =>
 });
 
 // Send Glitchi
-router.post('/:username/glitchi', authenticateToken, async (req: AuthRequest, res) => {
+router.post('/:username/glitchi', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const { username } = req.params;
         const targetUser = await userService.getUserByUsername(username);
@@ -40,7 +40,7 @@ router.post('/:username/glitchi', authenticateToken, async (req: AuthRequest, re
 });
 
 // Search users
-router.get(['/search/:query', '/search/'], optionalAuthenticateToken, async (req: AuthRequest, res) => {
+router.get(['/search/:query', '/search/'], optionalAuthenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     let query = req.params.query || '';
     const requesterId = req.userId;
@@ -76,7 +76,7 @@ router.get(['/search/:query', '/search/'], optionalAuthenticateToken, async (req
             recommendedUsers = [...recommendedUsers, ...popularResult.rows];
         }
 
-        const users = recommendedUsers.map(row => ({
+        const users = recommendedUsers.map((row: any) => ({
             id: row.id,
             username: row.username,
             avatar: row.avatar,
@@ -108,7 +108,7 @@ router.get(['/search/:query', '/search/'], optionalAuthenticateToken, async (req
 
     console.log(`[Search] Found ${result.rows.length} results for "${query}"`);
 
-    const users = result.rows.map(row => ({
+    const users = result.rows.map((row: any) => ({
       id: row.id,
       username: row.username,
       avatar: row.avatar,
@@ -127,7 +127,7 @@ router.get(['/search/:query', '/search/'], optionalAuthenticateToken, async (req
 });
 
 // Get user profile by username (Consolidated Route)
-router.get('/:username', optionalAuthenticateToken, async (req: AuthRequest, res) => {
+router.get('/:username', optionalAuthenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { username } = req.params;
     const requesterId = req.userId;
@@ -178,7 +178,7 @@ router.get('/:username', optionalAuthenticateToken, async (req: AuthRequest, res
 });
 
 // Update user profile
-router.put('/:username', authenticateToken, async (req: AuthRequest, res) => {
+router.put('/:username', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { username } = req.params;
 
@@ -207,7 +207,7 @@ router.put('/:username', authenticateToken, async (req: AuthRequest, res) => {
 });
 
 // Follow user
-router.post('/:username/follow', authenticateToken, async (req: AuthRequest, res) => {
+router.post('/:username/follow', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { username } = req.params;
 
@@ -234,7 +234,7 @@ router.post('/:username/follow', authenticateToken, async (req: AuthRequest, res
 });
 
 // Unfollow user
-router.post('/:username/unfollow', authenticateToken, async (req: AuthRequest, res) => {
+router.post('/:username/unfollow', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { username } = req.params;
 

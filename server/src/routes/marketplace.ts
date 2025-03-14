@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { MarketplaceService } from '../services/marketplaceService.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 
@@ -6,7 +6,7 @@ const router = express.Router();
 const marketplaceService = new MarketplaceService();
 
 // Get all items
-router.get('/items', async (req, res) => {
+router.get('/items', async (req: Request, res: Response) => {
   try {
     const { type } = req.query;
     const items = await marketplaceService.getItems(type as string);
@@ -17,7 +17,7 @@ router.get('/items', async (req, res) => {
 });
 
 // Get user inventory
-router.get('/inventory', authenticateToken, async (req: AuthRequest, res) => {
+router.get('/inventory', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const items = await marketplaceService.getUserInventory(req.userId!);
     res.json(items);
@@ -27,7 +27,7 @@ router.get('/inventory', authenticateToken, async (req: AuthRequest, res) => {
 });
 
 // Purchase item
-router.post('/items/:id/purchase', authenticateToken, async (req: AuthRequest, res) => {
+router.post('/items/:id/purchase', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const item = await marketplaceService.purchaseItem(req.userId!, req.params.id);
     res.json(item);
@@ -37,7 +37,7 @@ router.post('/items/:id/purchase', authenticateToken, async (req: AuthRequest, r
 });
 
 // Equip item
-router.post('/items/:id/equip', authenticateToken, async (req: AuthRequest, res) => {
+router.post('/items/:id/equip', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     await marketplaceService.equipItem(req.userId!, req.params.id);
     res.json({ success: true });
@@ -47,7 +47,7 @@ router.post('/items/:id/equip', authenticateToken, async (req: AuthRequest, res)
 });
 
 // Unequip item
-router.post('/items/:id/unequip', authenticateToken, async (req: AuthRequest, res) => {
+router.post('/items/:id/unequip', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     await marketplaceService.unequipItem(req.userId!, req.params.id);
     res.json({ success: true });
@@ -57,7 +57,7 @@ router.post('/items/:id/unequip', authenticateToken, async (req: AuthRequest, re
 });
 
 // Purchase subscription
-router.post('/subscription', authenticateToken, async (req: AuthRequest, res) => {
+router.post('/subscription', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { tier } = req.body;
     if (!['pro', 'pro_plus'].includes(tier)) {

@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Response } from 'express';
 import { ConversationService } from '../services/conversationService.js';
 import { UserService } from '../services/userService.js';
 import { NotificationService } from '../services/notificationService.js';
@@ -11,7 +11,7 @@ const userService = new UserService();
 const notificationService = new NotificationService();
 
 // Get all conversations for current user
-router.get('/', authenticateToken, async (req: AuthRequest, res) => {
+router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     if (!req.userId) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -23,7 +23,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
     const enriched = await Promise.all(
       conversations.map(async (conv) => {
         const participants = await Promise.all(
-          conv.participants.map(async (username) => {
+          conv.participants.map(async (username: string) => {
             const user = await userService.getUserByUsername(username);
             return user
               ? {
@@ -36,7 +36,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
         );
 
         const messages = await Promise.all(
-          conv.messages.map(async (msg) => {
+          conv.messages.map(async (msg: any) => {
             const sender = await userService.getUserById(msg.senderId);
             return {
               ...msg,
@@ -61,7 +61,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
 });
 
 // Create or get conversation (with options)
-router.post('/', authenticateToken, async (req: AuthRequest, res) => {
+router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { username, isEncrypted, selfDestructTimer } = req.body;
 
@@ -92,7 +92,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
 });
 
 // Get or create conversation (legacy GET)
-router.get('/with/:username', authenticateToken, async (req: AuthRequest, res) => {
+router.get('/with/:username', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { username } = req.params;
 
@@ -115,7 +115,7 @@ router.get('/with/:username', authenticateToken, async (req: AuthRequest, res) =
 });
 
 // Send message
-router.post('/:id/messages', authenticateToken, async (req: AuthRequest, res) => {
+router.post('/:id/messages', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { text, media } = req.body;
@@ -150,7 +150,7 @@ router.post('/:id/messages', authenticateToken, async (req: AuthRequest, res) =>
 });
 
 // Update message status (delivered/read)
-router.post('/:id/messages/:messageId/status', authenticateToken, async (req: AuthRequest, res) => {
+router.post('/:id/messages/:messageId/status', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         const { messageId } = req.params;
         const { status } = req.body;
@@ -168,7 +168,7 @@ router.post('/:id/messages/:messageId/status', authenticateToken, async (req: Au
 });
 
 // Mark conversation as read
-router.post('/:id/read', authenticateToken, async (req: AuthRequest, res) => {
+router.post('/:id/read', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     await conversationService.markAsRead(id, req.userId!);

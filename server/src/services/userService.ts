@@ -251,7 +251,7 @@ export class UserService {
        WHERE f.following_id = $1`,
       [userId]
     );
-    return result.rows.map(row => ({
+    return result.rows.map((row: any) => ({
       ...this.mapUserFromDb(row), // mapUserFromDb handles defaults, but we only have partial data
       // Ensure we don't break if mapUserFromDb expects more fields
       id: row.id,
@@ -272,7 +272,7 @@ export class UserService {
        WHERE f.follower_id = $1`,
       [userId]
     );
-    return result.rows.map(row => ({
+    return result.rows.map((row: any) => ({
       ...this.mapUserFromDb(row),
       id: row.id,
       username: row.username,
@@ -288,7 +288,7 @@ export class UserService {
       'SELECT following_id FROM follows WHERE follower_id = $1',
       [userId]
     );
-    return result.rows.map((row) => row.following_id);
+    return result.rows.map((row: any) => row.following_id);
   }
 
   async getFollowersIds(userId: string): Promise<string[]> {
@@ -296,7 +296,7 @@ export class UserService {
       'SELECT follower_id FROM follows WHERE following_id = $1',
       [userId]
     );
-    return result.rows.map((row) => row.follower_id);
+    return result.rows.map((row: any) => row.follower_id);
   }
 
   async getFollowersCount(userId: string): Promise<number> {

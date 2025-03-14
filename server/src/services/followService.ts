@@ -54,7 +54,7 @@ export class FollowService {
       'SELECT following_id FROM follows WHERE follower_id = $1',
       [userId]
     );
-    return result.rows.map((row) => row.following_id);
+    return result.rows.map((row: any) => row.following_id);
   }
 
   async getFollowingUsernames(userId: string): Promise<string[]> {
@@ -65,7 +65,7 @@ export class FollowService {
        WHERE f.follower_id = $1`,
       [userId]
     );
-    return result.rows.map((row) => row.username);
+    return result.rows.map((row: any) => row.username);
   }
 
   async getFollowersIds(userId: string): Promise<string[]> {
@@ -73,7 +73,7 @@ export class FollowService {
       'SELECT follower_id FROM follows WHERE following_id = $1',
       [userId]
     );
-    return result.rows.map((row) => row.follower_id);
+    return result.rows.map((row: any) => row.follower_id);
   }
 
   async getFollowersUsernames(userId: string): Promise<string[]> {
@@ -84,7 +84,7 @@ export class FollowService {
        WHERE f.following_id = $1`,
       [userId]
     );
-    return result.rows.map((row) => row.username);
+    return result.rows.map((row: any) => row.username);
   }
 }
 

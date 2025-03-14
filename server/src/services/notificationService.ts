@@ -88,7 +88,7 @@ export class NotificationService {
       [userId, limit]
     );
 
-    return result.rows.map((row) => this.mapNotificationFromDb(row));
+    return result.rows.map((row: any) => this.mapNotificationFromDb(row));
   }
 
   async markAsRead(notificationId: string, userId: string): Promise<void> {

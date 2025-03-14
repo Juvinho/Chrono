@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Response } from 'express';
 import { StoryService } from '../services/storyService.js';
 import { UserService } from '../services/userService.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
@@ -8,7 +8,7 @@ const storyService = new StoryService();
 const userService = new UserService();
 
 // Get active stories
-router.get('/', authenticateToken, async (req: AuthRequest, res) => {
+router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const stories = await storyService.getActiveStories(req.userId!);
     res.json(stories);
@@ -19,7 +19,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
 });
 
 // Create story
-router.post('/', authenticateToken, async (req: AuthRequest, res) => {
+router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { content, type } = req.body;
     
@@ -36,7 +36,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
 });
 
 // View story
-router.post('/:id/view', authenticateToken, async (req: AuthRequest, res) => {
+router.post('/:id/view', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {
         await storyService.viewStory(req.params.id, req.userId!);
         res.json({ success: true });

@@ -40,7 +40,7 @@ export class StoryService {
     `;
 
     const result = await pool.query(query, [currentUserId]);
-    return result.rows.map(row => ({
+    return result.rows.map((row: any) => ({
         ...this.mapStoryFromDb(row),
         author: {
             username: row.author_username,

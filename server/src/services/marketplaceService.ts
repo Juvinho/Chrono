@@ -26,7 +26,7 @@ export class MarketplaceService {
       WHERE ui.user_id = $1
     `;
     const result = await pool.query(query, [userId]);
-    return result.rows.map(row => ({
+    return result.rows.map((row: any) => ({
       id: row.id,
       userId: row.user_id,
       itemId: row.item_id,

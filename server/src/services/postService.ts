@@ -108,7 +108,7 @@ export class PostService {
     }
 
     const result = await pool.query(query, params);
-    return result.rows.map((row) => {
+    return result.rows.map((row: any) => {
       const post = this.mapPostFromDb(row);
       const author = {
         username: row.author_username,

@@ -116,7 +116,7 @@ export class ConversationService {
         [conversationId]
     );
 
-    for (const row of participantsResult.rows) {
+    for (const row of (participantsResult.rows as any[])) {
         await pool.query(
             'INSERT INTO message_status (message_id, user_id, status) VALUES ($1, $2, $3)',
             [message.id, row.user_id, row.user_id === senderId ? 'read' : 'sent']
@@ -151,7 +151,7 @@ export class ConversationService {
             conversationId
         };
 
-        participantsResult.rows.forEach(row => {
+        (participantsResult.rows as any[]).forEach(row => {
             io.to(row.user_id).emit('new_message', payload);
         });
     } catch (error) {
