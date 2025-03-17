@@ -1,4 +1,4 @@
-import { pool } from './db/connection';
+import { pool } from './db/connection.js';
 import bcrypt from 'bcryptjs';
 
 const resetPassword = async () => {
@@ -12,7 +12,7 @@ const resetPassword = async () => {
         if (res.rows.length === 0) {
             console.log('No users found in database.');
         } else {
-            res.rows.forEach(u => console.log(`- ${u.username} (ID: ${u.id}, Email: ${u.email})`));
+            res.rows.forEach((u: any) => console.log(`- ${u.username} (ID: ${u.id}, Email: ${u.email})`));
         }
     } catch (e) {
         console.error('Error connecting to database:', e);

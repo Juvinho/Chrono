@@ -1,5 +1,5 @@
-import { UserService } from './services/userService';
-import { pool } from './db/connection';
+import { UserService } from './services/userService.js';
+import { pool } from './db/connection.js';
 
 async function verify() {
   const userService = new UserService();

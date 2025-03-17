@@ -1,5 +1,5 @@
 
-import { pool } from '../db/connection';
+import { pool } from '../db/connection.js';
 
 async function fixSchema() {
   console.log('Fixing schema for Encrypted Cords...');

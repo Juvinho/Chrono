@@ -1,4 +1,4 @@
-import { pool } from './db/connection';
+import { pool } from './db/connection.js';
 
 async function updateSchema() {
   console.log('Updating database schema...');
