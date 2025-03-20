@@ -13,7 +13,8 @@ Como o seu plano trial do Railway acabou, vamos migrar a arquitetura para uma so
 2.  No painel do projeto, vá em **Project Settings** > **Database**.
 3.  Encontre a seção **Connection String**, mude para **URI** e copie a URL.
     *   *Dica: Ela se parece com `postgresql://postgres:[SENHA]@[HOST]:5432/postgres`.*
-    *   *Nota: Substitua `[SENHA]` pela senha que você definiu ao criar o projeto.*
+    *   *Nota 1: Substitua `[SENHA]` pela senha que você definiu ao criar o projeto.*
+    *   *Nota 2: Se o Render der erro de timeout, tente adicionar `?sslmode=require` ao final da URL.*
 
 ### Aplicar o Schema
 Para criar as tabelas no Supabase:

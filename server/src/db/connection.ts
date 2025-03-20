@@ -5,10 +5,21 @@ dotenv.config();
 
 const { Pool } = pg;
 
+const dbUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/chrono_db';
+const isProduction = process.env.NODE_ENV === 'production';
+const isSupabase = dbUrl.includes('supabase.co') || dbUrl.includes('supabase.com');
+
+// If using Supabase Pooler (port 6543), some configurations might need specific flags.
+// We'll use a more robust SSL config for cloud environments.
 export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/chrono_db',
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  connectionTimeoutMillis: 5000, // 5s timeout
+  connectionString: dbUrl,
+  ssl: (isProduction || isSupabase) ? { 
+    rejectUnauthorized: false,
+    // Add some keep-alive and handshake settings
+  } : false,
+  connectionTimeoutMillis: 30000, // Increase to 30s for slow cold-starts
+  idleTimeoutMillis: 30000,
+  max: 20,
 });
 
 pool.on('error', (err) => {
