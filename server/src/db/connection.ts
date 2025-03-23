@@ -15,11 +15,13 @@ export const pool = new Pool({
   connectionString: dbUrl,
   ssl: (isProduction || isSupabase) ? { 
     rejectUnauthorized: false,
-    // Add some keep-alive and handshake settings
   } : false,
-  connectionTimeoutMillis: 30000, // Increase to 30s for slow cold-starts
+  connectionTimeoutMillis: 60000, // 60s for cloud starts
   idleTimeoutMillis: 30000,
   max: 20,
+  // Add keep-alive settings to prevent unexpected termination
+  keepalive: true,
+  keepaliveInitialDelayMillis: 10000
 });
 
 pool.on('error', (err) => {

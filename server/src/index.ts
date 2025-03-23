@@ -183,20 +183,23 @@ initSocket(httpServer, allowedOrigins);
 // Run migrations and start server
 const startServer = async () => {
   try {
-    // Only run migrations in production or if explicitly requested
-    // But for simplicity in this MVP, we'll try to run them always to ensure DB is consistent
-    // The migration script is idempotent (IF NOT EXISTS)
-    if (process.env.NODE_ENV === 'production') {
-       console.log('Running migrations...');
-       await migrate();
-       console.log('Migrations completed.');
-    }
-    
+    // START SERVER FIRST to avoid Render timeout "No open ports detected"
     httpServer.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
       console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`Allowed Origins: ${allowedOrigins.join(', ')}`);
     });
+
+    // Run migrations in the background (idempotent)
+    if (process.env.NODE_ENV === 'production') {
+       console.log('Starting background migrations...');
+       migrate().then(() => {
+           console.log('✅ Migrations completed successfully.');
+       }).catch(err => {
+           console.error('❌ Background migration failed:', err);
+           // We don't exit here because the server is already serving
+       });
+    }
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
