@@ -16,12 +16,13 @@ export const pool = new Pool({
   ssl: (isProduction || isSupabase) ? { 
     rejectUnauthorized: false,
   } : false,
-  connectionTimeoutMillis: 60000, // 60s for cloud starts
+  connectionTimeoutMillis: 60000,
   idleTimeoutMillis: 30000,
   max: 20,
-  // Add keep-alive settings to prevent unexpected termination
   keepalive: true,
-  keepaliveInitialDelayMillis: 10000
+  keepaliveInitialDelayMillis: 10000,
+  // Add direct SSL mode to the connection string if missing
+  application_name: 'chrono_backend'
 });
 
 pool.on('error', (err) => {

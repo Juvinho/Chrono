@@ -37,7 +37,12 @@ O Supabase não hospeda servidores Node.js (Express), por isso usaremos o **Rend
     *   **Build Command**: `npm install && npm run build`
     *   **Start Command**: `npm start`
 5.  Vá em **Environment** e adicione as variáveis:
-    *   `DATABASE_URL`: (A URL que você copiou do Supabase no Passo 1).
+    *   `DATABASE_URL`: A string de conexão do Supabase (Transaction Mode, porta 6543).
+        *   **ATENÇÃO**: Se sua senha tiver caracteres especiais como `@`, `#`, `*`, você deve trocá-los pelos códigos:
+            *   `@` -> `%40`
+            *   `#` -> `%23`
+            *   `*` -> `%2A`
+        *   Exemplo: `27Set@2004#*` vira `27Set%402004%23%2A` 
     *   `JWT_SECRET`: (Uma senha aleatória para os tokens).
     *   `NODE_ENV`: `production`
 
