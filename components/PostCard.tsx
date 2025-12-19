@@ -1,0 +1,469 @@
+import React, { useState, ReactNode, useRef, useEffect } from 'react';
+import { Post, CyberpunkReaction, User } from '../types';
+import { ReactIcon, GlitchIcon, UploadIcon, CorruptIcon, RewindIcon, StaticIcon, ReplyIcon, EchoIcon, EditIcon, VerifiedIcon, CheckCircleIcon } from './icons';
+import { LockClosedIcon, DotsHorizontalIcon, TrashIcon } from './icons'; // Assuming these are added to icons.tsx
+import { useTranslation } from '../hooks/useTranslation';
+import TypingIndicatorCard from './TypingIndicatorCard';
+import FramePreview, { getFrameShape } from './FramePreview';
+
+interface PostCardProps {
+    post: Post;
+    currentUser: User;
+    onViewProfile: (username: string) => void;
+    onUpdateReaction: (postId: string, reaction: CyberpunkReaction) => void;
+    onReply: (parentPostId: string, content: string, isPrivate: boolean, media?: { imageUrl?: string, videoUrl?: string }) => void;
+    onEcho: (postToEcho: Post) => void;
+    onDelete: (postId: string) => void;
+    onEdit: (postToEdit: Post) => void;
+    onTagClick: (tag: string) => void;
+    onPollVote: (postId: string, optionIndex: number) => void;
+    typingParentIds: Set<string>;
+    compact?: boolean;
+    nestingLevel?: number;
+    isThreadedReply?: boolean;
+    isContextualView?: boolean; // New prop to prevent actions in certain contexts (like inside a repost)
+}
+
+const reactionIcons: { [key in CyberpunkReaction]: ReactNode } = {
+    Glitch: <GlitchIcon className="w-5 h-5" />,
+    Upload: <UploadIcon className="w-5 h-5" />,
+    Corrupt: <CorruptIcon className="w-5 h-5" />,
+    Rewind: <RewindIcon className="w-5 h-5" />,
+    Static: <StaticIcon className="w-5 h-5" />,
+};
+
+const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, onUpdateReaction, onReply, onEcho, onDelete, onEdit, onTagClick, onPollVote, typingParentIds, compact = false, nestingLevel = 0, isThreadedReply = false, isContextualView = false }) => {
+    const { t } = useTranslation();
+    const [showReactions, setShowReactions] = useState(false);
+    const [showMenu, setShowMenu] = useState(false);
+    const [isReplying, setIsReplying] = useState(false);
+    const [replyContent, setReplyContent] = useState('');
+    const [isReplyPrivate, setIsReplyPrivate] = useState(false);
+    const [replyMedia, setReplyMedia] = useState<{ imageUrl?: string, videoUrl?: string } | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [justVotedIndex, setJustVotedIndex] = useState<number | null>(null);
+
+    const menuRef = useRef<HTMLDivElement>(null);
+    const isTyping = typingParentIds?.has(post.id);
+    const prevVoters = useRef(post.voters);
+
+    useEffect(() => {
+        const currentUserVote = post.voters?.[currentUser.username];
+        const prevUserVote = prevVoters.current?.[currentUser.username];
+
+        if (prevUserVote === undefined && currentUserVote !== undefined) {
+            setJustVotedIndex(currentUserVote);
+            const timer = setTimeout(() => {
+                setJustVotedIndex(null);
+            }, 1000); // Animation duration
+            return () => clearTimeout(timer);
+        }
+
+        prevVoters.current = post.voters;
+    }, [post.voters, currentUser.username]);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setShowMenu(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [menuRef]);
+
+    const handleReact = (reaction: CyberpunkReaction) => {
+        onUpdateReaction(post.id, reaction);
+        setShowReactions(false);
+    };
+
+    const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const result = reader.result as string;
+                if (file.type.startsWith('video/')) {
+                    setReplyMedia({ videoUrl: result });
+                } else {
+                    setReplyMedia({ imageUrl: result });
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+    
+    const handleReplySubmit = () => {
+        if (!replyContent.trim() && !replyMedia) return;
+        onReply(post.id, replyContent.trim(), isReplyPrivate, replyMedia || undefined);
+        setReplyContent('');
+        setReplyMedia(null);
+        setIsReplying(false);
+    };
+
+    const handleDelete = () => {
+        if (window.confirm(t('deletePostConfirmation'))) {
+            setIsDeleting(true);
+            setTimeout(() => {
+                onDelete(post.id);
+            }, 500); // Match animation duration
+        }
+        setShowMenu(false);
+    }
+    
+    const renderContentWithTags = (content: string) => {
+        // Split by both tags ($tag) and mentions (@username)
+        const parts = content.split(/(\s|^)(\$[\w]+|@[\w]+)/g);
+        return parts.map((part, index) => {
+            if (part.startsWith('$')) {
+                return <button key={index} onClick={() => onTagClick(part)} className="chrono-tag">{part}</button>;
+            }
+            if (part.startsWith('@')) {
+                const username = part.substring(1);
+                return (
+                    <button 
+                        key={index} 
+                        onClick={() => onViewProfile(username)} 
+                        className="chrono-tag font-bold hover:text-[var(--theme-secondary)]"
+                    >
+                        {part}
+                    </button>
+                );
+            }
+            return <span key={index}>{part}</span>;
+        });
+    };
+
+    const renderPoll = () => {
+        if (!post.pollOptions) return null;
+
+        const totalVotes = post.pollOptions.reduce((sum, option) => sum + option.votes, 0);
+        const pollEnded = post.pollEndsAt ? new Date() > post.pollEndsAt : false;
+        const votedFor = post.voters?.[currentUser.username];
+
+        return (
+            <div className="mt-4 space-y-2">
+                {post.pollOptions.map((option, index) => {
+                    const percentage = totalVotes > 0 ? (option.votes / totalVotes) * 100 : 0;
+                    return (
+                        <div key={index} className="relative w-full bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] rounded-sm text-sm overflow-hidden">
+                             <div 
+                                className="absolute top-0 left-0 h-full bg-[var(--theme-primary)] opacity-30" 
+                                style={{ width: `${percentage}%` }}
+                            ></div>
+                            <button 
+                                onClick={() => onPollVote(post.id, index)}
+                                disabled={pollEnded || votedFor !== undefined}
+                                className={`relative w-full text-left p-2 flex justify-between items-center hover:bg-white/5 transition-colors disabled:cursor-not-allowed disabled:opacity-70 group ${justVotedIndex === index ? 'poll-vote-animation' : ''}`}
+                            >
+                                <span className="relative font-bold text-[var(--theme-text-light)] flex items-center">
+                                    {votedFor === index && <CheckCircleIcon className="w-4 h-4 mr-2 text-[var(--theme-secondary)]" />}
+                                    {option.option}
+                                </span>
+                                <span className="relative text-[var(--theme-text-secondary)]">{percentage.toFixed(0)}%</span>
+                            </button>
+                        </div>
+                    );
+                })}
+                <div className="text-xs text-[var(--theme-text-secondary)] pt-1">
+                    {t('pollTotalVotes', { count: totalVotes })} • {pollEnded ? t('pollEnded') : t('pollEndsIn', { time: post.pollEndsAt?.toLocaleDateString() || ''})}
+                </div>
+            </div>
+        )
+    }
+
+    const reactions: CyberpunkReaction[] = ['Glitch', 'Upload', 'Corrupt', 'Rewind', 'Static'];
+    const isAuthor = currentUser.username === post.author.username;
+    
+    const rootClasses = isThreadedReply
+        ? '' // Replies have no outer box model of their own
+        : `bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] mb-4 neon-glow-hover`;
+
+    if (post.repostOf) {
+        return (
+            <div className={`p-4 ${rootClasses} ${isDeleting ? 'post-disintegrate' : ''}`}>
+                <div className="flex justify-between items-start mb-2">
+                    <div className="text-xs text-[var(--theme-text-secondary)] flex items-center">
+                        <EchoIcon className="w-4 h-4 mr-2"/>
+                        <button onClick={() => onViewProfile(post.author.username)} className="font-bold hover:text-[var(--theme-secondary)]">@{post.author.username}</button>
+                        &nbsp;{t('postEchoed')}
+                    </div>
+                    {isAuthor && !isContextualView && (
+                        <div className="relative" ref={menuRef}>
+                            <button onClick={() => setShowMenu(prev => !prev)} className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)]">
+                                <DotsHorizontalIcon className="w-5 h-5"/>
+                            </button>
+                            {showMenu && (
+                                <div className="absolute top-full right-0 mt-1 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] rounded-sm z-10 animate-[fadeIn_0.2s_ease-in-out] w-36">
+                                    <button onClick={handleDelete} className="flex items-center space-x-2 w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-[var(--theme-border-primary)]">
+                                        <TrashIcon className="w-4 h-4" />
+                                        <span>{t('postDelete')}</span>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+                {post.content && <p className="mb-2 italic">"{post.content}"</p>}
+                <div className="border border-[var(--theme-border-secondary)] p-0">
+                     <PostCard 
+                        post={post.repostOf} 
+                        currentUser={currentUser}
+                        onViewProfile={onViewProfile} 
+                        onUpdateReaction={onUpdateReaction}
+                        onReply={onReply}
+                        onEcho={onEcho}
+                        onDelete={onDelete}
+                        onEdit={onEdit}
+                        onTagClick={onTagClick}
+                        onPollVote={onPollVote}
+                        typingParentIds={typingParentIds}
+                        nestingLevel={nestingLevel + 1}
+                        isContextualView={true}
+                     />
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <div className={`${rootClasses} ${compact ? 'p-3' : 'p-4'} ${isDeleting ? 'post-disintegrate' : ''}`}>
+            <div className="flex justify-between items-start">
+                <div className="flex items-center mb-3">
+                    <button onClick={() => onViewProfile(post.author.username)} className="relative mr-3 group">
+                        <div className={`relative ${compact ? 'w-8 h-8' : 'w-10 h-10'}`}>
+                            {(() => {
+                                const avatarShape = post.author.equippedFrame ? getFrameShape(post.author.equippedFrame.name) : 'rounded-full';
+                                return (
+                                    <>
+                                        <img 
+                                            src={post.author.avatar} 
+                                            alt={post.author.username} 
+                                            className={`w-full h-full ${avatarShape} border-2 border-[var(--theme-primary)] object-cover`}
+                                            loading="lazy" 
+                                        />
+                                        {post.author.equippedEffect && (
+                                            <div className={`absolute inset-0 pointer-events-none z-10 mix-blend-screen opacity-60 ${avatarShape} overflow-hidden`}>
+                                                <img 
+                                                    src={post.author.equippedEffect.imageUrl} 
+                                                    alt="" 
+                                                    className="w-full h-full object-cover animate-pulse-soft"
+                                                    onError={(e) => e.currentTarget.style.display = 'none'}
+                                                />
+                                            </div>
+                                        )}
+                                        {post.author.equippedFrame && (
+                                            <div className="absolute -inset-1 z-20 pointer-events-none">
+                                                <FramePreview item={post.author.equippedFrame} />
+                                            </div>
+                                        )}
+                                    </>
+                                );
+                            })()}
+                        </div>
+                    </button>
+                    <div>
+                        <div className="flex items-center space-x-1">
+                            <button onClick={() => onViewProfile(post.author.username)} className={`font-bold text-[var(--theme-text-light)] hover:text-[var(--theme-secondary)] transition-colors ${compact ? 'text-sm' : ''}`}>
+                                @{post.author.username}
+                            </button>
+                            {post.author.isVerified && post.author.verificationBadge && (
+                                <VerifiedIcon 
+                                    className="w-4 h-4"
+                                    style={{ color: post.author.verificationBadge.color }}
+                                    title={post.author.verificationBadge.label}
+                                />
+                            )}
+                            {post.isPrivate && <LockClosedIcon className="w-3 h-3 text-[var(--theme-text-secondary)]" title={t('postPrivate')} />}
+                        </div>
+                        <p className={`text-[var(--theme-text-secondary)] ${compact ? 'text-xs' : 'text-sm'}`}>{post.timestamp.toLocaleString()}</p>
+                    </div>
+                </div>
+                <div className="relative" ref={menuRef}>
+                    {!isContextualView && (
+                        <button onClick={() => setShowMenu(prev => !prev)} className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)]">
+                            <DotsHorizontalIcon className="w-5 h-5"/>
+                        </button>
+                    )}
+                    {showMenu && (
+                        <div className="absolute top-full right-0 mt-1 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] rounded-sm z-10 animate-[fadeIn_0.2s_ease-in-out] w-36">
+                            {isAuthor && (
+                                <>
+                                    <button onClick={() => { onEdit(post); setShowMenu(false); }} className="flex items-center space-x-2 w-full text-left px-3 py-2 text-sm text-[var(--theme-text-light)] hover:bg-[var(--theme-border-primary)]">
+                                        <EditIcon className="w-4 h-4" />
+                                        <span>{t('postEdit')}</span>
+                                    </button>
+                                    <button onClick={handleDelete} className="flex items-center space-x-2 w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-[var(--theme-border-primary)]">
+                                        <TrashIcon className="w-4 h-4" />
+                                        <span>{t('postDelete')}</span>
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {post.inReplyTo && !compact && (
+                <div className="mb-2 text-sm">
+                    <div className="p-2 border-l-2 border-[var(--theme-border-secondary)] bg-[var(--theme-bg-tertiary)] rounded-r-md">
+                        <div className="flex items-center space-x-2 text-[var(--theme-text-secondary)]">
+                            {(() => {
+                                const replyAvatarShape = post.inReplyTo!.author.equippedFrame ? getFrameShape(post.inReplyTo!.author.equippedFrame.name) : 'rounded-full';
+                                return (
+                                    <div className="relative w-4 h-4">
+                                        <img src={post.inReplyTo!.author.avatar} alt={post.inReplyTo!.author.username} className={`w-full h-full ${replyAvatarShape} object-cover`} loading="lazy"/>
+                                        {post.inReplyTo!.author.equippedFrame && (
+                                            <div className="absolute -inset-0.5 z-20 pointer-events-none">
+                                                <FramePreview item={post.inReplyTo!.author.equippedFrame} />
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+                            <button onClick={() => onViewProfile(post.inReplyTo!.author.username)} className="font-bold chrono-tag">@{post.inReplyTo!.author.username}</button>
+                        </div>
+                        <p className="mt-1 italic text-[var(--theme-text-primary)] opacity-80 truncate">
+                            {post.inReplyTo.content}
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            <p className={`whitespace-pre-wrap ${compact ? 'text-sm mb-2' : 'mb-4'}`}>{renderContentWithTags(post.content)}</p>
+            {post.imageUrl && (
+                <img src={post.imageUrl} alt={t('postImageAlt', { username: post.author.username })} className="w-full object-cover rounded-sm mt-2" loading="lazy" />
+            )}
+            {post.videoUrl && (
+                <video src={post.videoUrl} controls muted loop className="w-full object-cover rounded-sm mt-2 bg-black"></video>
+            )}
+            {renderPoll()}
+            
+            {post.replies && post.replies.length > 0 && (
+                <div className="reply-container">
+                    {post.replies.map(reply => (
+                        <PostCard 
+                            key={reply.id} 
+                            post={reply} 
+                            currentUser={currentUser}
+                            onViewProfile={onViewProfile}
+                            onUpdateReaction={onUpdateReaction}
+                            onReply={onReply}
+                            onEcho={onEcho}
+                            onDelete={onDelete}
+                            onEdit={onEdit}
+                            onTagClick={onTagClick}
+                            onPollVote={onPollVote}
+                            typingParentIds={typingParentIds}
+                            nestingLevel={nestingLevel + 1}
+                            isThreadedReply={true}
+                        />
+                    ))}
+                </div>
+            )}
+            {!isThreadedReply && isTyping && <TypingIndicatorCard />}
+
+            <div className="mt-4 flex items-center justify-between text-[var(--theme-text-secondary)] border-t border-[var(--theme-border-primary)] pt-2">
+                <div className="flex items-center space-x-3 overflow-x-auto">
+                    {post.reactions && Object.entries(post.reactions).map(([reaction, count]) => (
+                        <span key={reaction} className="text-xs flex items-center space-x-1 flex-shrink-0" title={reaction}>
+                           {reactionIcons[reaction as CyberpunkReaction]}
+                           <span className="text-[var(--theme-primary)] font-bold">{count}</span>
+                        </span>
+                    ))}
+                </div>
+                <div className="flex items-center space-x-4">
+                    <button onClick={() => setIsReplying(!isReplying)} className="flex items-center space-x-1 hover:text-[var(--theme-secondary)] transition-colors" title={t('postReply')}>
+                        <ReplyIcon className="w-5 h-5" />
+                    </button>
+                    <button onClick={() => onEcho(post)} className="flex items-center space-x-1 hover:text-[var(--theme-secondary)] transition-colors" title={t('postEcho')}>
+                        <EchoIcon className="w-5 h-5" />
+                    </button>
+                    <div className="relative">
+                        <button onClick={() => setShowReactions(!showReactions)} className="flex items-center space-x-1 hover:text-[var(--theme-secondary)] transition-colors" title={t('postReact')}>
+                            <ReactIcon className="w-5 h-5" />
+                        </button>
+                        {showReactions && (
+                            <div className="absolute bottom-full right-0 mb-2 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] rounded-sm p-1 flex space-x-1 z-10 animate-[fadeIn_0.2s_ease-in-out]">
+                                {reactions.map(reaction => (
+                                    <button key={reaction} onClick={() => handleReact(reaction)} className="reaction-button" title={reaction}>
+                                        {reactionIcons[reaction]}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+            {isReplying && (
+                <div className="mt-2">
+                     <div className="text-sm text-[var(--theme-text-secondary)] mb-2">
+                        {t('replyingTo')}{' '}
+                        <button onClick={() => onViewProfile(post.author.username)} className="chrono-tag">@{post.author.username}</button>
+                     </div>
+                     <textarea
+                        placeholder={t('postReplyTo', { username: post.author.username })}
+                        value={replyContent}
+                        onChange={(e) => setReplyContent(e.target.value)}
+                        className="w-full bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] rounded-sm py-1 px-3 text-[var(--theme-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--theme-primary)] resize-none"
+                        rows={2}
+                        autoFocus
+                    />
+                    
+                    {replyMedia && (
+                        <div className="mt-2 relative inline-block">
+                            {replyMedia.imageUrl ? (
+                                <img src={replyMedia.imageUrl} alt="Reply media" className="h-20 w-auto rounded border border-[var(--theme-border-primary)]" />
+                            ) : (
+                                <video src={replyMedia.videoUrl} className="h-20 w-auto rounded border border-[var(--theme-border-primary)]" />
+                            )}
+                            <button 
+                                onClick={() => setReplyMedia(null)}
+                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                            >
+                                ×
+                            </button>
+                        </div>
+                    )}
+
+                    <div className="mt-2 flex justify-between items-center">
+                        <div className="flex items-center space-x-2">
+                            <button 
+                                onClick={() => setIsReplyPrivate(p => !p)} 
+                                className="flex items-center space-x-2 text-sm text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-light)]"
+                                title={t('postMakePrivate')}
+                            >
+                                <LockClosedIcon className={`w-4 h-4 ${isReplyPrivate ? 'text-[var(--theme-primary)]' : ''}`} />
+                                <span>{isReplyPrivate ? t('postPrivate') : t('postPublic')}</span>
+                            </button>
+                             <input 
+                                type="file" 
+                                ref={fileInputRef} 
+                                onChange={handleFileSelect} 
+                                className="hidden" 
+                                accept="image/*,video/*" 
+                            />
+                            <button 
+                                onClick={() => fileInputRef.current?.click()} 
+                                className={`text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)] ${replyMedia ? 'text-[var(--theme-primary)]' : ''}`}
+                                title={t('attachMedia')}
+                            >
+                                <UploadIcon className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <button
+                            onClick={handleReplySubmit}
+                            disabled={!replyContent.trim() && !replyMedia}
+                            className="bg-[var(--theme-primary)] text-white px-4 py-1 rounded-sm text-sm hover:bg-[var(--theme-secondary)] transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed"
+                        >
+                            {t('postReplyButton')}
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default React.memo(PostCard);
