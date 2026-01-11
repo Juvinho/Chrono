@@ -90,6 +90,24 @@ export class MarketplaceService {
       `;
       await client.query(equipQuery, [userId, itemId]);
 
+      // If item is a theme, update user_settings
+      if (type === 'theme') {
+        const itemNameQuery = 'SELECT name FROM items WHERE id = $1';
+        const itemNameResult = await client.query(itemNameQuery, [itemId]);
+        const itemName = itemNameResult.rows[0].name;
+
+        // Ensure user_settings exists (it should, but just in case)
+        await client.query(
+            `INSERT INTO user_settings (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`,
+            [userId]
+        );
+
+        await client.query(
+            `UPDATE user_settings SET theme_skin = $1 WHERE user_id = $2`,
+            [itemName, userId]
+        );
+      }
+
       await client.query('COMMIT');
     } catch (e) {
       await client.query('ROLLBACK');

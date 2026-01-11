@@ -183,6 +183,9 @@ export const translations = {
     settingsBlock: 'Block',
     settingsUnblock: 'Unblock',
     settingsReportingPolicy: 'View Reporting Policy',
+    settingsWardrobe: 'Wardrobe',
+    settingsNoItems: 'No items in your wardrobe yet.',
+    settingsGoToMarketplace: 'Go to Marketplace',
 
     // Notifications
     notifReplied: 'replied to your post.',

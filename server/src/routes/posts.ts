@@ -120,7 +120,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { content, imageUrl, videoUrl, isThread, isPrivate, inReplyToId, repostOfId, pollOptions, pollEndsAt } = req.body;
+    const { content, imageUrl, videoUrl, isThread, isPrivate, inReplyToId, repostOfId, pollOptions, pollEndsAt, unlockAt } = req.body;
 
     if (!content && !repostOfId) {
       return res.status(400).json({ error: 'Content or repostOfId is required' });
@@ -135,6 +135,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
       repostOfId,
       pollOptions,
       pollEndsAt: pollEndsAt ? new Date(pollEndsAt) : undefined,
+      unlockAt: unlockAt ? new Date(unlockAt) : undefined,
     });
 
     // Create notification if reply

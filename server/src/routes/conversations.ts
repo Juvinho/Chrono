@@ -60,7 +60,38 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
   }
 });
 
-// Get or create conversation
+// Create or get conversation (with options)
+router.post('/', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const { username, isEncrypted, selfDestructTimer } = req.body;
+
+    if (!req.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    if (!username) {
+        return res.status(400).json({ error: 'Username is required' });
+    }
+
+    const targetUser = await userService.getUserByUsername(username);
+    if (!targetUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const conversationId = await conversationService.getOrCreateConversation(
+        req.userId, 
+        targetUser.id, 
+        { isEncrypted, selfDestructTimer }
+    );
+
+    res.json({ conversationId });
+  } catch (error: any) {
+    console.error('Create conversation error:', error);
+    res.status(500).json({ error: error.message || 'Failed to create conversation' });
+  }
+});
+
+// Get or create conversation (legacy GET)
 router.get('/with/:username', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { username } = req.params;

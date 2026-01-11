@@ -47,6 +47,10 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
     const menuRef = useRef<HTMLDivElement>(null);
     const isTyping = typingParentIds?.has(post.id);
     const prevVoters = useRef(post.voters);
+    
+    // Time Capsule Logic
+    const isLocked = post.unlockAt ? new Date(post.unlockAt) > new Date() : false;
+    const canUnlock = post.authorId === currentUser.id; // Author can always see their own locked posts (or maybe not? Let's say yes for now to verify)
 
     useEffect(() => {
         const currentUserVote = post.voters?.[currentUser.username];
@@ -179,6 +183,20 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
     const rootClasses = isThreadedReply
         ? '' // Replies have no outer box model of their own
         : `bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] mb-4 neon-glow-hover`;
+
+    if (isLocked && !canUnlock) {
+        return (
+            <div className={`p-4 ${rootClasses} flex flex-col items-center justify-center text-center space-y-4`}>
+                 <LockClosedIcon className="w-12 h-12 text-[var(--theme-primary)] animate-pulse" />
+                 <div>
+                     <h3 className="text-xl font-bold text-[var(--theme-text-light)]">Time Capsule</h3>
+                     <p className="text-[var(--theme-text-secondary)]">
+                         This memory is locked until {new Date(post.unlockAt!).toLocaleString()}
+                     </p>
+                 </div>
+            </div>
+        );
+    }
 
     if (post.repostOf) {
         return (
@@ -331,14 +349,26 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
                 </div>
             )}
 
-            <p className={`whitespace-pre-wrap ${compact ? 'text-sm mb-2' : 'mb-4'}`}>{renderContentWithTags(post.content)}</p>
-            {post.imageUrl && (
-                <img src={post.imageUrl} alt={t('postImageAlt', { username: post.author.username })} className="w-full object-cover rounded-sm mt-2" loading="lazy" />
+            {isLocked && !canUnlock ? (
+                <div className="flex flex-col items-center justify-center p-8 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] border-dashed rounded-sm my-4">
+                    <LockClosedIcon className="w-8 h-8 text-[var(--theme-secondary)] mb-2" />
+                    <h3 className="text-[var(--theme-primary)] font-bold text-lg mb-1">{t('timeCapsuleLocked') || 'Time Capsule Locked'}</h3>
+                    <p className="text-[var(--theme-text-secondary)] text-sm text-center">
+                        {t('unlocksAt') || 'Unlocks at'}: {post.unlockAt ? new Date(post.unlockAt).toLocaleString() : 'Unknown'}
+                    </p>
+                </div>
+            ) : (
+                <>
+                    <p className={`whitespace-pre-wrap ${compact ? 'text-sm mb-2' : 'mb-4'}`}>{renderContentWithTags(post.content)}</p>
+                    {post.imageUrl && (
+                        <img src={post.imageUrl} alt={t('postImageAlt', { username: post.author.username })} className="w-full object-cover rounded-sm mt-2" loading="lazy" />
+                    )}
+                    {post.videoUrl && (
+                        <video src={post.videoUrl} controls muted loop className="w-full object-cover rounded-sm mt-2 bg-black"></video>
+                    )}
+                    {renderPoll()}
+                </>
             )}
-            {post.videoUrl && (
-                <video src={post.videoUrl} controls muted loop className="w-full object-cover rounded-sm mt-2 bg-black"></video>
-            )}
-            {renderPoll()}
             
             {post.replies && post.replies.length > 0 && (
                 <div className="reply-container">
