@@ -107,5 +107,4 @@ export default function StoryTray({ currentUser, usersWithStories, onViewStory, 
             {usersWithStories.map(user => renderStoryItem(user, false))}
         </div>
     );
-    );
 }
