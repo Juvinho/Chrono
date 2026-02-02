@@ -166,6 +166,10 @@ export const translations = {
     settingsEffectGlitchOverlay: 'Glitch Overlay',
     settingsAnimationsEnable: 'Enable Animations',
     settingsAnimationsDesc: 'Enable/disable all UI animations and transitions.',
+    settingsFeed: 'Feed Settings',
+    settingsAutoRefresh: 'Auto Refresh',
+    settingsAutoRefreshDesc: 'Automatically update feed with new content',
+    settingsRefreshInterval: 'Refresh Interval (minutes)',
     settingsAccountSafety: 'ACCOUNT & SAFETY',
     settingsChangePasscode: 'Change Passcode',
     settingsCurrentPasscode: 'Current Passcode',
@@ -362,6 +366,8 @@ export const translations = {
     generateImage: 'Gerar Imagem',
     imageGenerationPrompt: 'Prompt de geração de imagem...',
     aspectRatio: 'Proporção',
+    autoRefreshPaused: 'PAUSADO (ATIVO)',
+    autoRefreshActive: 'AUTO-REFRESH LIGADO',
 
     // PostCard
     postEchoed: 'Ecoou',

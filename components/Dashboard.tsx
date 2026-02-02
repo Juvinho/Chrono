@@ -34,12 +34,15 @@ interface DashboardProps {
     onCreateStory?: () => void;
     onUpdateUser?: (user: User) => void;
     onOpenMarketplace?: () => void;
+    nextAutoRefresh?: Date | null;
+    isAutoRefreshPaused?: boolean;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ 
     user, onLogout, onNavigate, onNotificationClick, selectedDate, setSelectedDate, allUsers, allPosts,
     onNewPost, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost, onPollVote, isGenerating, typingParentIds,
-    conversations, newPostsCount = 0, onShowNewPosts, allKnownPosts, usersWithStories = [], onViewStory = () => {}, onCreateStory = () => {}, onUpdateUser = () => {}, onOpenMarketplace
+    conversations, newPostsCount = 0, onShowNewPosts, allKnownPosts, usersWithStories = [], onViewStory = () => {}, onCreateStory = () => {}, onUpdateUser = () => {}, onOpenMarketplace,
+    nextAutoRefresh, isAutoRefreshPaused
 }) => {
     const { t } = useTranslation();
     const [searchQuery, setSearchQuery] = useState('');
@@ -206,6 +209,8 @@ const Dashboard: React.FC<DashboardProps> = ({
                     usersWithStories={usersWithStories}
                     onViewStory={onViewStory}
                     onCreateStory={onCreateStory}
+                    nextAutoRefresh={nextAutoRefresh}
+                    isAutoRefreshPaused={isAutoRefreshPaused}
                 />
             </div>
             <Timeline 

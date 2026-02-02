@@ -520,6 +520,47 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout, onNavigate,
               </div>
             </section>
 
+            {/* Feed Settings */}
+            <section className="p-4 bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)]">
+                <h2 className="text-lg font-bold text-[var(--theme-secondary)] mb-4 pb-2 border-b-2 border-[var(--theme-border-primary)]">:: {t('settingsFeed') || 'Feed Settings'}</h2>
+                <div className="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 className="text-[var(--theme-text-light)]">{t('settingsAutoRefresh') || 'Auto Refresh'}</h3>
+                        <p className="text-sm text-[var(--theme-text-secondary)]">{t('settingsAutoRefreshDesc') || 'Automatically update feed with new content'}</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                        <input 
+                            type="checkbox" 
+                            checked={draftUser.profileSettings?.autoRefreshEnabled ?? false} 
+                            onChange={(e) => handleProfileSettingChange('autoRefreshEnabled', e.target.checked)} 
+                            className="sr-only peer" 
+                        />
+                        <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-focus:ring-2 peer-focus:ring-[var(--theme-secondary)] peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--theme-primary)]"></div>
+                    </label>
+                </div>
+                
+                {(draftUser.profileSettings?.autoRefreshEnabled ?? false) && (
+                    <div className="animate-fade-in space-y-2">
+                        <label className="text-sm font-bold text-[var(--theme-text-secondary)] block">{t('settingsRefreshInterval') || 'Refresh Interval (minutes)'}</label>
+                        <div className="flex items-center space-x-2">
+                            <input 
+                                type="number" 
+                                min="1" 
+                                value={draftUser.profileSettings?.autoRefreshInterval || 5} 
+                                onChange={(e) => {
+                                    const val = parseInt(e.target.value);
+                                    if (!isNaN(val) && val > 0) {
+                                        handleProfileSettingChange('autoRefreshInterval', val);
+                                    }
+                                }}
+                                className="w-24 px-3 py-2 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--theme-primary)]" 
+                            />
+                            <span className="text-sm text-[var(--theme-text-secondary)]">min</span>
+                        </div>
+                    </div>
+                )}
+            </section>
+
             {/* Account & Safety */}
             <section className="p-4 bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)]">
               <h2 className="text-lg font-bold text-[var(--theme-secondary)] mb-4 pb-2 border-b-2 border-[var(--theme-border-primary)]">:: {t('settingsAccountSafety')}</h2>

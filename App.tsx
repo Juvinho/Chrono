@@ -309,6 +309,9 @@ const App: React.FC = () => {
     const [emailToReset, setEmailToReset] = useState<string | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [typingParentIds, setTypingParentIds] = useState(new Set<string>());
+    const [nextAutoRefresh, setNextAutoRefresh] = useState<Date | null>(null);
+    const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false);
+    const lastInteractionRef = useRef<number>(Date.now());
 
     const audioContextRef = useRef<AudioContext | null>(null);
 
@@ -338,6 +341,68 @@ const App: React.FC = () => {
             document.removeEventListener('touchstart', unlockAudio);
         };
     }, []);
+
+    // User Interaction Tracking
+    useEffect(() => {
+        const handleInteraction = () => {
+            lastInteractionRef.current = Date.now();
+        };
+
+        window.addEventListener('mousemove', handleInteraction);
+        window.addEventListener('keydown', handleInteraction);
+        window.addEventListener('click', handleInteraction);
+        window.addEventListener('scroll', handleInteraction);
+        window.addEventListener('touchstart', handleInteraction);
+
+        return () => {
+            window.removeEventListener('mousemove', handleInteraction);
+            window.removeEventListener('keydown', handleInteraction);
+            window.removeEventListener('click', handleInteraction);
+            window.removeEventListener('scroll', handleInteraction);
+            window.removeEventListener('touchstart', handleInteraction);
+        };
+    }, []);
+
+    // Auto Refresh Logic
+    useEffect(() => {
+        if (!currentUser?.profileSettings?.autoRefreshEnabled) {
+            setNextAutoRefresh(null);
+            setIsAutoRefreshPaused(false);
+            return;
+        }
+
+        const intervalMinutes = currentUser.profileSettings.autoRefreshInterval || 5;
+        const intervalMs = intervalMinutes * 60 * 1000;
+        
+        // Set initial target time
+        let targetTime = new Date(Date.now() + intervalMs);
+        setNextAutoRefresh(targetTime);
+
+        const checkInterval = setInterval(() => {
+            const now = Date.now();
+            const timeSinceInteraction = now - lastInteractionRef.current;
+            const isPaused = timeSinceInteraction < 30000; // Pause if interaction in last 30s
+            
+            setIsAutoRefreshPaused(isPaused);
+
+            if (now >= targetTime.getTime()) {
+                if (!isPaused) {
+                    console.log("Auto-refreshing data...");
+                    reloadBackendData();
+                    targetTime = new Date(now + intervalMs);
+                    setNextAutoRefresh(targetTime);
+                } else {
+                    // If paused, postpone refresh check by 10 seconds
+                    // But keep the visual targetTime "overdue" or update it? 
+                    // Let's update it to show it's delayed.
+                    targetTime = new Date(now + 10000);
+                    setNextAutoRefresh(targetTime);
+                }
+            }
+        }, 1000);
+
+        return () => clearInterval(checkInterval);
+    }, [currentUser?.profileSettings?.autoRefreshEnabled, currentUser?.profileSettings?.autoRefreshInterval, reloadBackendData]);
 
     // Helper function to reload data from backend
     const reloadBackendData = useCallback(async () => {
@@ -782,17 +847,13 @@ const App: React.FC = () => {
         };
     }, []);
 
-    // Polling for notifications and updates
+    // Polling for notifications is now handled by the configurable auto-refresh
     useEffect(() => {
         if (!currentUser) return;
         
         NotificationManager.requestPermission();
         
-        const interval = setInterval(() => {
-            reloadBackendData();
-        }, 10000); // 10 seconds
-        
-        return () => clearInterval(interval);
+        // Removed hardcoded 10s interval in favor of user-configurable setting
     }, [currentUser]);
 
     const playNotificationSound = (type: 'notification' | 'post' | 'reply' = 'notification') => {
@@ -1647,6 +1708,8 @@ const App: React.FC = () => {
                         onCreateStory={() => setIsCreatingStory(true)}
                         onUpdateUser={handleUpdateUser}
                         onOpenMarketplace={() => setIsMarketplaceOpen(true)}
+                        nextAutoRefresh={nextAutoRefresh}
+                        isAutoRefreshPaused={isAutoRefreshPaused}
                     />
                 ) : (
                     <LoginScreen onLogin={handleLogin} users={users} onNavigate={handleNavigate} />
