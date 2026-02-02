@@ -267,7 +267,7 @@ class ApiClient {
   
   async sendMessageToUser(username: string, text: string) {
     const conv = await this.getOrCreateConversation(username);
-    const conversationId = (conv.data && (conv.data.conversationId || conv.data.id)) || '';
+    const conversationId = (conv.data && conv.data.conversationId) || '';
     if (!conversationId) {
       return { error: 'Failed to create or find conversation' };
     }
