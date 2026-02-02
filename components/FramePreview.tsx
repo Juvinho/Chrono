@@ -5,7 +5,7 @@ interface FramePreviewProps {
     item: Item;
 }
 
-export const getFrameShape = (frameName: string): string => {
+export function getFrameShape(frameName: string): string {
     switch (frameName) {
         case 'Neon Demon':
         case 'Golden Legend':
@@ -33,7 +33,7 @@ export const getFrameShape = (frameName: string): string => {
     }
 };
 
-const FramePreview: React.FC<FramePreviewProps> = ({ item }) => {
+function FramePreview({ item }: FramePreviewProps) {
     // Custom CSS implementations for specific frames
     if (item.name === 'Pixel Heart') {
         return (
