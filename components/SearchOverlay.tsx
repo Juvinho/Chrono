@@ -5,6 +5,7 @@ import { SearchIcon } from './icons';
 import PostCard from './PostCard';
 import { useTranslation } from '../hooks/useTranslation';
 import FramePreview, { getFrameShape } from './FramePreview';
+import { Avatar } from './Avatar';
 
 interface SearchOverlayProps {
     onClose: () => void;
@@ -93,7 +94,7 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ onClose, onSearch, onView
                                     return (
                                         <div key={user.username} onClick={() => onViewProfile(user.username)} className="flex items-center space-x-3 cursor-pointer group p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-sm transition-colors">
                                             <div className="relative w-10 h-10 flex-shrink-0">
-                                                <img src={user.avatar} alt={user.username} className={`w-full h-full ${avatarShape} object-cover`}/>
+                                                <Avatar src={user.avatar} username={user.username} className={`w-full h-full ${avatarShape} object-cover`} />
                                                 {user.equippedFrame && (
                                                     <div className="absolute -inset-1 z-20 pointer-events-none">
                                                         <FramePreview item={user.equippedFrame} />
@@ -160,7 +161,7 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ onClose, onSearch, onView
                                             const avatarShape = user.equippedFrame ? getFrameShape(user.equippedFrame.name) : 'rounded-full';
                                             return (
                                                 <>
-                                                    <img src={user.avatar} alt={user.username} className={`w-full h-full ${avatarShape} object-cover`} />
+                                                    <Avatar src={user.avatar} username={user.username} className={`w-full h-full ${avatarShape} object-cover`} />
                                                     {user.equippedFrame && (
                                                         <div className="absolute -inset-1 z-20 pointer-events-none">
                                                             <FramePreview item={user.equippedFrame} />

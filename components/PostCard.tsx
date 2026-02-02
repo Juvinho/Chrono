@@ -3,8 +3,10 @@ import { Post, CyberpunkReaction, User } from '../types';
 import { ReactIcon, GlitchIcon, UploadIcon, CorruptIcon, RewindIcon, StaticIcon, ReplyIcon, EchoIcon, EditIcon, VerifiedIcon, CheckCircleIcon } from './icons';
 import { LockClosedIcon, DotsHorizontalIcon, TrashIcon } from './icons'; // Assuming these are added to icons.tsx
 import { useTranslation } from '../hooks/useTranslation';
+import { Avatar } from './Avatar';
 import TypingIndicatorCard from './TypingIndicatorCard';
 import FramePreview, { getFrameShape } from './FramePreview';
+import { Avatar } from './Avatar';
 
 interface PostCardProps {
     post: Post;
@@ -260,38 +262,15 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
         <div className={`${rootClasses} ${compact ? 'p-3' : 'p-4'} ${isDeleting ? 'post-disintegrate' : ''}`}>
             <div className="flex justify-between items-start">
                 <div className="flex items-center mb-3">
-                    <button onClick={() => onViewProfile(post.author.username)} className="relative mr-3 group">
-                        <div className={`relative ${compact ? 'w-8 h-8' : 'w-10 h-10'}`}>
-                            {(() => {
-                                const avatarShape = post.author.equippedFrame ? getFrameShape(post.author.equippedFrame.name) : 'rounded-full';
-                                return (
-                                    <>
-                                        <img 
-                                            src={post.author.avatar} 
-                                            alt={post.author.username} 
-                                            className={`w-full h-full ${avatarShape} border-2 border-[var(--theme-primary)] object-cover`}
-                                            loading="lazy" 
-                                        />
-                                        {post.author.equippedEffect && (
-                                            <div className={`absolute inset-0 pointer-events-none z-10 mix-blend-screen opacity-60 ${avatarShape} overflow-hidden`}>
-                                                <img 
-                                                    src={post.author.equippedEffect.imageUrl} 
-                                                    alt="" 
-                                                    className="w-full h-full object-cover animate-pulse-soft"
-                                                    onError={(e) => e.currentTarget.style.display = 'none'}
-                                                />
-                                            </div>
-                                        )}
-                                        {post.author.equippedFrame && (
-                                            <div className="absolute -inset-1 z-20 pointer-events-none">
-                                                <FramePreview item={post.author.equippedFrame} />
-                                            </div>
-                                        )}
-                                    </>
-                                );
-                            })()}
+                    <div className={`relative ${compact ? 'w-8 h-8' : 'w-10 h-10'} flex-shrink-0 cursor-pointer hover:scale-105 transition-transform`} onClick={() => onViewProfile(post.author.username)}>
+                         <div className={`w-full h-full overflow-hidden border border-[var(--theme-border-primary)] shadow-[0_0_10px_rgba(0,243,255,0.2)] ${getFrameShape(post.author.equippedFrame?.name || '')}`}>
+                            <Avatar 
+                                src={post.author.avatar || 'https://picsum.photos/seed/user/100/100'} 
+                                username={post.author.username}
+                                className="w-full h-full object-cover"
+                            />
                         </div>
-                    </button>
+                    </div>
                     <div>
                         <div className="flex items-center space-x-1">
                             <button onClick={() => onViewProfile(post.author.username)} className={`font-bold text-[var(--theme-text-light)] hover:text-[var(--theme-secondary)] transition-colors ${compact ? 'text-sm' : ''}`}>
@@ -342,7 +321,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
                                 const replyAvatarShape = post.inReplyTo!.author.equippedFrame ? getFrameShape(post.inReplyTo!.author.equippedFrame.name) : 'rounded-full';
                                 return (
                                     <div className="relative w-4 h-4">
-                                        <img src={post.inReplyTo!.author.avatar} alt={post.inReplyTo!.author.username} className={`w-full h-full ${replyAvatarShape} object-cover`} loading="lazy"/>
+                                        <Avatar src={post.inReplyTo!.author.avatar} username={post.inReplyTo!.author.username} className={`w-full h-full ${replyAvatarShape} object-cover`} />
                                         {post.inReplyTo!.author.equippedFrame && (
                                             <div className="absolute -inset-0.5 z-20 pointer-events-none">
                                                 <FramePreview item={post.inReplyTo!.author.equippedFrame} />

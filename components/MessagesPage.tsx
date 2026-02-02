@@ -99,7 +99,7 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
         className={`w-full text-left p-3 flex items-center space-x-3 transition-colors ${selectedConversationId === conversation.id ? 'bg-[var(--theme-bg-tertiary)]' : 'hover:bg-[var(--theme-bg-secondary)]'}`}
       >
         <div className={`relative w-12 h-12 flex-shrink-0`}>
-             <img src={participant.avatar} alt={participant.username} className={`w-full h-full ${avatarShape} object-cover`} />
+             <Avatar src={participant.avatar} username={participant.username} className={`w-full h-full ${avatarShape} object-cover`} />
              {participant.equippedEffect && (
                 <div className={`absolute inset-0 pointer-events-none z-10 mix-blend-screen opacity-60 ${avatarShape} overflow-hidden`}>
                     <img 
@@ -170,9 +170,9 @@ const MessagesPage: React.FC<MessagesPageProps> = ({
                   {(() => {
                       const avatarShape = otherUser.equippedFrame ? getFrameShape(otherUser.equippedFrame.name) : 'rounded-full';
                       return (
-                          <>
-                            <img src={otherUser.avatar} alt={otherUser.username} className={`w-full h-full ${avatarShape} object-cover`} />
-                            {otherUser.equippedEffect && (
+                              <>
+                                <Avatar src={otherUser.avatar} username={otherUser.username} className={`w-full h-full ${avatarShape} object-cover`} />
+                                {otherUser.equippedEffect && (
                                 <div className={`absolute inset-0 pointer-events-none z-10 mix-blend-screen opacity-60 ${avatarShape} overflow-hidden`}>
                                 <img 
                                     src={otherUser.equippedEffect.imageUrl} 
