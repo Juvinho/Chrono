@@ -1,4 +1,5 @@
 import { pool } from './connection.js';
+import bcrypt from 'bcryptjs';
 
 const items = [
   // FRAMES
@@ -190,7 +191,37 @@ const items = [
 async function seed() {
   console.log('Seeding items...');
   
-  // Create table if not exists (just in case)
+  // -------------------------------------------------------------------------
+  // 1. ENSURE TABLES EXIST
+  // -------------------------------------------------------------------------
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      username VARCHAR(50) UNIQUE NOT NULL,
+      email VARCHAR(255) UNIQUE NOT NULL,
+      password_hash VARCHAR(255),
+      google_id VARCHAR(255) UNIQUE,
+      avatar TEXT,
+      bio TEXT DEFAULT '',
+      birthday DATE,
+      pronouns VARCHAR(20),
+      location VARCHAR(100),
+      website VARCHAR(255),
+      cover_image TEXT,
+      followers_count INTEGER DEFAULT 0,
+      following_count INTEGER DEFAULT 0,
+      is_private BOOLEAN DEFAULT FALSE,
+      is_verified BOOLEAN DEFAULT FALSE,
+      email_verification_token VARCHAR(255),
+      verification_badge_label VARCHAR(100),
+      verification_badge_color VARCHAR(20),
+      profile_settings JSONB DEFAULT '{"theme":"light","accentColor":"purple","effect":"none","animationsEnabled":true}'::jsonb,
+      blocked_users TEXT[] DEFAULT '{}',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS items (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -217,6 +248,72 @@ async function seed() {
     );
   `);
 
+  // -------------------------------------------------------------------------
+  // 2. SEED USERS (Creator & AI)
+  // -------------------------------------------------------------------------
+  console.log('Seeding special users...');
+  
+  const specialUsers = [
+    {
+      username: 'Juvinho',
+      email: 'juvinho@chrono.social',
+      password: '27Set@2004',
+      bio: 'Criador do Chrono. Viajante do tempo.',
+      is_verified: true,
+      verification_badge_label: 'Creator',
+      verification_badge_color: 'gold', // or whatever color system you use
+      avatar: 'https://i.imgur.com/7bIqY8T.png' // Optional placeholder
+    },
+    {
+      username: 'ChronoBot', // Representing "You" (the AI/System)
+      email: 'bot@chrono.social',
+      password: 'SuperSecretPassword123!', // Random strong password
+      bio: 'Assistente oficial do sistema Chrono.',
+      is_verified: true,
+      verification_badge_label: 'System',
+      verification_badge_color: 'blue',
+      avatar: 'https://i.imgur.com/5wQJ9zL.png' // Optional placeholder
+    }
+  ];
+
+  for (const user of specialUsers) {
+    const userExists = await pool.query('SELECT id FROM users WHERE username = $1', [user.username]);
+    
+    if (userExists.rows.length === 0) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(user.password, salt);
+      
+      await pool.query(
+        `INSERT INTO users (
+           username, email, password_hash, bio, is_verified, 
+           verification_badge_label, verification_badge_color, avatar
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          user.username, user.email, hashedPassword, user.bio, 
+          user.is_verified, user.verification_badge_label, 
+          user.verification_badge_color, user.avatar
+        ]
+      );
+      console.log(`✅ Created user: ${user.username}`);
+    } else {
+      // Optional: Update existing user to match desired state (e.g. ensure admin status)
+      // For now, just logging
+      console.log(`ℹ️ User ${user.username} already exists. Skipping creation.`);
+      
+      // Force update password if it's Juvinho (to ensure it matches what you asked)
+      if (user.username === 'Juvinho') {
+         const salt = await bcrypt.genSalt(10);
+         const hashedPassword = await bcrypt.hash(user.password, salt);
+         await pool.query('UPDATE users SET password_hash = $1, is_verified = $2, verification_badge_label = $3 WHERE username = $4', 
+            [hashedPassword, true, 'Creator', 'Juvinho']);
+         console.log(`🔄 Updated Juvinho password and verified status.`);
+      }
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // 3. SEED ITEMS
+  // -------------------------------------------------------------------------
   for (const item of items) {
     // Check if item exists by name
     const res = await pool.query('SELECT id FROM items WHERE name = $1', [item.name]);
