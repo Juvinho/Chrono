@@ -12,7 +12,7 @@ interface StoryViewerProps {
     onViewStory?: (storyId: string) => void;
 }
 
-const StoryViewer: React.FC<StoryViewerProps> = ({ user, stories, onClose, onNextUser, onPrevUser, onViewStory }) => {
+export default function StoryViewer({ user, stories, onClose, onNextUser, onPrevUser, onViewStory }: StoryViewerProps) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [progress, setProgress] = useState(0);
     const [videoDuration, setVideoDuration] = useState<number | null>(null);
@@ -208,6 +208,4 @@ const StoryViewer: React.FC<StoryViewerProps> = ({ user, stories, onClose, onNex
             </div>
         </div>
     );
-};
-
-export default StoryViewer;
+}

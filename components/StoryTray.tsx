@@ -12,7 +12,7 @@ interface StoryTrayProps {
     variant?: 'row' | 'grid';
 }
 
-function StoryTray({ currentUser, usersWithStories, onViewStory, onCreateStory, variant = 'row' }: StoryTrayProps) {
+export default function StoryTray({ currentUser, usersWithStories, onViewStory, onCreateStory, variant = 'row' }: StoryTrayProps) {
     const { t } = useTranslation();
     const [isExpanded, setIsExpanded] = useState(false);
 
@@ -107,6 +107,5 @@ function StoryTray({ currentUser, usersWithStories, onViewStory, onCreateStory, 
             {usersWithStories.map(user => renderStoryItem(user, false))}
         </div>
     );
-};
-
-export default StoryTray;
+    );
+}

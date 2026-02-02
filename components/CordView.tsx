@@ -22,7 +22,7 @@ interface CordViewProps {
     onNewPost: (post: Omit<Post, 'id' | 'author' | 'timestamp' | 'replies' | 'repostOf'>) => void;
 }
 
-const CordView: React.FC<CordViewProps> = ({
+export default function CordView({
     cordTag,
     onClose,
     allPosts,
@@ -37,7 +37,7 @@ const CordView: React.FC<CordViewProps> = ({
     onTagClick,
     typingParentIds,
     onNewPost
-}) => {
+}: CordViewProps) {
     const { t } = useTranslation();
     const [postToEdit, setPostToEdit] = useState<Post | null>(null);
 
@@ -166,6 +166,4 @@ const CordView: React.FC<CordViewProps> = ({
             </div>
         </main>
     );
-};
-
-export default CordView;
+}

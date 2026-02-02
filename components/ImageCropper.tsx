@@ -8,7 +8,7 @@ interface ImageCropperProps {
   isCircular?: boolean; // For avatars
 }
 
-export const ImageCropper: React.FC<ImageCropperProps> = ({ imageSrc, aspectRatio, onCrop, onCancel, isCircular = false }) => {
+export function ImageCropper({ imageSrc, aspectRatio, onCrop, onCancel, isCircular = false }: ImageCropperProps) {
   const [zoom, setZoom] = useState(1);
   const [minZoom, setMinZoom] = useState(0.1);
   const [maxZoom, setMaxZoom] = useState(3);

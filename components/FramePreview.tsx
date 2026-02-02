@@ -33,7 +33,7 @@ export function getFrameShape(frameName: string): string {
     }
 };
 
-function FramePreview({ item }: FramePreviewProps) {
+export default function FramePreview({ item }: FramePreviewProps) {
     // Custom CSS implementations for specific frames
     if (item.name === 'Pixel Heart') {
         return (
@@ -159,6 +159,4 @@ function FramePreview({ item }: FramePreviewProps) {
             }}
         />
     );
-};
-
-export default FramePreview;
+}

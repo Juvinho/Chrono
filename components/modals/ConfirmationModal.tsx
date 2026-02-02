@@ -13,7 +13,7 @@ interface ConfirmationModalProps {
   children?: React.ReactNode;
 }
 
-const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
+export default function ConfirmationModal({
   title,
   message,
   onConfirm,
@@ -22,7 +22,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   cancelText,
   showCancel = true,
   children
-}) => {
+}: ConfirmationModalProps) {
     const { t } = useTranslation();
     const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
         if (e.target === e.currentTarget) {
@@ -51,6 +51,4 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             </div>
         </div>
     );
-};
-
-export default ConfirmationModal;
+}

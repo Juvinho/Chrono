@@ -22,7 +22,7 @@ interface HeaderProps {
     conversations: Conversation[];
 }
 
-function Header({ user, onLogout, onViewProfile, onNavigate, onNotificationClick, onSearch, onOpenMarketplace, allUsers, allPosts, conversations }: HeaderProps) {
+export default function Header({ user, onLogout, onViewProfile, onNavigate, onNotificationClick, onSearch, onOpenMarketplace, allUsers, allPosts, conversations }: HeaderProps) {
     const { t } = useTranslation();
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -160,6 +160,4 @@ function Header({ user, onLogout, onViewProfile, onNavigate, onNotificationClick
             )}
         </header>
     );
-};
-
-export default Header;
+}

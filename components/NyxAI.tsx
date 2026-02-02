@@ -9,7 +9,7 @@ interface NyxAIProps {
   currentUser?: User;
 }
 
-const NyxAI: React.FC<NyxAIProps> = ({ onClose, currentUser }) => {
+export default function NyxAI({ onClose, currentUser }: NyxAIProps) {
   const { t } = useTranslation();
   const [messages, setMessages] = useState<{ text: string; sender: 'user' | 'ai' }[]>([]);
   const [input, setInput] = useState('');
@@ -96,6 +96,4 @@ const NyxAI: React.FC<NyxAIProps> = ({ onClose, currentUser }) => {
       </div>
     </div>
   );
-};
-
-export default NyxAI;
+}

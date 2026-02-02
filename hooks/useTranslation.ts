@@ -12,7 +12,7 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>(() => {
       const savedLang = localStorage.getItem('chrono_lang') as Language;
       return savedLang || 'pt';
@@ -41,7 +41,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // FIX: Replaced JSX with React.createElement to prevent parsing errors in a .ts file.
   // This resolves a series of cryptic TypeScript errors related to JSX syntax.
   return React.createElement(LanguageContext.Provider, { value: { language, setLanguage, t } }, children);
-};
+}
 
 export const useTranslation = () => {
   const context = useContext(LanguageContext);

@@ -18,7 +18,7 @@ interface CompanionData {
   mood: 'happy' | 'neutral' | 'sad' | 'excited' | 'sleepy';
 }
 
-const CyberCompanion: React.FC<CyberCompanionProps> = ({ notifications }) => {
+export default function CyberCompanion({ notifications }: CyberCompanionProps) {
   const [companion, setCompanion] = useState<CompanionData | null>(null);
   const [mood, setMood] = useState<'idle' | 'happy' | 'alert' | 'sleep'>('idle');
   const [message, setMessage] = useState<string | null>(null);
@@ -223,6 +223,4 @@ const CyberCompanion: React.FC<CyberCompanionProps> = ({ notifications }) => {
       </div>
     </div>
   );
-};
-
-export default CyberCompanion;
+}

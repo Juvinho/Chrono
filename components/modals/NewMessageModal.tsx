@@ -11,7 +11,7 @@ interface NewMessageModalProps {
   onSelectUser: (username: string) => void;
 }
 
-const NewMessageModal: React.FC<NewMessageModalProps> = ({ allUsers, currentUser, onClose, onSelectUser }) => {
+export default function NewMessageModal({ allUsers, currentUser, onClose, onSelectUser }: NewMessageModalProps) {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -86,6 +86,4 @@ const NewMessageModal: React.FC<NewMessageModalProps> = ({ allUsers, currentUser
       </div>
     </div>
   );
-};
-
-export default NewMessageModal;
+}

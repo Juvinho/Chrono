@@ -9,7 +9,7 @@ interface StoryCreatorProps {
     onSave: (story: Omit<Story, 'id' | 'timestamp' | 'expiresAt' | 'userId' | 'username' | 'userAvatar'>) => void;
 }
 
-const StoryCreator: React.FC<StoryCreatorProps> = ({ currentUser, onClose, onSave }) => {
+export default function StoryCreator({ currentUser, onClose, onSave }: StoryCreatorProps) {
     const { t } = useTranslation();
     const [mode, setMode] = useState<'text' | 'image' | 'video'>('text');
     const [content, setContent] = useState('');
@@ -174,6 +174,4 @@ const StoryCreator: React.FC<StoryCreatorProps> = ({ currentUser, onClose, onSav
             </div>
         </div>
     );
-};
-
-export default StoryCreator;
+}

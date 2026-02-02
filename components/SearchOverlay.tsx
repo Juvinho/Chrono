@@ -17,7 +17,8 @@ interface SearchOverlayProps {
     currentUser: User;
 }
 
-const NoSignal: React.FC<{ message?: string }> = ({ message }) => (
+function NoSignal({ message }: { message?: string }) {
+    return (
     <div className="flex flex-col items-center justify-center h-64 w-full bg-black relative overflow-hidden border border-[var(--theme-border-primary)] rounded-sm my-4">
       {/* Static Noise Layer */}
       <div className="absolute inset-0 opacity-30 pointer-events-none mix-blend-screen" 
@@ -51,9 +52,10 @@ const NoSignal: React.FC<{ message?: string }> = ({ message }) => (
       {/* Vignette */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_50%,black_100%)] pointer-events-none z-20"></div>
     </div>
-);
+    );
+}
 
-const SearchOverlay: React.FC<SearchOverlayProps> = ({ onClose, onSearch, onViewProfile, allUsers, allPosts, currentUser }) => {
+export default function SearchOverlay({ onClose, onSearch, onViewProfile, allUsers, allPosts, currentUser }: SearchOverlayProps) {
     const { t } = useTranslation();
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -336,6 +338,4 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ onClose, onSearch, onView
             </div>
         </div>
     );
-};
-
-export default SearchOverlay;
+}

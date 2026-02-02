@@ -13,7 +13,7 @@ interface UserListModalProps {
   onViewProfile: (username: string) => void;
 }
 
-const UserListModal: React.FC<UserListModalProps> = ({ title, users, currentUser, onFollowToggle, onClose, onViewProfile }) => {
+export default function UserListModal({ title, users, currentUser, onFollowToggle, onClose, onViewProfile }: UserListModalProps) {
     const { t } = useTranslation();
     const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
         if (e.target === e.currentTarget) {
@@ -91,6 +91,4 @@ const UserListModal: React.FC<UserListModalProps> = ({ title, users, currentUser
             </div>
         </div>
     );
-};
-
-export default UserListModal;
+}

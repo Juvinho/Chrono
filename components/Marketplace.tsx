@@ -32,7 +32,7 @@ interface MarketplaceProps {
     onUserUpdate: (user: User) => void;
 }
 
-const Marketplace: React.FC<MarketplaceProps> = ({ currentUser, onClose, onUserUpdate }) => {
+export default function Marketplace({ currentUser, onClose, onUserUpdate }: MarketplaceProps) {
     const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState<'subscriptions' | 'frames' | 'effects' | 'badges'>('subscriptions');
     const [items, setItems] = useState<Item[]>([]);
@@ -759,6 +759,4 @@ const Marketplace: React.FC<MarketplaceProps> = ({ currentUser, onClose, onUserU
             </div>
         </div>
     );
-};
-
-export default Marketplace;
+}

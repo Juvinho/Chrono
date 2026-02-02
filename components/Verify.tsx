@@ -11,7 +11,7 @@ interface VerifyProps {
   onNavigate: (page: Page) => void;
 }
 
-const Verify: React.FC<VerifyProps> = ({ email, users, setUsers, onNavigate }) => {
+export default function Verify({ email, users, setUsers, onNavigate }: VerifyProps) {
     const { t } = useTranslation();
 
     const handleVerification = () => {
@@ -42,6 +42,4 @@ const Verify: React.FC<VerifyProps> = ({ email, users, setUsers, onNavigate }) =
             </div>
         </div>
     );
-};
-
-export default Verify;
+}

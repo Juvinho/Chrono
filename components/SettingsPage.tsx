@@ -15,6 +15,8 @@ const defaultSettings: Omit<ProfileSettings, 'coverImage'> = {
   effect: 'none',
   animationsEnabled: true,
   borderRadius: 'md',
+  autoRefreshEnabled: false,
+  autoRefreshInterval: 5,
 };
 
 const COVER_PRESETS = [
@@ -37,7 +39,7 @@ interface SettingsPageProps {
   onOpenMarketplace?: () => void;
 }
 
-const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout, onNavigate, onNotificationClick, onUpdateUser, allUsers, allPosts, conversations, onOpenMarketplace }) => {
+export default function SettingsPage({ user, onLogout, onNavigate, onNotificationClick, onUpdateUser, allUsers, allPosts, conversations, onOpenMarketplace }: SettingsPageProps) {
   const { t, setLanguage, language } = useTranslation();
 
   // FIX: Safely initialize draftUser state to ensure profileSettings always exists.
@@ -48,576 +50,511 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout, onNavigate,
     birthday: user.birthday ? (user.birthday.includes('T') ? user.birthday.split('T')[0] : user.birthday) : '',
     profileSettings: {
         ...defaultSettings,
-        coverImage: user.coverImage, // Use the base coverImage as default
-        ...user.profileSettings, // Override with any existing settings
-    },
+        ...(user.profileSettings || {})
+    }
   }));
 
-  const [saved, setSaved] = useState(false);
-  const [blockUsername, setBlockUsername] = useState('');
-  const [passcode, setPasscode] = useState({ current: '', new: ''});
-  const [inventory, setInventory] = useState<Item[]>([]);
-  const [loadingInventory, setLoadingInventory] = useState(false);
-  const [showCoverGallery, setShowCoverGallery] = useState(false);
-
+  // Update draftUser when user prop changes, preserving local edits if needed? 
+  // For now, let's reset to user prop to keep in sync
   useEffect(() => {
-    const fetchInventory = async () => {
-        setLoadingInventory(true);
-        const { data } = await apiClient.getUserInventory();
-        if (data) {
-            setInventory(data);
+    setDraftUser({
+        ...user,
+        birthday: user.birthday ? (user.birthday.includes('T') ? user.birthday.split('T')[0] : user.birthday) : '',
+        profileSettings: {
+            ...defaultSettings,
+            ...(user.profileSettings || {})
         }
-        setLoadingInventory(false);
-    };
-    fetchInventory();
-  }, []);
+    });
+  }, [user]);
 
-  const handleEquipToggle = async (item: Item) => {
-      // Optimistic update
-      const isEquipped = (item.type === 'frame' && draftUser.equippedFrame?.id === item.id) || 
-                         (item.type === 'effect' && draftUser.equippedEffect?.id === item.id);
-      
-      let updatedUser = { ...draftUser };
-      
-      try {
-          if (isEquipped) {
-              // Unequip
-              if (item.type === 'frame') updatedUser.equippedFrame = undefined;
-              if (item.type === 'effect') updatedUser.equippedEffect = undefined;
-              await apiClient.unequipItem(item.id);
-          } else {
-              // Equip
-              if (item.type === 'frame') updatedUser.equippedFrame = item;
-              if (item.type === 'effect') updatedUser.equippedEffect = item;
-              await apiClient.equipItem(item.id);
-          }
-          
-          setDraftUser(updatedUser);
-          // Notify parent of the update so Header and other components update immediately
-          onUpdateUser(updatedUser);
-      } catch (error) {
-          console.error("Failed to toggle equip item:", error);
-          // Revert on error would be ideal, but for now just logging
-      }
-  };
+  const [activeTab, setActiveTab] = useState<'account' | 'profile' | 'appearance' | 'feed'>('account');
+  const [isSaving, setIsSaving] = useState(false);
+  const [showCropper, setShowCropper] = useState(false);
+  const [pendingImage, setPendingImage] = useState<string | null>(null);
+  const [cropperType, setCropperType] = useState<'avatar' | 'cover'>('avatar');
+  
+  // New state for password change
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
-  // Image Cropping State
-  const [croppingImage, setCroppingImage] = useState<string | null>(null);
-  const [croppingField, setCroppingField] = useState<'avatar' | 'coverImage' | null>(null);
-
-  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
-  
-  const handleSearch = (query: string) => {
-    sessionStorage.setItem('chrono_search_query', query);
-    onNavigate(Page.Dashboard);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setDraftUser(prev => ({ ...prev, [name]: value }));
   };
-  
-  const handleSave = async () => {
-      // Check for large payload
-      if (draftUser.avatar && draftUser.avatar.length > 5 * 1024 * 1024 * 1.33) {
-        setErrorMsg(t('settingsImageTooLarge') || "Image too large. Please crop it smaller or choose a different image.");
-        return;
-      }
 
-      const result = await onUpdateUser(draftUser);
-      const success = typeof result === 'object' ? result.success : result;
-      const resultError = typeof result === 'object' ? result.error : undefined;
-
-      if (success) {
-          setSaved(true);
-          setTimeout(() => setSaved(false), 2000);
-      } else {
-          setErrorMsg(resultError || t('settingsSaveError') || "Failed to save settings. Please try again.");
+  const handleProfileSettingChange = (setting: keyof ProfileSettings, value: any) => {
+    setDraftUser(prev => ({
+      ...prev,
+      profileSettings: {
+        ...prev.profileSettings!,
+        [setting]: value
       }
+    }));
   };
-  
-  const handlePasscodeUpdate = () => {
-    setErrorMsg(null);
-    if (passcode.current === user.password) {
-        if(passcode.new.length < 6) {
-            setErrorMsg(t('settingsPasswordTooShort') || "Password must be at least 6 characters.");
-            return;
-        }
-        onUpdateUser({...draftUser, password: passcode.new});
-        setPasscode({current: '', new: ''});
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2000);
-    } else {
-        setErrorMsg(t('settingsPasswordIncorrect') || "Incorrect current password.");
-    }
-  }
-  
-  const handleBlockUser = () => {
-    if (!blockUsername || draftUser.blockedUsers?.includes(blockUsername) || blockUsername === user.username) return;
-    const updatedBlocked = [...(draftUser.blockedUsers || []), blockUsername];
-    setDraftUser(prev => ({...prev, blockedUsers: updatedBlocked}));
-    setBlockUsername('');
-  }
-  
-  const handleUnblockUser = (username: string) => {
-      const updatedBlocked = draftUser.blockedUsers?.filter(u => u !== username);
-      setDraftUser(prev => ({...prev, blockedUsers: updatedBlocked}));
-  }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, field: 'coverImage' | 'avatar') => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'cover') => {
+    const file = e.target.files?.[0];
+    if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setCroppingImage(reader.result as string);
-        setCroppingField(field);
-        
-        // Reset file input so the same file can be selected again if cancelled
-        if (field === 'avatar' && avatarInputRef.current) avatarInputRef.current.value = '';
-        if (field === 'coverImage' && coverInputRef.current) coverInputRef.current.value = '';
+        setPendingImage(reader.result as string);
+        setCropperType(type);
+        setShowCropper(true);
       };
       reader.readAsDataURL(file);
     }
+    // Reset input
+    e.target.value = '';
   };
 
   const handleCropComplete = (croppedImage: string) => {
-    if (croppingField === 'coverImage') {
-        // FIX: Safely update profileSettings
-        setDraftUser(prev => ({ 
-            ...prev, 
-            // Also update root property for compatibility
-            coverImage: croppedImage,
-            profileSettings: { 
-                ...(prev.profileSettings as ProfileSettings), 
-                coverImage: croppedImage 
-            } 
-        }));
-    } else if (croppingField === 'avatar') {
-        setDraftUser(prev => ({ ...prev, avatar: croppedImage }));
+    if (cropperType === 'avatar') {
+      setDraftUser(prev => ({ ...prev, avatar: croppedImage }));
+    } else {
+      handleProfileSettingChange('coverImage', croppedImage);
     }
-    
-    // Close cropper
-    setCroppingImage(null);
-    setCroppingField(null);
+    setShowCropper(false);
+    setPendingImage(null);
   };
 
-  const handleCropCancel = () => {
-    setCroppingImage(null);
-    setCroppingField(null);
-  };
-  
-  const handleProfileSettingChange = (key: keyof ProfileSettings, value: any) => {
-      // FIX: Safely update profileSettings
-      const updatedUser = {
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      // Ensure birthday is formatted correctly if it was edited
+      const userToSave = {
           ...draftUser,
-          profileSettings: {
-              ...(draftUser.profileSettings as ProfileSettings),
-              [key]: value,
-          }
+          // If birthday is empty string, send null or keep it empty? API likely expects YYYY-MM-DD or ISO
+          birthday: draftUser.birthday || undefined
       };
       
-      setDraftUser(updatedUser);
+      const success = await onUpdateUser(userToSave);
+      if (success) {
+        // Show success feedback?
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  const handleChangePassword = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setPasswordError(null);
+      setPasswordSuccess(null);
       
-      // Apply theme immediately for preview (without saving)
-      if (key === 'theme' || key === 'accentColor' || key === 'effect' || key === 'animationsEnabled') {
-          // Update current user immediately for theme preview
-          const tempUser = { ...user, profileSettings: updatedUser.profileSettings };
-          onUpdateUser(tempUser);
+      if (newPassword !== confirmPassword) {
+          setPasswordError(t('passwordsDoNotMatch'));
+          return;
+      }
+      
+      if (newPassword.length < 6) {
+          setPasswordError(t('passwordTooShort'));
+          return;
+      }
+      
+      setIsChangingPassword(true);
+      try {
+          const response = await apiClient.changePassword(currentPassword, newPassword);
+          if (response.error) {
+              setPasswordError(response.error);
+          } else {
+              setPasswordSuccess(t('passwordChangedSuccess'));
+              setCurrentPassword('');
+              setNewPassword('');
+              setConfirmPassword('');
+          }
+      } catch (err) {
+          setPasswordError('An unexpected error occurred');
+      } finally {
+          setIsChangingPassword(false);
       }
   };
 
-  const accentColors: ProfileSettings['accentColor'][] = ['purple', 'green', 'amber', 'red', 'blue'];
-
   return (
-    <div className="h-screen w-screen flex flex-col">
+    <div className="min-h-screen bg-[var(--theme-bg-primary)] text-[var(--theme-text-primary)] font-sans">
       <Header 
         user={user} 
         onLogout={onLogout} 
-        onViewProfile={(username) => onNavigate(Page.Profile, username)} 
+        onViewProfile={(username) => onNavigate('profile', username)}
         onNavigate={onNavigate}
         onNotificationClick={onNotificationClick}
-        onSearch={handleSearch} 
-        allPosts={allPosts} 
         allUsers={allUsers}
+        allPosts={allPosts}
         conversations={conversations}
         onOpenMarketplace={onOpenMarketplace}
       />
-      <main className="flex-grow overflow-y-auto p-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-[var(--theme-text-light)] mb-2 glitch-effect" data-text={t('settingsTitle')}>{t('settingsTitle')}</h1>
-              <p className="text-[var(--theme-text-secondary)]">{t('settingsSubtitle')}</p>
-            </div>
-            <div className="flex items-center space-x-4">
-                 {saved && <span className="text-[var(--theme-primary)] font-bold animate-pulse uppercase tracking-widest">{t('settingsSaved')}</span>}
-                 {errorMsg && <span className="text-red-500 font-bold animate-pulse">{errorMsg}</span>}
-                 <button onClick={handleSave} className={`px-6 py-2 rounded-sm font-bold transition-colors ${saved ? 'bg-green-600 text-white' : 'bg-[var(--theme-primary)] text-white hover:bg-[var(--theme-secondary)]'}`}>
-                    {saved ? t('settingsSaved') : t('settingsSaveChanges')}
-                </button>
-            </div>
-          </div>
 
-          <div className="space-y-8">
-            {/* Profile Management */}
-            <section className="p-4 bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)]">
-              <h2 className="text-lg font-bold text-[var(--theme-secondary)] mb-4 pb-2 border-b-2 border-[var(--theme-border-primary)]">:: {t('settingsProfileManagement')}</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-1">
-                  <label className="text-sm font-bold text-[var(--theme-text-secondary)] block">{t('settingsAvatar')}</label>
-                  <div className="flex items-center space-x-4">
-                    <div className="relative w-16 h-16">
-                    {(() => {
-                        const avatarShape = draftUser.equippedFrame ? getFrameShape(draftUser.equippedFrame.name) : 'rounded-full';
-                        return (
-                            <>
-                                <Avatar src={draftUser.avatar} username={draftUser.username} className={`w-full h-full ${avatarShape} object-cover`} />
-                                {draftUser.equippedEffect && (
-                                    <div className={`absolute inset-0 pointer-events-none z-10 mix-blend-screen opacity-60 ${avatarShape} overflow-hidden`}>
-                                      <img 
-                                        src={draftUser.equippedEffect.imageUrl} 
-                                        alt="" 
-                                        className="w-full h-full object-cover animate-pulse-soft"
-                                      />
-                                    </div>
-                                )}
-                                {draftUser.equippedFrame && (
-                                    <div className="absolute -inset-1 z-20 pointer-events-none">
-                                      <FramePreview item={draftUser.equippedFrame} />
-                                    </div>
-                                )}
-                            </>
-                        );
-                    })()}
-                    </div>
-                    <input type="file" accept="image/*" ref={avatarInputRef} onChange={(e) => handleFileChange(e, 'avatar')} className="hidden" />
-                    <button onClick={() => avatarInputRef.current?.click()} className="follow-btn px-4 py-1 text-sm">{t('settingsUpload')}</button>
-                  </div>
-                </div>
-                <div className="space-y-1 md:col-span-2">
-                   <div className="flex justify-between items-center">
-                       <label className="text-sm font-bold text-[var(--theme-text-secondary)] block">{t('settingsCoverImage')}</label>
-                       <button 
-                           onClick={() => setShowCoverGallery(!showCoverGallery)} 
-                           className="text-xs text-[var(--theme-primary)] hover:underline"
-                       >
-                           {showCoverGallery ? (t('settingsHideGallery') || "Hide Gallery") : (t('settingsShowGallery') || "Choose from Gallery")}
-                       </button>
-                   </div>
-                   
-                   {showCoverGallery && (
-                       <div className="grid grid-cols-3 gap-2 mb-2 animate-[fadeIn_0.2s_ease-out]">
-                           {COVER_PRESETS.map((url, idx) => (
-                               <button 
-                                   key={idx}
-                                   onClick={() => {
-                                       setDraftUser(prev => ({ 
-                                           ...prev, 
-                                           coverImage: url,
-                                           profileSettings: { 
-                                               ...(prev.profileSettings as ProfileSettings), 
-                                               coverImage: url 
-                                           } 
-                                       }));
-                                       setShowCoverGallery(false);
-                                   }}
-                                   className="h-12 w-full rounded overflow-hidden border border-transparent hover:border-[var(--theme-primary)] transition-all"
-                               >
-                                   <img src={url} alt={`Preset ${idx + 1}`} className="w-full h-full object-cover" />
-                               </button>
-                           ))}
-                       </div>
-                   )}
+      <main className="pt-20 pb-20 px-4 max-w-4xl mx-auto space-y-6">
+        <div className="flex items-center gap-4 mb-8">
+            <h1 className="text-3xl font-bold glitch-text" data-text={t('settings')}>{t('settings')}</h1>
+        </div>
 
-                   <div className="w-32 h-16 rounded-sm border border-[var(--theme-border-primary)] overflow-hidden relative">
-                     <Avatar 
-                       src={draftUser.coverImage || draftUser.profileSettings.coverImage || 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&h=400&fit=crop&q=80'} 
-                       username={draftUser.username}
-                       className="w-full h-full object-cover"
-                     />
-                   </div>
-                     <input type="file" accept="image/*" ref={coverInputRef} onChange={(e) => handleFileChange(e, 'coverImage')} className="hidden" />
-                     <button onClick={() => coverInputRef.current?.click()} className="follow-btn px-4 py-1 text-sm">{t('settingsUpload')}</button>
-                </div>
-                <div className="space-y-1 md:col-span-3">
-                  <label className="text-sm font-bold text-[var(--theme-text-secondary)] block">{t('settingsBio')}</label>
-                  <textarea value={draftUser.bio} onChange={(e) => setDraftUser({...draftUser, bio: e.target.value})} rows={3} className="w-full mt-1 px-3 py-2 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--theme-primary)]" />
-                </div>
-                 <div className="space-y-1">
-                  <label className="text-sm font-bold text-[var(--theme-text-secondary)] block">{t('settingsPronouns')}</label>
-                  <input type="text" placeholder={t('settingsPronounsPlaceholder')} value={draftUser.pronouns || ''} onChange={(e) => setDraftUser({...draftUser, pronouns: e.target.value})} className="w-full mt-1 px-3 py-2 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--theme-primary)]" />
-                </div>
-                 <div className="space-y-1">
-                  <label className="text-sm font-bold text-[var(--theme-text-secondary)] block">{t('settingsBirthday') || 'Birthday'}</label>
-                  <input type="date" value={draftUser.birthday} onChange={(e) => setDraftUser({...draftUser, birthday: e.target.value})} className="w-full mt-1 px-3 py-2 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--theme-primary)]" />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-bold text-[var(--theme-text-secondary)] block">{t('settingsLocation') || 'Location'}</label>
-                  <input type="text" placeholder={t('settingsLocation') || "City, Country"} value={draftUser.location || ''} onChange={(e) => setDraftUser({...draftUser, location: e.target.value})} className="w-full mt-1 px-3 py-2 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--theme-primary)]" />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-bold text-[var(--theme-text-secondary)] block">{t('settingsWebsite') || 'Website'}</label>
-                  <input type="url" placeholder="https://example.com" value={draftUser.website || ''} onChange={(e) => setDraftUser({...draftUser, website: e.target.value})} className="w-full mt-1 px-3 py-2 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--theme-primary)]" />
-                </div>
-              </div>
-            </section>
+        {/* Tabs */}
+        <div className="flex overflow-x-auto no-scrollbar gap-2 pb-2 border-b border-[var(--theme-border)] mb-6">
+            <button 
+                onClick={() => setActiveTab('account')}
+                className={`px-4 py-2 whitespace-nowrap font-bold transition-all ${activeTab === 'account' ? 'text-[var(--theme-primary)] border-b-2 border-[var(--theme-primary)]' : 'text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-primary)]'}`}
+            >
+                {t('settingsAccount')}
+            </button>
+            <button 
+                onClick={() => setActiveTab('profile')}
+                className={`px-4 py-2 whitespace-nowrap font-bold transition-all ${activeTab === 'profile' ? 'text-[var(--theme-primary)] border-b-2 border-[var(--theme-primary)]' : 'text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-primary)]'}`}
+            >
+                {t('settingsProfile')}
+            </button>
+            <button 
+                onClick={() => setActiveTab('appearance')}
+                className={`px-4 py-2 whitespace-nowrap font-bold transition-all ${activeTab === 'appearance' ? 'text-[var(--theme-primary)] border-b-2 border-[var(--theme-primary)]' : 'text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-primary)]'}`}
+            >
+                {t('settingsAppearance')}
+            </button>
+            <button 
+                onClick={() => setActiveTab('feed')}
+                className={`px-4 py-2 whitespace-nowrap font-bold transition-all ${activeTab === 'feed' ? 'text-[var(--theme-primary)] border-b-2 border-[var(--theme-primary)]' : 'text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-primary)]'}`}
+            >
+                {t('settingsFeed')}
+            </button>
+        </div>
 
-            {/* Inventory / Wardrobe */}
-            <section className="p-4 bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)]">
-              <h2 className="text-lg font-bold text-[var(--theme-secondary)] mb-4 pb-2 border-b-2 border-[var(--theme-border-primary)]">:: {t('settingsWardrobe') || "Inventário / Wardrobe"}</h2>
-              
-              {loadingInventory ? (
-                  <div className="flex justify-center p-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--theme-primary)]"></div>
-                  </div>
-              ) : inventory.length === 0 ? (
-                  <div className="text-center p-8 text-[var(--theme-text-secondary)]">
-                      <p>{t('settingsNoItems') || "Você ainda não possui itens."}</p>
-                      <button 
-                          onClick={onOpenMarketplace}
-                          className="mt-4 px-4 py-2 bg-[var(--theme-primary)] text-white rounded hover:bg-[var(--theme-secondary)] transition-colors"
-                      >
-                          {t('settingsGoToMarketplace') || "Ir para o Mercado"}
-                      </button>
-                  </div>
-              ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {inventory.map(item => {
-                          const isEquipped = (item.type === 'frame' && draftUser.equippedFrame?.id === item.id) || 
-                                             (item.type === 'effect' && draftUser.equippedEffect?.id === item.id);
-                          return (
-                              <div 
-                                  key={item.id} 
-                                  onClick={() => handleEquipToggle(item)}
-                                  className={`relative group cursor-pointer border rounded-lg overflow-hidden transition-all ${
-                                      isEquipped 
-                                          ? 'border-[var(--theme-primary)] bg-[var(--theme-bg-tertiary)] shadow-[0_0_10px_var(--theme-primary)]' 
-                                          : 'border-[var(--theme-border-primary)] hover:border-[var(--theme-text-secondary)]'
-                                  }`}
-                              >
-                                  <div className="aspect-square relative p-4 flex items-center justify-center bg-[var(--theme-bg-primary)]">
-                                      {/* Avatar Preview Background for Context */}
-                                      <div className="w-16 h-16 rounded-full overflow-hidden relative opacity-50 grayscale group-hover:grayscale-0 transition-all">
-                                          <Avatar src={draftUser.avatar} username={draftUser.username} className="w-full h-full object-cover" />
-                                      </div>
-                                      
-                                      {/* Item Preview */}
-                                      {item.type === 'frame' ? (
-                                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                              <div className="w-20 h-20 relative">
-                                                  <FramePreview item={item} />
-                                              </div>
-                                          </div>
-                                      ) : (
-                                          <div className="absolute inset-0 pointer-events-none mix-blend-screen opacity-80 flex items-center justify-center">
-                                               <div className="w-16 h-16 rounded-full overflow-hidden relative">
-                                                  <img src={item.imageUrl} alt="" className="w-full h-full object-cover animate-pulse-soft" />
-                                               </div>
-                                          </div>
-                                      )}
-
-                                      {isEquipped && (
-                                          <div className="absolute top-2 right-2 bg-[var(--theme-primary)] text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                                              Equipped
-                                          </div>
-                                      )}
-                                  </div>
-                                  <div className="p-2 text-center">
-                                      <h3 className="text-xs font-bold text-[var(--theme-text-light)] truncate">{item.name}</h3>
-                                      <p className="text-[10px] text-[var(--theme-text-secondary)] uppercase">{item.type}</p>
-                                  </div>
-                              </div>
-                          );
-                      })}
-                  </div>
-              )}
-            </section>
-
-            {/* Appearance Customization */}
-            <section className="p-4 bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)]">
-              <h2 className="text-lg font-bold text-[var(--theme-secondary)] mb-4 pb-2 border-b-2 border-[var(--theme-border-primary)]">:: {t('settingsAppearance')}</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <h3 className="text-sm font-bold text-[var(--theme-text-secondary)] mb-2">{t('settingsTheme')}</h3>
-                    <div className="flex space-x-2">
-                        <button 
-                            onClick={() => handleProfileSettingChange('theme', 'dark')} 
-                            className={`px-4 py-2 border transition-colors ${
-                                draftUser.profileSettings.theme === 'dark' 
-                                    ? 'bg-[var(--theme-primary)] text-white border-[var(--theme-primary)]' 
-                                    : 'border-[var(--theme-border-primary)] text-[var(--theme-text-primary)] hover:border-[var(--theme-primary)] hover:text-[var(--theme-primary)]'
-                            }`}
-                        >
-                            {t('settingsThemeDark')}
-                        </button>
-                        <button 
-                            onClick={() => handleProfileSettingChange('theme', 'light')} 
-                            className={`px-4 py-2 border transition-colors ${
-                                draftUser.profileSettings.theme === 'light' 
-                                    ? 'bg-[var(--theme-primary)] text-white border-[var(--theme-primary)]' 
-                                    : 'border-[var(--theme-border-primary)] text-[var(--theme-text-primary)] hover:border-[var(--theme-primary)] hover:text-[var(--theme-primary)]'
-                            }`}
-                        >
-                            {t('settingsThemeLight')}
-                        </button>
-                    </div>
-                </div>
-                 <div>
-                    <h3 className="text-sm font-bold text-[var(--theme-text-secondary)] mb-2">{t('settingsLanguage')}</h3>
-                    <select value={language} onChange={(e) => setLanguage(e.target.value as 'en' | 'pt')} className="language-selector">
-                        <option value="en">English</option>
-                        <option value="pt">Português</option>
-                    </select>
-                </div>
-                <div>
-                    <h3 className="text-sm font-bold text-[var(--theme-text-secondary)] mb-2">{t('settingsAccentColor')}</h3>
-                    <div className="flex space-x-2">
-                        {accentColors.map(color => (
-                            <button key={color} onClick={() => handleProfileSettingChange('accentColor', color)} className={`w-8 h-8 rounded-full border-2 ${draftUser.profileSettings.accentColor === color ? 'border-[var(--theme-secondary)]' : 'border-transparent'}`}>
-                                <div className={`w-full h-full rounded-full accent-${color} bg-[var(--theme-primary)]`}></div>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-                <div>
-                    <h3 className="text-sm font-bold text-[var(--theme-text-secondary)] mb-2">{t('settingsVisualEffects')}</h3>
-                    <select value={draftUser.profileSettings.effect} onChange={(e) => handleProfileSettingChange('effect', e.target.value)} className="px-3 py-2 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--theme-primary)]">
-                        <option value="none">{t('settingsEffectNone')}</option>
-                        <option value="scanline">{t('settingsEffectScanline')}</option>
-                        <option value="glitch_overlay">{t('settingsEffectGlitchOverlay')}</option>
-                    </select>
-                </div>
-                <div>
-                    <h3 className="text-sm font-bold text-[var(--theme-text-secondary)] mb-2">{t('settingsBorderRadius')}</h3>
-                    <div className="flex space-x-2">
-                        {(['none', 'sm', 'md', 'full'] as const).map(radius => (
-                            <button 
-                                key={radius}
-                                onClick={() => handleProfileSettingChange('borderRadius', radius)}
-                                className={`w-10 h-10 border-2 flex items-center justify-center transition-all ${
-                                    (draftUser.profileSettings.borderRadius || 'md') === radius 
-                                    ? 'border-[var(--theme-primary)] bg-[var(--theme-bg-tertiary)]' 
-                                    : 'border-[var(--theme-border-primary)] hover:border-[var(--theme-secondary)]'
-                                }`}
-                                title={radius}
-                            >
-                                <div className={`w-6 h-6 bg-[var(--theme-text-secondary)] ${
-                                    radius === 'none' ? 'rounded-none' : 
-                                    radius === 'sm' ? 'rounded-sm' : 
-                                    radius === 'md' ? 'rounded-md' : 
-                                    'rounded-full'
-                                }`}></div>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-                <div className="md:col-span-2 flex items-center justify-between pt-4 border-t border-[var(--theme-border-secondary)]">
-                    <div>
-                        <h3 className="text-[var(--theme-text-light)]">{t('settingsAnimationsEnable')}</h3>
-                        <p className="text-sm text-[var(--theme-text-secondary)]">{t('settingsAnimationsDesc')}</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" checked={draftUser.profileSettings.animationsEnabled ?? true} onChange={(e) => handleProfileSettingChange('animationsEnabled', e.target.checked)} className="sr-only peer" />
-                      <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-focus:ring-2 peer-focus:ring-[var(--theme-secondary)] peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--theme-primary)]"></div>
-                    </label>
-                </div>
-              </div>
-            </section>
-
-            {/* Feed Settings */}
-            <section className="p-4 bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)]">
-                <h2 className="text-lg font-bold text-[var(--theme-secondary)] mb-4 pb-2 border-b-2 border-[var(--theme-border-primary)]">:: {t('settingsFeed') || 'Feed Settings'}</h2>
-                <div className="flex items-center justify-between mb-4">
-                    <div>
-                        <h3 className="text-[var(--theme-text-light)]">{t('settingsAutoRefresh') || 'Auto Refresh'}</h3>
-                        <p className="text-sm text-[var(--theme-text-secondary)]">{t('settingsAutoRefreshDesc') || 'Automatically update feed with new content'}</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                        <input 
-                            type="checkbox" 
-                            checked={draftUser.profileSettings?.autoRefreshEnabled ?? false} 
-                            onChange={(e) => handleProfileSettingChange('autoRefreshEnabled', e.target.checked)} 
-                            className="sr-only peer" 
-                        />
-                        <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-focus:ring-2 peer-focus:ring-[var(--theme-secondary)] peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--theme-primary)]"></div>
-                    </label>
-                </div>
-                
-                {(draftUser.profileSettings?.autoRefreshEnabled ?? false) && (
-                    <div className="animate-fade-in space-y-2">
-                        <label className="text-sm font-bold text-[var(--theme-text-secondary)] block">{t('settingsRefreshInterval') || 'Refresh Interval (minutes)'}</label>
-                        <div className="flex items-center space-x-2">
-                            <input 
-                                type="number" 
-                                min="1" 
-                                value={draftUser.profileSettings?.autoRefreshInterval || 5} 
-                                onChange={(e) => {
-                                    const val = parseInt(e.target.value);
-                                    if (!isNaN(val) && val > 0) {
-                                        handleProfileSettingChange('autoRefreshInterval', val);
-                                    }
-                                }}
-                                className="w-24 px-3 py-2 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--theme-primary)]" 
+        <div className="bg-[var(--theme-bg-secondary)]/50 backdrop-blur-md border border-[var(--theme-border)] rounded-lg p-6 shadow-lg">
+            
+            {/* Account Settings */}
+            {activeTab === 'account' && (
+                <div className="space-y-6">
+                    <h2 className="text-xl font-bold text-[var(--theme-primary)] mb-4">{t('settingsAccount')}</h2>
+                    
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                            <label className="text-sm text-[var(--theme-text-secondary)] font-mono uppercase">{t('username')}</label>
+                            <input
+                                type="text"
+                                name="username"
+                                value={draftUser.username}
+                                disabled
+                                className="w-full bg-black/30 border border-[var(--theme-border)] rounded p-2 text-[var(--theme-text-secondary)] cursor-not-allowed"
                             />
-                            <span className="text-sm text-[var(--theme-text-secondary)]">min</span>
+                            <p className="text-xs text-[var(--theme-text-secondary)]">Username cannot be changed</p>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm text-[var(--theme-text-secondary)] font-mono uppercase">{t('email')}</label>
+                            <input
+                                type="email"
+                                name="email"
+                                value={draftUser.email}
+                                onChange={handleInputChange}
+                                className="w-full bg-black/30 border border-[var(--theme-border)] rounded p-2 focus:border-[var(--theme-primary)] focus:outline-none transition-colors"
+                            />
                         </div>
                     </div>
-                )}
-            </section>
 
-            {/* Account & Safety */}
-            <section className="p-4 bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)]">
-              <h2 className="text-lg font-bold text-[var(--theme-secondary)] mb-4 pb-2 border-b-2 border-[var(--theme-border-primary)]">:: {t('settingsAccountSafety')}</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-bold text-[var(--theme-text-secondary)] block">{t('settingsChangePasscode')}</label>
-                  <input type="password" value={passcode.current} onChange={e => setPasscode(p => ({...p, current: e.target.value}))} placeholder={t('settingsCurrentPasscode')} className="w-full max-w-sm mt-1 px-3 py-2 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--theme-primary)]" />
-                  <input type="password" value={passcode.new} onChange={e => setPasscode(p => ({...p, new: e.target.value}))} placeholder={t('settingsNewPasscode')} className="w-full max-w-sm mt-2 px-3 py-2 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--theme-primary)]" />
-                   <button onClick={handlePasscodeUpdate} className="follow-btn px-4 py-1 text-sm mt-2">{t('settingsUpdatePasscode')}</button>
-                </div>
-                
-                 <div className="flex items-center justify-between pt-4 border-t border-[var(--theme-border-secondary)]">
-                    <div>
-                        <h3 className="text-[var(--theme-text-light)]">{t('settingsPrivateProfile')}</h3>
-                        <p className="text-sm text-[var(--theme-text-secondary)]">{t('settingsPrivateProfileDesc')}</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" checked={draftUser.isPrivate} onChange={(e) => setDraftUser({...draftUser, isPrivate: e.target.checked})} className="sr-only peer" />
-                      <div className="w-11 h-6 bg-gray-700 rounded-full peer peer-focus:ring-2 peer-focus:ring-[var(--theme-secondary)] peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--theme-primary)]"></div>
-                    </label>
-                </div>
-                 <div className="pt-4 border-t border-[var(--theme-border-secondary)]">
-                    <h3 className="text-sm font-bold text-[var(--theme-text-secondary)] block mb-2">{t('settingsBlockedUsers')}</h3>
-                    <div className="flex space-x-2">
-                        <input type="text" value={blockUsername} onChange={e => setBlockUsername(e.target.value)} placeholder={t('usernamePlaceholder')} className="flex-grow px-3 py-2 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--theme-primary)]"/>
-                        <button onClick={handleBlockUser} className="follow-btn px-4 py-1">{t('settingsBlock')}</button>
-                    </div>
-                    <div className="mt-2 space-y-1">
-                        {draftUser.blockedUsers?.map(username => (
-                            <div key={username} className="flex justify-between items-center bg-[var(--theme-bg-tertiary)] p-2">
-                                <span>@{username}</span>
-                                <button onClick={() => handleUnblockUser(username)} className="text-xs text-red-500 hover:underline">{t('settingsUnblock')}</button>
+                    <div className="space-y-4 border-t border-[var(--theme-border)] pt-6 mt-6">
+                        <h3 className="text-lg font-bold">{t('changePassword')}</h3>
+                        {passwordError && <div className="text-red-500 text-sm bg-red-900/20 p-2 rounded border border-red-900">{passwordError}</div>}
+                        {passwordSuccess && <div className="text-green-500 text-sm bg-green-900/20 p-2 rounded border border-green-900">{passwordSuccess}</div>}
+                        
+                        <div className="space-y-2">
+                            <label className="text-sm text-[var(--theme-text-secondary)] font-mono uppercase">{t('currentPassword')}</label>
+                            <input
+                                type="password"
+                                value={currentPassword}
+                                onChange={(e) => setCurrentPassword(e.target.value)}
+                                className="w-full bg-black/30 border border-[var(--theme-border)] rounded p-2 focus:border-[var(--theme-primary)] focus:outline-none"
+                            />
+                        </div>
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <div className="space-y-2">
+                                <label className="text-sm text-[var(--theme-text-secondary)] font-mono uppercase">{t('newPassword')}</label>
+                                <input
+                                    type="password"
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    className="w-full bg-black/30 border border-[var(--theme-border)] rounded p-2 focus:border-[var(--theme-primary)] focus:outline-none"
+                                />
                             </div>
-                        ))}
+                            <div className="space-y-2">
+                                <label className="text-sm text-[var(--theme-text-secondary)] font-mono uppercase">{t('confirmPassword')}</label>
+                                <input
+                                    type="password"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    className="w-full bg-black/30 border border-[var(--theme-border)] rounded p-2 focus:border-[var(--theme-primary)] focus:outline-none"
+                                />
+                            </div>
+                        </div>
+                        <div className="flex justify-end">
+                            <button 
+                                onClick={handleChangePassword}
+                                disabled={isChangingPassword || !currentPassword || !newPassword || !confirmPassword}
+                                className="px-4 py-2 bg-[var(--theme-bg-secondary)] border border-[var(--theme-border)] hover:bg-[var(--theme-border)] transition-colors rounded disabled:opacity-50"
+                            >
+                                {isChangingPassword ? 'Updating...' : t('updatePassword')}
+                            </button>
+                        </div>
                     </div>
                 </div>
-                 <div className="flex items-center space-x-2 text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-light)] cursor-pointer pt-4 border-t border-[var(--theme-border-secondary)]">
-                    <FlagIcon className="w-5 h-5" />
-                    <span>{t('settingsReportingPolicy')}</span>
-                </div>
-              </div>
-            </section>
-          </div>
-        </div>
-      </main>
+            )}
 
-      {croppingImage && (
-        <ImageCropper 
-          imageSrc={croppingImage}
-          aspectRatio={croppingField === 'avatar' ? 1 : 3} // Avatar 1:1, Cover ~3:1
-          isCircular={croppingField === 'avatar'}
-          onCrop={handleCropComplete}
-          onCancel={handleCropCancel}
-        />
+            {/* Profile Settings */}
+            {activeTab === 'profile' && (
+                <div className="space-y-6">
+                    <h2 className="text-xl font-bold text-[var(--theme-primary)] mb-4">{t('settingsProfile')}</h2>
+                    
+                    {/* Avatar & Cover */}
+                    <div className="space-y-4">
+                        <div className="relative h-48 w-full rounded-lg overflow-hidden border border-[var(--theme-border)] group">
+                            {draftUser.profileSettings?.coverImage ? (
+                                <img src={draftUser.profileSettings.coverImage} alt="Cover" className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="w-full h-full bg-gradient-to-r from-purple-900 to-blue-900" />
+                            )}
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <button 
+                                    onClick={() => coverInputRef.current?.click()}
+                                    className="bg-black/70 text-white px-4 py-2 rounded-full backdrop-blur-sm border border-white/20 hover:bg-white/20 transition-colors"
+                                >
+                                    Change Cover
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex items-end gap-4 -mt-12 px-4 relative z-10">
+                            <div className="relative group">
+                                <div className="w-24 h-24 rounded-full border-4 border-[var(--theme-bg-primary)] overflow-hidden bg-black">
+                                    <img src={draftUser.avatar || 'https://via.placeholder.com/150'} alt={draftUser.username} className="w-full h-full object-cover" />
+                                </div>
+                                <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+                                     onClick={() => fileInputRef.current?.click()}>
+                                    <span className="text-xs text-white font-bold">EDIT</span>
+                                </div>
+                            </div>
+                            <div className="pb-2">
+                                <h3 className="text-xl font-bold">{draftUser.username}</h3>
+                                <p className="text-[var(--theme-text-secondary)] text-sm">@{draftUser.username}</p>
+                            </div>
+                        </div>
+
+                        {/* Preset Covers */}
+                        <div className="mt-4">
+                            <label className="text-sm text-[var(--theme-text-secondary)] font-mono uppercase block mb-2">Preset Covers</label>
+                            <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+                                {COVER_PRESETS.map((url, i) => (
+                                    <button 
+                                        key={i}
+                                        onClick={() => handleProfileSettingChange('coverImage', url)}
+                                        className="w-20 h-12 rounded overflow-hidden border border-[var(--theme-border)] hover:border-[var(--theme-primary)] flex-shrink-0 transition-all"
+                                    >
+                                        <img src={url} alt={`Preset ${i+1}`} className="w-full h-full object-cover" />
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => handleFileSelect(e, 'avatar')} />
+                        <input type="file" ref={coverInputRef} className="hidden" accept="image/*" onChange={(e) => handleFileSelect(e, 'cover')} />
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-sm text-[var(--theme-text-secondary)] font-mono uppercase">{t('bio')}</label>
+                        <textarea
+                            name="bio"
+                            value={draftUser.bio || ''}
+                            onChange={handleInputChange}
+                            rows={3}
+                            className="w-full bg-black/30 border border-[var(--theme-border)] rounded p-2 focus:border-[var(--theme-primary)] focus:outline-none transition-colors resize-none"
+                            placeholder="Tell your story..."
+                        />
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                            <label className="text-sm text-[var(--theme-text-secondary)] font-mono uppercase">{t('location')}</label>
+                            <input
+                                type="text"
+                                name="location"
+                                value={draftUser.location || ''}
+                                onChange={handleInputChange}
+                                className="w-full bg-black/30 border border-[var(--theme-border)] rounded p-2 focus:border-[var(--theme-primary)] focus:outline-none"
+                                placeholder="Night City"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm text-[var(--theme-text-secondary)] font-mono uppercase">{t('website')}</label>
+                            <input
+                                type="text"
+                                name="website"
+                                value={draftUser.website || ''}
+                                onChange={handleInputChange}
+                                className="w-full bg-black/30 border border-[var(--theme-border)] rounded p-2 focus:border-[var(--theme-primary)] focus:outline-none"
+                                placeholder="https://"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm text-[var(--theme-text-secondary)] font-mono uppercase">{t('birthday')}</label>
+                            <input
+                                type="date"
+                                name="birthday"
+                                value={draftUser.birthday || ''}
+                                onChange={handleInputChange}
+                                className="w-full bg-black/30 border border-[var(--theme-border)] rounded p-2 focus:border-[var(--theme-primary)] focus:outline-none text-white"
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Appearance Settings */}
+            {activeTab === 'appearance' && (
+                <div className="space-y-6">
+                    <h2 className="text-xl font-bold text-[var(--theme-primary)] mb-4">{t('settingsAppearance')}</h2>
+                    
+                    <div className="space-y-4">
+                         <div className="flex items-center justify-between p-4 bg-black/20 rounded border border-[var(--theme-border)]">
+                            <div>
+                                <h3 className="font-bold">{t('language')}</h3>
+                                <p className="text-sm text-[var(--theme-text-secondary)]">Select your preferred language</p>
+                            </div>
+                            <div className="flex gap-2">
+                                <button 
+                                    onClick={() => setLanguage('en')}
+                                    className={`px-3 py-1 rounded border ${language === 'en' ? 'bg-[var(--theme-primary)] border-[var(--theme-primary)] text-white' : 'border-[var(--theme-border)] hover:bg-white/10'}`}
+                                >
+                                    EN
+                                </button>
+                                <button 
+                                    onClick={() => setLanguage('pt')}
+                                    className={`px-3 py-1 rounded border ${language === 'pt' ? 'bg-[var(--theme-primary)] border-[var(--theme-primary)] text-white' : 'border-[var(--theme-border)] hover:bg-white/10'}`}
+                                >
+                                    PT
+                                </button>
+                            </div>
+                         </div>
+
+                         <div className="flex items-center justify-between p-4 bg-black/20 rounded border border-[var(--theme-border)]">
+                            <div>
+                                <h3 className="font-bold">Theme Mode</h3>
+                                <p className="text-sm text-[var(--theme-text-secondary)]">Light or Dark mode (Cyberpunk is always dark at heart)</p>
+                            </div>
+                            <select 
+                                value={draftUser.profileSettings?.theme || 'dark'}
+                                onChange={(e) => handleProfileSettingChange('theme', e.target.value)}
+                                className="bg-black border border-[var(--theme-border)] rounded p-2 text-white"
+                            >
+                                <option value="dark">Dark</option>
+                                <option value="light">Light</option>
+                                <option value="system">System</option>
+                            </select>
+                         </div>
+
+                         <div className="flex items-center justify-between p-4 bg-black/20 rounded border border-[var(--theme-border)]">
+                            <div>
+                                <h3 className="font-bold">Accent Color</h3>
+                                <p className="text-sm text-[var(--theme-text-secondary)]">System-wide highlight color</p>
+                            </div>
+                            <select 
+                                value={draftUser.profileSettings?.accentColor || 'purple'}
+                                onChange={(e) => handleProfileSettingChange('accentColor', e.target.value)}
+                                className="bg-black border border-[var(--theme-border)] rounded p-2 text-white"
+                            >
+                                <option value="purple">Neon Purple</option>
+                                <option value="blue">Cyber Blue</option>
+                                <option value="green">Matrix Green</option>
+                                <option value="pink">Hot Pink</option>
+                                <option value="yellow">Caution Yellow</option>
+                            </select>
+                         </div>
+
+                         <div className="flex items-center justify-between p-4 bg-black/20 rounded border border-[var(--theme-border)]">
+                            <div>
+                                <h3 className="font-bold">Animations</h3>
+                                <p className="text-sm text-[var(--theme-text-secondary)]">Enable UI animations and effects</p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    checked={draftUser.profileSettings?.animationsEnabled ?? true}
+                                    onChange={(e) => handleProfileSettingChange('animationsEnabled', e.target.checked)}
+                                    className="sr-only peer" 
+                                />
+                                <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--theme-primary)]"></div>
+                            </label>
+                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Feed Settings */}
+            {activeTab === 'feed' && (
+                <div className="space-y-6">
+                    <h2 className="text-xl font-bold text-[var(--theme-primary)] mb-4">{t('settingsFeed')}</h2>
+                    
+                    <div className="space-y-4">
+                         <div className="flex items-center justify-between p-4 bg-black/20 rounded border border-[var(--theme-border)]">
+                            <div>
+                                <h3 className="font-bold">{t('settingsAutoRefresh')}</h3>
+                                <p className="text-sm text-[var(--theme-text-secondary)]">{t('settingsAutoRefreshDesc')}</p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input 
+                                    type="checkbox" 
+                                    checked={draftUser.profileSettings?.autoRefreshEnabled ?? false}
+                                    onChange={(e) => handleProfileSettingChange('autoRefreshEnabled', e.target.checked)}
+                                    className="sr-only peer" 
+                                />
+                                <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--theme-primary)]"></div>
+                            </label>
+                         </div>
+
+                         {draftUser.profileSettings?.autoRefreshEnabled && (
+                            <div className="flex items-center justify-between p-4 bg-black/20 rounded border border-[var(--theme-border)] animate-fade-in">
+                                <div>
+                                    <h3 className="font-bold">{t('settingsRefreshInterval')}</h3>
+                                    <p className="text-sm text-[var(--theme-text-secondary)]">Minutes between updates</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <input 
+                                        type="number" 
+                                        min="1"
+                                        value={draftUser.profileSettings?.autoRefreshInterval || 5}
+                                        onChange={(e) => handleProfileSettingChange('autoRefreshInterval', Math.max(1, parseInt(e.target.value) || 1))}
+                                        className="bg-black border border-[var(--theme-border)] rounded p-2 text-white w-20 text-center"
+                                    />
+                                    <span className="text-[var(--theme-text-secondary)]">min</span>
+                                </div>
+                            </div>
+                         )}
+                    </div>
+                </div>
+            )}
+        </div>
+        
+        {/* Actions */}
+        <div className="flex justify-end pt-6">
+            <button 
+                onClick={handleSave}
+                disabled={isSaving}
+                className={`bg-[var(--theme-primary)] text-white px-8 py-3 rounded-md font-bold hover:brightness-110 transition-all shadow-[0_0_15px_var(--theme-primary)] ${isSaving ? 'opacity-50 cursor-wait' : ''}`}
+            >
+                {isSaving ? 'SAVING...' : t('saveChanges')}
+            </button>
+        </div>
+
+      </main>
+      
+      {showCropper && pendingImage && (
+          <ImageCropper 
+              imageSrc={pendingImage}
+              aspectRatio={cropperType === 'avatar' ? 1 : 3}
+              onCropComplete={handleCropComplete}
+              onCancel={() => { setShowCropper(false); setPendingImage(null); }}
+          />
       )}
     </div>
   );
-};
-
-export default SettingsPage;
+}
