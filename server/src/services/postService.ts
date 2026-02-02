@@ -112,8 +112,8 @@ export class PostService {
         return {
           ...post,
           content: '',
-          imageUrl: undefined,
-          videoUrl: undefined,
+          imageUrl: null,
+          videoUrl: null,
           pollOptions: undefined
         };
       }

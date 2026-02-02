@@ -348,6 +348,7 @@ export class UserService {
       equippedFrame: mapItem(row.equipped_frame),
       equippedEffect: mapItem(row.equipped_effect),
       blockedUsers: row.blocked_users || [],
+      subscriptionTier: row.subscription_tier || 'free',
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };

@@ -65,7 +65,7 @@ async function run() {
   const getRes = await fetch(`${API_URL}/users/${username}`, {
       headers: { 'Authorization': `Bearer ${token}` }
   });
-  const getData = await getRes.json();
+  const getData = await getRes.json() as any;
   
   if (getData.coverImage === newBanner) {
       console.log('✅ Banner persisted successfully (verified via GET)');

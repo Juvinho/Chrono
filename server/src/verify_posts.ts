@@ -11,7 +11,7 @@ const pollService = new PollService();
 const userService = new UserService();
 
 // Helper to enrich post with author and reactions (COPIED FROM routes/posts.ts)
-async function enrichPost(post: any, depth: number = 0, maxDepth: number = 1) {
+async function enrichPost(post: any, depth: number = 0, maxDepth: number = 1): Promise<any> {
   const author = await userService.getUserById(post.authorId);
   // Log if author is missing
   if (!author) {
