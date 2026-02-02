@@ -314,6 +314,9 @@ export default function App() {
     const lastInteractionRef = useRef<number>(Date.now());
 
     const audioContextRef = useRef<AudioContext | null>(null);
+    const isAudioInitialized = useRef(false);
+    const knownNotificationIds = useRef<Set<string>>(new Set());
+    const isFirstLoad = useRef(true);
 
     // Global Audio Context Resume
     useEffect(() => {
@@ -363,46 +366,8 @@ export default function App() {
         };
     }, []);
 
-    // Auto Refresh Logic
-    useEffect(() => {
-        if (!currentUser?.profileSettings?.autoRefreshEnabled) {
-            setNextAutoRefresh(null);
-            setIsAutoRefreshPaused(false);
-            return;
-        }
 
-        const intervalMinutes = currentUser.profileSettings.autoRefreshInterval || 5;
-        const intervalMs = intervalMinutes * 60 * 1000;
-        
-        // Set initial target time
-        let targetTime = new Date(Date.now() + intervalMs);
-        setNextAutoRefresh(targetTime);
 
-        const checkInterval = setInterval(() => {
-            const now = Date.now();
-            const timeSinceInteraction = now - lastInteractionRef.current;
-            const isPaused = timeSinceInteraction < 30000; // Pause if interaction in last 30s
-            
-            setIsAutoRefreshPaused(isPaused);
-
-            if (now >= targetTime.getTime()) {
-                if (!isPaused) {
-                    console.log("Auto-refreshing data...");
-                    reloadBackendData();
-                    targetTime = new Date(now + intervalMs);
-                    setNextAutoRefresh(targetTime);
-                } else {
-                    // If paused, postpone refresh check by 10 seconds
-                    // But keep the visual targetTime "overdue" or update it? 
-                    // Let's update it to show it's delayed.
-                    targetTime = new Date(now + 10000);
-                    setNextAutoRefresh(targetTime);
-                }
-            }
-        }, 1000);
-
-        return () => clearInterval(checkInterval);
-    }, [currentUser?.profileSettings?.autoRefreshEnabled, currentUser?.profileSettings?.autoRefreshInterval, reloadBackendData]);
 
     // Helper function to reload data from backend
     const reloadBackendData = useCallback(async () => {
@@ -461,7 +426,7 @@ export default function App() {
                 }));
                 setConversations(mappedConversations);
             }
-
+            
             // Reload notifications
             const notificationsResult = await apiClient.getNotifications();
             if (notificationsResult.data) {
@@ -532,6 +497,51 @@ export default function App() {
             console.error("Failed to reload backend data:", error);
         }
     }, [currentUser]);
+
+    // Auto Refresh Logic
+    useEffect(() => {
+        if (!currentUser?.profileSettings?.autoRefreshEnabled) {
+            setNextAutoRefresh(null);
+            setIsAutoRefreshPaused(false);
+            return;
+        }
+
+        const intervalMinutes = currentUser.profileSettings.autoRefreshInterval || 5;
+        const intervalMs = intervalMinutes * 60 * 1000;
+        
+        // Set initial target time
+        let targetTime = new Date(Date.now() + intervalMs);
+        setNextAutoRefresh(targetTime);
+
+        const checkInterval = setInterval(() => {
+            const now = Date.now();
+            const timeSinceInteraction = now - lastInteractionRef.current;
+            const isPaused = timeSinceInteraction < 30000; // Pause if interaction in last 30s
+            
+            setIsAutoRefreshPaused(isPaused);
+
+            if (now >= targetTime.getTime()) {
+                if (!isPaused) {
+                    console.log("Auto-refreshing data...");
+                    reloadBackendData();
+                    targetTime = new Date(now + intervalMs);
+                    setNextAutoRefresh(targetTime);
+                } else {
+                    // If paused, postpone refresh check by 10 seconds
+                    // But keep the visual targetTime "overdue" or update it? 
+                    // Let's update it to show it's delayed.
+                    targetTime = new Date(now + 10000);
+                    setNextAutoRefresh(targetTime);
+                }
+            }
+        }, 1000);
+
+        return () => clearInterval(checkInterval);
+    }, [currentUser?.profileSettings?.autoRefreshEnabled, currentUser?.profileSettings?.autoRefreshInterval, reloadBackendData]);
+    
+
+
+
 
     // Socket.io Integration
     useEffect(() => {
