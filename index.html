@@ -633,31 +633,6 @@
             border-color: var(--theme-secondary);
         }
 
-        /* Devil666 ARG Styles */
-        .devil-mode-overlay {
-            position: fixed; inset: 0; background-color: rgba(10, 0, 0, 0.9);
-            z-index: 100;
-        }
-        .devil-mode-overlay::after {
-            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            width: 100%; height: 100%; pointer-events: none; z-index: 101;
-            background-image: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
-            background-size: 100% 3px;
-            animation: scanline-anim 1.5s linear infinite;
-        }
-        @keyframes pulse-glow-red {
-            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 4px #D50000); }
-            50% { transform: scale(1.05); filter: drop-shadow(0 0 12px #FF1744); }
-        }
-        .devil-mode-overlay .glitch-effect::before {
-            background: var(--theme-bg-primary);
-            text-shadow: -1px 0 #FF1744;
-        }
-         .devil-mode-overlay .glitch-effect::after {
-            background: var(--theme-bg-primary);
-            text-shadow: 1px 0 #0091EA;
-        }
-
     </style>
 <link rel="stylesheet" href="/index.css">
 </head>

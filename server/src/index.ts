@@ -10,6 +10,7 @@ import conversationRoutes from './routes/conversations.js';
 import notificationRoutes from './routes/notifications.js';
 import storyRoutes from './routes/stories.js';
 import marketplaceRoutes from './routes/marketplace.js';
+import companionRoutes from './routes/companionRoutes.js';
 
 dotenv.config();
 
@@ -55,7 +56,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Root route
-app.get('/', (req, res) => {
+app.get('/api', (req, res) => {
   res.json({
     message: 'Chrono API',
     version: '1.0.0',
@@ -86,6 +87,17 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Serve static files from the React app
+// Assuming the server is running from server/dist and the frontend build is in dist (root)
+const clientBuildPath = path.join(__dirname, '../../dist');
+app.use(express.static(clientBuildPath));
+
+// The "catchall" handler: for any request that doesn't
+// match one above, send back React's index.html file.
+app.get('*', (req, res) => {
+  res.sendFile(path.join(clientBuildPath, 'index.html'));
+});
+
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Error:', err);
@@ -97,12 +109,27 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 // Initialize Socket.io
 initSocket(httpServer, allowedOrigins);
 
-httpServer.listen(PORT, HOST, () => {
-  console.log(`🚀 Server running on http://${HOST}:${PORT}`);
-  console.log(`📊 Health check: http://${HOST}:${PORT}/health`);
-  console.log(`🌐 Accessible from network at: http://[YOUR_IP]:${PORT}`);
-  if (HOST === '0.0.0.0') {
-    console.log(`💡 Server is listening on all network interfaces`);
+// Run migrations and start server
+const startServer = async () => {
+  try {
+    // Only run migrations in production or if explicitly requested
+    // But for simplicity in this MVP, we'll try to run them always to ensure DB is consistent
+    // The migration script is idempotent (IF NOT EXISTS)
+    if (process.env.NODE_ENV === 'production') {
+       console.log('Running migrations...');
+       await migrate();
+    }
+    
+    httpServer.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`Allowed Origins: ${allowedOrigins.join(', ')}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
   }
-});
+};
+
+startServer();
 

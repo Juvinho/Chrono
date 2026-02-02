@@ -128,6 +128,7 @@ export interface Post {
   isPrivate?: boolean;
   viewCount?: number;
   unlockAt?: string | Date; // Time Capsule
+  mood?: 'neon-joy' | 'void-despair' | 'rage-glitch' | 'zen-stream' | 'neutral'; // Neural Mood
 }
 
 export enum Page {

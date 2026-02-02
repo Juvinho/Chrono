@@ -180,9 +180,20 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
     const reactions: CyberpunkReaction[] = ['Glitch', 'Upload', 'Corrupt', 'Rewind', 'Static'];
     const isAuthor = currentUser.username === post.author.username;
     
+    // Neural Mood Styling
+    const moodColors = {
+        'neon-joy': 'border-l-4 border-l-[#00ff9d] shadow-[inset_4px_0_10px_-2px_rgba(0,255,157,0.3)]',
+        'void-despair': 'border-l-4 border-l-[#7b2cbf] shadow-[inset_4px_0_10px_-2px_rgba(123,44,191,0.3)]',
+        'rage-glitch': 'border-l-4 border-l-[#ff003c] shadow-[inset_4px_0_10px_-2px_rgba(255,0,60,0.3)]',
+        'zen-stream': 'border-l-4 border-l-[#00f3ff] shadow-[inset_4px_0_10px_-2px_rgba(0,243,255,0.3)]',
+        'neutral': ''
+    };
+    
+    const moodStyle = post.mood ? moodColors[post.mood] : '';
+
     const rootClasses = isThreadedReply
         ? '' // Replies have no outer box model of their own
-        : `bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] mb-4 neon-glow-hover`;
+        : `bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] mb-4 neon-glow-hover ${moodStyle}`;
 
     if (isLocked && !canUnlock) {
         return (

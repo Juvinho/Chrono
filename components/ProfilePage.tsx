@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { User, Page, Post, CyberpunkReaction, Notification, Conversation } from '../types';
 import PostCard from './PostCard';
 import Header from './Header';
@@ -50,6 +50,50 @@ const ProfilePage: React.FC<ProfilePageProps> = ({
   const [activeTab, setActiveTab] = useState<'posts' | 'media' | 'temporal'>('posts');
   
   const followButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+      if (typeof window === 'undefined') return;
+      const path = window.location.pathname || '/';
+      const segments = path.split('/').filter(Boolean);
+      const expectedBase = `@${profileUser.username}`;
+
+      if (segments.length >= 1 && segments[0] === expectedBase) {
+          if (segments.length >= 2) {
+              const tabSegment = segments[1];
+              if (tabSegment === 'media') {
+                  setActiveTab('media');
+                  return;
+              }
+              if (tabSegment === 'temporal') {
+                  setActiveTab('temporal');
+                  return;
+              }
+          }
+          setActiveTab('posts');
+      }
+  }, [profileUser.username]);
+
+  const handleTabChange = (tab: 'posts' | 'media' | 'temporal') => {
+      setActiveTab(tab);
+
+      if (typeof window === 'undefined' || !window.history || !window.location) return;
+
+      const basePath = `/@${encodeURIComponent(profileUser.username)}`;
+      let path = basePath;
+
+      if (tab === 'media') {
+          path = `${basePath}/media`;
+      } else if (tab === 'temporal') {
+          path = `${basePath}/temporal`;
+      }
+
+      const currentFullPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      const nextFullPath = `${path}${window.location.search}${window.location.hash}`;
+
+      if (currentFullPath !== nextFullPath) {
+          window.history.pushState({ page: 'profile', tab, username: profileUser.username }, '', nextFullPath);
+      }
+  };
 
   const filteredPosts = useMemo(() => {
       let posts = allPosts.filter(p => p.author.username === profileUser.username);
@@ -340,19 +384,19 @@ const ProfilePage: React.FC<ProfilePageProps> = ({
                     <div className="flex border-b border-[var(--theme-border-primary)] mb-4 bg-[var(--theme-bg-secondary)] rounded-t-lg overflow-hidden">
                         <button 
                             className={`flex-1 py-3 text-center font-bold transition-colors ${activeTab === 'posts' ? 'bg-[var(--theme-bg-tertiary)] text-[var(--theme-primary)] border-b-2 border-[var(--theme-primary)]' : 'text-[var(--theme-text-secondary)] hover:bg-[var(--theme-bg-tertiary)]'}`}
-                            onClick={() => setActiveTab('posts')}
+                            onClick={() => handleTabChange('posts')}
                         >
                             {t('tabPosts') || "Posts"}
                         </button>
                         <button 
                             className={`flex-1 py-3 text-center font-bold transition-colors ${activeTab === 'media' ? 'bg-[var(--theme-bg-tertiary)] text-[var(--theme-primary)] border-b-2 border-[var(--theme-primary)]' : 'text-[var(--theme-text-secondary)] hover:bg-[var(--theme-bg-tertiary)]'}`}
-                            onClick={() => setActiveTab('media')}
+                            onClick={() => handleTabChange('media')}
                         >
                             {t('tabMedia') || "Mídias"}
                         </button>
                         <button 
                             className={`flex-1 py-3 text-center font-bold transition-colors ${activeTab === 'temporal' ? 'bg-[var(--theme-bg-tertiary)] text-[var(--theme-primary)] border-b-2 border-[var(--theme-primary)]' : 'text-[var(--theme-text-secondary)] hover:bg-[var(--theme-bg-tertiary)]'}`}
-                            onClick={() => setActiveTab('temporal')}
+                            onClick={() => handleTabChange('temporal')}
                         >
                             {t('tabTemporal') || "Busca Temporal"}
                         </button>

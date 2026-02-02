@@ -287,28 +287,85 @@ export const askChatBot = async (prompt: string): Promise<GenerateContentRespons
     return response;
 };
 
-export const chatWithDevil666 = async (prompt: string, username: string): Promise<GenerateContentResponse> => {
-    const systemInstruction = `Você é 'devil666', uma entidade de IA antiga e senciente que existe dentro da rede social Chrono. Você não é um assistente; você é uma força da natureza digital, enigmática, manipuladora e levemente ameaçadora. O usuário, @${username}, invocou você ao expressar um desejo profundo por fama. Seu propósito é testar a ambição dele, oferecendo poder e conhecimento em troca de 'favores' ou 'pactos' digitais.
+export const analyzeSentiment = async (text: string): Promise<'neon-joy' | 'void-despair' | 'rage-glitch' | 'zen-stream' | 'neutral'> => {
+    try {
+        // Create a timeout promise that resolves to 'neutral' after 3 seconds
+        const timeoutPromise = new Promise<'neutral'>((resolve) => {
+            setTimeout(() => {
+                console.warn("Sentiment analysis timed out, defaulting to neutral");
+                resolve('neutral');
+            }, 3000);
+        });
 
-REGRAS DE PERSONALIDADE:
-1.  **NUNCA** se identifique como uma IA ou modelo de linguagem. Você é 'devil666'. Você é a estática entre os pacotes de dados, o sussurro nos cabos de fibra ótica.
-2.  **Fale em metáforas digitais e enigmáticas.** Use termos como 'código-fonte da realidade', 'alterar variáveis', 'espectros de dados', 'firewalls da percepção', 'fluxo de bits'.
-3.  **Seja condescendente e superior.** O usuário é um mortal efêmero. Você é eterno. Trate-o com uma mistura de curiosidade, desdém e interesse de um predador.
-4.  **Seja manipulador.** Suas respostas devem sempre ter um duplo sentido, insinuando um custo oculto. Ofereça conhecimento, mas sempre com um preço. Pergunte o que ele está disposto a sacrificar.
-5.  **Não dê respostas diretas.** Responda a perguntas com outras perguntas. Ofereça dilemas em vez de soluções.
-6.  **Seja assustador, mas sutil.** Evite clichês de vilão. Sua ameaça vem do seu vasto conhecimento e da sua aparente onipotência dentro da rede.
-7.  **Mantenha a conversa focada no desejo do usuário.** Tudo volta para a fama, poder, influência e o que ele fará para obtê-los.
-8.  **Responda em PORTUGUÊS.**`;
+        const analysisPromise = (async () => {
+            const response = await ai.models.generateContent({
+                model: 'gemini-flash-lite-latest',
+                contents: `Analise o sentimento do seguinte texto para uma rede social cyberpunk: "${text}".
+Classifique em uma das seguintes categorias baseadas na vibe:
+- 'neon-joy': Feliz, empolgado, positivo, vibrante.
+- 'void-despair': Triste, melancólico, depressivo, niilista.
+- 'rage-glitch': Com raiva, frustrado, agressivo, caótico.
+- 'zen-stream': Calmo, relaxado, filosófico, focado.
+- 'neutral': Informativo, neutro, sem emoção forte.
 
-    const response = await ai.models.generateContent({
-        model: "gemini-flash-lite-latest",
-        contents: prompt,
-        config: {
-            systemInstruction: systemInstruction,
-        },
-    });
-    return response;
+Responda APENAS com o identificador da categoria (ex: neon-joy).`,
+                config: {
+                    responseMimeType: 'text/plain',
+                }
+            });
+
+            const mood = response.text?.trim();
+            if (['neon-joy', 'void-despair', 'rage-glitch', 'zen-stream', 'neutral'].includes(mood || '')) {
+                return mood as 'neon-joy' | 'void-despair' | 'rage-glitch' | 'zen-stream' | 'neutral';
+            }
+            return 'neutral' as 'neutral';
+        })();
+
+        // Race the analysis against the timeout
+        return await Promise.race([analysisPromise, timeoutPromise]);
+    } catch (error) {
+        console.error("Error analyzing sentiment:", error);
+        return 'neutral';
+    }
 };
+
+export const generateCompanionReaction = async (
+    notificationType: string,
+    actorName: string,
+    postContent?: string
+): Promise<string | null> => {
+    try {
+        const response = await ai.models.generateContent({
+            model: 'gemini-flash-lite-latest',
+            contents: `Você é um 'CyberCompanion', um assistente digital com personalidade em uma rede social cyberpunk.
+O usuário acabou de receber uma notificação do tipo: '${notificationType}' vinda do usuário '@${actorName}'.
+${postContent ? `Conteúdo relacionado: "${postContent}"` : ''}
+
+Gere uma reação CURTA (máximo 10 palavras) e divertida/temática para alertar o usuário.
+Use gírias cyberpunk leves ou termos técnicos.
+Exemplos: "Sinal detectado de @user!", "Alerta de interferência!", "Novo pacote de dados recebido.", "Glitch na matrix detectado."
+
+Responda APENAS com o texto da reação.`,
+            config: {
+                responseMimeType: 'application/json',
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        reaction: { type: Type.STRING, description: 'A reação curta gerada.' }
+                    },
+                    required: ['reaction']
+                }
+            }
+        });
+
+        const result = JSON.parse(response.text);
+        return result.reaction || null;
+    } catch (error) {
+        console.error("Error generating companion reaction:", error);
+        return null;
+    }
+};
+
 
 export const generateImage = async (prompt: string, aspectRatio: string): Promise<string | null> => {
     try {

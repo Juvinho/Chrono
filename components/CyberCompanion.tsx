@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from '../hooks/useTranslation';
 import { apiClient } from '../services/api';
+import { generateCompanionReaction } from '../services/geminiService';
+
+import { Notification } from '../types';
 
 interface CyberCompanionProps {
-  notificationsCount: number;
+  notifications: Notification[];
 }
 
 interface CompanionData {
@@ -15,12 +18,15 @@ interface CompanionData {
   mood: 'happy' | 'neutral' | 'sad' | 'excited' | 'sleepy';
 }
 
-const CyberCompanion: React.FC<CyberCompanionProps> = ({ notificationsCount }) => {
+const CyberCompanion: React.FC<CyberCompanionProps> = ({ notifications }) => {
   const [companion, setCompanion] = useState<CompanionData | null>(null);
   const [mood, setMood] = useState<'idle' | 'happy' | 'alert' | 'sleep'>('idle');
   const [message, setMessage] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const lastProcessedIdRef = useRef<string | null>(null);
   const { t } = useTranslation();
+
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   // Fetch or create companion
   useEffect(() => {
@@ -56,21 +62,63 @@ const CyberCompanion: React.FC<CyberCompanionProps> = ({ notificationsCount }) =
 
   // Mood logic based on notifications override
   useEffect(() => {
-    if (notificationsCount > 0) {
-      setMood('alert');
-      setMessage(`${notificationsCount} new alerts!`);
-      const timer = setTimeout(() => setMessage(null), 3000);
-      return () => clearTimeout(timer);
-    } else if (companion) {
-        // Revert to companion mood
-       switch(companion.mood) {
-           case 'happy': setMood('happy'); break;
-           case 'excited': setMood('happy'); break;
-           case 'sleepy': setMood('sleep'); break;
-           default: setMood('idle');
-       }
-    }
-  }, [notificationsCount, companion]);
+    const processNotification = async () => {
+        if (unreadCount > 0) {
+            setMood('alert');
+
+            const latest = notifications.find(n => !n.read);
+            
+            // Only generate reaction if it's a new notification we haven't seen in this session
+            if (latest && latest.id !== lastProcessedIdRef.current) {
+                lastProcessedIdRef.current = latest.id;
+
+                if (latest.actor) {
+                    let reactionMsg: string | null = null;
+                    
+                    // Try AI generation
+                    try {
+                        reactionMsg = await generateCompanionReaction(
+                            latest.notificationType,
+                            latest.actor.username,
+                            latest.post?.content
+                        );
+                    } catch (e) {
+                        console.error("AI reaction failed", e);
+                    }
+
+                    if (reactionMsg) {
+                        setMessage(reactionMsg);
+                    } else {
+                        // Fallback logic
+                        const actor = latest.actor.username;
+                        let msg = `${unreadCount} new alerts!`;
+                        switch (latest.notificationType) {
+                            case 'reply': msg = `${actor} replied to you!`; break;
+                            case 'reaction': msg = `${actor} reacted!`; break;
+                            case 'follow': msg = `${actor} followed you!`; break;
+                            case 'mention': msg = `${actor} mentioned you!`; break;
+                            case 'repost': msg = `${actor} echoed you!`; break;
+                            case 'directMessage': msg = `Message from ${actor}!`; break;
+                        }
+                        setMessage(msg);
+                    }
+
+                    setTimeout(() => setMessage(null), 6000);
+                }
+            }
+        } else if (companion) {
+            // Revert to companion mood
+            switch(companion.mood) {
+                case 'happy': setMood('happy'); break;
+                case 'excited': setMood('happy'); break;
+                case 'sleepy': setMood('sleep'); break;
+                default: setMood('idle');
+            }
+        }
+    };
+
+    processNotification();
+  }, [unreadCount, notifications, companion]);
 
   const handleInteract = async () => {
       // Toggle mood locally for feedback

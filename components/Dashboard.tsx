@@ -60,10 +60,33 @@ const Dashboard: React.FC<DashboardProps> = ({
     
     const handleTagClick = React.useCallback((tag: string) => {
         setActiveCordTag(tag);
-        // Also reset date to show all results for that tag and clear search
-        setSelectedDate(new Date()); 
         setSearchQuery('');
-    }, [setSelectedDate]);
+
+        if (typeof window !== 'undefined' && window.history && window.location) {
+            const monthSlugs = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+            const formatDateSegment = (date: Date) => {
+                const month = monthSlugs[date.getMonth()];
+                const day = String(date.getDate()).padStart(2, '0');
+                const year = date.getFullYear();
+                return `${month}-${day}-${year}`;
+            };
+
+            const cleanTag = tag.startsWith('$') ? tag.substring(1) : tag;
+            const today = new Date();
+            const isToday = today.toDateString() === selectedDate.toDateString();
+
+            let path = `/$${encodeURIComponent(cleanTag)}`;
+            if (!isToday) {
+                path = `${path}/${formatDateSegment(selectedDate)}`;
+            }
+
+            const currentFullPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+            const nextFullPath = `${path}${window.location.search}${window.location.hash}`;
+            if (currentFullPath !== nextFullPath) {
+                window.history.pushState({ cordTag: tag, date: selectedDate.toISOString() }, '', nextFullPath);
+            }
+        }
+    }, [selectedDate]);
 
     const handleViewProfile = React.useCallback((username: string) => {
         onNavigate(Page.Profile, username);

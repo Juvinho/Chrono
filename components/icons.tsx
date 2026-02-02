@@ -213,12 +213,3 @@ export const CloseIcon = ({ className }: { className?: string }) => (
     </svg>
 );
 
-export const DevilIcon = ({ className }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 2.25c-5.13 0-9.25 4.12-9.25 9.25s4.12 9.25 9.25 9.25 9.25-4.12 9.25-9.25S17.13 2.25 12 2.25zm0 1.5c4.28 0 7.75 3.47 7.75 7.75S16.28 19.5 12 19.5 4.25 16.03 4.25 11.5 7.72 3.75 12 3.75z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9.5 9.5a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 14s-2 2-4 2-4-2-4-2m16 0s-2 2-4 2-4-2-4-2" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9.5 12s.5-1.5 2.5-1.5 2.5 1.5 2.5 1.5" />
-    </svg>
-);
-
