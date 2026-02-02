@@ -15,7 +15,7 @@ const notificationService = new NotificationService();
 const userService = new UserService();
 
 // Helper to enrich post with author and reactions
-async function enrichPost(post: any, depth: number = 0, maxDepth: number = 1) {
+async function enrichPost(post: any, depth: number = 0, maxDepth: number = 1): Promise<any> {
   const author = await userService.getUserById(post.authorId);
   const reactions = await reactionService.getReactionsForPost(post.id);
   const votes = post.pollOptions ? await pollService.getVotesForPost(post.id) : {};
@@ -137,7 +137,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
       pollEndsAt: pollEndsAt ? new Date(pollEndsAt) : undefined,
       unlockAt: unlockAt ? new Date(unlockAt) : undefined,
       mood,
-    });
+    } as any);
 
     // Create notification if reply
     if (inReplyToId) {

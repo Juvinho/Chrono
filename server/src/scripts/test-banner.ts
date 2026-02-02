@@ -28,7 +28,7 @@ async function run() {
     return;
   }
 
-  const regData = await regRes.json();
+  const regData = await regRes.json() as any;
   const token = regData.token;
   console.log('Registered. Token obtained.');
 
@@ -52,7 +52,7 @@ async function run() {
     return;
   }
 
-  const updateData = await updateRes.json();
+  const updateData = await updateRes.json() as any;
   console.log('Update response coverImage length:', updateData.coverImage?.length);
   
   if (updateData.coverImage === newBanner) {
@@ -92,7 +92,7 @@ async function run() {
     })
   });
   
-  const updateData2 = await updateRes2.json();
+  const updateData2 = await updateRes2.json() as any;
   console.log('Update 2 response profileSettings.coverImage length:', updateData2.profileSettings?.coverImage?.length);
 
   if (updateData2.profileSettings?.coverImage === newBanner2) {
