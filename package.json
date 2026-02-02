@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
-    "build": "vite build && cd server && npm install && npm run build",
-    "start": "cd server && npm start",
+    "build": "vite build && tsc -p server/tsconfig.json && node server/copy-assets.js",
+    "start": "node server/dist/index.js",
     "preview": "vite preview",
-    "dev:server": "cd server && npm run dev",
+    "dev:server": "tsx watch server/src/index.ts",
     "dev:all": "concurrently \"npm run dev:server\" \"npm run dev\"",
     "install:all": "npm install && cd server && npm install"
   },
