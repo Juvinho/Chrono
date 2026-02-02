@@ -334,7 +334,6 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ user, onLogout, onNavigate,
                    </div>
                      <input type="file" accept="image/*" ref={coverInputRef} onChange={(e) => handleFileChange(e, 'coverImage')} className="hidden" />
                      <button onClick={() => coverInputRef.current?.click()} className="follow-btn px-4 py-1 text-sm">{t('settingsUpload')}</button>
-                   </div>
                 </div>
                 <div className="space-y-1 md:col-span-3">
                   <label className="text-sm font-bold text-[var(--theme-text-secondary)] block">{t('settingsBio')}</label>
