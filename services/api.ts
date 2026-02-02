@@ -73,7 +73,7 @@ class ApiClient {
       console.error('API request failed:', error);
       console.error('Request URL:', `${API_BASE_URL}${endpoint}`);
       if (error.message === 'Failed to fetch' || error.name === 'TypeError' || error.message?.includes('fetch')) {
-        return { error: `Não foi possível conectar ao servidor. Certifique-se de que o backend está rodando em ${API_BASE_URL.replace('/api', '')}. Verifique o console para mais detalhes.` };
+        return { error: `Não foi possível conectar ao servidor. Verifique o console para mais detalhes.` };
       }
       return { error: error.message || 'Erro de rede' };
     }
