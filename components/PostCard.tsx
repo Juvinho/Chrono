@@ -3,7 +3,7 @@ import { Post, CyberpunkReaction, User } from '../types';
 import { ReactIcon, GlitchIcon, UploadIcon, CorruptIcon, RewindIcon, StaticIcon, ReplyIcon, EchoIcon, EditIcon, VerifiedIcon, CheckCircleIcon } from './icons';
 import { LockClosedIcon, DotsHorizontalIcon, TrashIcon } from './icons'; // Assuming these are added to icons.tsx
 import { useTranslation } from '../hooks/useTranslation';
-import { Avatar } from './Avatar';
+import Avatar from './Avatar';
 import TypingIndicatorCard from './TypingIndicatorCard';
 import FramePreview, { getFrameShape } from './FramePreview';
 
@@ -33,7 +33,7 @@ const reactionIcons: { [key in CyberpunkReaction]: ReactNode } = {
     Static: <StaticIcon className="w-5 h-5" />,
 };
 
-const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, onUpdateReaction, onReply, onEcho, onDelete, onEdit, onTagClick, onPollVote, typingParentIds, compact = false, nestingLevel = 0, isThreadedReply = false, isContextualView = false }) => {
+function PostCard({ post, currentUser, onViewProfile, onUpdateReaction, onReply, onEcho, onDelete, onEdit, onTagClick, onPollVote, typingParentIds, compact = false, nestingLevel = 0, isThreadedReply = false, isContextualView = false }: PostCardProps) {
     const { t } = useTranslation();
     const [showReactions, setShowReactions] = useState(false);
     const [showMenu, setShowMenu] = useState(false);

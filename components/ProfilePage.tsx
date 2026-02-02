@@ -9,7 +9,7 @@ import { useTranslation } from '../hooks/useTranslation';
 import UserListModal from './modals/UserListModal';
 import { VerifiedIcon, MessageIcon } from './icons';
 import FramePreview, { getFrameShape } from './FramePreview';
-import { Avatar } from './Avatar';
+import Avatar from './Avatar';
 
 interface ProfilePageProps {
   currentUser: User;

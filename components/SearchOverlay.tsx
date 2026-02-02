@@ -5,7 +5,7 @@ import { SearchIcon } from './icons';
 import PostCard from './PostCard';
 import { useTranslation } from '../hooks/useTranslation';
 import FramePreview, { getFrameShape } from './FramePreview';
-import { Avatar } from './Avatar';
+import Avatar from './Avatar';
 import { apiClient } from '../services/api';
 
 interface SearchOverlayProps {

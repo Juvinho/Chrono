@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User, Page, Post, ProfileSettings, Notification, Conversation, Item } from '../types';
 import Header from './Header';
-import { Avatar } from './Avatar';
+import Avatar from './Avatar';
 import { BlockIcon, FlagIcon } from './icons';
 import { useTranslation } from '../hooks/useTranslation';
 import { ImageCropper } from './ImageCropper';
