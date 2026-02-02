@@ -684,9 +684,7 @@ export default function App() {
             socketService.disconnect();
         }
     }, [currentUser?.id, reloadBackendData]);
-    const isAudioInitialized = useRef(false);
-    const knownNotificationIds = useRef<Set<string>>(new Set());
-    const isFirstLoad = useRef(true);
+
 
     // Restore page on mount if user is logged in but page is Welcome
     useEffect(() => {
