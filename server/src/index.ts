@@ -163,21 +163,25 @@ app.get('/health', async (req, res) => {
 const possibleBuildPaths = [
   path.join(__dirname, 'public'),           // server/dist/public (Standard production)
   path.join(__dirname, '../public'),        // server/public
-  path.join(process.cwd(), 'dist'),         // Root dist
+  path.join(process.cwd(), 'dist'),         // Current directory / dist
+  path.join(process.cwd(), '../dist'),      // Parent directory / dist (Root if in server/)
   path.join(process.cwd(), 'server/dist/public'), // Root to server/dist/public
-  process.cwd(),                            // Fallback to root
 ];
 
-// Debug: List files in parent directory too
+// Debug information
+console.log('--- Path Debug ---');
+console.log(`CWD: ${process.cwd()}`);
+console.log(`__dirname: ${__dirname}`);
 try {
   const rootDir = path.join(process.cwd(), '..');
-  const files = fs.readdirSync(process.cwd());
-  const rootFiles = fs.readdirSync(rootDir);
-  console.log(`Current directory (${process.cwd()}) contents:`, files);
-  console.log(`Root directory (${rootDir}) contents:`, rootFiles);
+  console.log(`Current directory contents:`, fs.readdirSync(process.cwd()));
+  if (fs.existsSync(rootDir)) {
+    console.log(`Parent directory contents:`, fs.readdirSync(rootDir));
+  }
 } catch (e) {
   console.error('Failed to list directory contents');
 }
+console.log('------------------');
 
 let clientBuildPath = possibleBuildPaths[0];
 let found = false;
@@ -196,6 +200,12 @@ for (const p of possibleBuildPaths) {
 
 if (!found) {
   console.error('❌ CRITICAL: Could not find index.html in any of the expected paths.');
+  // As a last resort, let's try to find ANY index.html in the project
+  console.log('Searching for any index.html in the root...');
+  const rootPath = process.cwd().includes('server') ? path.join(process.cwd(), '..') : process.cwd();
+  if (fs.existsSync(path.join(rootPath, 'index.html'))) {
+    console.log('⚠️ Found source index.html in root, but this is NOT the build output.');
+  }
 }
 
 console.log(`Static files path: ${clientBuildPath}`);
