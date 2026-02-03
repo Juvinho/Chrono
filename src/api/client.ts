@@ -7,7 +7,7 @@ const getBaseUrl = () => {
     if (isLocal) {
       return 'http://127.0.0.1:3001/api';
     }
-    return '/api';
+    return 'https://chrono-pisx.onrender.com/api';
   }
   return 'http://127.0.0.1:3001/api';
 };
