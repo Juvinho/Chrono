@@ -161,29 +161,18 @@ app.get('/health', async (req, res) => {
 
 // Serve static files from the React app
 const possibleBuildPaths = [
-  path.join(__dirname, 'public'),           // server/dist/public (Standard production)
-  path.join(__dirname, '../public'),        // server/public
-  path.join(process.cwd(), 'dist'),         // Current directory / dist
-  path.join(process.cwd(), '../dist'),      // Parent directory / dist (Root if in server/)
-  path.join(process.cwd(), 'server/dist/public'), // Root to server/dist/public
+  path.resolve(__dirname, 'public'),           // server/dist/public (Standard production)
+  path.resolve(__dirname, '../public'),        // server/public
+  path.resolve(process.cwd(), 'dist'),         // Root dist
+  path.resolve(process.cwd(), 'server/dist/public'), // Root to server/dist/public
 ];
 
 // Debug information
 console.log('--- Path Debug ---');
 console.log(`CWD: ${process.cwd()}`);
 console.log(`__dirname: ${__dirname}`);
-try {
-  const rootDir = path.join(process.cwd(), '..');
-  console.log(`Current directory contents:`, fs.readdirSync(process.cwd()));
-  if (fs.existsSync(rootDir)) {
-    console.log(`Parent directory contents:`, fs.readdirSync(rootDir));
-  }
-} catch (e) {
-  console.error('Failed to list directory contents');
-}
-console.log('------------------');
 
-let clientBuildPath = possibleBuildPaths[0];
+let clientBuildPath = '';
 let found = false;
 
 for (const p of possibleBuildPaths) {
@@ -200,30 +189,53 @@ for (const p of possibleBuildPaths) {
 
 if (!found) {
   console.error('❌ CRITICAL: Could not find index.html in any of the expected paths.');
-  // As a last resort, let's try to find ANY index.html in the project
-  console.log('Searching for any index.html in the root...');
-  const rootPath = process.cwd().includes('server') ? path.join(process.cwd(), '..') : process.cwd();
-  if (fs.existsSync(path.join(rootPath, 'index.html'))) {
-    console.log('⚠️ Found source index.html in root, but this is NOT the build output.');
-  }
+  // Fallback to a safe directory to avoid crashing, but we'll return 404/500 later
+  clientBuildPath = path.resolve(process.cwd(), 'dist');
 }
 
-console.log(`Static files path: ${clientBuildPath}`);
+console.log(`Final Static files path: ${clientBuildPath}`);
+console.log('------------------');
+
+// Middleware for logging static file requests
+app.use((req, res, next) => {
+  if (req.url.startsWith('/assets/') || req.url.endsWith('.js') || req.url.endsWith('.css')) {
+    const filePath = path.join(clientBuildPath, req.url);
+    if (!fs.existsSync(filePath)) {
+      console.warn(`⚠️ Static file NOT FOUND: ${filePath}`);
+    }
+  }
+  next();
+});
+
 app.use(express.static(clientBuildPath));
 
 // The "catchall" handler: for any request that doesn't
 // match one above, send back React's index.html file.
 app.get('*', (req, res) => {
+  // Skip API routes
+  if (req.url.startsWith('/api')) {
+    return res.status(404).json({ error: 'API route not found' });
+  }
+
   const indexPath = path.join(clientBuildPath, 'index.html');
-  res.sendFile(indexPath, (err) => {
-    if (err) {
-      console.error(`Error sending index.html from ${indexPath}:`, err);
-      res.status(500).json({ 
-        error: "Frontend build files not found. Please check build command.",
-        path: indexPath 
-      });
-    }
-  });
+  
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    console.error(`❌ Cannot send index.html, file does not exist at: ${indexPath}`);
+    res.status(500).send(`
+      <html>
+        <body style="background: #000; color: #0f0; font-family: monospace; padding: 20px;">
+          <h1>❌ CHRONO_CRITICAL_ERROR</h1>
+          <p>Frontend assets not found at: ${indexPath}</p>
+          <p>Please check build logs and Render configuration.</p>
+          <hr>
+          <p>CWD: ${process.cwd()}</p>
+          <p>__dirname: ${__dirname}</p>
+        </body>
+      </html>
+    `);
+  }
 });
 
 // Error handling middleware

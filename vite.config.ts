@@ -26,7 +26,10 @@ export default defineConfig(({ mode }) => {
         }
       },
       build: {
-        sourcemap: true
+        outDir: 'dist',
+        sourcemap: true,
+        emptyOutDir: true,
+        chunkSizeWarningLimit: 1000
       }
     };
 });
