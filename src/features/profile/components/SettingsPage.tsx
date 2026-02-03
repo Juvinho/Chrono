@@ -50,6 +50,7 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
     ...user,
     // Ensure birthday is in YYYY-MM-DD format for the date input
     birthday: user.birthday ? (user.birthday.includes('T') ? user.birthday.split('T')[0] : user.birthday) : '',
+    profileType: user.profileType || 'personal',
     profileSettings: {
         ...defaultSettings,
         ...(user.profileSettings || {})
@@ -62,6 +63,7 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
     setDraftUser({
         ...user,
         birthday: user.birthday ? (user.birthday.includes('T') ? user.birthday.split('T')[0] : user.birthday) : '',
+        profileType: user.profileType || 'personal',
         profileSettings: {
             ...defaultSettings,
             ...(user.profileSettings || {})
@@ -344,6 +346,32 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
                                 onChange={handleInputChange}
                                 className="w-full bg-black/30 border border-[var(--theme-border)] rounded p-2 focus:border-[var(--theme-primary)] focus:outline-none transition-colors"
                             />
+                        </div>
+                    </div>
+
+                    {/* Profile Type Toggle */}
+                    <div className="flex items-center justify-between p-4 bg-[var(--theme-primary)]/5 rounded border border-[var(--theme-primary)]/30">
+                        <div>
+                            <h3 className="font-bold text-[var(--theme-text-light)]">{t('profileType') || 'Tipo de Perfil'}</h3>
+                            <p className="text-sm text-[var(--theme-text-secondary)]">
+                                {draftUser.profileType === 'professional' 
+                                    ? (t('profileTypeProfessionalDesc') || 'Seu perfil está no modo Profissional. Campos extras de carreira estão ativos.') 
+                                    : (t('profileTypePersonalDesc') || 'Seu perfil está no modo Pessoal. Mude para Profissional para exibir currículo e skills.')}
+                            </p>
+                        </div>
+                        <div className="flex bg-black/40 p-1 rounded-md">
+                            <button 
+                                onClick={() => setDraftUser(prev => ({ ...prev, profileType: 'personal' }))}
+                                className={`px-4 py-1 rounded text-xs font-bold transition-all ${draftUser.profileType !== 'professional' ? 'bg-[var(--theme-bg-secondary)] text-[var(--theme-primary)] shadow-sm' : 'text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-light)]'}`}
+                            >
+                                PERSONAL
+                            </button>
+                            <button 
+                                onClick={() => setDraftUser(prev => ({ ...prev, profileType: 'professional' }))}
+                                className={`px-4 py-1 rounded text-xs font-bold transition-all ${draftUser.profileType === 'professional' ? 'bg-[var(--theme-bg-secondary)] text-[var(--theme-primary)] shadow-sm' : 'text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-light)]'}`}
+                            >
+                                PROFESSIONAL
+                            </button>
                         </div>
                     </div>
 

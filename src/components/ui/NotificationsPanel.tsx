@@ -7,8 +7,6 @@ interface NotificationsPanelProps {
     notifications: Notification[];
     onClose: () => void;
     onNotificationClick: (notification: Notification) => void;
-    onAcceptConnection?: (requestId: string) => void;
-    onDeclineConnection?: (requestId: string) => void;
 }
 
 interface AggregatedNotification {
@@ -23,10 +21,8 @@ interface AggregatedNotification {
 
 const NotificationItem: React.FC<{ 
     notification: AggregatedNotification, 
-    onNotificationClick: (notification: any) => void,
-    onAcceptConnection?: (requestId: string) => void,
-    onDeclineConnection?: (requestId: string) => void
-}> = ({ notification, onNotificationClick, onAcceptConnection, onDeclineConnection }) => {
+    onNotificationClick: (notification: any) => void
+}> = ({ notification, onNotificationClick }) => {
     const { t } = useTranslation();
     const renderIcon = () => {
         switch (notification.notificationType) {
@@ -34,8 +30,6 @@ const NotificationItem: React.FC<{
             case 'repost': return <EchoIcon className="w-5 h-5 text-green-500" />;
             case 'follow': return <UserIcon className="w-5 h-5 text-blue-500" />;
             case 'reaction': return <GlitchIcon className="w-5 h-5 text-yellow-500" />;
-            case 'connectionRequest': return <UserIcon className="w-5 h-5 text-[var(--theme-primary)]" />;
-            case 'connectionAccepted': return <CheckCircleIcon className="w-5 h-5 text-green-500" />;
             default: return null;
         }
     };
@@ -65,8 +59,6 @@ const NotificationItem: React.FC<{
             case 'repost': return <>{actorText} {t('notifEchoed')}</>;
             case 'follow': return <>{actorText} {t('notifFollowed')}</>;
             case 'reaction': return <>{actorText} {t('notifReacted')}</>;
-            case 'connectionRequest': return <>{actorText} {t('notifConnectionRequested') || 'quer se conectar com você'}</>;
-            case 'connectionAccepted': return <>{actorText} {t('notifConnectionAccepted') || 'aceitou seu pedido de conexão'}</>;
             default: return t('notifDefault');
         }
     }
@@ -85,29 +77,12 @@ const NotificationItem: React.FC<{
                     </p>
                 )}
                 <p className="text-[10px] text-[var(--theme-text-secondary)] mt-1 uppercase tracking-tighter">{notification.timestamp.toLocaleTimeString()}</p>
-                
-                {notification.notificationType === 'connectionRequest' && !notification.read && (
-                    <div className="mt-2 flex space-x-2">
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); onAcceptConnection?.(notification.id); }}
-                            className="bg-[var(--theme-primary)] text-white text-[10px] px-3 py-1 rounded-sm font-bold uppercase hover:brightness-110"
-                        >
-                            {t('accept') || 'ACEITAR'}
-                        </button>
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); onDeclineConnection?.(notification.id); }}
-                            className="bg-[var(--theme-bg-tertiary)] text-[var(--theme-text-secondary)] text-[10px] px-3 py-1 rounded-sm font-bold uppercase hover:text-red-500"
-                        >
-                            {t('decline') || 'RECUSAR'}
-                        </button>
-                    </div>
-                )}
             </div>
         </div>
     );
 }
 
-export default function NotificationsPanel({ notifications, onClose, onNotificationClick, onAcceptConnection, onDeclineConnection }: NotificationsPanelProps) {
+export default function NotificationsPanel({ notifications, onClose, onNotificationClick }: NotificationsPanelProps) {
     const { t } = useTranslation();
 
     // Aggregate notifications
@@ -121,9 +96,6 @@ export default function NotificationsPanel({ notifications, onClose, onNotificat
                 key += `-${n.post.id}`;
             } else if (n.notificationType === 'follow') {
                 key += '-global-follow'; 
-            } else if (n.notificationType === 'connectionRequest') {
-                // Connection requests should probably not be grouped as they need individual actions
-                key += `-${n.id}`;
             } else {
                 key += `-${n.id}`; // Don't group if no post and not a follow
             }
@@ -170,8 +142,6 @@ export default function NotificationsPanel({ notifications, onClose, onNotificat
                             key={n.key} 
                             notification={n} 
                             onNotificationClick={onNotificationClick}
-                            onAcceptConnection={onAcceptConnection}
-                            onDeclineConnection={onDeclineConnection}
                         />
                     ))}
                 </div>

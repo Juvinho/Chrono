@@ -6,9 +6,9 @@ export interface Message {
   text: string;
   imageUrl?: string;
   videoUrl?: string;
-  metadata?: any;
-  status?: 'sent' | 'delivered' | 'read';
+  glitchiType?: string; // If sharing a glitchi
   timestamp: Date;
+  status?: 'sent' | 'delivered' | 'read';
 }
 
 export interface Conversation {
@@ -35,7 +35,7 @@ export interface ProfileSettings {
   autoRefreshInterval?: number;
 }
 
-export type NotificationType = 'reply' | 'reaction' | 'follow' | 'mention' | 'repost' | 'directMessage' | 'connectionRequest' | 'connectionAccepted';
+export type NotificationType = 'reply' | 'reaction' | 'follow' | 'mention' | 'repost' | 'directMessage';
 
 export interface Notification {
   id: string;
@@ -66,7 +66,6 @@ export interface User {
   password?: string;
   avatar: string;
   bio: string;
-  headline?: string; // Professional headline
   birthday: string;
   pronouns?: string;
   location?: string;
@@ -74,7 +73,8 @@ export interface User {
   coverImage: string;
   followers: number;
   following: number;
-  connections?: number; // Professional connections
+  profileType?: 'personal' | 'professional';
+  headline?: string; // Professional headline
   skills?: string[];
   workExperience?: {
     company: string;
@@ -90,7 +90,6 @@ export interface User {
   profileSettings?: ProfileSettings;
   followingList?: string[];
   followersList?: string[];
-  connectionList?: string[]; // Mutual connections
   notifications?: Notification[];
   blockedUsers?: string[];
   isPrivate?: boolean;
@@ -105,14 +104,6 @@ export interface User {
   subscriptionExpiresAt?: Date;
   equippedFrame?: Item;
   equippedEffect?: Item;
-}
-
-export interface ConnectionRequest {
-  id: string;
-  senderId: string;
-  receiverId: string;
-  status: 'pending' | 'accepted' | 'declined';
-  timestamp: Date;
 }
 
 export interface Item {

@@ -36,25 +36,10 @@ export const userService = {
     });
   },
 
-  async requestConnection(username: string) {
-    return baseClient.request<any>(`/users/${username}/connect`, {
+  async sendMessage(conversationId: string, text: string, media?: { imageUrl?: string, videoUrl?: string, glitchiType?: string }) {
+    return baseClient.request<any>(`/conversations/${conversationId}/messages`, {
       method: 'POST',
+      body: JSON.stringify({ text, ...media }),
     });
-  },
-
-  async acceptConnection(requestId: string) {
-    return baseClient.request<any>(`/connections/${requestId}/accept`, {
-      method: 'POST',
-    });
-  },
-
-  async declineConnection(requestId: string) {
-    return baseClient.request<any>(`/connections/${requestId}/decline`, {
-      method: 'POST',
-    });
-  },
-
-  async getConnections() {
-    return baseClient.request<any[]>('/users/me/connections');
   },
 };
