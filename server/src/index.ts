@@ -161,15 +161,19 @@ app.get('/health', async (req, res) => {
 
 // Serve static files from the React app
 const possibleBuildPaths = [
-  path.join(__dirname, 'public'),          // New combined path (server/dist/public)
-  path.join(__dirname, '../../dist'),      // Relative to server/dist
-  path.join(process.cwd(), 'dist'),        // Current working directory dist
+  path.join(process.cwd(), '../dist'),      // Root dist when running from server/
+  path.join(process.cwd(), 'dist'),         // Root dist when running from root
+  path.join(__dirname, '../../dist'),       // Relative to server/dist
+  path.join(__dirname, '../public'),        // server/dist/public
 ];
 
-// Debug: List files in current directory to help find the build folder
+// Debug: List files in parent directory too
 try {
+  const rootDir = path.join(process.cwd(), '..');
   const files = fs.readdirSync(process.cwd());
+  const rootFiles = fs.readdirSync(rootDir);
   console.log(`Current directory (${process.cwd()}) contents:`, files);
+  console.log(`Root directory (${rootDir}) contents:`, rootFiles);
 } catch (e) {
   console.error('Failed to list directory contents');
 }
