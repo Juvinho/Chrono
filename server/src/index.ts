@@ -4,6 +4,7 @@ import { initSocket } from './socket.js';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import rateLimit from 'express-rate-limit';
 import { migrate } from './db/migrate.js';
@@ -159,14 +160,38 @@ app.get('/health', async (req, res) => {
 });
 
 // Serve static files from the React app
-// Assuming the server is running from server/dist and the frontend build is in dist (root)
-const clientBuildPath = path.join(__dirname, '../../dist');
+// Try multiple possible paths for the dist folder to be robust in different environments
+const possibleBuildPaths = [
+  path.join(__dirname, '../../dist'),      // Relative to server/dist (production)
+  path.join(__dirname, '../dist'),         // Relative to server/dist
+  path.join(process.cwd(), 'dist'),        // Relative to root
+  path.join(process.cwd(), '../dist')      // Relative to server root
+];
+
+let clientBuildPath = possibleBuildPaths[0];
+for (const p of possibleBuildPaths) {
+  if (fs.existsSync(p)) {
+    clientBuildPath = p;
+    break;
+  }
+}
+
+console.log(`Static files path: ${clientBuildPath}`);
 app.use(express.static(clientBuildPath));
 
 // The "catchall" handler: for any request that doesn't
 // match one above, send back React's index.html file.
 app.get('*', (req, res) => {
-  res.sendFile(path.join(clientBuildPath, 'index.html'));
+  const indexPath = path.join(clientBuildPath, 'index.html');
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      console.error(`Error sending index.html from ${indexPath}:`, err);
+      res.status(500).json({ 
+        error: "Frontend build files not found. Please check build command.",
+        path: indexPath 
+      });
+    }
+  });
 });
 
 // Error handling middleware
