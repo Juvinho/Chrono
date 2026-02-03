@@ -149,6 +149,26 @@ class ApiClient {
     });
   }
 
+  async checkEmail(email: string) {
+    return this.request<any>('/auth/check-email', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async verifyEmail(token: string) {
+    return this.request<any>(`/auth/verify-email?token=${token}`, {
+      method: 'GET',
+    });
+  }
+
+  async changePassword(currentPassword: string, newPassword: string) {
+    return this.request<any>('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  }
+
   // User endpoints
   async getUser(username: string) {
     return this.request<any>(`/users/${username}`);
@@ -213,6 +233,34 @@ class ApiClient {
     });
   }
 
+  async updatePost(postId: string, data: any) {
+    return this.request<any>(`/posts/${postId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateReaction(postId: string, reaction: string) {
+    return this.request<any>(`/posts/${postId}/reaction`, {
+      method: 'POST',
+      body: JSON.stringify({ reaction }),
+    });
+  }
+
+  async replyToPost(postId: string, content: string, isPrivate: boolean = false, media?: { imageUrl?: string, videoUrl?: string }) {
+    return this.request<any>(`/posts/${postId}/reply`, {
+      method: 'POST',
+      body: JSON.stringify({ content, isPrivate, ...media }),
+    });
+  }
+
+  async votePoll(postId: string, optionIndex: number) {
+    return this.request<any>(`/posts/${postId}/poll/vote`, {
+      method: 'POST',
+      body: JSON.stringify({ optionIndex }),
+    });
+  }
+
   async replyPost(postId: string, content: string) {
     return this.request<any>(`/posts/${postId}/reply`, {
       method: 'POST',
@@ -236,10 +284,30 @@ class ApiClient {
     });
   }
 
+  async sendMessageToUser(recipientUsername: string, content: string) {
+    return this.request<any>(`/conversations/user/${recipientUsername}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    });
+  }
+
   async createConversation(userId: string) {
     return this.request<any>('/conversations', {
       method: 'POST',
       body: JSON.stringify({ userId }),
+    });
+  }
+
+  async getOrCreateConversation(recipientUsername: string, options: any = {}) {
+    return this.request<any>('/conversations/get-or-create', {
+      method: 'POST',
+      body: JSON.stringify({ recipientUsername, ...options }),
+    });
+  }
+
+  async markConversationAsRead(conversationId: string) {
+    return this.request<any>(`/conversations/${conversationId}/read`, {
+      method: 'POST',
     });
   }
 
@@ -271,7 +339,50 @@ class ApiClient {
     });
   }
 
+  async purchaseItem(itemId: string) {
+    return this.buyItem(itemId);
+  }
+
+  async getItems(type?: string) {
+    const endpoint = type ? `/marketplace/items?type=${type}` : '/marketplace/items';
+    return this.request<any[]>(endpoint);
+  }
+
+  async getUserInventory() {
+    return this.request<any[]>('/marketplace/inventory');
+  }
+
+  async purchaseSubscription(tier: string) {
+    return this.request<any>('/marketplace/subscribe', {
+      method: 'POST',
+      body: JSON.stringify({ tier }),
+    });
+  }
+
+  async equipItem(itemId: string) {
+    return this.request<any>(`/marketplace/inventory/${itemId}/equip`, {
+      method: 'POST',
+    });
+  }
+
+  async unequipItem(itemId: string) {
+    return this.request<any>(`/marketplace/inventory/${itemId}/unequip`, {
+      method: 'POST',
+    });
+  }
+
   // Companion endpoints
+  async getCompanion() {
+    return this.request<any>('/companions');
+  }
+
+  async createCompanion(name: string, type: string) {
+    return this.request<any>('/companions', {
+      method: 'POST',
+      body: JSON.stringify({ name, type }),
+    });
+  }
+
   async interactWithCompanion(action: 'feed' | 'play' | 'pet') {
     return this.request<any>('/companions/interact', {
       method: 'POST',
@@ -305,6 +416,7 @@ export function mapApiUserToUser(apiUser: any): any {
   if (!apiUser) return null;
   
   return {
+    id: apiUser.id || apiUser._id,
     username: apiUser.username,
     email: apiUser.email,
     avatar: apiUser.avatar,
@@ -369,6 +481,8 @@ export function mapApiStoryToStory(apiStory: any): any {
   return {
     id: apiStory.id,
     userId: apiStory.userId || apiStory.user_id,
+    username: apiStory.username || apiStory.author?.username,
+    userAvatar: apiStory.userAvatar || apiStory.author?.avatar || '',
     content: apiStory.content,
     type: apiStory.type,
     timestamp: new Date(apiStory.createdAt || apiStory.created_at),

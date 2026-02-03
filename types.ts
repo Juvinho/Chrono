@@ -52,9 +52,11 @@ export interface Story {
   timestamp: Date;
   expiresAt: Date;
   viewers?: string[];
+  author?: User;
 }
 
 export interface User {
+  id: string;
   username: string;
   email?: string;
   password?: string;

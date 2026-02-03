@@ -5,6 +5,7 @@ import { useTranslation } from '../hooks/useTranslation';
 import { MessageIcon, EditIcon, LockClosedIcon } from './icons';
 import NewMessageModal from './modals/NewMessageModal';
 import FramePreview, { getFrameShape } from './FramePreview';
+import Avatar from './Avatar';
 
 interface MessagesPageProps {
   currentUser: User;

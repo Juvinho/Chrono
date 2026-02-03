@@ -26,6 +26,7 @@ export const generateUsers = (count: number): User[] => {
         usedUsernames.add(username);
 
         const user: User = {
+            id: username,
             username,
             email: `${username.toLowerCase()}@chrono.net`,
             password: 'password123',

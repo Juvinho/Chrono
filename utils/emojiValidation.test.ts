@@ -1,4 +1,5 @@
 
+import { describe, test, expect } from 'vitest';
 import { containsEmoji, validateNoEmojis } from './emojiValidation';
 
 describe('emojiValidation', () => {

@@ -57,11 +57,11 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
     useEffect(() => {
         const checkUsername = async () => {
             if (username.length < 3) {
-                if (username.length > 0) setUsernameError('Nome de usuário muito curto.');
+                if (username.length > 0) setUsernameError(t('errorUsernameTooShort'));
                 return;
             }
 
-            const emojiValidation = validateNoEmojis(username, 'Nome de usuário');
+            const emojiValidation = validateNoEmojis(username, t('registerUsername'));
             if (!emojiValidation.valid) {
                 setUsernameError(emojiValidation.error);
                 return;
@@ -107,7 +107,7 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
             }
             // Basic regex for quick check before API to reduce load
             if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                setEmailError('Formato de email inválido.');
+                setEmailError(t('errorInvalidEmail') || 'Invalid email format.');
                 return;
             }
 
@@ -117,7 +117,7 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
             try {
                 const response = await apiClient.checkEmail(email);
                 if (response.data && !response.data.valid) {
-                    setEmailError(response.data.error || 'Email inválido');
+                    setEmailError(response.data.error || t('errorEmailInvalid') || 'Invalid email');
                 } else if (response.error) {
                     setEmailError(response.error);
                 }
@@ -152,7 +152,7 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
         setError('');
 
         if (emailError || usernameError || isCheckingEmail || isCheckingUsername) {
-            setError('Por favor, corrija os erros antes de continuar.');
+            setError(t('errorFixErrors'));
             return;
         }
 
@@ -166,12 +166,12 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
         }
 
         if (username.includes(' ')) {
-            setError('O nome de usuário não pode conter espaços.');
+            setError(t('errorUsernameSpaces'));
             return;
         }
 
         if (!captchaVerified) {
-            setError('Por favor, confirme que você não é um robô');
+            setError(t('errorCaptchaRequired'));
             return;
         }
 
@@ -208,20 +208,20 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
                     <div>
                         <label className="text-sm font-bold text-[var(--theme-text-secondary)] block">{t('registerEmail')}</label>
                         <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className={`w-full px-3 py-2 mt-1 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border ${emailError ? 'border-red-500' : 'border-[var(--theme-border-primary)]'} focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)]`} />
-                        {isCheckingEmail && <p className="text-xs text-[var(--theme-text-secondary)] mt-1 animate-pulse">Verificando disponibilidade...</p>}
+                        {isCheckingEmail && <p className="text-xs text-[var(--theme-text-secondary)] mt-1 animate-pulse">{t('verifyingAvailability')}</p>}
                         {emailError && <p className="text-xs text-red-500 mt-1">{emailError}</p>}
-                        {!emailError && !isCheckingEmail && email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && <p className="text-xs text-green-500 mt-1">Email válido</p>}
+                        {!emailError && !isCheckingEmail && email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && <p className="text-xs text-green-500 mt-1">{t('emailValid')}</p>}
                     </div>
                     <div>
                         <label className="text-sm font-bold text-[var(--theme-text-secondary)] block">{t('registerUsername')}</label>
                         <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} required className={`w-full px-3 py-2 mt-1 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border ${usernameError ? 'border-red-500' : 'border-[var(--theme-border-primary)]'} focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)]`} />
-                         {isCheckingUsername && <p className="text-xs text-[var(--theme-text-secondary)] mt-1 animate-pulse">Verificando disponibilidade...</p>}
+                         {isCheckingUsername && <p className="text-xs text-[var(--theme-text-secondary)] mt-1 animate-pulse">{t('verifyingAvailability')}</p>}
                         {usernameError && (
                             <div className="mt-1">
                                 <p className="text-xs text-red-500">{usernameError}</p>
                                 {usernameSuggestions.length > 0 && (
                                     <div className="mt-2 p-2 bg-[var(--theme-bg-secondary)] rounded border border-[var(--theme-border-primary)]">
-                                        <p className="text-xs text-[var(--theme-text-secondary)] mb-1">Sugestões disponíveis:</p>
+                                        <p className="text-xs text-[var(--theme-text-secondary)] mb-1">{t('usernameSuggestions')}</p>
                                         <div className="flex flex-wrap gap-2">
                                             {usernameSuggestions.map(s => (
                                                 <button
@@ -238,7 +238,7 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
                                 )}
                             </div>
                         )}
-                        {!usernameError && !isCheckingUsername && username.length >= 3 && <p className="text-xs text-green-500 mt-1">Nome de usuário disponível</p>}
+                        {!usernameError && !isCheckingUsername && username.length >= 3 && <p className="text-xs text-green-500 mt-1">{t('usernameAvailable')}</p>}
                     </div>
                      <div>
                         <label className="text-sm font-bold text-[var(--theme-text-secondary)] block">{t('registerAvatar')}</label>
@@ -276,7 +276,7 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
                             className="w-5 h-5 cursor-pointer accent-[var(--theme-primary)]"
                         />
                         <label htmlFor="captcha-register" className="text-sm text-[var(--theme-text-primary)] cursor-pointer flex-1">
-                            Eu não sou um robô
+                            {t('captchaIAmNotARobot')}
                         </label>
                     </div>
 
