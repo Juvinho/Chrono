@@ -10,7 +10,8 @@ const getBaseUrl = () => {
     
     if (isLocal) {
       // Development: use hardcoded local backend URL if env var not set
-      return import.meta.env.VITE_API_URL || `http://${hostname}:3001/api`;
+      // Use 127.0.0.1 instead of localhost to avoid Node 17+ IPv6 resolution issues on Windows
+      return import.meta.env.VITE_API_URL || `http://${hostname}:3001/api`.replace('localhost', '127.0.0.1');
     }
     
     // Production: Always use relative path.
@@ -20,7 +21,8 @@ const getBaseUrl = () => {
   }
   
   // Fallback for non-browser environments (e.g. tests/SSR)
-  return import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+  // Use 127.0.0.1 for better compatibility
+  return import.meta.env.VITE_API_URL || 'http://127.0.0.1:3001/api';
 };
 
 const API_BASE_URL = getBaseUrl();
@@ -64,10 +66,17 @@ class ApiClient {
     }
 
     try {
+      // Add timeout to fetch
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         ...options,
         headers,
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
@@ -82,8 +91,13 @@ class ApiClient {
     } catch (error: any) {
       console.error('API request failed:', error);
       console.error('Request URL:', `${API_BASE_URL}${endpoint}`);
+      
+      if (error.name === 'AbortError') {
+         return { error: 'Tempo limite de conexão excedido. O servidor pode estar indisponível.' };
+      }
+      
       if (error.message === 'Failed to fetch' || error.name === 'TypeError' || error.message?.includes('fetch')) {
-        return { error: `Não foi possível conectar ao servidor. Verifique o console para mais detalhes.` };
+        return { error: `Não foi possível conectar ao servidor. Verifique se o backend está rodando.` };
       }
       return { error: error.message || 'Erro de rede' };
     }

@@ -1,12 +1,14 @@
 import express from 'express';
 import { UserService } from '../services/userService.js';
 import { FollowService } from '../services/followService.js';
+import { NotificationService } from '../services/notificationService.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import { pool } from '../db/connection.js';
 
 const router = express.Router();
 const userService = new UserService();
 const followService = new FollowService();
+const notificationService = new NotificationService();
 
 // Get user by username
 router.get('/:username', authenticateToken, async (req: AuthRequest, res) => {
@@ -118,6 +120,10 @@ router.post('/:username/follow', authenticateToken, async (req: AuthRequest, res
       res.json({ message: 'Unfollowed successfully', isFollowing: false });
     } else {
       await followService.follow(req.userId, targetUser.id);
+      
+      // Create notification
+      await notificationService.createNotification(targetUser.id, req.userId, 'follow');
+      
       res.json({ message: 'Followed successfully', isFollowing: true });
     }
   } catch (error: any) {

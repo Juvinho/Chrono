@@ -7,6 +7,7 @@ import { generatePostContent, generateReplyContent, generatePollVote, generateDi
 import { apiClient, mapApiUserToUser, mapApiPostToPost } from './services/api';
 import { NotificationManager } from './services/notificationManager';
 import { socketService } from './services/socketService';
+import { useSound } from './contexts/SoundContext';
 import LoadingSpinner from './components/LoadingSpinner';
 
 // Lazy load components for performance
@@ -34,95 +35,7 @@ const placeholderVideos = [
     'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
     'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4'
 ];
-// Helper function to play notification sound
-let sharedAudioCtx: AudioContext | null = null;
 
-const playNotificationSound = (type: 'notification' | 'post' | 'reply' = 'notification') => {
-    try {
-        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-        if (!AudioContext) return;
-        
-        if (!sharedAudioCtx) {
-            sharedAudioCtx = new AudioContext();
-        }
-        
-        // Try to resume if suspended (requires user interaction previously)
-        if (sharedAudioCtx.state === 'suspended') {
-            sharedAudioCtx.resume().catch(() => {});
-        }
-        
-        const ctx = sharedAudioCtx;
-        const t = ctx.currentTime;
-        
-        if (type === 'notification') {
-            // Notification: High tech "ping"
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(800, t);
-            osc.frequency.exponentialRampToValueAtTime(400, t + 0.2);
-            
-            gain.gain.setValueAtTime(0.1, t);
-            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
-            
-            osc.start(t);
-            osc.stop(t + 0.2);
-        } else if (type === 'post') {
-            // Post: Digital "blip"
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(300, t);
-            osc.frequency.linearRampToValueAtTime(600, t + 0.1);
-            
-            gain.gain.setValueAtTime(0.05, t);
-            gain.gain.linearRampToValueAtTime(0, t + 0.15);
-            
-            osc.start(t);
-            osc.stop(t + 0.15);
-        } else if (type === 'reply') {
-            // Reply: Double chirp
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(600, t);
-            osc.frequency.linearRampToValueAtTime(800, t + 0.1);
-            
-            gain.gain.setValueAtTime(0.1, t);
-            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
-            
-            osc.start(t);
-            osc.stop(t + 0.1);
-            
-            // Second chirp
-            const osc2 = ctx.createOscillator();
-            const gain2 = ctx.createGain();
-            osc2.connect(gain2);
-            gain2.connect(ctx.destination);
-            
-            osc2.type = 'sine';
-            osc2.frequency.setValueAtTime(800, t + 0.15);
-            osc2.frequency.linearRampToValueAtTime(1200, t + 0.25);
-            
-            gain2.gain.setValueAtTime(0.1, t + 0.15);
-            gain2.gain.exponentialRampToValueAtTime(0.01, t + 0.25);
-            
-            osc2.start(t + 0.15);
-            osc2.stop(t + 0.25);
-        }
-    } catch (e) {
-        console.error("Audio error", e);
-    }
-}
 
 // Helper function to revive dates recursively from JSON strings
 const reviveDates = (data: any[], dateKeys: string[]): any[] => {
@@ -313,37 +226,11 @@ export default function App() {
     const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false);
     const lastInteractionRef = useRef<number>(Date.now());
 
-    const audioContextRef = useRef<AudioContext | null>(null);
-    const isAudioInitialized = useRef(false);
+    const { playSound } = useSound();
     const knownNotificationIds = useRef<Set<string>>(new Set());
     const isFirstLoad = useRef(true);
 
-    // Global Audio Context Resume
-    useEffect(() => {
-        const unlockAudio = () => {
-            const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-            if (AudioContext && (!sharedAudioCtx || sharedAudioCtx.state === 'suspended')) {
-                if (!sharedAudioCtx) sharedAudioCtx = new AudioContext();
-                sharedAudioCtx.resume().then(() => {
-                    console.log("AudioContext unlocked");
-                    // Remove listeners once unlocked
-                    document.removeEventListener('click', unlockAudio);
-                    document.removeEventListener('keydown', unlockAudio);
-                    document.removeEventListener('touchstart', unlockAudio);
-                }).catch(e => console.error("Audio unlock failed", e));
-            }
-        };
 
-        document.addEventListener('click', unlockAudio);
-        document.addEventListener('keydown', unlockAudio);
-        document.addEventListener('touchstart', unlockAudio);
-
-        return () => {
-            document.removeEventListener('click', unlockAudio);
-            document.removeEventListener('keydown', unlockAudio);
-            document.removeEventListener('touchstart', unlockAudio);
-        };
-    }, []);
 
     // User Interaction Tracking
     useEffect(() => {
@@ -444,7 +331,7 @@ export default function App() {
                                     body: message,
                                     tag: n.id
                                  });
-                                 playNotificationSound();
+                                 playSound('notification');
                              } catch (err) {
                                  console.error("Error showing notification:", err);
                              }
@@ -593,9 +480,13 @@ export default function App() {
                       });
                       
                       if (payload.notificationType === 'reply') {
-                          playNotificationSound('reply');
+                          playSound('reply');
+                      } else if (payload.notificationType === 'follow') {
+                          playSound('follow');
+                      } else if (payload.notificationType === 'reaction') {
+                          playSound('like');
                       } else {
-                          playNotificationSound('notification');
+                          playSound('notification');
                       }
                   } catch (err) {
                       console.error("Error showing notification:", err);
@@ -657,14 +548,14 @@ export default function App() {
                   
                   // Optional: Sound for message
                   if (payload.senderUsername !== currentUser.username) {
-                      playNotificationSound();
+                      playSound('notification');
                   }
               };
 
               const handleNewPost = (payload: any) => {
                   // Play sound for new posts (but not my own)
                   if (payload.author?.username !== currentUser.username) {
-                       playNotificationSound('post');
+                       playSound('post');
                   }
                   
                   // Reload data to ensure consistency
@@ -786,74 +677,11 @@ export default function App() {
 
     // MIGRATION: Fetch initial data from Backend
     useEffect(() => {
-        const loadBackendData = async () => {
-            if (!currentUser) return; // Only fetch if logged in
-
-            setIsGenerating(true); // Show loading state
-            try {
-                // Fetch Posts
-                const postsResult = await apiClient.getPosts();
-                if (postsResult.data) {
-                    const mappedPosts = postsResult.data.map((p: any) => mapApiPostToPost(p));
-                    setPosts(mappedPosts);
-                } else if (postsResult.error) {
-                    console.error("Failed to load posts:", postsResult.error);
-                }
-
-                // Fetch Conversations
-                const conversationsResult = await apiClient.getConversations();
-                if (conversationsResult.data) {
-                    const mappedConversations = conversationsResult.data.map((conv: any) => ({
-                        id: conv.id,
-                        participants: conv.participants.map((p: any) => typeof p === 'string' ? p : (p.username || p)),
-                        messages: (conv.messages || []).map((msg: any) => ({
-                            id: msg.id,
-                            senderUsername: msg.senderUsername || (msg.sender_id ? 'unknown' : 'unknown'),
-                            text: msg.text,
-                            timestamp: new Date(msg.createdAt || msg.created_at || Date.now()),
-                        })),
-                        lastMessageTimestamp: new Date(conv.lastMessageTimestamp || conv.updated_at || Date.now()),
-                        unreadCount: conv.unreadCount || {},
-                    }));
-                    setConversations(mappedConversations);
-                } else if (conversationsResult.error) {
-                    console.error("Failed to load conversations:", conversationsResult.error);
-                }
-            } catch (error) {
-                console.error("Failed to load data from backend:", error);
-            } finally {
-                setIsGenerating(false);
-            }
-        };
-
         if (currentUser) {
-            loadBackendData();
+            setIsGenerating(true);
+            reloadBackendData().finally(() => setIsGenerating(false));
         }
-    }, [currentUser]); // Re-fetch on login
-
-    // One-time setup for audio context to comply with browser autoplay policies.
-    useEffect(() => {
-        const initializeAudio = () => {
-            if (!isAudioInitialized.current && typeof window !== 'undefined') {
-                const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-                if (AudioContext) {
-                    audioContextRef.current = new AudioContext();
-                    isAudioInitialized.current = true;
-                    // Clean up event listeners once initialized
-                    window.removeEventListener('click', initializeAudio);
-                    window.removeEventListener('keydown', initializeAudio);
-                }
-            }
-        };
-
-        window.addEventListener('click', initializeAudio);
-        window.addEventListener('keydown', initializeAudio);
-
-        return () => {
-            window.removeEventListener('click', initializeAudio);
-            window.removeEventListener('keydown', initializeAudio);
-        };
-    }, []);
+    }, [currentUser, reloadBackendData]); // Re-fetch on login
 
     // Polling for notifications is now handled by the configurable auto-refresh
     useEffect(() => {
@@ -864,66 +692,16 @@ export default function App() {
         // Removed hardcoded 10s interval in favor of user-configurable setting
     }, [currentUser]);
 
-    const playNotificationSound = (type: 'notification' | 'post' | 'reply' = 'notification') => {
-        if (!audioContextRef.current) return;
-        
-        // Resume context if suspended (browser policy)
-        if (audioContextRef.current.state === 'suspended') {
-            audioContextRef.current.resume();
-        }
-    
-        const context = audioContextRef.current;
-        const now = context.currentTime;
-        
-        const oscillator = context.createOscillator();
-        const gain = context.createGain();
-    
-        oscillator.connect(gain);
-        gain.connect(context.destination);
 
-        if (type === 'reply') {
-            // Reply sound: Two quick high beeps
-            oscillator.type = 'sine';
-            oscillator.frequency.setValueAtTime(800, now);
-            oscillator.frequency.setValueAtTime(1200, now + 0.1);
-            
-            gain.gain.setValueAtTime(0.2, now);
-            gain.gain.linearRampToValueAtTime(0, now + 0.2);
-            
-            oscillator.start(now);
-            oscillator.stop(now + 0.2);
-        } else if (type === 'post') {
-             // Post sound: Soft low "pop"
-            oscillator.type = 'triangle';
-            oscillator.frequency.setValueAtTime(300, now);
-            oscillator.frequency.exponentialRampToValueAtTime(100, now + 0.15);
-            
-            gain.gain.setValueAtTime(0.2, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
-            
-            oscillator.start(now);
-            oscillator.stop(now + 0.15);
-        } else {
-            // Default notification: A5 drop
-            oscillator.type = 'sine';
-            oscillator.frequency.setValueAtTime(880, now); // A5 note
-            oscillator.frequency.exponentialRampToValueAtTime(440, now + 0.1);
-        
-            gain.gain.setValueAtTime(0.3, now);
-            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
-        
-            oscillator.start(now);
-            oscillator.stop(now + 0.2);
-        }
-    };
 
     const addNotification = (targetUser: User, actor: User, notificationType: NotificationType, post?: Post) => {
         if (targetUser.username === actor.username) return; // Don't send notifications for own actions
 
         // Play sound if the notification is for the current user
         if (currentUser && targetUser.username === currentUser.username) {
-            playNotificationSound();
+            playSound('notification');
         }
+
 
         const newNotification: Notification = {
             id: `notif-${Date.now()}-${Math.random()}`,
@@ -1172,7 +950,7 @@ export default function App() {
             }
             
             if (replier.username === currentUser.username) {
-                playNotificationSound('reply');
+                playSound('reply');
             }
 
             // Reload posts to get the updated state with the new reply
@@ -1488,7 +1266,7 @@ export default function App() {
         // Reload all posts to ensure we have the latest state from backend
         
         if (post.author.username === currentUser?.username) {
-            playNotificationSound('post');
+            playSound('post');
         }
 
         await reloadBackendData();
@@ -1533,7 +1311,7 @@ export default function App() {
             }
             
             if (echoer.username === currentUser.username) {
-                playNotificationSound();
+                playSound('notification');
             }
 
             // Reload posts to get the updated state with the new echo

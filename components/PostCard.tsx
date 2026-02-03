@@ -2,6 +2,7 @@ import React, { useState, ReactNode, useRef, useEffect } from 'react';
 import { Post, CyberpunkReaction, User } from '../types';
 import { ReactIcon, GlitchIcon, UploadIcon, CorruptIcon, RewindIcon, StaticIcon, ReplyIcon, EchoIcon, EditIcon, VerifiedIcon, CheckCircleIcon, LockClosedIcon, DotsHorizontalIcon, TrashIcon } from './icons';
 import { useTranslation } from '../hooks/useTranslation';
+import { useSound } from '../contexts/SoundContext';
 import Avatar from './Avatar';
 import TypingIndicatorCard from './TypingIndicatorCard';
 import FramePreview, { getFrameShape } from './FramePreview';
@@ -34,6 +35,7 @@ const reactionIcons: { [key in CyberpunkReaction]: ReactNode } = {
 
 function PostCard({ post, currentUser, onViewProfile, onUpdateReaction, onReply, onEcho, onDelete, onEdit, onTagClick, onPollVote, typingParentIds, compact = false, nestingLevel = 0, isThreadedReply = false, isContextualView = false }: PostCardProps) {
     const { t } = useTranslation();
+    const { playSound } = useSound();
     const [showReactions, setShowReactions] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
     const [isReplying, setIsReplying] = useState(false);
@@ -78,6 +80,7 @@ function PostCard({ post, currentUser, onViewProfile, onUpdateReaction, onReply,
     }, [menuRef]);
 
     const handleReact = (reaction: CyberpunkReaction) => {
+        playSound('like');
         onUpdateReaction(post.id, reaction);
         setShowReactions(false);
     };
