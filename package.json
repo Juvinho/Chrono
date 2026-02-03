@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
-    "build": "vite build && tsc -p server/tsconfig.json && node server/copy-assets.js && mkdir -p server/dist/public && cp -r dist/* server/dist/public/",
+    "build": "vite build && tsc -p server/tsconfig.json && node server/copy-assets.js",
     "start": "node server/dist/index.js",
     "db:migrate": "node server/dist/db/migrate.js",
     "db:seed": "node server/dist/db/seed.js",
