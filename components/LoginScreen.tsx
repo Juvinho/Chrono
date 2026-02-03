@@ -17,6 +17,7 @@ export default function LoginScreen({ onLogin, users, onNavigate }: LoginScreenP
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [dbError, setDbError] = useState('');
     const [message, setMessage] = useState('');
     const [captchaVerified, setCaptchaVerified] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -27,11 +28,40 @@ export default function LoginScreen({ onLogin, users, onNavigate }: LoginScreenP
             setMessage(msg);
             sessionStorage.removeItem('chrono_login_message');
         }
+
+        // Check backend health
+        checkBackendHealth();
     }, []);
+
+    const checkBackendHealth = async () => {
+        try {
+            // Determine base URL (hacky but works for dev)
+            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const baseUrl = isLocal ? 'http://127.0.0.1:3001' : '';
+            
+            const response = await fetch(`${baseUrl}/health`);
+            const data = await response.json();
+            
+            if (data.status === 'error' && data.db === 'disconnected') {
+                setDbError('Banco de dados indisponível. Inicie o Docker e o container postgres.');
+            } else {
+                setDbError('');
+            }
+        } catch (e) {
+            console.error('Health check failed:', e);
+            setDbError('Não foi possível conectar ao servidor backend.');
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (isLoading) return;
+        
+        // Retry health check if there was an error
+        if (dbError) {
+             await checkBackendHealth();
+             // If error persists, we still let them try, but it will likely fail
+        }
 
         console.log('Login attempt starting...', { username, captchaVerified });
         setError('');
@@ -98,6 +128,11 @@ export default function LoginScreen({ onLogin, users, onNavigate }: LoginScreenP
                     <p className="mt-2 text-[var(--theme-text-primary)]">{t('loginSubtitle')}</p>
                 </div>
                 <form className="space-y-6" onSubmit={handleSubmit}>
+                    {dbError && (
+                        <div className="p-3 text-sm font-bold text-red-500 bg-red-900/20 border border-red-500 rounded animate-pulse">
+                            ⚠️ {dbError}
+                        </div>
+                    )}
                     <div>
                         <label htmlFor="username" className="text-sm font-bold text-[var(--theme-text-secondary)] block">
                             {t('loginUserID')}

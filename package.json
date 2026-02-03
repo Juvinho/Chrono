@@ -12,6 +12,8 @@
     "preview": "vite preview",
     "dev:server": "tsx watch server/src/index.ts",
     "dev:all": "concurrently \"npm run dev:server\" \"npm run dev\"",
+    "db:start": "docker-compose up -d postgres",
+    "db:stop": "docker-compose down",
     "install:all": "npm install && cd server && npm install"
   },
   "dependencies": {
