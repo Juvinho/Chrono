@@ -11,6 +11,8 @@ import UserListModal from './modals/UserListModal';
 import { VerifiedIcon, MessageIcon } from './icons';
 import FramePreview, { getFrameShape } from './FramePreview';
 import Avatar from './Avatar';
+import LoadingSpinner from './LoadingSpinner';
+que import { apiClient } from '../services/api';
 
 interface ProfilePageProps {
   currentUser: User;
@@ -38,19 +40,96 @@ interface ProfilePageProps {
 export default function ProfilePage({ 
   currentUser, profileUsername, onLogout, onNavigate, onNotificationClick, users, onFollowToggle, 
   allPosts, allUsers, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost,
-  onPollVote, selectedDate, setSelectedDate, typingParentIds, conversations, onOpenMarketplace
-}: ProfilePageProps) {
+  onPollVote, selectedDate, setSelectedDate, typingParentIds, conversations, onOpenMarketplace, onUpdateUser
+}: ProfilePageProps & { onUpdateUser?: (user: User) => Promise<{ success: boolean; error?: string }> }) {
   const { t } = useTranslation();
   const { playSound } = useSound();
   
-  // Prioritize currentUser if it matches the profileUsername to ensure we show the latest state (e.g. after profile updates)
+  const [fetchedUser, setFetchedUser] = useState<User | null>(null);
+  const [isLoadingUser, setIsLoadingUser] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  
+  // Lazy load EditProfileModal
+  const EditProfileModal = useMemo(() => React.lazy(() => import('./modals/EditProfileModal')), []);
+
+  // Prioritize currentUser if it matches the profileUsername to ensure we show the latest state
   const isOwnProfile = currentUser.username.toLowerCase() === profileUsername.toLowerCase();
   
-  const profileUser = isOwnProfile ? currentUser : (allUsers.find(u => u.username.toLowerCase() === profileUsername.toLowerCase()) || users.find(u => u.username.toLowerCase() === profileUsername.toLowerCase()) || currentUser)!;
+  // Memoize foundUser to avoid unnecessary recalculations
+  const foundUser = useMemo(() => {
+      if (isOwnProfile) return currentUser;
+      return allUsers.find(u => u.username.toLowerCase() === profileUsername.toLowerCase()) 
+          || users.find(u => u.username.toLowerCase() === profileUsername.toLowerCase());
+  }, [isOwnProfile, currentUser, allUsers, users, profileUsername]);
   
-  const isFollowing = currentUser.followingList?.includes(profileUser.username);
+  // Ensure fetchedUser matches the requested profileUsername
+  const effectiveFetchedUser = fetchedUser && fetchedUser.username.toLowerCase() === profileUsername.toLowerCase() ? fetchedUser : null;
+  
+  // Prioritize API data (effectiveFetchedUser) over local state (foundUser) for other users
+  // This ensures we display the most up-to-date profile data
+  const profileUser = isOwnProfile ? currentUser : (effectiveFetchedUser || foundUser);
+
+  useEffect(() => {
+    // Reset fetched user when profile username changes
+    if (fetchedUser && fetchedUser.username.toLowerCase() !== profileUsername.toLowerCase()) {
+        setFetchedUser(null);
+        setFetchError(null);
+    }
+
+    // If user is not in props/local state and we have a username, fetch it
+    // Or if we want to ensure we have the latest data for a profile we are viewing (even if in local state)
+    // For now, fetch if not found OR if we want to prioritize API data
+    if ((!foundUser && !effectiveFetchedUser) && profileUsername && !isOwnProfile) {
+        setIsLoadingUser(true);
+        setFetchError(null);
+        
+        apiClient.getUser(profileUsername)
+            .then(response => {
+                if (response.data) {
+                    setFetchedUser(response.data);
+                } else {
+                    setFetchError(response.error || "User not found");
+                }
+            })
+            .catch(err => {
+                console.error("Error fetching user profile:", err);
+                setFetchError(err.message || "Failed to load user profile");
+            })
+            .finally(() => {
+                setIsLoadingUser(false);
+            });
+    }
+  }, [profileUsername, foundUser, isOwnProfile, effectiveFetchedUser, fetchedUser]);
+  
+  if (!profileUser) {
+      if (isLoadingUser) {
+          return (
+              <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--theme-bg-primary)]">
+                  <LoadingSpinner />
+                  <p className="mt-4 text-[var(--theme-primary)] font-mono animate-pulse">{t('loadingProfile') || 'LOCATING TARGET...'}</p>
+              </div>
+          );
+      }
+      if (fetchError) {
+           return (
+              <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--theme-bg-primary)] text-[var(--theme-text-primary)]">
+                  <div className="text-red-500 text-6xl mb-4">404</div>
+                  <p className="text-xl font-mono">{fetchError}</p>
+                  <button onClick={() => onNavigate(Page.Dashboard)} className="mt-8 px-6 py-2 bg-[var(--theme-primary)] text-white rounded-sm hover:brightness-110">
+                      {t('returnHome') || 'RETURN TO BASE'}
+                  </button>
+              </div>
+          );
+      }
+      // Fallback loading
+      return <LoadingSpinner />;
+  }
+  
+  const isFollowing = profileUser ? currentUser.followingList?.includes(profileUser.username) : false;
 
   const [userListModal, setUserListModal] = useState<{title: string, users: User[]} | null>(null);
+
   const [postToEdit, setPostToEdit] = useState<Post | null>(null);
   const [activeTab, setActiveTab] = useState<'posts' | 'media' | 'temporal'>('posts');
   
@@ -166,6 +245,25 @@ export default function ProfilePage({
       if (!isFollowing) {
           playSound('follow');
       }
+
+      // Optimistic update for fetchedUser (if viewing another user)
+      if (fetchedUser && fetchedUser.username === profileUser.username) {
+           const isNowFollowing = !isFollowing;
+           const newFollowerCount = isNowFollowing 
+               ? (fetchedUser.followers || 0) + 1 
+               : Math.max(0, (fetchedUser.followers || 0) - 1);
+           
+           const newFollowersList = isNowFollowing
+               ? [...(fetchedUser.followersList || []), currentUser.username]
+               : (fetchedUser.followersList || []).filter(u => u !== currentUser.username);
+
+           setFetchedUser({
+               ...fetchedUser,
+               followers: newFollowerCount,
+               followersList: newFollowersList
+           });
+      }
+
       onFollowToggle(profileUser.username);
       if (followButtonRef.current) {
           followButtonRef.current.classList.add('pulse-click');
@@ -208,7 +306,44 @@ export default function ProfilePage({
              borderRadius === 'sm' ? 'rounded-sm' : 'rounded-none';
   };
   
-  const avatarShape = profileUser.equippedFrame ? getFrameShape(profileUser.equippedFrame.name) : getRadiusClass('avatar');
+  const avatarShape = profileUser?.equippedFrame ? getFrameShape(profileUser.equippedFrame.name) : getRadiusClass('avatar');
+
+  if (isLoadingUser && !profileUser) {
+    return (
+        <div className="h-screen w-screen flex flex-col items-center justify-center bg-[var(--theme-bg-primary)]">
+            <LoadingSpinner/>
+            <p className="mt-4 text-[var(--theme-text-secondary)] animate-pulse">LOCATING SIGNAL...</p>
+        </div>
+    );
+  }
+
+  if (!profileUser) {
+    return (
+        <div className="h-screen w-screen flex flex-col">
+             <Header 
+                user={currentUser} 
+                onLogout={onLogout} 
+                onViewProfile={(username) => onNavigate(Page.Profile, username)} 
+                onNavigate={onNavigate}
+                onNotificationClick={onNotificationClick}
+                onSearch={handleSearch} 
+                allPosts={allPosts} 
+                allUsers={allUsers}
+                conversations={conversations}
+                onOpenMarketplace={onOpenMarketplace}
+            />
+            <div className="flex-grow flex flex-col items-center justify-center">
+                <div className="text-center space-y-4">
+                    <h2 className="text-2xl font-bold text-red-500 glitch-effect" data-text="USER NOT FOUND">USER NOT FOUND</h2>
+                    <p className="text-[var(--theme-text-secondary)]">{fetchError || "The requested timeline could not be found."}</p>
+                    <button onClick={() => onNavigate(Page.Dashboard)} className="px-4 py-2 bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] hover:border-[var(--theme-primary)] rounded transition-colors">
+                        RETURN TO DASHBOARD
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+  }
 
   return (
     <div className="h-screen w-screen flex flex-col">
@@ -282,7 +417,28 @@ export default function ProfilePage({
                     )}
                 </div>
                 {profileUser.bio && (
-                  <p className="text-[var(--theme-text-primary)] mt-2">{profileUser.bio}</p>
+                  <div className="text-[var(--theme-text-primary)] mt-2 whitespace-pre-wrap break-words">
+                      {(() => {
+                          const urlRegex = /(https?:\/\/[^\s]+)/g;
+                          const parts = profileUser.bio.split(urlRegex);
+                          return parts.map((part, i) => {
+                              if (part.match(urlRegex)) {
+                                  return (
+                                      <a 
+                                        key={i} 
+                                        href={part} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer" 
+                                        className="text-[var(--theme-primary)] hover:underline break-all"
+                                      >
+                                          {part}
+                                      </a>
+                                  );
+                              }
+                              return part;
+                          });
+                      })()}
+                  </div>
                 )}
                 {profileUser.birthday && (
                   <p className="text-sm text-[var(--theme-text-secondary)] mt-1">{t('profileBirthday')}: {(() => {
@@ -327,7 +483,14 @@ export default function ProfilePage({
                   <button onClick={() => onNavigate(Page.Dashboard)} className="back-to-echo-btn">
                       &lt; {t('backToEchoFrame')}
                   </button>
-                  {!isOwnProfile && (
+                  {isOwnProfile ? (
+                      <button 
+                          onClick={() => setIsEditProfileOpen(true)}
+                          className="px-4 py-1 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] hover:border-[var(--theme-primary)] hover:text-[var(--theme-primary)] text-[var(--theme-text-primary)] rounded-sm transition-colors flex items-center"
+                      >
+                          <span className="mr-2">✎</span> {t('editProfile') || 'Edit Profile'}
+                      </button>
+                  ) : (
                     <>
                       <button onClick={() => onNavigate(Page.Messages, profileUser.username)} className="follow-btn px-2 py-1 rounded-sm transition-colors" title={t('messageButton')}>
                           <MessageIcon className="w-5 h-5"/>
@@ -406,20 +569,33 @@ export default function ProfilePage({
 
                     {canViewPosts ? (
                         filteredPosts.length > 0 ? (
-                            filteredPosts.map(post => <PostCard 
-                              key={post.id} 
-                              post={post} 
-                              currentUser={currentUser}
-                              onViewProfile={(username) => onNavigate(Page.Profile, username)} 
-                              onUpdateReaction={onUpdateReaction}
-                              onReply={onReply}
-                              onEcho={onEcho}
-                              onDelete={onDeletePost}
-                              onEdit={setPostToEdit}
-                              onTagClick={handleTagClick}
-                              onPollVote={onPollVote}
-                              typingParentIds={typingParentIds}
-                            />)
+                            <>
+                                {filteredPosts.slice(0, visiblePostsCount).map(post => <PostCard 
+                                key={post.id} 
+                                post={post} 
+                                currentUser={currentUser}
+                                onViewProfile={(username) => onNavigate(Page.Profile, username)} 
+                                onUpdateReaction={onUpdateReaction}
+                                onReply={onReply}
+                                onEcho={onEcho}
+                                onDelete={onDeletePost}
+                                onEdit={setPostToEdit}
+                                onTagClick={handleTagClick}
+                                onPollVote={onPollVote}
+                                typingParentIds={typingParentIds}
+                                />)}
+                                
+                                {filteredPosts.length > visiblePostsCount && (
+                                    <div className="flex justify-center pt-4 pb-2">
+                                        <button 
+                                            onClick={() => setVisiblePostsCount(prev => prev + 10)}
+                                            className="px-6 py-2 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-primary)] text-[var(--theme-primary)] hover:bg-[var(--theme-primary)] hover:text-white transition-colors font-mono tracking-wider rounded-sm"
+                                        >
+                                            [ {t('loadMore') || 'LOAD MORE DATA'} ]
+                                        </button>
+                                    </div>
+                                )}
+                            </>
                         ) : (
                             <div className="text-center text-[var(--theme-text-secondary)] p-10 border border-dashed border-[var(--theme-border-primary)]">
                                 <p className="text-lg">{activeTab === 'temporal' ? t('noEchoesFoundDate') : t('noPostsYet')}</p>
@@ -432,22 +608,24 @@ export default function ProfilePage({
                     )}
                 </div>
 
-                {/* Right Column: AI Summary */}
+                {/* Right Column: Bio */}
                 <div className="hidden lg:block space-y-4">
                     <div className="bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] rounded-lg p-4">
                         <h3 className="font-bold text-[var(--theme-text-light)] mb-3 border-b border-[var(--theme-border-primary)] pb-2 flex items-center">
-                            <span className="mr-2">🤖</span> {t('aiBio') || "Resumo AI"}
+                            <span className="mr-2">📝</span> {t('bio') || "Bio"}
                         </h3>
                         <div className="text-sm text-[var(--theme-text-primary)] space-y-2">
-                            <p className="italic opacity-80">
-                                "{profileUser.bio ? 
-                                    `Uma entidade digital identificada como @${profileUser.username}. ${profileUser.bio.length > 50 ? 'Possui uma presença complexa e multifacetada.' : 'Define-se de forma concisa.'}` 
-                                    : 'Uma entidade enigmática sem descrição definida.'} 
-                                {popularCords.length > 0 ? ' Frequentemente inicia discussões engajadas.' : ' Mantém um perfil de baixo ruído na rede.'}"
-                            </p>
+                            {profileUser.bio ? (
+                                <p className="whitespace-pre-wrap">{profileUser.bio}</p>
+                            ) : (
+                                <p className="italic opacity-60 text-[var(--theme-text-secondary)]">
+                                    {t('noBio') || "Nenhuma biografia disponível."}
+                                </p>
+                            )}
+                            
                             <div className="mt-4 pt-2 border-t border-[var(--theme-border-primary)]">
                                 <span className="text-xs text-[var(--theme-text-secondary)] font-mono uppercase">
-                                    :: Persona Analysis ::
+                                    :: System Tags ::
                                 </span>
                                 <div className="flex flex-wrap gap-2 mt-2">
                                     <span className="bg-[var(--theme-bg-tertiary)] px-2 py-1 rounded text-xs border border-[var(--theme-primary)] text-[var(--theme-primary)]">
@@ -489,6 +667,23 @@ export default function ProfilePage({
               onNavigate(Page.Profile, username);
             }}
           />
+      )}
+      
+      {isEditProfileOpen && (
+        <React.Suspense fallback={<LoadingSpinner />}>
+            <EditProfileModal 
+                user={currentUser} 
+                onClose={() => setIsEditProfileOpen(false)} 
+                onSave={async (updatedUser) => {
+                    if (onUpdateUser) {
+                        const result = await onUpdateUser(updatedUser);
+                        if (!result.success) {
+                            throw new Error(result.error || 'Failed to update profile');
+                        }
+                    }
+                }} 
+            />
+        </React.Suspense>
       )}
     </div>
   );

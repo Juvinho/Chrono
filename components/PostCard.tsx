@@ -33,7 +33,7 @@ const reactionIcons: { [key in CyberpunkReaction]: ReactNode } = {
     Static: <StaticIcon className="w-5 h-5" />,
 };
 
-const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, onUpdateReaction, onReply, onEcho, onDelete, onEdit, onTagClick, onPollVote, typingParentIds, compact = false, nestingLevel = 0, isThreadedReply = false, isContextualView = false }) => {
+const PostCard: React.FC<PostCardProps> = React.memo(({ post, currentUser, onViewProfile, onUpdateReaction, onReply, onEcho, onDelete, onEdit, onTagClick, onPollVote, typingParentIds, compact = false, nestingLevel = 0, isThreadedReply = false, isContextualView = false, onPostClick }) => {
     const { t } = useTranslation();
     const { playSound } = useSound();
     const [showReactions, setShowReactions] = useState(false);
@@ -297,7 +297,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
                 </div>
                 <div className="relative" ref={menuRef}>
                     {!isContextualView && (
-                        <button onClick={() => setShowMenu(prev => !prev)} className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)]">
+                        <button 
+                            onClick={() => setShowMenu(prev => !prev)} 
+                            className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)]"
+                            aria-label={t('postMenuLabel') || 'Post Options'}
+                        >
                             <DotsHorizontalIcon className="w-5 h-5"/>
                         </button>
                     )}
@@ -305,11 +309,17 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
                         <div className="absolute top-full right-0 mt-1 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] rounded-sm z-10 animate-[fadeIn_0.2s_ease-in-out] w-36">
                             {isAuthor && (
                                 <>
-                                    <button onClick={() => { onEdit(post); setShowMenu(false); }} className="flex items-center space-x-2 w-full text-left px-3 py-2 text-sm text-[var(--theme-text-light)] hover:bg-[var(--theme-border-primary)]">
+                                    <button 
+                                        onClick={() => { onEdit(post); setShowMenu(false); }} 
+                                        className="flex items-center space-x-2 w-full text-left px-3 py-2 text-sm text-[var(--theme-text-light)] hover:bg-[var(--theme-border-primary)]"
+                                    >
                                         <EditIcon className="w-4 h-4" />
                                         <span>{t('postEdit')}</span>
                                     </button>
-                                    <button onClick={handleDelete} className="flex items-center space-x-2 w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-[var(--theme-border-primary)]">
+                                    <button 
+                                        onClick={handleDelete} 
+                                        className="flex items-center space-x-2 w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-[var(--theme-border-primary)]"
+                                    >
                                         <TrashIcon className="w-4 h-4" />
                                         <span>{t('postDelete')}</span>
                                     </button>
@@ -337,7 +347,13 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
                                     </div>
                                 );
                             })()}
-                            <button onClick={() => onViewProfile(post.inReplyTo!.author.username)} className="font-bold chrono-tag">@{post.inReplyTo!.author.username}</button>
+                            <button 
+                                onClick={() => onViewProfile(post.inReplyTo!.author.username)} 
+                                className="font-bold chrono-tag"
+                                aria-label={t('viewProfileLabel', { username: post.inReplyTo!.author.username }) || `View @${post.inReplyTo!.author.username}'s profile`}
+                            >
+                                @{post.inReplyTo!.author.username}
+                            </button>
                         </div>
                         <p className="mt-1 italic text-[var(--theme-text-primary)] opacity-80 truncate">
                             {post.inReplyTo.content}
@@ -358,10 +374,10 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
                 <>
                     <p className={`whitespace-pre-wrap ${compact ? 'text-sm mb-2' : 'mb-4'}`}>{renderContentWithTags(post.content)}</p>
                     {post.imageUrl && (
-                        <img src={post.imageUrl} alt={t('postImageAlt', { username: post.author.username })} className="w-full object-cover rounded-sm mt-2" loading="lazy" />
+                        <img src={post.imageUrl} alt={t('postImageAlt', { username: post.author.username }) || `Image posted by @${post.author.username}`} className="w-full object-cover rounded-sm mt-2" loading="lazy" />
                     )}
                     {post.videoUrl && (
-                        <video src={post.videoUrl} controls muted loop className="w-full object-cover rounded-sm mt-2 bg-black"></video>
+                        <video src={post.videoUrl} controls muted loop className="w-full object-cover rounded-sm mt-2 bg-black" aria-label={t('postVideoLabel', { username: post.author.username }) || `Video posted by @${post.author.username}`}></video>
                     )}
                     {renderPoll()}
                     
@@ -373,6 +389,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
                                     key={tag}
                                     onClick={(e) => { e.stopPropagation(); onTagClick(tag); }}
                                     className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-[var(--theme-bg-tertiary)] text-[var(--theme-secondary)] border border-[var(--theme-border-secondary)] hover:bg-[var(--theme-bg-primary)] hover:border-[var(--theme-secondary)] hover:shadow-[0_0_8px_rgba(0,243,255,0.3)] transition-all"
+                                    aria-label={t('viewTagLabel', { tag }) || `View posts with tag ${tag}`}
                                 >
                                     {tag}
                                 </button>
@@ -409,27 +426,53 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
             <div className="mt-4 flex items-center justify-between text-[var(--theme-text-secondary)] border-t border-[var(--theme-border-primary)] pt-2">
                 <div className="flex items-center space-x-3 overflow-x-auto">
                     {post.reactions && Object.entries(post.reactions).map(([reaction, count]) => (
-                        <span key={reaction} className="text-xs flex items-center space-x-1 flex-shrink-0" title={reaction}>
+                        <span 
+                            key={reaction} 
+                            className="text-xs flex items-center space-x-1 flex-shrink-0" 
+                            title={reaction}
+                            aria-label={`${count} ${reaction} reactions`}
+                        >
                            {reactionIcons[reaction as CyberpunkReaction]}
                            <span className="text-[var(--theme-primary)] font-bold">{count}</span>
                         </span>
                     ))}
                 </div>
                 <div className="flex items-center space-x-4">
-                    <button onClick={() => setIsReplying(!isReplying)} className="flex items-center space-x-1 hover:text-[var(--theme-secondary)] transition-colors" title={t('postReply')}>
+                    <button 
+                        onClick={() => setIsReplying(!isReplying)} 
+                        className="flex items-center space-x-1 hover:text-[var(--theme-secondary)] transition-colors" 
+                        title={t('postReply')}
+                        aria-label={t('postReply') || 'Reply to post'}
+                    >
                         <ReplyIcon className="w-5 h-5" />
                     </button>
-                    <button onClick={() => onEcho(post)} className="flex items-center space-x-1 hover:text-[var(--theme-secondary)] transition-colors" title={t('postEcho')}>
+                    <button 
+                        onClick={() => onEcho(post)} 
+                        className="flex items-center space-x-1 hover:text-[var(--theme-secondary)] transition-colors" 
+                        title={t('postEcho')}
+                        aria-label={t('postEcho') || 'Echo post'}
+                    >
                         <EchoIcon className="w-5 h-5" />
                     </button>
                     <div className="relative">
-                        <button onClick={() => setShowReactions(!showReactions)} className="flex items-center space-x-1 hover:text-[var(--theme-secondary)] transition-colors" title={t('postReact')}>
+                        <button 
+                            onClick={() => setShowReactions(!showReactions)} 
+                            className="flex items-center space-x-1 hover:text-[var(--theme-secondary)] transition-colors" 
+                            title={t('postReact')}
+                            aria-label={t('postReact') || 'React to post'}
+                        >
                             <ReactIcon className="w-5 h-5" />
                         </button>
                         {showReactions && (
                             <div className="absolute bottom-full right-0 mb-2 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] rounded-sm p-1 flex space-x-1 z-10 animate-[fadeIn_0.2s_ease-in-out]">
                                 {reactions.map(reaction => (
-                                    <button key={reaction} onClick={() => handleReact(reaction)} className="reaction-button" title={reaction}>
+                                    <button 
+                                        key={reaction} 
+                                        onClick={() => handleReact(reaction)} 
+                                        className="reaction-button" 
+                                        title={reaction}
+                                        aria-label={reaction}
+                                    >
                                         {reactionIcons[reaction]}
                                     </button>
                                 ))}
@@ -506,6 +549,6 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
             )}
         </div>
     );
-};
+});
 
 export default React.memo(PostCard);

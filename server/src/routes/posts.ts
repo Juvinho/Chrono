@@ -4,8 +4,10 @@ import { ReactionService } from '../services/reactionService.js';
 import { PollService } from '../services/pollService.js';
 import { NotificationService } from '../services/notificationService.js';
 import { UserService } from '../services/userService.js';
+import { ModerationService } from '../services/moderationService.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import { getIo } from '../socket.js';
+import { validateNoEmojis } from '../utils/validation.js';
 
 const router = express.Router();
 const postService = new PostService();
@@ -13,10 +15,64 @@ const reactionService = new ReactionService();
 const pollService = new PollService();
 const notificationService = new NotificationService();
 const userService = new UserService();
+const moderationService = new ModerationService();
+
+// Helper to enrich posts in batch to avoid N+1 problems
+async function batchEnrichPosts(posts: any[], userId?: string): Promise<any[]> {
+  if (posts.length === 0) return [];
+
+  const postIds = posts.map(p => p.id);
+  
+  // Fetch reactions and votes in batch
+  const [allReactions, allVotes] = await Promise.all([
+    reactionService.getReactionsForPosts(postIds),
+    pollService.getVotesForPosts(postIds)
+  ]);
+
+  // For reposts and replies, we still use the single enrich logic but with limited depth
+  // to avoid complex batching for nested structures for now.
+  // The main bottleneck was the flat list of posts in the feed.
+  
+  return Promise.all(posts.map(async (post) => {
+    let repostOf = null;
+    if (post.repostOfId) {
+      const repost = await postService.getPostById(post.repostOfId);
+      if (repost) {
+        repostOf = await enrichPost(repost, 1, 1); 
+      }
+    }
+
+    let inReplyTo = null;
+    if (post.inReplyToId) {
+      const parentPost = await postService.getPostById(post.inReplyToId);
+      if (parentPost) {
+        const parentAuthor = await userService.getUserById(parentPost.authorId);
+        inReplyTo = {
+          postId: parentPost.id,
+          author: {
+            username: parentAuthor?.username,
+            avatar: parentAuthor?.avatar,
+          },
+          content: parentPost.content,
+        };
+      }
+    }
+
+    return {
+      ...post,
+      reactions: allReactions[post.id] || {},
+      voters: allVotes[post.id] || {},
+      repostOf,
+      inReplyTo,
+      replies: [] // Replies are fetched separately or via single post view
+    };
+  }));
+}
 
 // Helper to enrich post with author and reactions
 async function enrichPost(post: any, depth: number = 0, maxDepth: number = 1): Promise<any> {
-  const author = await userService.getUserById(post.authorId);
+  // If post already has author (from optimized getPosts), skip fetch
+  const author = post.author || await userService.getUserById(post.authorId);
   const reactions = await reactionService.getReactionsForPost(post.id);
   const votes = post.pollOptions ? await pollService.getVotesForPost(post.id) : {};
 
@@ -51,19 +107,19 @@ async function enrichPost(post: any, depth: number = 0, maxDepth: number = 1): P
       replies = await Promise.all(rawReplies.map((r) => enrichPost(r, depth + 1, maxDepth)));
   }
 
+  const authorData = post.author || (author ? {
+    username: author.username,
+    avatar: author.avatar,
+    bio: author.bio,
+    isVerified: author.isVerified,
+    verificationBadge: author.verificationBadge,
+    equippedFrame: author.equippedFrame,
+    equippedEffect: author.equippedEffect,
+  } : null);
+
   return {
     ...post,
-    author: author
-      ? {
-          username: author.username,
-          avatar: author.avatar,
-          bio: author.bio,
-          isVerified: author.isVerified,
-          verificationBadge: author.verificationBadge,
-          equippedFrame: author.equippedFrame,
-          equippedEffect: author.equippedEffect,
-        }
-      : null,
+    author: authorData,
     reactions,
     repostOf,
     inReplyTo,
@@ -84,8 +140,8 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
       inReplyToId: inReplyTo === 'null' ? null : (inReplyTo as string),
     });
 
-    // For feed, limit recursion depth to 1 (show immediate replies only)
-    const enrichedPosts = await Promise.all(posts.map((post) => enrichPost(post, 0, 1)));
+    // Use optimized batch enrichment
+    const enrichedPosts = await batchEnrichPosts(posts, req.userId || undefined);
 
     res.json(enrichedPosts);
   } catch (error: any) {
@@ -124,6 +180,21 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
 
     if (!content && !repostOfId) {
       return res.status(400).json({ error: 'Content or repostOfId is required' });
+    }
+
+    // Validate no emojis in mentions
+    if (content) {
+      const words = content.split(/\s+/);
+      const hasInvalidMention = words.some((w: string) => w.startsWith('@') && !validateNoEmojis(w, 'Menção').valid);
+      if (hasInvalidMention) {
+        return res.status(400).json({ error: 'Menções não podem conter emojis.' });
+      }
+
+      // Moderation Check
+      const moderationResult = await moderationService.checkContent(content);
+      if (moderationResult.flagged) {
+        return res.status(400).json({ error: moderationResult.reason || 'Conteúdo sinalizado pela moderação.' });
+      }
     }
 
     const post = await postService.createPost(req.userId, content || '', {

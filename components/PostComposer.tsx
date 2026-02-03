@@ -4,6 +4,7 @@ import { useTranslation } from '../hooks/useTranslation';
 import { CameraIcon, PollIcon, CalendarIcon, LockClosedIcon, MicrophoneIcon, ImageIcon, SparklesIcon } from './icons';
 import { generateImage, analyzeSentiment } from '../services/geminiService';
 import FramePreview, { getFrameShape } from './FramePreview';
+import { containsEmoji } from '../utils/emojiValidation';
 
 const MAX_CHARACTERS = 512;
 
@@ -181,6 +182,28 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
   const handleSubmit = async () => {
     // Basic validation
     if (!content.trim() && !generatedImageUrl && !videoUrl && !postToEdit) return;
+
+    // Emoji validation
+    if (containsEmoji(content)) {
+        // If the requirement is to block emojis in mentions ONLY, we need to parse.
+        // But "impedir a inserção de emojis nos campos de @ menções e na área de login"
+        // If we assume "campos de @ menções" refers to the username field (login/register), we are good.
+        // But if it means "mentions in posts", we need regex for that.
+        // Let's assume the strict "no emojis in mentions" rule.
+        // Regex to find @mentions: @[a-zA-Z0-9_-]+
+        // If we find @ followed by emoji, block.
+        // Regex: /@[\w-]*\p{Emoji}/u
+        // But simply, if the user meant "block emojis in post text", I'd use containsEmoji(content).
+        // Given "EchoFrame" is a social network, blocking emojis in posts is weird.
+        // I will assume they meant "mentions" specifically.
+        // Let's implement a check: if any word starts with @ and contains emoji.
+        const words = content.split(/\s+/);
+        const hasInvalidMention = words.some(w => w.startsWith('@') && containsEmoji(w));
+        if (hasInvalidMention) {
+             alert(t('noEmojisInMentions')); // Or use a proper error state if available
+             return;
+        }
+    }
 
     setIsLocalSubmitting(true);
 

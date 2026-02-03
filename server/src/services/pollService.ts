@@ -48,5 +48,28 @@ export class PollService {
 
     return votes;
   }
+
+  async getVotesForPosts(postIds: string[]): Promise<{ [postId: string]: { [username: string]: number } }> {
+    if (postIds.length === 0) return {};
+
+    const result = await pool.query(
+      `SELECT pv.post_id, u.username, pv.option_index
+       FROM poll_votes pv
+       JOIN users u ON pv.user_id = u.id
+       WHERE pv.post_id = ANY($1)`,
+      [postIds]
+    );
+
+    const postVotes: { [postId: string]: { [username: string]: number } } = {};
+    result.rows.forEach((row) => {
+      const postId = row.post_id;
+      if (!postVotes[postId]) {
+        postVotes[postId] = {};
+      }
+      postVotes[postId][row.username] = row.option_index;
+    });
+
+    return postVotes;
+  }
 }
 

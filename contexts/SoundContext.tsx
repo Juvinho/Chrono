@@ -126,8 +126,10 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
     };
 
+    const contextValue = React.useMemo(() => ({ playSound }), []);
+
     return (
-        <SoundContext.Provider value={{ playSound }}>
+        <SoundContext.Provider value={contextValue}>
             {children}
         </SoundContext.Provider>
     );

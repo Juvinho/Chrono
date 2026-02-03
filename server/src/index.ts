@@ -5,6 +5,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import rateLimit from 'express-rate-limit';
 import { migrate } from './db/migrate.js';
 import { pool } from './db/connection.js';
 import authRoutes from './routes/auth.js';
@@ -62,6 +63,31 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Rate Limiting
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 500, // Limit each IP to 500 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const postLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 10, // Limit each IP to 10 posts per minute (prevents echo spam)
+  message: { error: 'Você está postando muito rápido. Aguarde um momento.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api', apiLimiter);
+app.use('/api/posts', (req, res, next) => {
+  if (req.method === 'POST') {
+    postLimiter(req, res, next);
+  } else {
+    next();
+  }
+});
 
 // Root route
 app.get('/api', (req, res) => {

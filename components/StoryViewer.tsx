@@ -113,10 +113,24 @@ export default function StoryViewer({ user, stories, onClose, onNextUser, onPrev
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [handleNext, handlePrev, onClose]);
 
+    // Preload next story
+    const nextStory = stories[currentIndex + 1];
+
     if (!currentStory) return null;
 
     return (
         <div className="fixed inset-0 z-[100] bg-black bg-opacity-95 flex flex-col items-center justify-center">
+            {/* Hidden Preloader */}
+            {nextStory && (
+                <div className="hidden">
+                    {nextStory.type === 'video' ? (
+                        <video src={nextStory.content} preload="auto" />
+                    ) : (
+                        <img src={nextStory.content} alt="preload" />
+                    )}
+                </div>
+            )}
+
             {/* Header / Progress */}
             <div className="absolute top-4 w-full max-w-md px-4 flex flex-col gap-2 z-20">
                 <div className="flex gap-1 h-1">

@@ -57,36 +57,45 @@ export class PostService {
       authorId?: string;
       inReplyToId?: string | null; // null means top-level posts only
     }
-  ): Promise<Post[]> {
-    let query = 'SELECT * FROM posts WHERE 1=1';
+  ): Promise<any[]> {
+    let query = `
+      SELECT p.*, 
+             u.username as author_username, u.avatar as author_avatar, u.is_verified as author_is_verified,
+             u.verification_badge_label, u.verification_badge_color,
+             up.bio as author_bio
+      FROM posts p
+      JOIN users u ON p.author_id = u.id
+      LEFT JOIN user_profiles up ON u.id = up.user_id
+      WHERE 1=1
+    `;
     const params: any[] = [];
     let paramIndex = 1;
 
     if (options?.authorId) {
-      query += ` AND author_id = $${paramIndex++}`;
+      query += ` AND p.author_id = $${paramIndex++}`;
       params.push(options.authorId);
     }
 
     if (options?.inReplyToId !== undefined) {
       if (options.inReplyToId === null) {
-        query += ` AND in_reply_to_id IS NULL`;
+        query += ` AND p.in_reply_to_id IS NULL`;
       } else {
-        query += ` AND in_reply_to_id = $${paramIndex++}`;
+        query += ` AND p.in_reply_to_id = $${paramIndex++}`;
         params.push(options.inReplyToId);
       }
     }
 
     // Filter private posts - only show if user is the author or following the author
     if (userId) {
-      query += ` AND (is_private = FALSE OR author_id = $${paramIndex} OR 
-               author_id IN (SELECT following_id FROM follows WHERE follower_id = $${paramIndex}))`;
+      query += ` AND (p.is_private = FALSE OR p.author_id = $${paramIndex} OR 
+               p.author_id IN (SELECT following_id FROM follows WHERE follower_id = $${paramIndex}))`;
       params.push(userId);
       paramIndex++;
     } else {
-      query += ` AND is_private = FALSE`;
+      query += ` AND p.is_private = FALSE`;
     }
 
-    query += ' ORDER BY created_at DESC';
+    query += ' ORDER BY p.created_at DESC';
 
     if (options?.limit) {
       query += ` LIMIT $${paramIndex++}`;
@@ -101,16 +110,25 @@ export class PostService {
     const result = await pool.query(query, params);
     return result.rows.map((row) => {
       const post = this.mapPostFromDb(row);
+      const author = {
+        username: row.author_username,
+        avatar: row.author_avatar,
+        bio: row.author_bio,
+        isVerified: row.author_is_verified,
+        verificationBadge: row.verification_badge_label ? {
+          label: row.verification_badge_label,
+          color: row.verification_badge_color
+        } : undefined
+      };
       
       // Scrub locked content for Time Capsules
       if (post.unlockAt && new Date(post.unlockAt) > new Date()) {
-        // If userId is provided and matches author, allow viewing
         if (userId && post.authorId === userId) {
-          return post;
+          return { ...post, author };
         }
-        // Otherwise hide content
         return {
           ...post,
+          author,
           content: '',
           imageUrl: null,
           videoUrl: null,
@@ -118,7 +136,7 @@ export class PostService {
         };
       }
       
-      return post;
+      return { ...post, author };
     });
   }
 

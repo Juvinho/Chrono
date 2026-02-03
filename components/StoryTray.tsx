@@ -19,17 +19,20 @@ export default function StoryTray({ currentUser, usersWithStories, onViewStory, 
     const hasMyStory = currentUser.stories && currentUser.stories.length > 0;
 
     const renderStoryItem = (user: User, isCurrentUser: boolean) => {
+        const hasUnviewedStories = user.stories?.some(s => !s.viewers?.includes(currentUser.id || ''));
         const avatarShape = user.equippedFrame ? getFrameShape(user.equippedFrame.name) : 'rounded-full';
+        
         return (
-            <div 
+            <button 
                 key={user.username} 
-                className={`flex flex-col items-center gap-1 cursor-pointer ${variant === 'row' ? 'min-w-[72px]' : 'w-full'}`} 
+                className={`flex flex-col items-center gap-1 cursor-pointer ${variant === 'row' ? 'min-w-[72px]' : 'w-full'} border-none bg-transparent p-0`} 
                 onClick={() => isCurrentUser ? (hasMyStory ? onViewStory(user) : onCreateStory()) : onViewStory(user)}
+                aria-label={isCurrentUser ? (hasMyStory ? t('viewYourStory') || 'Ver seu Story' : t('createStory') || 'Criar Story') : t('viewUserStory', { username: user.username }) || `Ver Story de ${user.username}`}
             >
                 <div className={`relative ${variant === 'row' ? 'w-16 h-16' : 'w-14 h-14'} ${avatarShape} p-[2px] ${
                     isCurrentUser 
-                        ? (hasMyStory ? 'bg-gradient-to-tr from-purple-600 to-purple-400' : 'border-2 border-[var(--theme-border)] border-dashed')
-                        : 'bg-gradient-to-tr from-purple-600 to-purple-400 animate-pulse-slow'
+                        ? (hasMyStory ? (hasUnviewedStories ? 'bg-gradient-to-tr from-purple-600 to-purple-400' : 'bg-gray-500') : 'border-2 border-[var(--theme-border)] border-dashed')
+                        : (hasUnviewedStories ? 'bg-gradient-to-tr from-purple-600 to-purple-400 animate-pulse-slow' : 'bg-gray-500')
                 }`}>
                     <div className={`w-full h-full ${avatarShape} overflow-hidden bg-[var(--theme-bg-primary)] p-[2px] relative z-10`}>
                         <img 

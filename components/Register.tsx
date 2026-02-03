@@ -1,12 +1,14 @@
 
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import GlitchText from './GlitchText';
 import { User, Page, ProfileSettings } from '../types';
 import { useTranslation } from '../hooks/useTranslation';
 import { UserIcon } from './icons';
 import { apiClient, mapApiUserToUser } from '../services/api';
 import FramePreview, { getFrameShape } from './FramePreview';
+import { generateInitialsAvatar } from '../utils/avatarGenerator';
+import { validateNoEmojis } from '../utils/emojiValidation';
 
 interface RegisterProps {
   users: User[];
@@ -29,14 +31,109 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [avatar, setAvatar] = useState('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop');
+    const [avatar, setAvatar] = useState('');
     const [error, setError] = useState('');
     const [captchaVerified, setCaptchaVerified] = useState(false);
+    const [emailError, setEmailError] = useState('');
+    const [usernameError, setUsernameError] = useState('');
+    const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
+    const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+    const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+    const [isCustomAvatar, setIsCustomAvatar] = useState(false);
     const avatarInputRef = useRef<HTMLInputElement>(null);
 
     // Mock initial frame for preview (optional, or null if new users start with no frame)
     // For now, we assume new users have no frame, but we use the helper to be safe/consistent
     const avatarShape = 'rounded-full'; // Default for new users without frame
+
+    // Generate avatar from initials if not custom
+    useEffect(() => {
+        if (username && !isCustomAvatar) {
+            const generated = generateInitialsAvatar(username);
+            setAvatar(generated);
+        }
+    }, [username, isCustomAvatar]);
+
+    useEffect(() => {
+        const checkUsername = async () => {
+            if (username.length < 3) {
+                if (username.length > 0) setUsernameError('Nome de usuário muito curto.');
+                return;
+            }
+
+            const emojiValidation = validateNoEmojis(username, 'Nome de usuário');
+            if (!emojiValidation.valid) {
+                setUsernameError(emojiValidation.error);
+                return;
+            }
+
+            setIsCheckingUsername(true);
+            setUsernameError('');
+            setUsernameSuggestions([]);
+            
+            try {
+                const response = await apiClient.checkUsername(username);
+                if (response.data && !response.data.available) {
+                    setUsernameError(response.data.error || 'Nome de usuário indisponível');
+                    if (response.data.suggestions) {
+                        setUsernameSuggestions(response.data.suggestions);
+                    }
+                } else if (response.error) {
+                     setUsernameError(response.error);
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setIsCheckingUsername(false);
+            }
+        };
+
+        const timeoutId = setTimeout(() => {
+            if (username) checkUsername();
+            else {
+                setUsernameError('');
+                setUsernameSuggestions([]);
+            }
+        }, 500);
+
+        return () => clearTimeout(timeoutId);
+    }, [username]);
+
+    useEffect(() => {
+        const checkEmail = async () => {
+            if (!email) {
+                setEmailError('');
+                return;
+            }
+            // Basic regex for quick check before API to reduce load
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                setEmailError('Formato de email inválido.');
+                return;
+            }
+
+            setIsCheckingEmail(true);
+            setEmailError('');
+            
+            try {
+                const response = await apiClient.checkEmail(email);
+                if (response.data && !response.data.valid) {
+                    setEmailError(response.data.error || 'Email inválido');
+                } else if (response.error) {
+                    setEmailError(response.error);
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setIsCheckingEmail(false);
+            }
+        };
+
+        const timeoutId = setTimeout(() => {
+            checkEmail();
+        }, 800);
+
+        return () => clearTimeout(timeoutId);
+    }, [email]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
@@ -44,6 +141,7 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
           const reader = new FileReader();
           reader.onloadend = () => {
             setAvatar(reader.result as string);
+            setIsCustomAvatar(true);
           };
           reader.readAsDataURL(file);
         }
@@ -52,6 +150,11 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+
+        if (emailError || usernameError || isCheckingEmail || isCheckingUsername) {
+            setError('Por favor, corrija os erros antes de continuar.');
+            return;
+        }
 
         if (password !== confirmPassword) {
             setError(t('errorPasswordMatch'));
@@ -80,12 +183,9 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
                 return;
             }
 
-            if (response.data?.token && response.data?.user) {
-                apiClient.setToken(response.data.token);
-                const user = mapApiUserToUser(response.data.user);
-                onLogin(user);
-                onNavigate(Page.Dashboard);
-            }
+            // Navigate to verify page with email
+            onNavigate(Page.Verify, email);
+            
         } catch (err: any) {
             setError(err.message || 'Erro ao registrar. Tente novamente.');
         }
@@ -101,11 +201,38 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
                 <form className="space-y-4" onSubmit={handleSubmit}>
                     <div>
                         <label className="text-sm font-bold text-[var(--theme-text-secondary)] block">{t('registerEmail')}</label>
-                        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full px-3 py-2 mt-1 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)]" />
+                        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className={`w-full px-3 py-2 mt-1 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border ${emailError ? 'border-red-500' : 'border-[var(--theme-border-primary)]'} focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)]`} />
+                        {isCheckingEmail && <p className="text-xs text-[var(--theme-text-secondary)] mt-1 animate-pulse">Verificando disponibilidade...</p>}
+                        {emailError && <p className="text-xs text-red-500 mt-1">{emailError}</p>}
+                        {!emailError && !isCheckingEmail && email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && <p className="text-xs text-green-500 mt-1">Email válido</p>}
                     </div>
                     <div>
                         <label className="text-sm font-bold text-[var(--theme-text-secondary)] block">{t('registerUsername')}</label>
-                        <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} required className="w-full px-3 py-2 mt-1 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)]" />
+                        <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} required className={`w-full px-3 py-2 mt-1 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border ${usernameError ? 'border-red-500' : 'border-[var(--theme-border-primary)]'} focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)]`} />
+                         {isCheckingUsername && <p className="text-xs text-[var(--theme-text-secondary)] mt-1 animate-pulse">Verificando disponibilidade...</p>}
+                        {usernameError && (
+                            <div className="mt-1">
+                                <p className="text-xs text-red-500">{usernameError}</p>
+                                {usernameSuggestions.length > 0 && (
+                                    <div className="mt-2 p-2 bg-[var(--theme-bg-secondary)] rounded border border-[var(--theme-border-primary)]">
+                                        <p className="text-xs text-[var(--theme-text-secondary)] mb-1">Sugestões disponíveis:</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {usernameSuggestions.map(s => (
+                                                <button
+                                                    key={s}
+                                                    type="button"
+                                                    onClick={() => setUsername(s)}
+                                                    className="text-xs px-2 py-1 bg-[var(--theme-bg-primary)] border border-[var(--theme-border-primary)] rounded hover:border-[var(--theme-primary)] transition-colors text-[var(--theme-primary)]"
+                                                >
+                                                    @{s}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        {!usernameError && !isCheckingUsername && username.length >= 3 && <p className="text-xs text-green-500 mt-1">Nome de usuário disponível</p>}
                     </div>
                      <div>
                         <label className="text-sm font-bold text-[var(--theme-text-secondary)] block">{t('registerAvatar')}</label>

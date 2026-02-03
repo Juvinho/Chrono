@@ -5,6 +5,7 @@ import { User, Page } from '../types';
 import { useTranslation } from '../hooks/useTranslation';
 import { apiClient, mapApiUserToUser } from '../services/api';
 import FramePreview, { getFrameShape } from './FramePreview';
+import { validateNoEmojis } from '../utils/emojiValidation';
 
 interface LoginScreenProps {
     onLogin: (user: User) => void;
@@ -66,6 +67,13 @@ export default function LoginScreen({ onLogin, users, onNavigate }: LoginScreenP
         console.log('Login attempt starting...', { username, captchaVerified });
         setError('');
         setMessage('');
+
+        // Client-side emoji validation
+        const usernameValidation = validateNoEmojis(username, 'Nome de usuário');
+        if (!usernameValidation.valid) {
+            setError(usernameValidation.error);
+            return;
+        }
 
         if (!captchaVerified) {
             console.log('Captcha not verified');

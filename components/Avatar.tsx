@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { UserIcon } from './icons';
 
 interface AvatarProps {
     src?: string;
@@ -17,7 +18,7 @@ export default function Avatar({ src, alt, className, username, onClick }: Avata
     }, [src]);
 
     const handleOnError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-        console.warn(`[Avatar] Load failed for user: ${username || 'unknown'}`, { src });
+        // console.warn(`[Avatar] Load failed for user: ${username || 'unknown'}`, { src });
         setError(true);
     };
 
@@ -33,21 +34,17 @@ export default function Avatar({ src, alt, className, username, onClick }: Avata
 
     if (error || !src) {
         const fallbackStyle = getFallbackStyle(username || '?');
+        const initials = username ? username.slice(0, 2).toUpperCase() : '?';
         
-        // If it's a "rounded-full" or similar class, the div needs to respect it.
-        // We assume className contains dimensions and shape (e.g., w-10 h-10 rounded-full).
-        // We add flex center to center the initial.
         return (
             <div 
-                className={`${className} flex items-center justify-center overflow-hidden`} 
-                style={{ ...fallbackStyle }}
+                className={`${className} flex items-center justify-center overflow-hidden font-bold select-none text-white`} 
+                style={{ ...fallbackStyle, fontSize: '1.2em' }}
                 onClick={onClick}
                 role="img"
                 aria-label={alt || username || 'Avatar'}
             >
-                <span style={{ fontFamily: 'monospace', fontWeight: 'bold', fontSize: '1.2em' }}>
-                    {(username || '?').charAt(0).toUpperCase()}
-                </span>
+                 {username ? initials : <UserIcon className="w-1/2 h-1/2 text-white opacity-80" />}
             </div>
         );
     }
