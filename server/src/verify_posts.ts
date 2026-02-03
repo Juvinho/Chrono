@@ -1,8 +1,8 @@
-import { PostService } from './services/postService';
-import { ReactionService } from './services/reactionService';
-import { PollService } from './services/pollService';
-import { UserService } from './services/userService';
-import { pool } from './db/connection';
+import { PostService } from './services/postService.js';
+import { ReactionService } from './services/reactionService.js';
+import { PollService } from './services/pollService.js';
+import { UserService } from './services/userService.js';
+import { pool } from './db/connection.js';
 
 // Mock services
 const postService = new PostService();
@@ -49,7 +49,7 @@ async function enrichPost(post: any, depth: number = 0, maxDepth: number = 1): P
   let replies: any[] = [];
   if (depth < maxDepth) {
       const rawReplies = await postService.getReplies(post.id);
-      replies = await Promise.all(rawReplies.map((r) => enrichPost(r, depth + 1, maxDepth)));
+      replies = await Promise.all(rawReplies.map((r: any) => enrichPost(r, depth + 1, maxDepth)));
   }
 
   return {
@@ -107,12 +107,12 @@ async function verify() {
       // 2. Enrich posts
       console.log('Enriching posts...');
       const start = performance.now();
-      const enrichedPosts = await Promise.all(posts.map((post) => enrichPost(post, 0, 1)));
+      const enrichedPosts = await Promise.all(posts.map((post: any) => enrichPost(post, 0, 1)));
       const end = performance.now();
       console.log(`Enrichment took ${end - start}ms`);
       
       // 3. Check results
-      enrichedPosts.forEach(p => {
+      enrichedPosts.forEach((p: any) => {
           console.log(`Post ${p.id}: Author=${p.author ? p.author.username : 'NULL'}, Reactions=${JSON.stringify(p.reactions)}`);
           if (!p.author) {
               console.error(`ERROR: Post ${p.id} has no author!`);
