@@ -9,7 +9,7 @@ interface NotificationsPanelProps {
     onNotificationClick: (notification: Notification) => void;
 }
 
-function NotificationItem({ notification, onNotificationClick }: { notification: Notification, onNotificationClick: (notification: Notification) => void }) {
+const NotificationItem: React.FC<{ notification: Notification, onNotificationClick: (notification: Notification) => void }> = ({ notification, onNotificationClick }) => {
     const { t } = useTranslation();
     const renderIcon = () => {
         switch (notification.notificationType) {

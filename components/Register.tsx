@@ -12,6 +12,7 @@ interface RegisterProps {
   users: User[];
   setUsers: React.Dispatch<React.SetStateAction<User[]>>;
   onNavigate: (page: Page, email?: string) => void;
+  onLogin: (user: User) => void;
 }
 
 const defaultSettings: ProfileSettings = {

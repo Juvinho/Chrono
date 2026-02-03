@@ -33,7 +33,7 @@ const reactionIcons: { [key in CyberpunkReaction]: ReactNode } = {
     Static: <StaticIcon className="w-5 h-5" />,
 };
 
-function PostCard({ post, currentUser, onViewProfile, onUpdateReaction, onReply, onEcho, onDelete, onEdit, onTagClick, onPollVote, typingParentIds, compact = false, nestingLevel = 0, isThreadedReply = false, isContextualView = false }: PostCardProps) {
+const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, onUpdateReaction, onReply, onEcho, onDelete, onEdit, onTagClick, onPollVote, typingParentIds, compact = false, nestingLevel = 0, isThreadedReply = false, isContextualView = false }) => {
     const { t } = useTranslation();
     const { playSound } = useSound();
     const [showReactions, setShowReactions] = useState(false);
@@ -48,17 +48,17 @@ function PostCard({ post, currentUser, onViewProfile, onUpdateReaction, onReply,
 
     const menuRef = useRef<HTMLDivElement>(null);
     const isTyping = typingParentIds?.has(post.id);
-    const prevVoters = useRef(post.voters);
+    const prevVotedOption = useRef(post.poll?.userVotedOption);
     
     // Time Capsule Logic
     const isLocked = post.unlockAt ? new Date(post.unlockAt) > new Date() : false;
-    const canUnlock = post.authorId === currentUser.id; // Author can always see their own locked posts (or maybe not? Let's say yes for now to verify)
+    const canUnlock = post.author.username === currentUser.username; // Author can always see their own locked posts
 
     useEffect(() => {
-        const currentUserVote = post.voters?.[currentUser.username];
-        const prevUserVote = prevVoters.current?.[currentUser.username];
+        const currentUserVote = post.poll?.userVotedOption;
+        const prevVote = prevVotedOption.current;
 
-        if (prevUserVote === undefined && currentUserVote !== undefined) {
+        if (prevVote === undefined && currentUserVote !== undefined && currentUserVote !== null) {
             setJustVotedIndex(currentUserVote);
             const timer = setTimeout(() => {
                 setJustVotedIndex(null);
@@ -66,8 +66,8 @@ function PostCard({ post, currentUser, onViewProfile, onUpdateReaction, onReply,
             return () => clearTimeout(timer);
         }
 
-        prevVoters.current = post.voters;
-    }, [post.voters, currentUser.username]);
+        prevVotedOption.current = post.poll?.userVotedOption;
+    }, [post.poll?.userVotedOption, currentUser.username]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {

@@ -104,12 +104,12 @@ export default function ProfilePage({
       let posts = allPosts.filter(p => p.author.username === profileUser.username);
       
       if (activeTab === 'temporal') {
-          posts = posts.filter(p => isSameDay(p.timestamp, selectedDate));
+          posts = posts.filter(p => isSameDay(new Date(p.timestamp), selectedDate));
       } else if (activeTab === 'media') {
           posts = posts.filter(p => p.imageUrl || p.videoUrl);
       }
       
-      return posts.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+      return posts.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }, [allPosts, profileUser.username, selectedDate, activeTab]);
 
   const popularCords = useMemo(() => {

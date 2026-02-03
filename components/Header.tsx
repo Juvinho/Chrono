@@ -146,7 +146,6 @@ export default function Header({ user, onLogout, onViewProfile, onNavigate, onNo
             
             {showLogoutConfirm && (
                 <ConfirmationModal
-                    isOpen={showLogoutConfirm}
                     onCancel={() => setShowLogoutConfirm(false)}
                     onConfirm={() => {
                         setShowLogoutConfirm(false);

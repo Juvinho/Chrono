@@ -23,7 +23,7 @@ interface EchoFrameProps {
     onReply: (parentPostId: string, content: string, isPrivate: boolean, media?: { imageUrl?: string, videoUrl?: string }) => void;
     onEcho: (postToEcho: Post) => void;
     onDeletePost: (postId: string) => void;
-    onEditPost: (postId: string, newPostData: Omit<Post, 'id' | 'author' | 'timestamp' | 'replies' | 'repostOf'>) => void;
+    onEditPost: (postId: string, newPostData: Omit<Post, 'id' | 'author' | 'timestamp' | 'replies' | 'repostOf' | 'likes' | 'likedBy'>) => void;
     onPollVote: (postId: string, optionIndex: number) => void;
     searchQuery: string;
     focusPostId: string | null;
@@ -140,7 +140,7 @@ export default function EchoFrame({
             if (isSameDay(selectedDate, new Date())) {
                 filteredPosts = allPosts;
             } else {
-                filteredPosts = allPosts.filter(p => isSameDay(p.timestamp, selectedDate));
+                filteredPosts = allPosts.filter(p => isSameDay(new Date(p.timestamp), selectedDate));
             }
             
             // Apply new filters
@@ -151,7 +151,7 @@ export default function EchoFrame({
             } else if (activeFilter === 'Media') {
                 filteredPosts = filteredPosts.filter(p => !!p.imageUrl || !!p.videoUrl);
             } else if (activeFilter === 'Polls') {
-                filteredPosts = filteredPosts.filter(p => !!p.pollOptions && p.pollOptions.length > 0);
+                filteredPosts = filteredPosts.filter(p => !!p.poll?.options && p.poll.options.length > 0);
             }
         }
         
@@ -162,7 +162,7 @@ export default function EchoFrame({
             return false;
         })
 
-        setDisplayedPosts(visiblePosts.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()));
+        setDisplayedPosts(visiblePosts.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
         
         if (isContextSwitch) {
             const timer = setTimeout(() => setIsLoading(false), 500);
@@ -175,7 +175,7 @@ export default function EchoFrame({
         setIsComposerOpen(true);
     };
 
-    const handlePostSubmit = async (postData: Omit<Post, 'id' | 'author' | 'timestamp' | 'replies' | 'repostOf'>, existingPostId?: string) => {
+    const handlePostSubmit = async (postData: Omit<Post, 'id' | 'author' | 'timestamp' | 'replies' | 'repostOf' | 'likes' | 'likedBy'>, existingPostId?: string) => {
         if (existingPostId) {
             onEditPost(existingPostId, postData);
             setIsComposerOpen(false);
@@ -186,7 +186,7 @@ export default function EchoFrame({
         // MIGRATION: Sending new post to Backend
         setIsSubmitting(true);
         try {
-            const result = await apiClient.createPost(postData);
+            const result = await apiClient.createPost(postData as any);
             
             if (result.error) {
                 console.error("Failed to transmit echo to the network:", result.error);
@@ -282,7 +282,7 @@ export default function EchoFrame({
     const recentCords = useMemo(() => {
         return allPosts
             .filter(p => p.isThread)
-            .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
             .slice(0, 5);
     }, [allPosts]);
 
