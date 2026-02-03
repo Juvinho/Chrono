@@ -6,8 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "cd .. && npm install && npm run build",
-    "build:local": "tsc && node copy-assets.js",
+    "build": "tsc && node copy-assets.js",
+    "build:full": "cd .. && npm install && npm run build",
     "start": "node dist/index.js",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:seed": "tsx src/db/seed.ts",
