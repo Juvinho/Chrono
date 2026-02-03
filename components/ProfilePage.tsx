@@ -12,7 +12,7 @@ import { VerifiedIcon, MessageIcon } from './icons';
 import FramePreview, { getFrameShape } from './FramePreview';
 import Avatar from './Avatar';
 import LoadingSpinner from './LoadingSpinner';
-que import { apiClient } from '../services/api';
+import { apiClient } from '../services/api';
 
 interface ProfilePageProps {
   currentUser: User;

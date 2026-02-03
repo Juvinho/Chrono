@@ -292,7 +292,7 @@ export default function App() {
         if (!currentUser) return;
         
         try {
-            // Reload Current User to ensure follow counts and lists are accurate
+            // Reload current user to ensure follow counts and lists are accurate
             const userResult = await apiClient.getCurrentUser();
             if (userResult.data) {
                 const mappedUser = mapApiUserToUser(userResult.data);
@@ -304,9 +304,9 @@ export default function App() {
             }
 
             // Reload stories
-            const storiesResult = await apiClient.getStories();
-            if (storiesResult.data) {
-                setStories(storiesResult.data.map(mapApiStoryToStory));
+            const storiesRes = await apiClient.getStories();
+            if (storiesRes.data) {
+                setStories(storiesRes.data.map(mapApiStoryToStory));
             }
 
             // Reload posts
@@ -471,62 +471,18 @@ export default function App() {
     useEffect(() => {
         if (currentUser) {
             socketService.connect();
-            // Assuming currentUser.id is available. If it's undefined, it won't join.
             if (currentUser.id) {
                 socketService.joinUserRoom(currentUser.id);
             }
 
             const handleNewNotification = (payload: any) => {
                  console.log("New notification received:", payload);
-                 // Refresh notifications or add to state
-                 // For now, we rely on polling or reload, but we should optimize later.
-                 // Ideally: notificationManager.add(payload);
-                 playSound('notification');
-            };
-
-            const handleNewPost = (newPost: Post) => {
-                console.log("New post received via socket:", newPost.id);
-                // Map if necessary, but enrichedPost from server should match Post type mostly
-                const mappedPost = mapApiPostToPost(newPost);
-                
-                // Update posts state
-                setPosts(prevPosts => {
-                    // Avoid duplicates
-                    if (prevPosts.some(p => p.id === mappedPost.id)) return prevPosts;
-                    
-                    // If it's my own post, it might already be there via optimistic update or re-fetch?
-                    // But usually socket comes after.
-                    // We add it to the list.
-                    return [mappedPost, ...prevPosts];
-                });
-
-                if (newPost.author.username !== currentUser.username) {
-                    playSound('notification'); // Or a different sound for posts
-                }
-            };
-
-            socketService.on('new_notification', handleNewNotification);
-            socketService.on('new_post', handleNewPost);
-
-            return () => {
-                socketService.off('new_notification', handleNewNotification);
-                socketService.off('new_post', handleNewPost);
-                socketService.disconnect();
-            };
-        }
-    }, [currentUser]);                 // For now, assume payload is compatible or we use it directly for toast
                  
                  // Update state
                  setCurrentUser(prev => {
                      if (!prev) return prev;
-                     // Avoid duplicates
                      if (prev.notifications?.some(n => n.id === payload.id)) return prev;
                      
-                     // We need to ensure the notification matches the structure expected by the UI
-                     // The backend payload has { ...notification, actor, post }
-                     // The UI seems to expect Notification object.
-                     
-                     // Convert timestamp string to Date
                      const notification = {
                          ...payload,
                          timestamp: new Date(payload.createdAt || Date.now())
@@ -539,109 +495,111 @@ export default function App() {
                  });
 
                  // Play sound and show toast
-                  try {
-                      const message = NotificationManager.formatNotificationMessage(payload.notificationType, payload.actor, payload.post);
-                      NotificationManager.showNotification('Chrono', {
-                         body: message,
-                         tag: payload.id
-                      });
-                      
-                      if (payload.notificationType === 'reply') {
-                          playSound('reply');
-                      } else if (payload.notificationType === 'follow') {
-                          playSound('follow');
-                      } else if (payload.notificationType === 'reaction') {
-                          playSound('like');
-                      } else {
-                          playSound('notification');
-                      }
-                  } catch (err) {
-                      console.error("Error showing notification:", err);
-                  }
-             };
+                 try {
+                     const message = NotificationManager.formatNotificationMessage(payload.notificationType, payload.actor, payload.post);
+                     NotificationManager.showNotification('Chrono', {
+                        body: message,
+                        tag: payload.id
+                     });
+                     
+                     if (payload.notificationType === 'reply') {
+                         playSound('reply');
+                     } else if (payload.notificationType === 'follow') {
+                         playSound('follow');
+                     } else if (payload.notificationType === 'reaction') {
+                         playSound('like');
+                     } else {
+                         playSound('notification');
+                     }
+                 } catch (err) {
+                     console.error("Error showing notification:", err);
+                 }
+            };
 
-             const handleNewMessage = async (payload: any) => {
-                  // Check if conversation exists locally
-                  const conversationExists = conversationsRef.current.some(c => c.id === payload.conversationId);
-                  
-                  if (!conversationExists) {
-                      // If it's a new conversation, we should fetch it
-                      try {
-                          // We don't have a direct endpoint to get one conversation by ID easily exposed in apiClient yet
-                          // But we can re-fetch all conversations for now, or just the new one if we add an endpoint
-                          // For efficiency, let's just re-fetch all for this prototype
-                          const conversationsResult = await apiClient.getConversations();
-                          if (conversationsResult.data) {
-                              const mappedConversations = conversationsResult.data.map((conv: any) => ({
-                                  id: conv.id,
-                                  participants: conv.participants.map((p: any) => typeof p === 'string' ? p : (p.username || p)),
-                                  messages: (conv.messages || []).map((msg: any) => ({
-                                      id: msg.id,
-                                      senderUsername: msg.senderUsername || (msg.sender_id ? 'unknown' : 'unknown'),
-                                      text: msg.text,
-                                      timestamp: new Date(msg.createdAt || msg.created_at || Date.now()),
-                                  })),
-                                  lastMessageTimestamp: new Date(conv.lastMessageTimestamp || conv.updated_at || Date.now()),
-                                  unreadCount: conv.unreadCount || {},
-                              }));
-                              setConversations(mappedConversations);
-                          }
-                      } catch (err) {
-                          console.error("Error fetching new conversation:", err);
-                      }
-                  } else {
-                      setConversations(prev => {
-                          return prev.map(conv => {
-                              if (conv.id === payload.conversationId) {
-                                  if (conv.messages.some(m => m.id === payload.id)) return conv;
-     
-                                  const newMessage = {
-                                      id: payload.id,
-                                      senderUsername: payload.senderUsername,
-                                      text: payload.text,
-                                      timestamp: new Date(payload.createdAt || Date.now())
-                                  };
-                                  
-                                  return {
-                                      ...conv,
-                                      messages: [newMessage, ...conv.messages],
-                                      lastMessageTimestamp: newMessage.timestamp,
-                                  };
-                              }
-                              return conv;
-                          });
-                      });
-                  }
-                  
-                  // Optional: Sound for message
-                  if (payload.senderUsername !== currentUser.username) {
-                      playSound('notification');
-                  }
-              };
+            const handleNewMessage = async (payload: any) => {
+                 const conversationExists = conversationsRef.current.some(c => c.id === payload.conversationId);
+                 
+                 if (!conversationExists) {
+                     try {
+                         const conversationsResult = await apiClient.getConversations();
+                         if (conversationsResult.data) {
+                             const mappedConversations = conversationsResult.data.map((conv: any) => ({
+                                 id: conv.id,
+                                 participants: conv.participants.map((p: any) => typeof p === 'string' ? p : (p.username || p)),
+                                 messages: (conv.messages || []).map((msg: any) => ({
+                                     id: msg.id,
+                                     senderUsername: msg.senderUsername || 'unknown',
+                                     text: msg.text,
+                                     timestamp: new Date(msg.createdAt || msg.created_at || Date.now()),
+                                 })),
+                                 lastMessageTimestamp: new Date(conv.lastMessageTimestamp || conv.updated_at || Date.now()),
+                                 unreadCount: conv.unreadCount || {},
+                             }));
+                             setConversations(mappedConversations);
+                         }
+                     } catch (err) {
+                         console.error("Error fetching new conversation:", err);
+                     }
+                 } else {
+                     setConversations(prev => {
+                         return prev.map(conv => {
+                             if (conv.id === payload.conversationId) {
+                                 if (conv.messages.some(m => m.id === payload.id)) return conv;
+    
+                                 const newMessage = {
+                                     id: payload.id,
+                                     senderUsername: payload.senderUsername,
+                                     text: payload.text,
+                                     timestamp: new Date(payload.createdAt || Date.now())
+                                 };
+                                 
+                                 return {
+                                     ...conv,
+                                     messages: [newMessage, ...conv.messages],
+                                     lastMessageTimestamp: newMessage.timestamp,
+                                 };
+                             }
+                             return conv;
+                         });
+                     });
+                 }
+                 
+                 if (payload.senderUsername !== currentUser.username) {
+                     playSound('notification');
+                 }
+            };
 
-              const handleNewPost = (payload: any) => {
-                  // Play sound for new posts (but not my own)
-                  if (payload.author?.username !== currentUser.username) {
-                       playSound('post');
-                  }
-                  
-                  // Reload data to ensure consistency
-                  reloadBackendData();
-              };
- 
-              socketService.on('new_notification', handleNewNotification);
-              socketService.on('new_message', handleNewMessage);
-              socketService.on('new_post', handleNewPost);
-  
-              return () => {
-                  socketService.off('new_notification', handleNewNotification);
-                  socketService.off('new_message', handleNewMessage);
-                  socketService.off('new_post', handleNewPost);
-              };
+            const handleNewPost = (newPost: any) => {
+                console.log("New post received via socket:", newPost.id);
+                const mappedPost = mapApiPostToPost(newPost);
+                
+                setPosts(prevPosts => {
+                    if (prevPosts.some(p => p.id === mappedPost.id)) return prevPosts;
+                    return [mappedPost, ...prevPosts];
+                });
+
+                if (newPost.author?.username !== currentUser.username) {
+                    playSound('post');
+                }
+                
+                // Also reload backend data for full sync
+                reloadBackendData();
+            };
+
+            socketService.on('new_notification', handleNewNotification);
+            socketService.on('new_message', handleNewMessage);
+            socketService.on('new_post', handleNewPost);
+
+            return () => {
+                socketService.off('new_notification', handleNewNotification);
+                socketService.off('new_message', handleNewMessage);
+                socketService.off('new_post', handleNewPost);
+                socketService.disconnect();
+            };
         } else {
             socketService.disconnect();
         }
-    }, [currentUser?.id, reloadBackendData]);
+    }, [currentUser, reloadBackendData]);
 
 
     // Restore page on mount if user is logged in but page is Welcome
