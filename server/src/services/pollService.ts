@@ -42,7 +42,7 @@ export class PollService {
     );
 
     const votes: { [username: string]: number } = {};
-    result.rows.forEach((row) => {
+    result.rows.forEach((row: any) => {
       votes[row.username] = row.option_index;
     });
 
@@ -61,7 +61,7 @@ export class PollService {
     );
 
     const postVotes: { [postId: string]: { [username: string]: number } } = {};
-    result.rows.forEach((row) => {
+    result.rows.forEach((row: any) => {
       const postId = row.post_id;
       if (!postVotes[postId]) {
         postVotes[postId] = {};

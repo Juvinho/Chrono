@@ -1,6 +1,5 @@
 
-import fetch from 'node-fetch'; // Try node-fetch, or assume global fetch if Node 18+
-// If node-fetch fails, I'll remove the import and rely on global fetch
+// Rely on global fetch in Node 18+
 
 const API_URL = 'http://localhost:3001/api';
 

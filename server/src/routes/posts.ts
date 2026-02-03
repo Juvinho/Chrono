@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Response } from 'express';
 import { PostService } from '../services/postService.js';
 import { ReactionService } from '../services/reactionService.js';
 import { PollService } from '../services/pollService.js';
@@ -33,7 +33,7 @@ async function batchEnrichPosts(posts: any[], userId?: string): Promise<any[]> {
   // to avoid complex batching for nested structures for now.
   // The main bottleneck was the flat list of posts in the feed.
   
-  return Promise.all(posts.map(async (post) => {
+  return Promise.all(posts.map(async (post: any) => {
     let repostOf = null;
     if (post.repostOfId) {
       const repost = await postService.getPostById(post.repostOfId);
@@ -104,7 +104,7 @@ async function enrichPost(post: any, depth: number = 0, maxDepth: number = 1): P
   let replies: any[] = [];
   if (depth < maxDepth) {
       const rawReplies = await postService.getReplies(post.id);
-      replies = await Promise.all(rawReplies.map((r) => enrichPost(r, depth + 1, maxDepth)));
+      replies = await Promise.all(rawReplies.map((r: any) => enrichPost(r, depth + 1, maxDepth)));
   }
 
   const authorData = post.author || (author ? {
@@ -129,7 +129,7 @@ async function enrichPost(post: any, depth: number = 0, maxDepth: number = 1): P
 }
 
 // Get posts
-router.get('/', authenticateToken, async (req: AuthRequest, res) => {
+router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { limit = 50, offset = 0, author, inReplyTo } = req.query;
 
@@ -151,7 +151,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
 });
 
 // Get single post
-router.get('/:id', authenticateToken, async (req: AuthRequest, res) => {
+router.get('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const post = await postService.getPostById(id);
@@ -170,7 +170,7 @@ router.get('/:id', authenticateToken, async (req: AuthRequest, res) => {
 });
 
 // Create post
-router.post('/', authenticateToken, async (req: AuthRequest, res) => {
+router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     if (!req.userId) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -245,7 +245,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res) => {
 });
 
 // Update post
-router.put('/:id', authenticateToken, async (req: AuthRequest, res) => {
+router.put('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const post = await postService.updatePost(id, req.userId!, req.body);
@@ -258,7 +258,7 @@ router.put('/:id', authenticateToken, async (req: AuthRequest, res) => {
 });
 
 // Delete post
-router.delete('/:id', authenticateToken, async (req: AuthRequest, res) => {
+router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     await postService.deletePost(req.params.id, req.userId!);
     res.json({ message: 'Post deleted successfully' });
@@ -269,7 +269,7 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res) => {
 });
 
 // Add reaction
-router.post('/:id/reactions', authenticateToken, async (req: AuthRequest, res) => {
+router.post('/:id/reactions', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { reactionType } = req.body;
@@ -295,7 +295,7 @@ router.post('/:id/reactions', authenticateToken, async (req: AuthRequest, res) =
 });
 
 // Vote on poll
-router.post('/:id/vote', authenticateToken, async (req: AuthRequest, res) => {
+router.post('/:id/vote', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { optionIndex } = req.body;

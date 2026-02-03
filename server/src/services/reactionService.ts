@@ -48,7 +48,7 @@ export class ReactionService {
     );
 
     const reactions: { [key in CyberpunkReaction]?: number } = {};
-    result.rows.forEach((row) => {
+    result.rows.forEach((row: any) => {
       reactions[row.reaction_type as CyberpunkReaction] = parseInt(row.count);
     });
 
@@ -67,7 +67,7 @@ export class ReactionService {
     );
 
     const postReactions: { [postId: string]: { [key in CyberpunkReaction]?: number } } = {};
-    result.rows.forEach((row) => {
+    result.rows.forEach((row: any) => {
       const postId = row.post_id;
       if (!postReactions[postId]) {
         postReactions[postId] = {};

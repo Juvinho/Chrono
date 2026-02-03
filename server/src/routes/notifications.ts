@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Response } from 'express';
 import { NotificationService } from '../services/notificationService.js';
 import { UserService } from '../services/userService.js';
 import { PostService } from '../services/postService.js';
@@ -10,7 +10,7 @@ const userService = new UserService();
 const postService = new PostService();
 
 // Get notifications
-router.get('/', authenticateToken, async (req: AuthRequest, res) => {
+router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     if (!req.userId) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -20,7 +20,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
 
     // Enrich with actor and post info
     const enriched = await Promise.all(
-      notifications.map(async (notif) => {
+      notifications.map(async (notif: any) => {
         const actor = await userService.getUserById(notif.actorId);
         let post = null;
         if (notif.postId) {
@@ -62,7 +62,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
 });
 
 // Mark notification as read
-router.put('/:id/read', authenticateToken, async (req: AuthRequest, res) => {
+router.put('/:id/read', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     await notificationService.markAsRead(id, req.userId!);
@@ -74,7 +74,7 @@ router.put('/:id/read', authenticateToken, async (req: AuthRequest, res) => {
 });
 
 // Mark all notifications as read
-router.post('/read-all', authenticateToken, async (req: AuthRequest, res) => {
+router.post('/read-all', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     await notificationService.markAllAsRead(req.userId!);
     res.json({ message: 'All notifications marked as read' });
