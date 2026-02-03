@@ -161,10 +161,11 @@ app.get('/health', async (req, res) => {
 
 // Serve static files from the React app
 const possibleBuildPaths = [
-  path.join(process.cwd(), '../dist'),      // Root dist when running from server/
-  path.join(process.cwd(), 'dist'),         // Root dist when running from root
-  path.join(__dirname, '../../dist'),       // Relative to server/dist
-  path.join(__dirname, '../public'),        // server/dist/public
+  path.join(__dirname, 'public'),           // server/dist/public (Standard production)
+  path.join(__dirname, '../public'),        // server/public
+  path.join(process.cwd(), 'dist'),         // Root dist
+  path.join(process.cwd(), 'server/dist/public'), // Root to server/dist/public
+  process.cwd(),                            // Fallback to root
 ];
 
 // Debug: List files in parent directory too

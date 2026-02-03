@@ -7,8 +7,15 @@ const __dirname = path.dirname(__filename);
 
 const srcDir = path.join(__dirname, 'src', 'db');
 const destDir = path.join(__dirname, 'dist', 'db');
+const frontendDistDir = path.join(__dirname, '..', 'dist');
+const backendPublicDir = path.join(__dirname, 'dist', 'public');
 
-function copyDir(src, dest) {
+function copyDir(src, dest, filter = null) {
+  if (!fs.existsSync(src)) {
+    console.warn(`Source directory ${src} does not exist. Skipping.`);
+    return;
+  }
+
   if (!fs.existsSync(dest)) {
     fs.mkdirSync(dest, { recursive: true });
   }
@@ -20,13 +27,21 @@ function copyDir(src, dest) {
     const destPath = path.join(dest, entry.name);
 
     if (entry.isDirectory()) {
-      copyDir(srcPath, destPath);
-    } else if (entry.name.endsWith('.sql')) {
-      fs.copyFileSync(srcPath, destPath);
-      console.log(`Copied ${entry.name} to ${destPath}`);
+      copyDir(srcPath, destPath, filter);
+    } else {
+      if (!filter || filter(entry.name)) {
+        fs.copyFileSync(srcPath, destPath);
+        // console.log(`Copied ${entry.name} to ${destPath}`);
+      }
     }
   }
 }
 
-copyDir(srcDir, destDir);
+// Copy SQL files
+copyDir(srcDir, destDir, (name) => name.endsWith('.sql'));
 console.log('SQL assets copied successfully.');
+
+// Copy Frontend Build
+console.log('Copying frontend build assets...');
+copyDir(frontendDistDir, backendPublicDir);
+console.log('Frontend build assets copied successfully.');
