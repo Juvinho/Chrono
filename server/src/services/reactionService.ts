@@ -26,7 +26,7 @@ export class ReactionService {
     await pool.query(
       `INSERT INTO reactions (post_id, user_id, reaction_type)
        VALUES ($1, $2, $3)
-       ON CONFLICT (post_id, user_id, reaction_type) DO NOTHING`,
+       ON CONFLICT (post_id, user_id) DO UPDATE SET reaction_type = EXCLUDED.reaction_type`,
       [postId, userId, reactionType]
     );
   }

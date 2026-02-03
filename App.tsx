@@ -62,9 +62,16 @@ const reviveDates = (data: any[], dateKeys: string[]): any[] => {
 
 export default function App() {
     // 1. Basic User State (used by almost everything)
-    const [users, setUsers] = useLocalStorage<User[]>('chrono_users_v2', CORE_USERS);
+    const [users, setUsers] = useLocalStorage<User[]>('chrono_users_v2', []); 
     const [currentUser, setCurrentUser] = useLocalStorage<User | null>('chrono_currentUser_v2', null);
     const [isSessionLoading, setIsSessionLoading] = useState(true);
+
+    // Persist to local storage for extra safety
+    useEffect(() => {
+        if (currentUser) {
+            localStorage.setItem('chrono_currentUser_v2', JSON.stringify(currentUser));
+        }
+    }, [currentUser]);
 
     // 2. Navigation State (depends on currentUser)
     const getInitialPage = (): Page => {
@@ -210,6 +217,12 @@ export default function App() {
                         const storiesResult = await apiClient.getStories();
                         if (storiesResult.data) {
                             setStories(storiesResult.data.map(mapApiStoryToStory));
+                        }
+
+                        // Load initial users (recommended/popular)
+                        const usersRes = await apiClient.searchUsers('');
+                        if (usersRes.data) {
+                            setUsers(usersRes.data);
                         }
                     } else {
                         console.warn("Session expired or invalid, logging out.");

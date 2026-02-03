@@ -142,6 +142,14 @@ CREATE TABLE IF NOT EXISTS posts (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Ensure unlock_at exists (from migration)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'posts' AND column_name = 'unlock_at') THEN
+        ALTER TABLE posts ADD COLUMN unlock_at TIMESTAMP WITH TIME ZONE;
+    END IF;
+END $$;
+
 -- Indexes for posts
 CREATE INDEX IF NOT EXISTS idx_posts_author_id ON posts(author_id);
 CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
@@ -242,8 +250,11 @@ BEGIN
     -- Update reactions unique constraint
     IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'reactions_post_id_user_id_reaction_type_key') THEN
         ALTER TABLE reactions DROP CONSTRAINT reactions_post_id_user_id_reaction_type_key;
-        -- We might need to clean up duplicate reactions before adding the new constraint
-        -- DELETE FROM reactions a USING reactions b WHERE a.id < b.id AND a.post_id = b.post_id AND a.user_id = b.user_id;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'reactions_post_id_user_id_key') THEN
+        -- Clean up potential duplicates before adding unique constraint
+        DELETE FROM reactions a USING reactions b WHERE a.id < b.id AND a.post_id = b.post_id AND a.user_id = b.user_id;
         ALTER TABLE reactions ADD CONSTRAINT reactions_post_id_user_id_key UNIQUE (post_id, user_id);
     END IF;
 
