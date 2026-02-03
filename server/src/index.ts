@@ -162,20 +162,38 @@ app.get('/health', async (req, res) => {
 // Serve static files from the React app
 // Try multiple possible paths for the dist folder to be robust in different environments
 const possibleBuildPaths = [
-  path.join(__dirname, '../../dist'),      // Relative to server/dist (production)
-  path.join(__dirname, '../dist'),         // Relative to server/dist
-  path.join(process.cwd(), 'dist'),        // Relative to root
-  path.join(process.cwd(), '../dist')      // Relative to server root
+  path.join(process.cwd(), 'dist'),        // Root dist (Vite default)
+  path.join(process.cwd(), 'client/dist'), // Subfolder client
+  path.join(process.cwd(), 'frontend/dist'),// Subfolder frontend
+  path.join(__dirname, '../../dist'),      // Relative to server/dist
+  path.join(__dirname, '../../../dist'),   // One more level up
 ];
 
+// Debug: List files in current directory to help find the build folder
+try {
+  const files = fs.readdirSync(process.cwd());
+  console.log(`Current directory (${process.cwd()}) contents:`, files);
+} catch (e) {
+  console.error('Failed to list directory contents');
+}
+
 let clientBuildPath = possibleBuildPaths[0];
+let found = false;
+
 for (const p of possibleBuildPaths) {
   const checkPath = path.join(p, 'index.html');
   if (fs.existsSync(checkPath)) {
     clientBuildPath = p;
-    console.log(`✅ Found index.html at: ${checkPath}`);
+    console.log(`✅ SUCCESS: Found index.html at: ${checkPath}`);
+    found = true;
     break;
+  } else {
+    console.log(`Searching for index.html at: ${checkPath} (Not found)`);
   }
+}
+
+if (!found) {
+  console.error('❌ CRITICAL: Could not find index.html in any of the expected paths.');
 }
 
 console.log(`Static files path: ${clientBuildPath}`);
