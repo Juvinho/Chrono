@@ -170,8 +170,10 @@ const possibleBuildPaths = [
 
 let clientBuildPath = possibleBuildPaths[0];
 for (const p of possibleBuildPaths) {
-  if (fs.existsSync(p)) {
+  const checkPath = path.join(p, 'index.html');
+  if (fs.existsSync(checkPath)) {
     clientBuildPath = p;
+    console.log(`✅ Found index.html at: ${checkPath}`);
     break;
   }
 }
