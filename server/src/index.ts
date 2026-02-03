@@ -160,13 +160,10 @@ app.get('/health', async (req, res) => {
 });
 
 // Serve static files from the React app
-// Try multiple possible paths for the dist folder to be robust in different environments
 const possibleBuildPaths = [
-  path.join(process.cwd(), 'dist'),        // Root dist (Vite default)
-  path.join(process.cwd(), 'client/dist'), // Subfolder client
-  path.join(process.cwd(), 'frontend/dist'),// Subfolder frontend
+  path.join(__dirname, 'public'),          // New combined path (server/dist/public)
   path.join(__dirname, '../../dist'),      // Relative to server/dist
-  path.join(__dirname, '../../../dist'),   // One more level up
+  path.join(process.cwd(), 'dist'),        // Current working directory dist
 ];
 
 // Debug: List files in current directory to help find the build folder
