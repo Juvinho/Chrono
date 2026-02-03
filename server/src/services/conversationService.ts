@@ -149,16 +149,9 @@ export class ConversationService {
     );
 
     return result.rows.map((row) => {
-      const participants = JSON.parse(row.participants);
-      const messages = JSON.parse(row.messages);
-      const unreadCount: { [key: string]: number } = {};
-
-      // Get unread counts for each participant
-      const unreadResult = pool.query(
-        'SELECT user_id, unread_count FROM conversation_participants WHERE conversation_id = $1',
-        [row.id]
-      );
-
+      const participants = typeof row.participants === 'string' ? JSON.parse(row.participants) : row.participants;
+      const messages = typeof row.messages === 'string' ? JSON.parse(row.messages) : row.messages;
+      
       return {
         id: row.id,
         participants: participants.map((p: any) => p.username),
