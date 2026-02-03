@@ -66,8 +66,17 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Rate Limiting
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 2000, // Increased for smoother dev experience
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 100, // 100 requests per minute per IP
+  message: { error: 'rateLimitError' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const authLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 100, // More restrictive for auth to prevent brute force
+  message: { error: 'Too many login attempts. Please try again in an hour.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -88,7 +97,9 @@ const postLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-app.use('/api', apiLimiter);
+app.use('/api/', apiLimiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
 app.use('/api/users/:username', (req, res, next) => {
   if (req.method === 'PUT') {
     profileUpdateLimiter(req, res, next);

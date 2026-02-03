@@ -14,10 +14,11 @@ interface DataSlicerPageProps {
   allPosts: Post[];
   conversations: Conversation[];
   onOpenMarketplace?: () => void;
+  onBack?: () => void;
 }
 
 export default function DataSlicerPage({
-  user, onLogout, onNavigate, onNotificationClick, allUsers, allPosts, conversations, onOpenMarketplace
+  user, onLogout, onNavigate, onNotificationClick, allUsers, allPosts, conversations, onOpenMarketplace, onBack
 }: DataSlicerPageProps) {
   const { t } = useTranslation();
   const [videoFile, setVideoFile] = useState<File | null>(null);
@@ -104,6 +105,7 @@ export default function DataSlicerPage({
         allUsers={allUsers}
         conversations={conversations}
         onOpenMarketplace={onOpenMarketplace}
+        onBack={onBack}
       />
       <main className="flex-grow overflow-y-auto p-8">
         <div className="max-w-4xl mx-auto">

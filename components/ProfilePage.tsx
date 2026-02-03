@@ -35,12 +35,15 @@ interface ProfilePageProps {
   typingParentIds: Set<string>;
   conversations: Conversation[];
   onOpenMarketplace?: () => void;
+  onSendGlitchi: (username: string) => void;
+  onBack?: () => void;
 }
 
 export default function ProfilePage({ 
   currentUser, profileUsername, onLogout, onNavigate, onNotificationClick, users, onFollowToggle, 
   allPosts, allUsers, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost,
-  onPollVote, selectedDate, setSelectedDate, typingParentIds, conversations, onOpenMarketplace, onUpdateUser
+  onPollVote, selectedDate, setSelectedDate, typingParentIds, conversations, onOpenMarketplace, 
+  onSendGlitchi, onUpdateUser, onBack
 }: ProfilePageProps & { onUpdateUser?: (user: User) => Promise<{ success: boolean; error?: string }> }) {
   const { t } = useTranslation();
   const { playSound } = useSound();
@@ -332,6 +335,7 @@ export default function ProfilePage({
                 allUsers={allUsers}
                 conversations={conversations}
                 onOpenMarketplace={onOpenMarketplace}
+                onBack={onBack}
             />
             <div className="flex-grow flex flex-col items-center justify-center">
                 <div className="text-center space-y-4">
@@ -356,9 +360,10 @@ export default function ProfilePage({
           onNotificationClick={onNotificationClick}
           onSearch={handleSearch} 
           allPosts={allPosts} 
-          allUsers={allUsers}
+          allUsers={allUsers} 
           conversations={conversations}
           onOpenMarketplace={onOpenMarketplace}
+          onBack={onBack}
       />
       <main className="flex-grow overflow-y-auto">
         <div className={`max-w-4xl mx-auto ${borderRadius === 'none' ? '' : 'my-4'} animate-fade-in`}>
@@ -495,6 +500,13 @@ export default function ProfilePage({
                     <>
                       <button onClick={() => onNavigate(Page.Messages, profileUser.username)} className="follow-btn px-2 py-1 rounded-sm transition-colors" title={t('messageButton')}>
                           <MessageIcon className="w-5 h-5"/>
+                      </button>
+                      <button 
+                        onClick={() => onSendGlitchi(profileUser.username)} 
+                        className="bg-red-900/30 border border-red-500 text-red-500 px-2 py-1 rounded-sm hover:bg-red-500 hover:text-white transition-all font-mono text-xs tracking-tighter flex items-center group"
+                        title="Send Glitchi"
+                      >
+                        <span className="group-hover:animate-pulse">GLITCHI</span>
                       </button>
                       <button ref={followButtonRef} onClick={handleFollowClick} className={`${isFollowing ? 'following-btn' : 'follow-btn'} px-4 py-1 rounded-sm transition-colors`}>
                         {isFollowing ? t('profileFollowing') : t('profileFollow')}

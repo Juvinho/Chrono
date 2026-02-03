@@ -302,6 +302,57 @@ export class UserService {
     return parseInt(result.rows[0].count);
   }
 
+  async canSendGlitchi(userId: string): Promise<boolean> {
+    const result = await pool.query(
+      'SELECT glitchis_sent_today, last_glitchi_sent_at FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (result.rows.length === 0) return false;
+
+    const { glitchis_sent_today, last_glitchi_sent_at } = result.rows[0];
+
+    // Reset count if it's a new day
+    const now = new Date();
+    const lastSent = last_glitchi_sent_at ? new Date(last_glitchi_sent_at) : null;
+
+    if (!lastSent || lastSent.getUTCDate() !== now.getUTCDate() || lastSent.getUTCMonth() !== now.getUTCMonth() || lastSent.getUTCFullYear() !== now.getUTCFullYear()) {
+      await pool.query('UPDATE users SET glitchis_sent_today = 0 WHERE id = $1', [userId]);
+      return true;
+    }
+
+    return glitchis_sent_today < 3;
+  }
+
+  async sendGlitchi(senderId: string, recipientId: string): Promise<void> {
+    const canSend = await this.canSendGlitchi(senderId);
+    if (!canSend) throw new Error('Glitchi limit reached (3 per 24h)');
+
+    const recipientSettings = await pool.query('SELECT can_receive_glitchis FROM user_settings WHERE user_id = $1', [recipientId]);
+    if (recipientSettings.rows.length > 0 && !recipientSettings.rows[0].can_receive_glitchis) {
+      throw new Error('This user has disabled glitchis');
+    }
+
+    await pool.query(
+      'UPDATE users SET glitchis_sent_today = glitchis_sent_today + 1, last_glitchi_sent_at = CURRENT_TIMESTAMP WHERE id = $1',
+      [senderId]
+    );
+
+    // Emit real-time glitchi
+    try {
+      const io = (global as any).getIo();
+      const sender = await this.getUserById(senderId);
+      io.to(recipientId).emit('glitchi_received', { senderUsername: sender?.username });
+    } catch (e) { }
+  }
+
+  async setCanReceiveGlitchis(userId: string, enabled: boolean): Promise<void> {
+    await pool.query(
+      'UPDATE user_settings SET can_receive_glitchis = $1 WHERE user_id = $2',
+      [enabled, userId]
+    );
+  }
+
   mapUserFromDb(row: any): User {
     // Override verification for Juvinho
     const isJuvinho = row.username === 'Juvinho';
@@ -320,7 +371,7 @@ export class UserService {
         };
     };
 
-    return {
+    const user: any = {
       id: row.id,
       username: row.username,
       email: row.email,
@@ -356,6 +407,15 @@ export class UserService {
       subscriptionTier: row.subscription_tier || 'free',
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      // SECURITY: Ensure sensitive fields are NEVER included by default in the mapped object
+      // unless explicitly needed for auth. We handle password_hash separately in auth logic.
     };
+
+    // Remove sensitive fields if they accidentally leaked from the DB row
+    delete user.password_hash;
+    delete user.passwordHash;
+    delete user.two_factor_secret;
+    
+    return user;
   }
 }

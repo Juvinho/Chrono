@@ -62,7 +62,8 @@ export class ConversationService {
   async sendMessage(
     conversationId: string,
     senderId: string,
-    text: string
+    text: string,
+    media?: { imageUrl?: string, videoUrl?: string, metadata?: any }
   ): Promise<Message> {
     // Check if conversation is encrypted
     const cordResult = await pool.query(
@@ -72,11 +73,35 @@ export class ConversationService {
     const isEncrypted = cordResult.rows.length > 0;
 
     const result = await pool.query(
-      `INSERT INTO messages (conversation_id, sender_id, text, is_encrypted)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO messages (conversation_id, sender_id, text, is_encrypted, image_url, video_url, metadata, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [conversationId, senderId, text, isEncrypted]
+      [
+        conversationId, 
+        senderId, 
+        text, 
+        isEncrypted, 
+        media?.imageUrl || null, 
+        media?.videoUrl || null, 
+        media?.metadata ? JSON.stringify(media.metadata) : '{}',
+        'sent'
+      ]
     );
+
+    const message = this.mapMessageFromDb(result.rows[0]);
+
+    // Track status per participant
+    const participantsResult = await pool.query(
+        'SELECT user_id FROM conversation_participants WHERE conversation_id = $1',
+        [conversationId]
+    );
+
+    for (const row of participantsResult.rows) {
+        await pool.query(
+            'INSERT INTO message_status (message_id, user_id, status) VALUES ($1, $2, $3)',
+            [message.id, row.user_id, row.user_id === senderId ? 'read' : 'sent']
+        );
+    }
 
     // Update conversation timestamp
     await pool.query(
@@ -92,17 +117,9 @@ export class ConversationService {
       [conversationId, senderId]
     );
 
-    const message = this.mapMessageFromDb(result.rows[0]);
-
     // Emit real-time message
     try {
         const io = getIo();
-        
-        // Get participants
-        const participantsResult = await pool.query(
-            'SELECT user_id FROM conversation_participants WHERE conversation_id = $1',
-            [conversationId]
-        );
         
         // Get sender username
         const senderResult = await pool.query('SELECT username FROM users WHERE id = $1', [senderId]);
@@ -122,6 +139,35 @@ export class ConversationService {
     }
 
     return message;
+  }
+
+  async updateMessageStatus(messageId: string, userId: string, status: 'delivered' | 'read'): Promise<void> {
+      await pool.query(
+          `UPDATE message_status SET status = $1, updated_at = CURRENT_TIMESTAMP 
+           WHERE message_id = $2 AND user_id = $3`,
+          [status, messageId, userId]
+      );
+
+      // If all participants (except sender) have read it, update the main message status
+      const msgResult = await pool.query('SELECT conversation_id, sender_id FROM messages WHERE id = $1', [messageId]);
+      if (msgResult.rows.length > 0) {
+          const { conversation_id, sender_id } = msgResult.rows[0];
+          
+          const pending = await pool.query(
+              'SELECT COUNT(*) FROM message_status WHERE message_id = $1 AND user_id != $2 AND status != $3',
+              [messageId, sender_id, status]
+          );
+
+          if (parseInt(pending.rows[0].count) === 0) {
+              await pool.query('UPDATE messages SET status = $1 WHERE id = $2', [status, messageId]);
+              
+              // Emit status update to sender
+              try {
+                  const io = getIo();
+                  io.to(sender_id).emit('message_status_update', { messageId, status, conversationId: conversation_id });
+              } catch (e) {}
+          }
+      }
   }
 
   async getConversations(userId: string): Promise<Conversation[]> {
@@ -195,6 +241,11 @@ export class ConversationService {
       conversationId: row.conversation_id,
       senderId: row.sender_id,
       text: row.text,
+      imageUrl: row.image_url,
+      videoUrl: row.video_url,
+      metadata: row.metadata,
+      status: row.status,
+      isEncrypted: row.is_encrypted,
       createdAt: row.created_at,
     };
   }
