@@ -42,6 +42,13 @@ copyDir(srcDir, destDir, (name) => name.endsWith('.sql'));
 console.log('SQL assets copied successfully.');
 
 // Copy Frontend Build
-console.log('Copying frontend build assets...');
-copyDir(frontendDistDir, backendPublicDir);
-console.log('Frontend build assets copied successfully.');
+console.log(`Checking for frontend build at: ${frontendDistDir}`);
+if (fs.existsSync(frontendDistDir)) {
+  console.log('Copying frontend build assets...');
+  copyDir(frontendDistDir, backendPublicDir);
+  console.log('Frontend build assets copied successfully.');
+} else {
+  console.error(`❌ ERROR: Frontend build directory NOT FOUND at ${frontendDistDir}`);
+  console.log('Current directory contents:', fs.readdirSync(__dirname));
+  console.log('Parent directory contents:', fs.readdirSync(path.join(__dirname, '..')));
+}
