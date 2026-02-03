@@ -162,9 +162,8 @@ const startServer = async () => {
     // The migration script is idempotent (IF NOT EXISTS)
     if (process.env.NODE_ENV === 'production') {
        console.log('Running migrations...');
-       // TEMPORARY: Commenting out migration to debug deployment hang
-       // await migrate();
-       console.log('Migrations skipped for debugging.');
+       await migrate();
+       console.log('Migrations completed.');
     }
     
     httpServer.listen(PORT, () => {
