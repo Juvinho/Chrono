@@ -4,6 +4,10 @@ import { getIo } from '../socket.js';
 
 export class ConversationService {
   async getOrCreateConversation(userId1: string, userId2: string, options?: { isEncrypted?: boolean, selfDestructTimer?: number }): Promise<string> {
+    if (userId1 === userId2) {
+      throw new Error('Cannot create a conversation with yourself');
+    }
+
     const isEncrypted = options?.isEncrypted || false;
 
     // Check if conversation exists
@@ -65,6 +69,16 @@ export class ConversationService {
     text: string,
     media?: { imageUrl?: string, videoUrl?: string, metadata?: any }
   ): Promise<Message> {
+    // Check if user is a participant
+    const participantCheck = await pool.query(
+        'SELECT 1 FROM conversation_participants WHERE conversation_id = $1 AND user_id = $2',
+        [conversationId, senderId]
+    );
+
+    if (participantCheck.rows.length === 0) {
+        throw new Error('User is not a participant in this conversation');
+    }
+
     // Check if conversation is encrypted
     const cordResult = await pool.query(
       'SELECT is_active FROM encrypted_cords WHERE conversation_id = $1',
@@ -142,6 +156,18 @@ export class ConversationService {
   }
 
   async updateMessageStatus(messageId: string, userId: string, status: 'delivered' | 'read'): Promise<void> {
+      // Verify user is a participant in the conversation of this message
+      const authCheck = await pool.query(
+          `SELECT 1 FROM messages m
+           JOIN conversation_participants cp ON m.conversation_id = cp.conversation_id
+           WHERE m.id = $1 AND cp.user_id = $2`,
+          [messageId, userId]
+      );
+
+      if (authCheck.rows.length === 0) {
+          throw new Error('Unauthorized to update this message status');
+      }
+
       await pool.query(
           `UPDATE message_status SET status = $1, updated_at = CURRENT_TIMESTAMP 
            WHERE message_id = $2 AND user_id = $3`,
@@ -195,13 +221,13 @@ export class ConversationService {
     );
 
     return result.rows.map((row) => {
-      const participants = typeof row.participants === 'string' ? JSON.parse(row.participants) : row.participants;
-      const messages = typeof row.messages === 'string' ? JSON.parse(row.messages) : row.messages;
+      const participants = (typeof row.participants === 'string' ? JSON.parse(row.participants) : row.participants) || [];
+      const messages = (typeof row.messages === 'string' ? JSON.parse(row.messages) : row.messages) || [];
       
       return {
         id: row.id,
-        participants: participants.map((p: any) => p.username),
-        messages: messages.map((m: any) => this.mapMessageFromDb(m)),
+        participants: participants.filter((p: any) => p && p.username).map((p: any) => p.username),
+        messages: messages.filter((m: any) => m !== null).map((m: any) => this.mapMessageFromDb(m)),
         lastMessageTimestamp: row.updated_at,
         unreadCount: { [userId]: row.unread_count || 0 },
         isEncrypted: row.is_encrypted,

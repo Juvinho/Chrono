@@ -197,7 +197,23 @@ CREATE TABLE IF NOT EXISTS messages (
     conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
     sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     text TEXT NOT NULL,
+    image_url TEXT,
+    video_url TEXT,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    status VARCHAR(20) DEFAULT 'sent',
+    is_encrypted BOOLEAN DEFAULT FALSE,
+    delete_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Message Status table (per-user status)
+CREATE TABLE IF NOT EXISTS message_status (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    status VARCHAR(20) DEFAULT 'sent', -- 'sent', 'delivered', 'read'
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(message_id, user_id)
 );
 
 -- Indexes for messages
@@ -289,6 +305,20 @@ BEGIN
     -- Add delete_at to messages
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='delete_at') THEN
         ALTER TABLE messages ADD COLUMN delete_at TIMESTAMP;
+    END IF;
+
+    -- Add media and status columns to messages
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='image_url') THEN
+        ALTER TABLE messages ADD COLUMN image_url TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='video_url') THEN
+        ALTER TABLE messages ADD COLUMN video_url TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='metadata') THEN
+        ALTER TABLE messages ADD COLUMN metadata JSONB DEFAULT '{}'::jsonb;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='status') THEN
+        ALTER TABLE messages ADD COLUMN status VARCHAR(20) DEFAULT 'sent';
     END IF;
 
     -- Clean up duplicate notifications (same user, actor, type, post)
