@@ -61,68 +61,92 @@ const reviveDates = (data: any[], dateKeys: string[]): any[] => {
 };
 
 export default function App() {
-    // Users are still partially local/hybrid as per instructions, but Posts/Convos are now fully API
+    // 1. Basic User State (used by almost everything)
     const [users, setUsers] = useLocalStorage<User[]>('chrono_users_v2', CORE_USERS);
+    const [currentUser, setCurrentUser] = useLocalStorage<User | null>('chrono_currentUser_v2', null);
+    const [isSessionLoading, setIsSessionLoading] = useState(true);
+
+    // 2. Navigation State (depends on currentUser)
+    const getInitialPage = (): Page => {
+        if (currentUser) {
+            const savedPage = sessionStorage.getItem('chrono_currentPage');
+            if (savedPage) {
+                const pageNum = parseInt(savedPage, 10);
+                if (pageNum >= 0 && pageNum < Object.keys(Page).length / 2) {
+                    return pageNum as Page;
+                }
+            }
+            return Page.Dashboard;
+        }
+        return Page.Welcome;
+    };
     
-    // MIGRATION: Posts and Conversations now start empty and load from API
+    const [currentPage, setCurrentPage] = useState<Page>(getInitialPage());
+    const [profileUsername, setProfileUsername] = useState<string | null>(null);
+
+    // 3. UI and Content State
     const [posts, setPosts] = useState<Post[]>([]);
     const [displayedPosts, setDisplayedPosts] = useState<Post[]>([]);
     const [pendingPosts, setPendingPosts] = useState<Post[]>([]);
     const [conversations, setConversations] = useState<Conversation[]>([]);
-    
-    // Story State
     const [stories, setStories] = useState<Story[]>([]);
     const [viewingStoryUser, setViewingStoryUser] = useState<User | null>(null);
     const [isCreatingStory, setIsCreatingStory] = useState(false);
     const [isMarketplaceOpen, setIsMarketplaceOpen] = useState(false);
-
-    // Create refs to hold the current state to avoid stale closures in async callbacks
+    
+    // 4. Refs and Services
+    const { playSound } = useSound();
+    const { showToast } = useToast();
     const usersRef = useRef(users);
+    const postsRef = useRef(posts);
+    const conversationsRef = useRef(conversations);
+    const knownNotificationIds = useRef<Set<string>>(new Set());
+    const isFirstLoad = useRef(true);
+    const lastInteractionRef = useRef<number>(Date.now());
+    
     useEffect(() => { usersRef.current = users; }, [users]);
+    useEffect(() => { postsRef.current = posts; }, [posts]);
+    useEffect(() => { conversationsRef.current = conversations; }, [conversations]);
 
-    // Derived state for users with stories
+    // 5. Derived State (useMemo) - Now safe because dependencies are defined above
     const usersWithStories = useMemo(() => {
         if (!currentUser) return [];
         
-        // Group stories by user
         const storiesByUser = new Map<string, Story[]>();
         stories.forEach(story => {
-            const userId = story.userId; // userId is string (username in frontend types sometimes, but ID in backend)
-            // Wait, frontend Story type uses userId as string.
-            // Let's assume userId is the user's ID or username.
-            // Based on mapApiStoryToStory, userId is userId.
-            
+            const userId = story.userId;
             if (!storiesByUser.has(userId)) {
                 storiesByUser.set(userId, []);
             }
             storiesByUser.get(userId)!.push(story);
         });
 
-        // Map to Users
         const usersWithStoriesList: User[] = [];
         
-        // Add current user if they have stories
-        // (Actually Dashboard handles current user separately usually, but let's see StoryTray)
-        // StoryTray takes currentUser and usersWithStories.
-        
         storiesByUser.forEach((userStories, userId) => {
-             // Find user in users array or maybe from story author
-             // Ideally story has author field.
              const firstStory = userStories[0];
              if (firstStory.author && firstStory.author.username !== currentUser.username) {
-                 // Enhance user with stories
                  usersWithStoriesList.push({
                      ...firstStory.author,
                      stories: userStories
                  });
-             } else if (userId === currentUser.username || userId === currentUser.id) {
-                 // It's me
              }
         });
         
         return usersWithStoriesList;
     }, [stories, currentUser]);
 
+    // 6. Other states and hooks
+    const [animationKey, setAnimationKey] = useState(0);
+    const [selectedDate, setSelectedDate] = useState(new Date());
+    const [userToVerify, setUserToVerify] = useState<string | null>(null);
+    const [emailToReset, setEmailToReset] = useState<string | null>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [typingParentIds, setTypingParentIds] = useState(new Set<string>());
+    const [nextAutoRefresh, setNextAutoRefresh] = useState<Date | null>(null);
+    const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false);
+
+    // 7. Logic and Effects
     // Update current user stories
     useEffect(() => {
         if (currentUser) {
@@ -131,16 +155,12 @@ export default function App() {
                 setCurrentUser(prev => prev ? { ...prev, stories: myStories } : null);
             }
         }
-    }, [stories]); // Be careful with loops here
-
-    const postsRef = useRef(posts);
-    useEffect(() => { postsRef.current = posts; }, [posts]);
+    }, [stories]);
 
     // Sync posts to displayedPosts and pendingPosts
     useEffect(() => {
         if (posts.length === 0) return;
 
-        // Initial load
         if (displayedPosts.length === 0) {
             setDisplayedPosts(posts);
             return;
@@ -149,21 +169,12 @@ export default function App() {
         const displayedIds = new Set(displayedPosts.map(p => p.id));
         const postsMap = new Map(posts.map(p => [p.id, p]));
 
-        // Update existing posts in displayedPosts (edits, likes, replies)
-        // and remove deleted ones (not in postsMap)
         const updatedDisplayed = displayedPosts
             .filter(p => postsMap.has(p.id))
             .map(p => postsMap.get(p.id)!);
 
         setDisplayedPosts(updatedDisplayed);
 
-        // Find new posts that are not in displayedPosts
-        // We only care about posts that are NEWER than the newest displayed post
-        // to avoid re-adding old posts that might have been scrolled past? 
-        // Actually, just any ID not in displayed is a candidate.
-        // But we need to avoid adding "older" posts if pagination was involved.
-        // For now, assuming allPosts returns the full relevant feed or top N posts.
-        
         const newItems = posts.filter(p => !displayedIds.has(p.id));
         
         if (newItems.length > 0) {
@@ -178,22 +189,12 @@ export default function App() {
 
     const handleShowNewPosts = () => {
         setDisplayedPosts(prev => {
-            // Merge pending posts at the top
-            // Ensure no duplicates just in case
             const currentIds = new Set(prev.map(p => p.id));
             const uniquePending = pendingPosts.filter(p => !currentIds.has(p.id));
             return [...uniquePending, ...prev];
         });
         setPendingPosts([]);
     };
-
-    const conversationsRef = useRef(conversations);
-    useEffect(() => { conversationsRef.current = conversations; }, [conversations]);
-
-    // MIGRATION: Removed localStorage.setItem effects for posts and conversations
-    
-    const [currentUser, setCurrentUser] = useLocalStorage<User | null>('chrono_currentUser_v2', null);
-    const [isSessionLoading, setIsSessionLoading] = useState(true);
 
     // Validate Session on Mount
     useEffect(() => {
@@ -206,20 +207,18 @@ export default function App() {
                         const mappedUser = mapApiUserToUser(result.data);
                         setCurrentUser(mappedUser);
 
-                        // Fetch Stories
                         const storiesResult = await apiClient.getStories();
                         if (storiesResult.data) {
                             setStories(storiesResult.data.map(mapApiStoryToStory));
                         }
                     } else {
-                        // Token invalid or expired
                         console.warn("Session expired or invalid, logging out.");
                         setCurrentUser(null);
                         apiClient.setToken(null);
                     }
                 } catch (error) {
                     console.error("Session validation failed:", error);
-                    setCurrentUser(null); // Safety fallback
+                    setCurrentUser(null);
                     apiClient.setToken(null);
                 }
             }
@@ -227,39 +226,7 @@ export default function App() {
         };
         
         validateSession();
-    }, []); // Run once on mount
-    
-    // Restore page from sessionStorage if user is logged in
-    const getInitialPage = (): Page => {
-        if (currentUser) {
-            const savedPage = sessionStorage.getItem('chrono_currentPage');
-            if (savedPage) {
-                const pageNum = parseInt(savedPage, 10);
-                if (pageNum >= 0 && pageNum < Object.keys(Page).length / 2) {
-                    return pageNum as Page;
-                }
-            }
-            return Page.Dashboard; // Default to Dashboard if logged in
-        }
-        return Page.Welcome;
-    };
-    
-    const [currentPage, setCurrentPage] = useState<Page>(getInitialPage());
-    const [profileUsername, setProfileUsername] = useState<string | null>(null);
-    const [animationKey, setAnimationKey] = useState(0);
-    const [selectedDate, setSelectedDate] = useState(new Date());
-    const [userToVerify, setUserToVerify] = useState<string | null>(null);
-    const [emailToReset, setEmailToReset] = useState<string | null>(null);
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [typingParentIds, setTypingParentIds] = useState(new Set<string>());
-    const [nextAutoRefresh, setNextAutoRefresh] = useState<Date | null>(null);
-    const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false);
-    const lastInteractionRef = useRef<number>(Date.now());
-
-    const { playSound } = useSound();
-    const { showToast } = useToast();
-    const knownNotificationIds = useRef<Set<string>>(new Set());
-    const isFirstLoad = useRef(true);
+    }, []);
 
 
 
