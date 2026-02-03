@@ -262,15 +262,53 @@ export default function App() {
 
     // Helper function to reload data from backend
     const reloadBackendData = useCallback(async () => {
-        if (!currentUser) return;
+        // Use a ref-based check to avoid dependency on currentUser
+        if (!apiClient.getToken()) return;
         
         try {
             // Reload current user to ensure follow counts and lists are accurate
             const userResult = await apiClient.getCurrentUser();
             if (userResult.data) {
                 const mappedUser = mapApiUserToUser(userResult.data);
-                // Update local storage and state
-                setCurrentUser(mappedUser);
+                
+                // Reload notifications specifically for this update
+                const notificationsResult = await apiClient.getNotifications();
+                let finalNotifications = [];
+                if (notificationsResult.data) {
+                    finalNotifications = notificationsResult.data.map((n: any) => ({
+                        ...n,
+                        timestamp: new Date(n.timestamp || Date.now())
+                    }));
+
+                    finalNotifications.forEach((n: any) => {
+                        if (!n.read && !knownNotificationIds.current.has(n.id)) {
+                            if (!isFirstLoad.current) {
+                                 try {
+                                     const message = NotificationManager.formatNotificationMessage(n.notificationType, n.actor, n.post);
+                                     NotificationManager.showNotification('Chrono', {
+                                        body: message,
+                                        tag: n.id
+                                     });
+                                     playSound('notification');
+                                 } catch (err) {
+                                     console.error("Error showing notification:", err);
+                                 }
+                            }
+                            knownNotificationIds.current.add(n.id);
+                        } else {
+                             knownNotificationIds.current.add(n.id);
+                        }
+                    });
+                }
+
+                // Update local storage and state using functional update
+                setCurrentUser(prev => {
+                    if (!prev) return mappedUser;
+                    return {
+                        ...mappedUser,
+                        notifications: finalNotifications
+                    };
+                });
                 
                 // Update in users array if present
                 setUsers(prev => prev.map(u => u.username === mappedUser.username ? mappedUser : u));
@@ -324,40 +362,7 @@ export default function App() {
                 setConversations(mappedConversations);
             }
             
-            // Reload notifications
-            const notificationsResult = await apiClient.getNotifications();
-            if (notificationsResult.data) {
-                const notifications = notificationsResult.data.map((n: any) => ({
-                    ...n,
-                    timestamp: new Date(n.timestamp || Date.now())
-                }));
-
-                notifications.forEach((n: any) => {
-                    if (!n.isRead && !knownNotificationIds.current.has(n.id)) {
-                        if (!isFirstLoad.current) {
-                             try {
-                                 const message = NotificationManager.formatNotificationMessage(n.notificationType, n.actor, n.post);
-                                 NotificationManager.showNotification('Chrono', {
-                                    body: message,
-                                    tag: n.id
-                                 });
-                                 playSound('notification');
-                             } catch (err) {
-                                 console.error("Error showing notification:", err);
-                             }
-                        }
-                        knownNotificationIds.current.add(n.id);
-                    } else {
-                         knownNotificationIds.current.add(n.id);
-                    }
-                });
-
-                if (currentUser) {
-                    setCurrentUser(prev => prev ? { ...prev, notifications } : prev);
-                }
-            }
-
-            // Reload stories
+            // Reload stories (grouped)
             const storiesResult = await apiClient.getStories();
             if (storiesResult.data) {
                 const stories = storiesResult.data.map((s: any) => ({
@@ -393,7 +398,7 @@ export default function App() {
         } catch (error) {
             console.error("Failed to reload backend data:", error);
         }
-    }, [currentUser]);
+    }, [playSound]);
 
     // Auto Refresh Logic
     useEffect(() => {

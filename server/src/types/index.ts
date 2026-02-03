@@ -100,7 +100,7 @@ export interface Notification {
   actorId: string;
   notificationType: NotificationType;
   postId: string | null;
-  isRead: boolean;
+  read: boolean;
   createdAt: Date;
 }
 
