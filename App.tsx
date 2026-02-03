@@ -355,12 +355,18 @@ export default function App() {
                     participants: conv.participants.map((p: any) => typeof p === 'string' ? p : (p.username || p)),
                     messages: (conv.messages || []).map((msg: any) => ({
                         id: msg.id,
-                        senderUsername: msg.senderUsername || (msg.sender_id ? 'unknown' : 'unknown'),
+                        senderUsername: msg.senderUsername || 'unknown',
                         text: msg.text,
+                        imageUrl: msg.imageUrl,
+                        videoUrl: msg.videoUrl,
+                        status: msg.status,
+                        isEncrypted: msg.isEncrypted,
                         timestamp: new Date(msg.createdAt || msg.created_at || Date.now()),
-                    })),
+                    })).sort((a: any, b: any) => a.timestamp.getTime() - b.timestamp.getTime()),
                     lastMessageTimestamp: new Date(conv.lastMessageTimestamp || conv.updated_at || Date.now()),
                     unreadCount: conv.unreadCount || {},
+                    isEncrypted: conv.isEncrypted,
+                    selfDestructTimer: conv.selfDestructTimer
                 }));
                 setConversations(mappedConversations);
             }
@@ -511,10 +517,16 @@ export default function App() {
                                      id: msg.id,
                                      senderUsername: msg.senderUsername || 'unknown',
                                      text: msg.text,
+                                     imageUrl: msg.imageUrl,
+                                     videoUrl: msg.videoUrl,
+                                     status: msg.status,
+                                     isEncrypted: msg.isEncrypted,
                                      timestamp: new Date(msg.createdAt || msg.created_at || Date.now()),
-                                 })),
+                                 })).sort((a: any, b: any) => a.timestamp.getTime() - b.timestamp.getTime()),
                                  lastMessageTimestamp: new Date(conv.lastMessageTimestamp || conv.updated_at || Date.now()),
                                  unreadCount: conv.unreadCount || {},
+                                 isEncrypted: conv.isEncrypted,
+                                 selfDestructTimer: conv.selfDestructTimer
                              }));
                              setConversations(mappedConversations);
                          }
@@ -531,12 +543,16 @@ export default function App() {
                                      id: payload.id,
                                      senderUsername: payload.senderUsername,
                                      text: payload.text,
+                                     imageUrl: payload.imageUrl,
+                                     videoUrl: payload.videoUrl,
+                                     status: payload.status,
+                                     isEncrypted: payload.isEncrypted,
                                      timestamp: new Date(payload.createdAt || Date.now())
                                  };
                                  
                                  return {
                                      ...conv,
-                                     messages: [newMessage, ...conv.messages],
+                                     messages: [...conv.messages, newMessage].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()),
                                      lastMessageTimestamp: newMessage.timestamp,
                                  };
                              }
@@ -547,6 +563,10 @@ export default function App() {
                  
                  if (payload.senderUsername !== currentUser.username) {
                      playSound('notification');
+                     // Mark as delivered
+                     try {
+                         await apiClient.updateMessageStatus(payload.conversationId, payload.id, 'delivered');
+                     } catch (e) {}
                  }
             };
 
@@ -573,16 +593,32 @@ export default function App() {
                 playSound('notification');
             };
 
+            const handleMessageStatusUpdate = (payload: { messageId: string, status: string, conversationId: string }) => {
+                setConversations(prev => prev.map(conv => {
+                    if (conv.id === payload.conversationId) {
+                        return {
+                            ...conv,
+                            messages: conv.messages.map(msg => 
+                                msg.id === payload.messageId ? { ...msg, status: payload.status as any } : msg
+                            )
+                        };
+                    }
+                    return conv;
+                }));
+            };
+
             socketService.on('new_notification', handleNewNotification);
             socketService.on('new_message', handleNewMessage);
             socketService.on('new_post', handleNewPost);
             socketService.on('glitchi_received', handleGlitchiReceived);
+            socketService.on('message_status_update', handleMessageStatusUpdate);
 
             return () => {
                 socketService.off('new_notification', handleNewNotification);
                 socketService.off('new_message', handleNewMessage);
                 socketService.off('new_post', handleNewPost);
                 socketService.off('glitchi_received', handleGlitchiReceived);
+                socketService.off('message_status_update', handleMessageStatusUpdate);
                 socketService.disconnect();
             };
         } else {
@@ -855,7 +891,7 @@ export default function App() {
             // Find or create conversation first
             const convResult = await apiClient.getOrCreateConversation(recipientUsername);
             if (convResult.data) {
-                const conversationId = convResult.data.id;
+                const conversationId = convResult.data.conversationId || convResult.data.id;
                 const result = await apiClient.sendMessage(conversationId, text, media);
                 if (result.error) {
                     console.error("Failed to send message via API:", result.error);

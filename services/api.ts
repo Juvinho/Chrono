@@ -283,37 +283,46 @@ class ApiClient {
     return this.request<any[]>(`/conversations/${conversationId}/messages`);
   }
 
-  async sendMessage(conversationId: string, content: string) {
+  async sendMessage(conversationId: string, text: string, media?: { imageUrl?: string, videoUrl?: string, metadata?: any }) {
     return this.request<any>(`/conversations/${conversationId}/messages`, {
       method: 'POST',
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ text, media }),
     });
   }
 
-  async sendMessageToUser(recipientUsername: string, content: string) {
-    return this.request<any>(`/conversations/user/${recipientUsername}/messages`, {
-      method: 'POST',
-      body: JSON.stringify({ content }),
-    });
+  async sendMessageToUser(recipientUsername: string, text: string, media?: { imageUrl?: string, videoUrl?: string, metadata?: any }) {
+    // First get or create conversation
+    const conv = await this.getOrCreateConversation(recipientUsername);
+    if (conv.data) {
+        return this.sendMessage(conv.data.conversationId, text, media);
+    }
+    return conv;
   }
 
-  async createConversation(userId: string) {
+  async createConversation(username: string, options: any = {}) {
     return this.request<any>('/conversations', {
       method: 'POST',
-      body: JSON.stringify({ userId }),
+      body: JSON.stringify({ username, ...options }),
     });
   }
 
-  async getOrCreateConversation(recipientUsername: string, options: any = {}) {
-    return this.request<any>('/conversations/get-or-create', {
+  async getOrCreateConversation(username: string, options: any = {}) {
+    return this.request<any>('/conversations', {
       method: 'POST',
-      body: JSON.stringify({ recipientUsername, ...options }),
+      body: JSON.stringify({ username, ...options }),
     });
   }
 
   async markConversationAsRead(conversationId: string) {
     return this.request<any>(`/conversations/${conversationId}/read`, {
       method: 'POST',
+    });
+  }
+
+  async updateMessageStatus(conversationId: string, messageId: string, status: 'delivered' | 'read') {
+    return this.request<any>(`/conversations/${conversationId}/messages/${messageId}/status`, {
+      method: 'POST',
+      body: JSON.stringify({ status }),
     });
   }
 
