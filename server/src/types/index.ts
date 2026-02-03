@@ -83,6 +83,11 @@ export interface Message {
   conversationId: string;
   senderId: string;
   text: string;
+  imageUrl?: string | null;
+  videoUrl?: string | null;
+  metadata?: any;
+  status?: 'sent' | 'delivered' | 'read';
+  isEncrypted?: boolean;
   createdAt: Date;
 }
 
@@ -92,6 +97,8 @@ export interface Conversation {
   messages: Message[];
   lastMessageTimestamp: Date;
   unreadCount: { [username: string]: number };
+  isEncrypted?: boolean;
+  selfDestructTimer?: number;
 }
 
 export interface Notification {
