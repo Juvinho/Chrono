@@ -152,7 +152,10 @@ class ApiClient {
   }
 
   async searchUsers(query: string) {
-    return this.request<any[]>(`/users/search?q=${encodeURIComponent(query)}`);
+    const q = query.trim();
+    // If query is empty, use a special path or handle it
+    const endpoint = q ? `/users/search/${encodeURIComponent(q)}` : '/users/search/recommended';
+    return this.request<any[]>(endpoint);
   }
 
   async followUser(userId: string) {

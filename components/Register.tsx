@@ -176,7 +176,13 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
         }
 
         try {
-            const response = await apiClient.register(username, email, password, avatar || undefined, captchaVerified);
+            const response = await apiClient.register({ 
+                username, 
+                email, 
+                password, 
+                avatar: avatar || undefined, 
+                captchaVerified 
+            });
             
             if (response.error) {
                 setError(response.error);

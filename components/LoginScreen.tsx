@@ -85,7 +85,7 @@ export default function LoginScreen({ onLogin, users, onNavigate }: LoginScreenP
 
         try {
             console.log('Calling API login...');
-            const response = await apiClient.login(username, password);
+            const response = await apiClient.login({ username, password });
             console.log('API response:', response);
             
             if (response.error) {
