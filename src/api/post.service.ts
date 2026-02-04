@@ -48,9 +48,9 @@ export const postService = {
   },
 
   async updateReaction(postId: string, reaction: string) {
-    return baseClient.request<any>(`/posts/${postId}/reaction`, {
+    return baseClient.request<any>(`/posts/${postId}/reactions`, {
       method: 'POST',
-      body: JSON.stringify({ reaction }),
+      body: JSON.stringify({ reactionType: reaction }),
     });
   },
 

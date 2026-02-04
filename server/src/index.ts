@@ -13,6 +13,7 @@ import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import postRoutes from './routes/posts.js';
 import conversationRoutes from './routes/conversations.js';
+import reactionsRoutes from './routes/reactions.js';
 import notificationRoutes from './routes/notifications.js';
 import marketplaceRoutes from './routes/marketplace.js';
 import companionRoutes from './routes/companionRoutes.js';
@@ -141,6 +142,7 @@ app.get('/api', (_req: express.Request, res: express.Response) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/posts', postRoutes);
+app.use('/api/posts', reactionsRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/marketplace', marketplaceRoutes);

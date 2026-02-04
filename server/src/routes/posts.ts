@@ -268,31 +268,7 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
   }
 });
 
-// Add reaction
-router.post('/:id/reactions', authenticateToken, async (req: AuthRequest, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { reactionType } = req.body;
-
-    if (!['Glitch', 'Upload', 'Corrupt', 'Rewind', 'Static'].includes(reactionType)) {
-      return res.status(400).json({ error: 'Invalid reaction type' });
-    }
-
-    await reactionService.addReaction(id, req.userId!, reactionType);
-
-    // Create notification
-    const post = await postService.getPostById(id);
-    if (post && post.authorId !== req.userId) {
-      await notificationService.createNotification(post.authorId, req.userId!, 'reaction', id);
-    }
-
-    const reactions = await reactionService.getReactionsForPost(id);
-    res.json({ reactions });
-  } catch (error: any) {
-    console.error('Add reaction error:', error);
-    res.status(500).json({ error: error.message || 'Failed to add reaction' });
-  }
-});
+// Reactions endpoints moved to reactions router
 
 // Vote on poll
 router.post('/:id/vote', authenticateToken, async (req: AuthRequest, res: Response) => {
