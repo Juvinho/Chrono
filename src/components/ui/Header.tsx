@@ -15,6 +15,7 @@ interface HeaderProps {
     onViewProfile: (username: string) => void;
     onNavigate: (page: Page, data?: string) => void;
     onNotificationClick: (notification: Notification) => void;
+    onViewNotifications: () => void;
     onSearch: (query: string) => void;
     onOpenMarketplace?: () => void;
     onBack?: () => void;
@@ -24,7 +25,7 @@ interface HeaderProps {
     onToggleChat?: () => void;
 }
 
-export default function Header({ user, onLogout, onViewProfile, onNavigate, onNotificationClick, onSearch, onOpenMarketplace, onBack, allUsers, allPosts, conversations, onToggleChat }: HeaderProps) {
+export default function Header({ user, onLogout, onViewProfile, onNavigate, onNotificationClick, onViewNotifications, onSearch, onOpenMarketplace, onBack, allUsers, allPosts, conversations, onToggleChat }: HeaderProps) {
     const { t } = useTranslation();
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -33,6 +34,14 @@ export default function Header({ user, onLogout, onViewProfile, onNavigate, onNo
     const handlePerformSearch = (query: string) => {
         setIsSearchOpen(false);
         onSearch(query);
+    };
+
+    const handleToggleNotifications = () => {
+        const newIsOpen = !isNotificationsOpen;
+        setIsNotificationsOpen(newIsOpen);
+        if (newIsOpen) {
+            onViewNotifications();
+        }
     };
 
     const unreadNotificationCount = useMemo(() => {
@@ -99,7 +108,7 @@ export default function Header({ user, onLogout, onViewProfile, onNavigate, onNo
                     </button>
                  )}
                  <div className="relative">
-                    <button onClick={() => setIsNotificationsOpen(prev => !prev)} title={t('notifications')} className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-secondary)] p-2 rounded-full hover:bg-[var(--theme-bg-tertiary)] transition-colors">
+                    <button onClick={handleToggleNotifications} title={t('notifications')} className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-secondary)] p-2 rounded-full hover:bg-[var(--theme-bg-tertiary)] transition-colors">
                         <BellIcon className="w-5 h-5 md:w-6 md:h-6" />
                         {unreadNotificationCount > 0 && (
                             <span className="absolute top-1 right-1 w-3 h-3 md:w-4 md:h-4 bg-red-600 text-white text-[10px] md:text-xs rounded-full flex items-center justify-center animate-pulse">

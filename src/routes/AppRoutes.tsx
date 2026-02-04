@@ -65,6 +65,7 @@ interface AppRoutesProps {
     handleLogin: (user: User) => void;
     handleLogout: () => void;
     handleNotificationClick: (notification: any) => void;
+    onViewNotifications: () => void;
     handleNewPost: (post: Post) => void;
     handleUpdateReaction: (postId: string, reaction: any, actor?: User) => void;
     handleReply: (parentId: string, content: string, isPrivate: boolean, media?: any, actor?: User) => void;
@@ -89,7 +90,7 @@ export default function AppRoutes(props: AppRoutesProps) {
         currentUser, users, setUsers, combinedUsers, memoizedPosts, memoizedAllPosts, memoizedUsers,
         pendingPosts, usersWithStories, conversations, selectedDate, setSelectedDate,
         userToVerify, emailToReset, isGenerating, typingParentIds, nextAutoRefresh, isAutoRefreshPaused,
-        handleNavigate, handleLogin, handleLogout, handleNotificationClick, handleNewPost,
+        handleNavigate, handleLogin, handleLogout, handleNotificationClick, onViewNotifications, handleNewPost,
         handleUpdateReaction, handleReply, handleEcho, handleDeletePost, handleEditPost,
         handlePollVote, handleShowNewPosts, setIsCreatingStory, handleUpdateUser,
         setIsMarketplaceOpen, handleBack, handleFollowToggle, handleSendGlitchi, handlePasswordReset,
@@ -113,6 +114,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     onLogout={handleLogout}
                     onNavigate={handleNavigate}
                     onNotificationClick={handleNotificationClick}
+                    onViewNotifications={onViewNotifications}
                     selectedDate={selectedDate}
                     setSelectedDate={setSelectedDate}
                     allUsers={combinedUsers}
@@ -148,6 +150,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     onLogout={handleLogout}
                     onNavigate={handleNavigate}
                     onNotificationClick={handleNotificationClick}
+                    onViewNotifications={onViewNotifications}
                     selectedDate={selectedDate}
                     setSelectedDate={setSelectedDate}
                     allUsers={combinedUsers}
@@ -246,6 +249,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     onLogout={handleLogout}
                     onNavigate={handleNavigate}
                     onNotificationClick={handleNotificationClick}
+                    onViewNotifications={onViewNotifications}
                     selectedDate={selectedDate}
                     setSelectedDate={setSelectedDate}
                     allUsers={combinedUsers}

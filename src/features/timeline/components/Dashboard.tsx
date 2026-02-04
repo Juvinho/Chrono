@@ -13,6 +13,7 @@ interface DashboardProps {
     onLogout: () => void;
     onNavigate: (page: Page, data?: string) => void;
     onNotificationClick: (notification: Notification) => void;
+    onViewNotifications: () => void;
     selectedDate: Date;
     setSelectedDate: (date: Date) => void;
     allUsers: User[];
@@ -42,7 +43,7 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ 
-    user, onLogout, onNavigate, onNotificationClick, selectedDate, setSelectedDate, allUsers, allPosts,
+    user, onLogout, onNavigate, onNotificationClick, onViewNotifications, selectedDate, setSelectedDate, allUsers, allPosts,
     onNewPost, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost, onPollVote, isGenerating, typingParentIds,
     conversations, newPostsCount = 0, onShowNewPosts, allKnownPosts, usersWithStories = [], onViewStory = () => {}, onCreateStory = () => {}, onUpdateUser = () => {}, onOpenMarketplace,
     nextAutoRefresh, isAutoRefreshPaused, onBack, onToggleChat
@@ -175,6 +176,7 @@ export default function Dashboard({
                 onViewProfile={handleViewProfile} 
                 onNavigate={onNavigate}
                 onNotificationClick={onNotificationClick}
+                onViewNotifications={onViewNotifications}
                 onSearch={handleSearch} 
                 onOpenMarketplace={onOpenMarketplace}
                 allPosts={postsForSearch} 

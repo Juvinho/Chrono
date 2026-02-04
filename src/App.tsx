@@ -68,6 +68,7 @@ export default function App() {
     const [typingParentIds, setTypingParentIds] = useState(new Set<string>());
     const [nextAutoRefresh, setNextAutoRefresh] = useState<Date | null>(null);
     const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false);
+    const [lastViewedNotifications, setLastViewedNotifications] = useState<Date | null>(null);
 
     // 4. Refs
     const usersRef = useRef(users);
@@ -305,6 +306,9 @@ export default function App() {
 
             const handleNewNotification = (payload: any) => {
                  console.log("New notification received:", payload);
+                 
+                 // Reset last viewed notifications to show the count again
+                 setLastViewedNotifications(null);
                  
                  setCurrentUser(prev => {
                      if (!prev) return prev;
@@ -735,6 +739,18 @@ export default function App() {
         handleNavigate(Page.Login);
     }
     
+    const handleViewNotifications = () => {
+        if (!currentUser) return;
+        setLastViewedNotifications(new Date());
+        
+        // Mark all notifications as read
+        const updatedUser = {
+            ...currentUser,
+            notifications: currentUser.notifications?.map(n => ({ ...n, read: true }))
+        };
+        handleUpdateUser(updatedUser);
+    };
+
     const handleNotificationClick = (notification: Notification) => {
         if (!currentUser) return;
 
@@ -742,7 +758,7 @@ export default function App() {
             setSelectedDate(new Date(notification.post.timestamp));
             sessionStorage.setItem('chrono_focus_post_id', notification.post.id);
             handleNavigate(Page.Dashboard);
-        } else if (notification.notificationType === 'follow') {
+        } else if (notification.notificationType === 'follow' && notification.actor?.username) {
             handleNavigate(Page.Profile, notification.actor.username);
         }
 
@@ -751,6 +767,9 @@ export default function App() {
             notifications: currentUser.notifications?.map(n => n.id === notification.id ? { ...n, read: true } : n)
         };
         handleUpdateUser(updatedUser);
+        
+        // Also mark notifications as viewed when clicking on one
+        setLastViewedNotifications(new Date());
     }
 
     const memoizedUsers = useMemo(() => users, [users]);
@@ -816,6 +835,7 @@ export default function App() {
                             handleLogin={handleLogin}
                             handleLogout={handleLogout}
                             handleNotificationClick={handleNotificationClick}
+                            onViewNotifications={handleViewNotifications}
                             handleNewPost={handleNewPost}
                             handleUpdateReaction={handleUpdateReaction}
                             handleReply={handleReply}
