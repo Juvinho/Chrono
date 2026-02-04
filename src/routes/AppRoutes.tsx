@@ -59,6 +59,7 @@ interface AppRoutesProps {
     isAutoRefreshPaused: boolean;
     viewingStoryUser: User | null;
     setViewingStoryUser: (user: User | null) => void;
+    lastViewedNotifications: Date | null;
     
     // Handlers
     handleNavigate: (page: Page, data?: string) => void;
@@ -90,11 +91,12 @@ export default function AppRoutes(props: AppRoutesProps) {
         currentUser, users, setUsers, combinedUsers, memoizedPosts, memoizedAllPosts, memoizedUsers,
         pendingPosts, usersWithStories, conversations, selectedDate, setSelectedDate,
         userToVerify, emailToReset, isGenerating, typingParentIds, nextAutoRefresh, isAutoRefreshPaused,
+        viewingStoryUser, setViewingStoryUser, lastViewedNotifications,
         handleNavigate, handleLogin, handleLogout, handleNotificationClick, onViewNotifications, handleNewPost,
         handleUpdateReaction, handleReply, handleEcho, handleDeletePost, handleEditPost,
         handlePollVote, handleShowNewPosts, setIsCreatingStory, handleUpdateUser,
         setIsMarketplaceOpen, handleBack, handleFollowToggle, handleSendGlitchi, handlePasswordReset,
-        setViewingStoryUser, onToggleChat, onOpenChat
+        onToggleChat, onOpenChat
     } = props;
 
     return (
@@ -141,6 +143,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     isAutoRefreshPaused={isAutoRefreshPaused}
                     onBack={handleBack}
                     onToggleChat={onToggleChat}
+                    lastViewedNotifications={lastViewedNotifications}
                 />
             ) : <Navigate to="/welcome" />} />
 
@@ -177,6 +180,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     isAutoRefreshPaused={isAutoRefreshPaused}
                     onBack={handleBack}
                     onToggleChat={onToggleChat}
+                    lastViewedNotifications={lastViewedNotifications}
                 />
             ) : <Navigate to="/welcome" />} />
 
@@ -275,6 +279,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     nextAutoRefresh={nextAutoRefresh}
                     isAutoRefreshPaused={isAutoRefreshPaused}
                     onBack={handleBack}
+                    lastViewedNotifications={lastViewedNotifications}
                 />
             ) : <Navigate to="/welcome" />} />
 
