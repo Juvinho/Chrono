@@ -101,14 +101,14 @@ const postLimiter = rateLimit({
 app.use('/api/', apiLimiter);
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
-app.use('/api/users/:username', (req, res, next) => {
+app.use('/api/users/:username', (req: express.Request, res: express.Response, next: express.NextFunction) => {
   if (req.method === 'PUT') {
     profileUpdateLimiter(req, res, next);
   } else {
     next();
   }
 });
-app.use('/api/posts', (req, res, next) => {
+app.use('/api/posts', (req: express.Request, res: express.Response, next: express.NextFunction) => {
   if (req.method === 'POST') {
     postLimiter(req, res, next);
   } else {
@@ -117,7 +117,7 @@ app.use('/api/posts', (req, res, next) => {
 });
 
 // Root route
-app.get('/api', (req, res) => {
+app.get('/api', (_req: express.Request, res: express.Response) => {
   res.json({
     message: 'Chrono API',
     version: '1.0.0',
@@ -144,7 +144,7 @@ app.use('/api/marketplace', marketplaceRoutes);
 app.use('/api/companions', companionRoutes);
 
 // Health check
-app.get('/health', async (req, res) => {
+app.get('/health', async (_req: express.Request, res: express.Response) => {
   try {
     await pool.query('SELECT 1');
     res.json({ status: 'ok', db: 'connected', timestamp: new Date().toISOString() });
@@ -197,7 +197,7 @@ console.log(`Final Static files path: ${clientBuildPath}`);
 console.log('------------------');
 
 // Middleware for logging static file requests
-app.use((req, res, next) => {
+app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
   if (req.url.startsWith('/assets/') || req.url.endsWith('.js') || req.url.endsWith('.css')) {
     const filePath = path.join(clientBuildPath, req.url);
     if (!fs.existsSync(filePath)) {
@@ -211,7 +211,7 @@ app.use(express.static(clientBuildPath));
 
 // The "catchall" handler: for any request that doesn't
 // match one above, send back React's index.html file.
-app.get('*', (req, res) => {
+app.get('*', (req: express.Request, res: express.Response) => {
   // Skip API routes
   if (req.url.startsWith('/api')) {
     return res.status(404).json({ error: 'API route not found' });
