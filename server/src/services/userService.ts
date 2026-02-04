@@ -366,6 +366,24 @@ export class UserService {
     );
   }
 
+  async syncUserFollowCounts(userId: string): Promise<void> {
+    await pool.query(
+      `UPDATE users 
+       SET followers_count = (SELECT COUNT(*) FROM follows WHERE following_id = $1),
+           following_count = (SELECT COUNT(*) FROM follows WHERE follower_id = $1)
+       WHERE id = $1`,
+      [userId]
+    );
+  }
+
+  async syncAllFollowCounts(): Promise<void> {
+    await pool.query(`
+      UPDATE users u
+      SET followers_count = (SELECT COUNT(*) FROM follows WHERE following_id = u.id),
+          following_count = (SELECT COUNT(*) FROM follows WHERE follower_id = u.id)
+    `);
+  }
+
   mapUserFromDb(row: any): User {
     // Override verification for Juvinho
     const isJuvinho = row.username === 'Juvinho';
