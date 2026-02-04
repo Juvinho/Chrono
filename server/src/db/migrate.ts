@@ -37,6 +37,7 @@ export async function migrate(retries = 3) {
       console.log('Ensuring system creator accounts...');
       
       // @Juvinho: The Creator
+      console.log('👤 Garantindo conta: @Juvinho');
       const juvinhoPassword = await bcrypt.hash('27Set@2004', 10);
       await pool.query(`
           INSERT INTO users (
@@ -65,6 +66,7 @@ export async function migrate(retries = 3) {
       ]);
 
       // @Chrono: The System Entity
+      console.log('👤 Garantindo conta: @Chrono');
       const chronoPassword = await bcrypt.hash('chrono_secure_system_2026_!@#', 10);
       await pool.query(`
           INSERT INTO users (
