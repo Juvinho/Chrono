@@ -1,5 +1,12 @@
 import pg from 'pg';
 import dotenv from 'dotenv';
+import dns from 'dns';
+
+// Force Node.js to prefer IPv4 over IPv6. 
+// This fixes the ENETUNREACH error on Render when connecting to Supabase.
+if (dns.setDefaultResultOrder) {
+  dns.setDefaultResultOrder('ipv4first');
+}
 
 dotenv.config();
 
