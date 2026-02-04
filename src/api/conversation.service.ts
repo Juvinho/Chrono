@@ -35,4 +35,13 @@ export const conversationService = {
       body: JSON.stringify({ status }),
     });
   },
+
+  async sendMessageToUser(recipientUsername: string, text: string, media?: { imageUrl?: string, videoUrl?: string, metadata?: any }) {
+    // First get or create conversation
+    const conv = await this.getOrCreateConversation(recipientUsername);
+    if (conv.data) {
+      return this.sendMessage(conv.data.conversationId || conv.data.id, text, media);
+    }
+    return conv;
+  },
 };

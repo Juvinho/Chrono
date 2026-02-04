@@ -102,6 +102,7 @@ export interface User {
   stories?: Story[];
   subscriptionTier?: 'free' | 'pro' | 'pro_plus';
   subscriptionExpiresAt?: Date;
+  lastSeen?: Date | string | null;
   equippedFrame?: Item;
   equippedEffect?: Item;
 }

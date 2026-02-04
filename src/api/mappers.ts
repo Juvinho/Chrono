@@ -33,6 +33,7 @@ export function mapApiUserToUser(apiUser: any): any {
     blockedUsers: apiUser.blockedUsers || apiUser.blocked_users || [],
     notifications: apiUser.notifications || [],
     createdAt: apiUser.createdAt || apiUser.created_at,
+    lastSeen: apiUser.lastSeen || apiUser.last_seen || null,
     stories: apiUser.stories ? apiUser.stories.map(mapApiStoryToStory) : [],
   };
 }

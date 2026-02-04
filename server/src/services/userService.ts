@@ -7,7 +7,7 @@ import { FollowService } from './followService.js';
 const FULL_USER_SELECT = `
   SELECT 
     u.id, u.username, u.email, u.password_hash, u.avatar, 
-    u.followers_count, u.following_count, u.is_verified, u.verification_badge_label, u.verification_badge_color, u.blocked_users, u.created_at, u.updated_at,
+    u.followers_count, u.following_count, u.is_verified, u.verification_badge_label, u.verification_badge_color, u.blocked_users, u.created_at, u.updated_at, u.last_seen,
     u.profile_type, u.headline, u.connections_count, u.skills, u.work_experience, u.education,
     p.bio, p.birthday, p.location, p.website, p.cover_image, p.pronouns,
     s.theme, s.accent_color, s.effect, s.animations_enabled, s.is_private,
@@ -125,6 +125,13 @@ export class UserService {
 
   async verifyPassword(password: string, passwordHash: string): Promise<boolean> {
     return bcrypt.compare(password, passwordHash);
+  }
+
+  async updateLastSeen(userId: string): Promise<void> {
+    await pool.query(
+      'UPDATE users SET last_seen = CURRENT_TIMESTAMP WHERE id = $1',
+      [userId]
+    );
   }
 
   async updateUser(id: string, updates: Partial<User>): Promise<User> {
@@ -444,6 +451,7 @@ export class UserService {
       subscriptionTier: row.subscription_tier || 'free',
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      lastSeen: row.last_seen || null,
       // SECURITY: Ensure sensitive fields are NEVER included by default in the mapped object
       // unless explicitly needed for auth. We handle password_hash separately in auth logic.
     };
