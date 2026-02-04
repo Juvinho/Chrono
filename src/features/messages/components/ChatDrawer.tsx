@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Conversation, Message } from '../../../types';
 import { useTranslation } from '../../../hooks/useTranslation';
+import { useToast } from '../../../contexts/ToastContext';
 import Avatar from '../../profile/components/Avatar';
 import { CloseIcon, MessageIcon, SendIcon, ChevronLeftIcon } from '../../../components/ui/icons';
 import { apiClient } from '../../../api';
@@ -25,6 +26,7 @@ export default function ChatDrawer({
     allUsers
 }: ChatDrawerProps) {
     const { t } = useTranslation();
+    const { showToast } = useToast();
     const [messageText, setMessageText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -37,11 +39,15 @@ export default function ChatDrawer({
             // Focus input when chat opens
             setTimeout(() => inputRef.current?.focus(), 100);
             
-            // Join real-time room via socket
+            // Join real-time room via socket and mark as read
             const conversation = conversations.find(c => c.participants.includes(activeChatUser.username));
             if (conversation) {
-                // Assuming socketService is available globally or imported
-                // We'll need to import socketService from utils
+                // Mark conversation as read when opening
+                apiClient.markConversationAsRead(conversation.id).catch(err => {
+                    console.error('Failed to mark conversation as read:', err);
+                });
+                
+                // Join socket room
                 import('../../../utils/socketService').then(({ socketService }) => {
                     socketService.emit('join_conversation', conversation.id);
                 });
@@ -70,17 +76,37 @@ export default function ChatDrawer({
 
     const handleSendMessage = async (e?: React.FormEvent) => {
         e?.preventDefault();
-        if (!messageText.trim() || !activeChatUser) return;
+        if (!messageText.trim() || !activeChatUser || isLoading) return;
 
-        const textToSend = messageText;
-        setMessageText(''); // Optimistic clear
+        const textToSend = messageText.trim();
+        setMessageText(''); // Limpa input otimisticamente
+        setIsLoading(true);
 
         try {
-            await apiClient.sendMessage(activeChatUser.username, textToSend);
-            scrollToBottom();
-        } catch (error) {
+            // Usa sendMessageToUser que cria/busca conversa automaticamente
+            const response = await apiClient.sendMessageToUser(activeChatUser.username, textToSend);
+            
+            if (response.error) {
+                throw new Error(response.error);
+            }
+
+            // Feedback de sucesso
+            showToast('Mensagem enviada!', 'success');
+            
+            // Scroll para última mensagem após um pequeno delay
+            setTimeout(() => scrollToBottom(), 100);
+            
+        } catch (error: any) {
+            // Feedback de erro
+            const errorMessage = error.message || 'Erro ao enviar mensagem. Tente novamente.';
+            showToast(errorMessage, 'error');
+            
+            // Restaura texto no input em caso de erro
+            setMessageText(textToSend);
+            
             console.error('Failed to send message:', error);
-            // Ideally show toast here
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -100,7 +126,7 @@ export default function ChatDrawer({
             />
 
             {/* Drawer */}
-            <div className={`fixed right-0 top-0 h-full w-full sm:w-[400px] bg-[#1a1a1a] border-l border-[var(--theme-border-primary)] shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+            <div className={`fixed right-0 top-0 h-full w-full sm:w-[380px] bg-[var(--theme-bg-primary)] border-l border-[var(--theme-border-primary)] shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
                 
                 {/* View: Conversation List */}
                 {!activeChatUser ? (
@@ -131,24 +157,24 @@ export default function ChatDrawer({
                                             onClick={() => handleConversationClick(conv)}
                                             className="flex items-center gap-3 p-3 rounded-lg hover:bg-[var(--theme-bg-tertiary)] cursor-pointer transition-colors group"
                                         >
-                                            <div className="relative">
+                                            <div className="relative flex-shrink-0">
                                                 <Avatar src={partner.avatar} username={partner.username} className="w-12 h-12 rounded-full" />
                                                 {isUnread && (
-                                                    <div className="absolute -right-1 -bottom-1 w-3 h-3 bg-[var(--theme-primary)] rounded-full border-2 border-[#1a1a1a]" />
+                                                    <div className="absolute -right-1 -top-1 w-3 h-3 bg-[var(--theme-primary)] rounded-full border-2 border-[var(--theme-bg-primary)] animate-pulse" />
                                                 )}
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex justify-between items-baseline">
-                                                    <span className={`font-bold truncate ${isUnread ? 'text-[var(--theme-text-primary)]' : 'text-[var(--theme-text-secondary)]'}`}>
+                                                    <span className={`font-bold truncate ${isUnread ? 'text-white' : 'text-[var(--theme-text-secondary)]'}`}>
                                                         {partner.username}
                                                     </span>
                                                     <span className="text-xs text-[var(--theme-text-secondary)] whitespace-nowrap ml-2">
-                                                        {new Date(lastMsg?.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                                        {lastMsg?.timestamp ? new Date(lastMsg.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}
                                                     </span>
                                                 </div>
-                                                <p className={`text-sm truncate ${isUnread ? 'text-white font-semibold' : 'text-gray-500'}`}>
-                                                    {lastMsg?.senderUsername === currentUser.username && 'You: '}
-                                                    {lastMsg?.text || 'Sent an attachment'}
+                                                <p className={`text-sm truncate ${isUnread ? 'text-white font-bold' : 'text-gray-500'}`}>
+                                                    {lastMsg?.senderUsername === currentUser.username && 'Você: '}
+                                                    {lastMsg?.text || 'Enviou um anexo'}
                                                 </p>
                                             </div>
                                         </div>
@@ -187,28 +213,33 @@ export default function ChatDrawer({
                         </div>
 
                         {/* Messages Body */}
-                        <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#121212]">
-                            {currentConversation?.messages.map((msg, idx) => {
-                                const isMe = msg.senderUsername === currentUser.username;
-                                const isLast = idx === currentConversation.messages.length - 1;
-                                
-                                return (
-                                    <div key={msg.id || idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                                        <div 
-                                            className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm break-words relative group ${
-                                                isMe 
-                                                    ? 'bg-[var(--theme-primary)] text-white rounded-br-none' 
-                                                    : 'bg-gray-800 text-gray-200 rounded-bl-none'
-                                            }`}
-                                        >
-                                            {msg.text}
-                                            <span className="text-[10px] opacity-50 block text-right mt-1">
-                                                {new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                            </span>
+                        <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[var(--theme-bg-primary)]">
+                            {currentConversation?.messages.length > 0 ? (
+                                currentConversation.messages.map((msg, idx) => {
+                                    const isMe = msg.senderUsername === currentUser.username;
+                                    
+                                    return (
+                                        <div key={msg.id || idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                            <div 
+                                                className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm break-words relative group ${
+                                                    isMe 
+                                                        ? 'bg-[var(--theme-primary)] text-white rounded-br-sm' 
+                                                        : 'bg-gray-800 text-gray-200 rounded-bl-sm'
+                                                }`}
+                                            >
+                                                {msg.text}
+                                                <span className={`text-[10px] opacity-70 block ${isMe ? 'text-right' : 'text-left'} mt-1`}>
+                                                    {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}
+                                                </span>
+                                            </div>
                                         </div>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })
+                            ) : (
+                                <div className="flex items-center justify-center h-full text-[var(--theme-text-secondary)] opacity-50">
+                                    <p>Nenhuma mensagem ainda. Comece a conversa!</p>
+                                </div>
+                            )}
                             <div ref={messagesEndRef} />
                         </div>
 
@@ -225,10 +256,14 @@ export default function ChatDrawer({
                                 />
                                 <button 
                                     type="submit" 
-                                    disabled={!messageText.trim()}
-                                    className="p-2 bg-[var(--theme-primary)] text-white rounded-full hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                    disabled={!messageText.trim() || isLoading}
+                                    className="p-2 bg-[var(--theme-primary)] text-white rounded-full hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center"
                                 >
-                                    <SendIcon className="w-5 h-5" />
+                                    {isLoading ? (
+                                        <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                        <SendIcon className="w-5 h-5" />
+                                    )}
                                 </button>
                             </form>
                         </div>

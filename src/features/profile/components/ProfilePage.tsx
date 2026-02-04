@@ -9,7 +9,7 @@ import { isSameDay } from '../../../utils/date';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useSound } from '../../../contexts/SoundContext';
 import UserListModal from '../../../components/ui/UserListModal';
-import { VerifiedIcon, MessageIcon } from '../../../components/ui/icons';
+import { VerifiedIcon, MessageIcon, PaperPlaneIcon } from '../../../components/ui/icons';
 import FramePreview, { getFrameShape } from './FramePreview';
 import Avatar from './Avatar';
 import LoadingSpinner from '../../../components/ui/LoadingSpinner';
@@ -559,10 +559,11 @@ export default function ProfilePage({
                             if (onOpenChat) onOpenChat(profileUser);
                             else onNavigate(Page.Messages, profileUser.username);
                         }} 
-                        className="follow-btn px-2 py-1 rounded-sm transition-colors" 
-                        title={t('messageButton')}
+                        className="follow-btn px-4 py-1 rounded-sm transition-colors flex items-center gap-2" 
+                        title={t('messageButton') || 'Enviar Mensagem'}
                       >
-                          <MessageIcon className="w-5 h-5"/>
+                          <PaperPlaneIcon className="w-5 h-5"/>
+                          <span className="hidden sm:inline">{t('messageButton') || 'Enviar Mensagem'}</span>
                       </button>
                       <button ref={followButtonRef} onClick={handleFollowClick} className={`${isFollowing ? 'following-btn' : 'follow-btn'} px-4 py-1 rounded-sm transition-colors`}>
                         {isFollowing ? t('profileFollowing') : t('profileFollow')}
