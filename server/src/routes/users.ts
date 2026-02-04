@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿import express, { Response } from 'express';
+﻿﻿﻿﻿﻿﻿﻿import express, { Response } from 'express';
 import { UserService } from '../services/userService.js';
 import { FollowService } from '../services/followService.js';
 import { NotificationService } from '../services/notificationService.js';
@@ -151,12 +151,12 @@ router.get('/:username', optionalAuthenticateToken, async (req: AuthRequest, res
     const canViewDetails = !user.isPrivate || isFollowing || isOwnProfile;
 
     // Get followers and following lists if allowed
-    let followersList: string[] = [];
-    let followingList: string[] = [];
+    let followersList: any[] = [];
+    let followingList: any[] = [];
 
     if (canViewDetails) {
-        followersList = await followService.getFollowersUsernames(user.id);
-        followingList = await followService.getFollowingUsernames(user.id);
+        followersList = await followService.getFollowersFull(user.id);
+        followingList = await followService.getFollowingFull(user.id);
     }
 
     res.json({

@@ -296,15 +296,16 @@ export default function ProfilePage({
   const canViewPosts = !profileUser.isPrivate || isFollowing || isOwnProfile;
   
   const getFullUsersFromList = (usersOrUsernames: (string | User)[] = []) => {
-      // If the list contains User objects, return them directly.
-      // If it contains strings, map them to User objects.
-      // This handles the transition where we might have strings or full objects.
-      if (usersOrUsernames.length === 0) return [];
+      if (!usersOrUsernames || usersOrUsernames.length === 0) return [];
       
-      if (typeof usersOrUsernames[0] === 'string') {
-          return (usersOrUsernames as string[]).map(username => allUsers.find(u => u.username === username)).filter(Boolean) as User[];
-      }
-      return usersOrUsernames as User[];
+      return usersOrUsernames.map(item => {
+          if (typeof item === 'string') {
+              // If it's a string, try to find it in allUsers
+              return allUsers.find(u => u.username === item);
+          }
+          // If it's already an object, return it
+          return item;
+      }).filter(Boolean) as User[];
   }
 
   const borderRadius = profileUser.profileSettings?.borderRadius || 'md';
