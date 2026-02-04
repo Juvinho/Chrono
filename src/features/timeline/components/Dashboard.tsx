@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { User, Page, Post, CyberpunkReaction, Notification, Conversation, Story } from '../../../types/index';
 import Header from '../../../components/ui/Header';
@@ -46,10 +47,18 @@ export default function Dashboard({
     nextAutoRefresh, isAutoRefreshPaused, onBack
 }: DashboardProps) {
     const { t } = useTranslation();
+    const { tag } = useParams<{ tag: string }>();
     const [searchQuery, setSearchQuery] = useState('');
     const [focusPostId, setFocusPostId] = useState<string | null>(null);
     const [activeCordTag, setActiveCordTag] = useState<string | null>(null);
     const [composerDate, setComposerDate] = useState<Date | null>(null);
+
+    useEffect(() => {
+        if (tag) {
+            const formattedTag = tag.startsWith('$') ? tag : `$${tag}`;
+            setActiveCordTag(formattedTag);
+        }
+    }, [tag]);
 
 
     const handleSearch = React.useCallback((query: string) => {
