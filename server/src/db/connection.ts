@@ -1,53 +1,34 @@
 import pg from 'pg';
 import dotenv from 'dotenv';
-import dns from 'dns';
 
 dotenv.config();
-
-// --- OPÇÃO NUCLEAR PARA FORÇAR IPv4 ---
-// Isso sequestra a função de busca de DNS do Node.js para garantir que 
-// ele NUNCA tente usar IPv6, resolvendo o erro ENETUNREACH no Render.
-const originalLookup = dns.lookup;
-(dns as any).lookup = function(hostname: any, options: any, callback: any) {
-  if (typeof options === 'function') {
-    callback = options;
-    options = { family: 4 };
-  } else if (typeof options === 'number') {
-    options = { family: options };
-  } else if (!options) {
-    options = { family: 4 };
-  } else {
-    options.family = 4;
-  }
-  return originalLookup.call(this, hostname, options, callback);
-};
-// ---------------------------------------
 
 const { Pool } = pg;
 
 const rawDbUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/chrono_db';
 
-// Limpa a URL de parâmetros que podem confundir o driver
+// Clean URL: Remove sslmode parameter if present to avoid conflicts with our object config
 const cleanDbUrl = rawDbUrl.split('?')[0];
 
-// Log de segurança
+// Sanitize URL for logging (mask password)
 const sanitizedUrl = cleanDbUrl.replace(/:([^:@]+)@/, ':****@');
-console.log(`📡 Conectando ao banco (IPv4 Forçado): ${sanitizedUrl}`);
+console.log(`📡 Conectando ao banco de dados: ${sanitizedUrl}`);
+
+const isProduction = process.env.NODE_ENV === 'production';
 
 export const pool = new Pool({
   connectionString: cleanDbUrl,
-  ssl: {
+  ssl: isProduction ? {
     rejectUnauthorized: false
-  },
+  } : false,
   connectionTimeoutMillis: 30000,
   idleTimeoutMillis: 15000,
-  max: 10,
+  max: 20,
   keepAlive: true,
 });
 
 pool.on('error', (err: Error) => {
   console.error('❌ Erro inesperado no cliente de banco de dados:', err);
-  // Não encerra o processo imediatamente para permitir tentativas de reconexão do Pool
 });
 
 export const query = async (text: string, params?: any[]) => {

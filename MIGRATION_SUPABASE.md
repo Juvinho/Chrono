@@ -1,4 +1,10 @@
-# Guia de Migração: Railway para Supabase + Render
+# 🔄 Retorno ao Railway
+
+**Status Atual: O projeto voltou a usar o Railway devido à instabilidade do Supabase.**
+
+Se você precisar voltar para o Supabase no futuro, os passos abaixo continuam válidos, mas lembre-se de que a "Opção Nuclear" de IPv4 foi removida para garantir a compatibilidade padrão do Railway.
+
+---
 
 Como o seu plano trial do Railway acabou, vamos migrar a arquitetura para uma solução 100% gratuita e robusta:
 
