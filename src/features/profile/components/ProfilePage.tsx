@@ -1,4 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { User, Page, Post, CyberpunkReaction, Notification, Conversation } from '../../../types/index';
 import PostCard from '../../timeline/components/PostCard';
 import Header from '../../../components/ui/Header';
@@ -16,7 +17,7 @@ import { apiClient } from '../../../api';
 
 interface ProfilePageProps {
   currentUser: User;
-  profileUsername: string;
+  profileUsername?: string;
   onLogout: () => void;
   onNavigate: (page: Page, username?: string) => void;
   onNotificationClick: (notification: Notification) => void;
@@ -40,14 +41,21 @@ interface ProfilePageProps {
 }
 
 export default function ProfilePage({ 
-  currentUser, profileUsername, onLogout, onNavigate, onNotificationClick, users, onFollowToggle, 
+  currentUser, profileUsername: propProfileUsername, onLogout, onNavigate, onNotificationClick, users, onFollowToggle, 
   allPosts, allUsers, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost,
   onPollVote, selectedDate, setSelectedDate, typingParentIds, conversations, onOpenMarketplace, 
   onSendGlitchi, onUpdateUser, onBack
 }: ProfilePageProps & { onUpdateUser?: (user: User) => Promise<{ success: boolean; error?: string }> }) {
   const { t } = useTranslation();
   const { playSound } = useSound();
+  const { username: routeUsername } = useParams<{ username: string }>();
   
+  // Determine the profile username to display:
+  // 1. From URL param (e.g. /@Juvinho)
+  // 2. From prop (legacy or direct usage)
+  // 3. Fallback to current user if nothing else
+  const profileUsername = routeUsername || propProfileUsername || currentUser.username;
+
   const [fetchedUser, setFetchedUser] = useState<User | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);

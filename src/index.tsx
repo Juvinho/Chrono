@@ -1,6 +1,7 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { SoundProvider } from './contexts/SoundContext';
 import { ToastProvider } from './contexts/ToastContext';
@@ -89,7 +90,9 @@ root.render(
     <ErrorBoundary>
       <SoundProvider>
         <ToastProvider>
-          <App />
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
         </ToastProvider>
       </SoundProvider>
     </ErrorBoundary>
