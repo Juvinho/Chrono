@@ -2,12 +2,6 @@ import pg from 'pg';
 import dotenv from 'dotenv';
 import dns from 'dns';
 
-// Force Node.js to prefer IPv4 over IPv6. 
-// This fixes the ENETUNREACH error on Render when connecting to Supabase.
-if (dns.setDefaultResultOrder) {
-  dns.setDefaultResultOrder('ipv4first');
-}
-
 dotenv.config();
 
 const { Pool } = pg;
@@ -24,7 +18,14 @@ console.log(`📡 Connecting to database: ${sanitizedUrl}`);
 export const pool = new Pool({
   connectionString: cleanDbUrl,
   ssl: {
-    rejectUnauthorized: false // This is the key fix for "self-signed certificate"
+    rejectUnauthorized: false
+  },
+  // FORCE IPv4 ONLY - This is the ultimate fix for ENETUNREACH on Render
+  // It overrides the default DNS lookup to only return IPv4 addresses.
+  lookup: (hostname, _options, callback) => {
+    dns.lookup(hostname, { family: 4 }, (err, address, family) => {
+      callback(err, address, family);
+    });
   },
   connectionTimeoutMillis: 30000,
   idleTimeoutMillis: 15000,
