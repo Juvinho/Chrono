@@ -83,25 +83,8 @@ export const useAppSession = ({
                         ...n,
                         timestamp: new Date(n.timestamp || Date.now())
                     }));
-
                     finalNotifications.forEach((n: any) => {
-                        if (!n.read && !knownNotificationIds.current.has(n.id)) {
-                            if (!isFirstLoad.current) {
-                                 try {
-                                     const message = NotificationManager.formatNotificationMessage(n.notificationType, n.actor, n.post);
-                                     NotificationManager.showNotification('Chrono', {
-                                        body: message,
-                                        tag: n.id
-                                     });
-                                     playSound('notification');
-                                 } catch (err) {
-                                     console.error("Error showing notification:", err);
-                                 }
-                            }
-                            knownNotificationIds.current.add(n.id);
-                        } else {
-                             knownNotificationIds.current.add(n.id);
-                        }
+                        knownNotificationIds.current.add(n.id);
                     });
                 }
 

@@ -7,7 +7,6 @@ import { useAppTheme } from './hooks/useAppTheme';
 import { LanguageProvider } from './hooks/useTranslation';
 import { generateReplyContent } from './utils/geminiService';
 import { apiClient, mapApiPostToPost } from './api';
-import { NotificationManager } from './utils/notificationManager';
 import { socketService } from './utils/socketService';
 import { useSound } from './contexts/SoundContext';
 import { useToast } from './contexts/ToastContext';
@@ -67,41 +66,6 @@ export default function App() {
     const [nextAutoRefresh, setNextAutoRefresh] = useState<Date | null>(null);
     const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false);
     const [lastViewedNotifications, setLastViewedNotifications] = useState<Date | null>(null);
-
-    useEffect(() => {
-        if (!currentUser) {
-            setLastViewedNotifications(null);
-            return;
-        }
-
-        const key = `chrono_last_viewed_notifications_${currentUser.username}`;
-        const stored = localStorage.getItem(key);
-        if (!stored) {
-            setLastViewedNotifications(null);
-            return;
-        }
-
-        const parsed = new Date(stored);
-        if (Number.isNaN(parsed.getTime())) {
-            localStorage.removeItem(key);
-            setLastViewedNotifications(null);
-            return;
-        }
-
-        setLastViewedNotifications(parsed);
-    }, [currentUser?.username]);
-
-    useEffect(() => {
-        if (!currentUser) return;
-        const key = `chrono_last_viewed_notifications_${currentUser.username}`;
-
-        if (!lastViewedNotifications) {
-            localStorage.removeItem(key);
-            return;
-        }
-
-        localStorage.setItem(key, lastViewedNotifications.toISOString());
-    }, [currentUser?.username, lastViewedNotifications]);
 
     // 4. Refs
     const usersRef = useRef(users);
@@ -317,26 +281,6 @@ export default function App() {
                          notifications: [notification, ...(prev.notifications || [])]
                      };
                  });
-
-                 try {
-                     const message = NotificationManager.formatNotificationMessage(payload.notificationType, payload.actor, payload.post);
-                     NotificationManager.showNotification('Chrono', {
-                        body: message,
-                        tag: payload.id
-                     });
-                     
-                     if (payload.notificationType === 'reply') {
-                         playSound('reply');
-                     } else if (payload.notificationType === 'follow') {
-                         playSound('follow');
-                     } else if (payload.notificationType === 'reaction') {
-                         playSound('like');
-                     } else {
-                         playSound('notification');
-                     }
-                 } catch (err) {
-                     console.error("Error showing notification:", err);
-                 }
             };
 
             const handleNewMessage = async (payload: any) => {
@@ -476,10 +420,7 @@ export default function App() {
         }
     }, [currentUser, reloadBackendData, isInitialLoading]);
 
-    useEffect(() => {
-        if (!currentUser) return;
-        NotificationManager.requestPermission();
-    }, [currentUser]);
+    // Removed desktop notification permission request
 
     // Stories feature removed
 
@@ -697,28 +638,29 @@ export default function App() {
         handleNavigate(Page.Login);
     }
     
-    const handleViewNotifications = () => {
+    const handleViewNotifications = async () => {
         if (!currentUser) return;
         
-        setLastViewedNotifications(new Date());
-        
-        // Mark all notifications as read
-        const updatedUser = {
-            ...currentUser,
-            notifications: currentUser.notifications?.map(n => ({ ...n, read: true }))
-        };
-        
-        setCurrentUser(prev => {
-            if (!prev) return prev;
-            return {
-                ...prev,
-                notifications: prev.notifications?.map(n => ({ ...n, read: true }))
-            };
-        });
-        handleUpdateUser(updatedUser);
+        try {
+            const result = await apiClient.markAllNotificationsRead();
+            if (result.error) {
+                console.error("Failed to mark all notifications read:", result.error);
+                return;
+            }
+            setCurrentUser(prev => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    notifications: prev.notifications?.map(n => ({ ...n, read: true }))
+                };
+            });
+            setLastViewedNotifications(new Date());
+        } catch (err) {
+            console.error("Error marking all notifications read:", err);
+        }
     };
 
-    const handleNotificationClick = (notification: Notification) => {
+    const handleNotificationClick = async (notification: Notification) => {
         if (!currentUser) return;
 
         if (notification.post) {
@@ -729,14 +671,21 @@ export default function App() {
             handleNavigate(Page.Profile, notification.actor.username);
         }
 
-        const updatedUser = {
-            ...currentUser,
-            notifications: currentUser.notifications?.map(n => n.id === notification.id ? { ...n, read: true } : n)
-        };
-        handleUpdateUser(updatedUser);
-        
-        // Also mark notifications as viewed when clicking on one
-        setLastViewedNotifications(new Date());
+        try {
+            const result = await apiClient.markNotificationRead(notification.id as any);
+            if (result.error) {
+                console.error("Failed to mark notification read:", result.error);
+            }
+            setCurrentUser(prev => {
+                if (!prev) return prev;
+                return {
+                    ...prev,
+                    notifications: prev.notifications?.map(n => n.id === notification.id ? { ...n, read: true } : n)
+                };
+            });
+        } catch (err) {
+            console.error("Error marking notification read:", err);
+        }
     }
 
     const memoizedUsers = useMemo(() => users, [users]);
