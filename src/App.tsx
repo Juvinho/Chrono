@@ -27,6 +27,7 @@ const StoryViewer = React.lazy(() => import('./features/stories/components/Story
 const StoryCreator = React.lazy(() => import('./features/stories/components/StoryCreator'));
 const Marketplace = React.lazy(() => import('./features/marketplace/components/Marketplace'));
 const GlitchiOverlay = React.lazy(() => import('./features/companion/components/GlitchiOverlay'));
+const ChatSystem = React.lazy(() => import('./features/messages/components/ChatSystem'));
 
 
 const placeholderVideos = [
@@ -94,6 +95,8 @@ export default function App() {
     const [viewingStoryUser, setViewingStoryUser] = useState<User | null>(null);
     const [isCreatingStory, setIsCreatingStory] = useState(false);
     const [isMarketplaceOpen, setIsMarketplaceOpen] = useState(false);
+    const [openChatUsernames, setOpenChatUsernames] = useState<string[]>([]);
+    const [minimizedChatUsernames, setMinimizedChatUsernames] = useState<string[]>([]);
     
     // 4. Refs and Services
     const { playSound } = useSound();
@@ -567,6 +570,9 @@ export default function App() {
                      try {
                          await apiClient.updateMessageStatus(payload.conversationId, payload.id, 'delivered');
                      } catch (e) {}
+                     
+                     // Auto-open chat window on new message if not already open
+                     handleOpenChat(payload.senderUsername);
                  }
             };
 
@@ -624,7 +630,7 @@ export default function App() {
         } else {
             socketService.disconnect();
         }
-    }, [currentUser, reloadBackendData]);
+    }, [currentUser, reloadBackendData, handleOpenChat]);
 
 
     // Restore page on mount if user is logged in but page is Welcome
@@ -1110,7 +1116,11 @@ export default function App() {
 
         if (page === Page.Verify && data) setUserToVerify(data);
         if (page === Page.ResetPassword && data) setEmailToReset(data);
-        if (page === Page.Messages && data) sessionStorage.setItem('chrono_focus_conversation_user', data);
+        
+        if (page === Page.Messages && data) {
+            handleOpenChat(data);
+            return; // Don't navigate away, just open the chat window like FB
+        }
         
         setCurrentPage(page);
         // Save current page to sessionStorage for refresh persistence
@@ -1147,9 +1157,37 @@ export default function App() {
         setCurrentPage(Page.Welcome); 
         setPosts([]); 
         setConversations([]);
+        setOpenChatUsernames([]);
+        setMinimizedChatUsernames([]);
         sessionStorage.removeItem('chrono_currentPage');
         apiClient.setToken(null);
     };
+
+    const handleOpenChat = useCallback((username: string) => {
+        if (!currentUser || username === currentUser.username) return;
+        
+        setOpenChatUsernames(prev => {
+            if (prev.includes(username)) return prev;
+            // Limit to 3 open chats to avoid cluttering, like FB
+            const next = [username, ...prev].slice(0, 3);
+            return next;
+        });
+        setMinimizedChatUsernames(prev => prev.filter(u => u !== username));
+    }, [currentUser]);
+
+    const handleCloseChat = useCallback((username: string) => {
+        setOpenChatUsernames(prev => prev.filter(u => u !== username));
+        setMinimizedChatUsernames(prev => prev.filter(u => u !== username));
+    }, []);
+
+    const handleMinimizeChat = useCallback((username: string) => {
+        setMinimizedChatUsernames(prev => {
+            if (prev.includes(username)) {
+                return prev.filter(u => u !== username);
+            }
+            return [...prev, username];
+        });
+    }, []);
 
     const handleUpdateUser = async (updatedUser: User): Promise<{ success: boolean; error?: string }> => {
         // Update local state immediately for responsive UI
@@ -1926,6 +1964,20 @@ export default function App() {
                         <GlitchiOverlay 
                             senderUsername={activeGlitchi.senderUsername}
                             onComplete={() => setActiveGlitchi(null)}
+                        />
+                    )}
+                    
+                    {currentUser && (
+                        <ChatSystem
+                            currentUser={currentUser}
+                            allUsers={combinedUsers}
+                            conversations={conversations}
+                            openChatUsernames={openChatUsernames}
+                            minimizedChatUsernames={minimizedChatUsernames}
+                            onCloseChat={handleCloseChat}
+                            onMinimizeChat={handleMinimizeChat}
+                            onSendMessage={handleSendMessage}
+                            onMarkAsRead={handleMarkConversationAsRead}
                         />
                     )}
                     
