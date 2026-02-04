@@ -91,8 +91,7 @@ export default function AppRoutes(props: AppRoutesProps) {
         handleUpdateReaction, handleReply, handleEcho, handleDeletePost, handleEditPost,
         handlePollVote, handleShowNewPosts, setIsCreatingStory, handleUpdateUser,
         setIsMarketplaceOpen, handleBack, handleFollowToggle, handleSendGlitchi, handlePasswordReset,
-        setViewingStoryUser,
-        onOpenNyx
+        setViewingStoryUser
     } = props;
 
     return (
@@ -196,7 +195,6 @@ export default function AppRoutes(props: AppRoutesProps) {
                     typingParentIds={typingParentIds}
                     conversations={conversations}
                     onOpenMarketplace={() => handleNavigate(Page.Dashboard, 'marketplace')}
-                    onOpenNyx={onOpenNyx}
                     onSendGlitchi={handleSendGlitchi}
                     onUpdateUser={handleUpdateUser}
                     onBack={handleBack}
@@ -217,7 +215,6 @@ export default function AppRoutes(props: AppRoutesProps) {
                     allPosts={memoizedPosts}
                     conversations={conversations}
                     onOpenMarketplace={() => setIsMarketplaceOpen(true)}
-                    onOpenNyx={onOpenNyx}
                     onBack={handleBack}
                 />
             ) : <Navigate to="/welcome" />} />
@@ -232,7 +229,6 @@ export default function AppRoutes(props: AppRoutesProps) {
                     allPosts={memoizedPosts}
                     conversations={conversations}
                     onOpenMarketplace={() => handleNavigate(Page.Dashboard, 'marketplace')}
-                    onOpenNyx={onOpenNyx}
                     onBack={handleBack}
                 />
             ) : <Navigate to="/welcome" />} />

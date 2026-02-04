@@ -105,7 +105,6 @@ export default function DataSlicerPage({
         allUsers={allUsers}
         conversations={conversations}
         onOpenMarketplace={onOpenMarketplace}
-        onOpenNyx={onOpenNyx}
         onBack={onBack}
       />
       <main className="flex-grow overflow-y-auto p-8">

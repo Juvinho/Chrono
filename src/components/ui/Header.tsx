@@ -17,14 +17,13 @@ interface HeaderProps {
     onNotificationClick: (notification: Notification) => void;
     onSearch: (query: string) => void;
     onOpenMarketplace?: () => void;
-    onOpenNyx?: () => void;
     onBack?: () => void;
     allUsers: User[];
     allPosts: Post[];
     conversations: Conversation[];
 }
 
-export default function Header({ user, onLogout, onViewProfile, onNavigate, onNotificationClick, onSearch, onOpenMarketplace, onOpenNyx, onBack, allUsers, allPosts, conversations }: HeaderProps) {
+export default function Header({ user, onLogout, onViewProfile, onNavigate, onNotificationClick, onSearch, onOpenMarketplace, onBack, allUsers, allPosts, conversations }: HeaderProps) {
     const { t } = useTranslation();
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -77,11 +76,6 @@ export default function Header({ user, onLogout, onViewProfile, onNavigate, onNo
                  <button onClick={() => onNavigate(Page.VideoAnalysis)} title={t('dataSlicer')} className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-secondary)] p-2 rounded-full hover:bg-[var(--theme-bg-tertiary)] transition-colors hidden sm:block">
                     <FilmIcon className="w-5 h-5 md:w-6 md:h-6" />
                  </button>
-                 {onOpenNyx && (
-                    <button onClick={onOpenNyx} title="Nyx AI" className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-accent)] p-2 rounded-full hover:bg-[var(--theme-bg-tertiary)] transition-colors hidden sm:block">
-                        <SparklesIcon className="w-5 h-5 md:w-6 md:h-6" />
-                    </button>
-                 )}
                  {/* DM icon removed as per request */}
                  {onOpenMarketplace && (
                     <button onClick={onOpenMarketplace} title={t('marketplace')} className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-secondary)] p-2 rounded-full hover:bg-[var(--theme-bg-tertiary)] transition-colors">

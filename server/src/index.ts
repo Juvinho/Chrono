@@ -146,7 +146,6 @@ app.use('/api/conversations', conversationRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/stories', storyRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
-app.use('/api/companions', companionRoutes);
 
 // Health check
 app.get('/health', async (_req: express.Request, res: express.Response) => {
