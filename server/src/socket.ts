@@ -19,11 +19,26 @@ export const initSocket = (httpServer: HttpServer, allowedOrigins: string[]) => 
   io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
 
-    // User joins a room identified by their User ID
+    // --- User's Simplified Chat Logic (For Testing & Compatibility) ---
+    // Quando o usuário entra numa sala (conversa com alguém)
+    socket.on("join_room", (room_id) => {
+      socket.join(room_id);
+      console.log(`Usuário ${socket.id} entrou na sala: ${room_id}`);
+    });
+
+    // Quando o usuário manda mensagem
+    socket.on("send_message", (data) => {
+      // data deve ter: { room, author, message, time }
+      // Envia para todo mundo QUE ESTÁ NA MESMA SALA
+      socket.to(data.room).emit("receive_message", data);
+    });
+    // ------------------------------------------------------------------
+
+    // User joins a room identified by their User ID (Used by Chrono features)
     socket.on('join_user_room', (userId: string) => {
         if(userId) {
             socket.join(userId);
-            console.log(`Socket ${socket.id} joined room ${userId}`);
+            console.log(`Socket ${socket.id} joined user room ${userId}`);
         }
     });
 

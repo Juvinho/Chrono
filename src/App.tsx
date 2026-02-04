@@ -28,6 +28,7 @@ const StoryCreator = React.lazy(() => import('./features/stories/components/Stor
 const Marketplace = React.lazy(() => import('./features/marketplace/components/Marketplace'));
 const GlitchiOverlay = React.lazy(() => import('./features/companion/components/GlitchiOverlay'));
 const ChatSystem = React.lazy(() => import('./features/messages/components/ChatSystem'));
+const ChatTest = React.lazy(() => import('./features/messages/components/ChatTest'));
 
 
 const placeholderVideos = [
@@ -1191,7 +1192,16 @@ export default function App() {
         }
     };
 
-    const handleNavigate = (page: Page, data?: string) => {
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        
+        const path = window.location.pathname;
+        if (path === '/teste-chat') {
+            setCurrentPage(Page.ChatTest);
+        }
+    }, []);
+
+    const handleNavigate = (page: Page, username?: string) => {
         if(page === Page.Profile && data) setProfileUsername(data);
         else setProfileUsername(null);
 
@@ -1916,6 +1926,8 @@ export default function App() {
                 ) : (
                     <LoginScreen onLogin={handleLogin} onNavigate={handleNavigate} />
                 );
+            case Page.ChatTest:
+                return <ChatTest />;
             default:
                 return <Welcome onNavigate={handleNavigate} />;
         }

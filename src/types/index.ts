@@ -166,6 +166,7 @@ export enum Page {
   ResetPassword,
   Messages,
   VideoAnalysis,
+  ChatTest,
 }
 
 // FIX: Add global type definitions for Web Speech API to fix TypeScript errors in PostComposer.tsx
