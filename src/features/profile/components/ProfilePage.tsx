@@ -52,6 +52,12 @@ export default function ProfilePage({
   const [isLoadingUser, setIsLoadingUser] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [userListModal, setUserListModal] = useState<{title: string, users: User[]} | null>(null);
+  const [postToEdit, setPostToEdit] = useState<Post | null>(null);
+  const [activeTab, setActiveTab] = useState<'posts' | 'media' | 'temporal' | 'professional'>('posts');
+  const [visiblePostsCount, setVisiblePostsCount] = useState(10);
+  
+  const followButtonRef = useRef<HTMLButtonElement>(null);
   
   // Lazy load EditProfileModal
   const EditProfileModal = useMemo(() => React.lazy(() => import('./EditProfileModal')), []);
@@ -104,43 +110,9 @@ export default function ProfilePage({
             });
     }
   }, [profileUsername, foundUser, isOwnProfile, effectiveFetchedUser, fetchedUser]);
-  
-  if (!profileUser) {
-      if (isLoadingUser) {
-          return (
-              <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--theme-bg-primary)]">
-                  <LoadingSpinner />
-                  <p className="mt-4 text-[var(--theme-primary)] font-mono animate-pulse">{t('loadingProfile') || 'LOCATING TARGET...'}</p>
-              </div>
-          );
-      }
-      if (fetchError) {
-           return (
-              <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--theme-bg-primary)] text-[var(--theme-text-primary)]">
-                  <div className="text-red-500 text-6xl mb-4">404</div>
-                  <p className="text-xl font-mono">{fetchError}</p>
-                  <button onClick={() => onNavigate(Page.Dashboard)} className="mt-8 px-6 py-2 bg-[var(--theme-primary)] text-white rounded-sm hover:brightness-110">
-                      {t('returnHome') || 'RETURN TO BASE'}
-                  </button>
-              </div>
-          );
-      }
-      // Fallback loading
-      return <LoadingSpinner />;
-  }
-  
-  const isFollowing = profileUser ? currentUser.followingList?.includes(profileUser.username) : false;
-  
-  const [userListModal, setUserListModal] = useState<{title: string, users: User[]} | null>(null);
-
-  const [postToEdit, setPostToEdit] = useState<Post | null>(null);
-  const [activeTab, setActiveTab] = useState<'posts' | 'media' | 'temporal' | 'professional'>('posts');
-  const [visiblePostsCount, setVisiblePostsCount] = useState(10);
-  
-  const followButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-      if (typeof window === 'undefined') return;
+      if (typeof window === 'undefined' || !profileUser) return;
       const path = window.location.pathname || '/';
       const segments = path.split('/').filter(Boolean);
       const expectedBase = `@${profileUser.username}`;
@@ -168,33 +140,10 @@ export default function ProfilePage({
           }
           setActiveTab('posts');
       }
-  }, [profileUser.username, profileUser.profileType, onNavigate]);
-
-  const handleTabChange = (tab: 'posts' | 'media' | 'temporal' | 'professional') => {
-      setActiveTab(tab);
-
-      if (typeof window === 'undefined' || !window.history || !window.location) return;
-
-      const basePath = `/@${encodeURIComponent(profileUser.username)}`;
-      let path = basePath;
-
-      if (tab === 'media') {
-          path = `${basePath}/media`;
-      } else if (tab === 'temporal') {
-          path = `${basePath}/temporal`;
-      } else if (tab === 'professional') {
-          path = `${basePath}/professional`;
-      }
-
-      const currentFullPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-      const nextFullPath = `${path}${window.location.search}${window.location.hash}`;
-
-      if (currentFullPath !== nextFullPath) {
-          window.history.pushState({ page: 'profile', tab, username: profileUser.username }, '', nextFullPath);
-      }
-  };
+  }, [profileUser?.username, profileUser?.profileType, onNavigate]);
 
   const filteredPosts = useMemo(() => {
+      if (!profileUser) return [];
       let posts = allPosts.filter(p => p.author.username === profileUser.username);
       
       if (activeTab === 'temporal') {
@@ -204,9 +153,10 @@ export default function ProfilePage({
       }
       
       return posts.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  }, [allPosts, profileUser.username, selectedDate, activeTab]);
+  }, [allPosts, profileUser?.username, selectedDate, activeTab]);
 
   const popularCords = useMemo(() => {
+    if (!profileUser) return [];
     // Collect all posts where the user is the author or has replied
     const userPosts = allPosts.filter(p => p.author.username === profileUser.username);
     
@@ -222,11 +172,6 @@ export default function ProfilePage({
         }
     });
 
-    // Also consider posts the user replied to (if we had that link easily, but userPosts covers authored posts)
-    // The requirement is "posts that the user commented on that have $"
-    // "commented on" could mean authored OR replied.
-    // Let's iterate all posts, check replies for user, and if found, check post content for tags.
-    
     allPosts.forEach(post => {
         const userReplied = post.replies?.some(r => r.author.username === profileUser.username);
         if (userReplied) {
@@ -243,8 +188,33 @@ export default function ProfilePage({
         .sort(([, countA], [, countB]) => countB - countA)
         .slice(0, 5)
         .map(([tag]) => ({ id: tag, content: tag, replies: [], reactions: {}, timestamp: new Date(), author: { username: '', avatar: '' } as User })); 
-        // Mocking a Post object for now to fit the existing rendering or we change rendering
-  }, [allPosts, profileUser.username]);
+  }, [allPosts, profileUser?.username]);
+
+  if (!profileUser) {
+      if (isLoadingUser) {
+          return (
+              <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--theme-bg-primary)]">
+                  <LoadingSpinner />
+                  <p className="mt-4 text-[var(--theme-primary)] font-mono animate-pulse">{t('loadingProfile') || 'LOCATING TARGET...'}</p>
+              </div>
+          );
+      }
+      if (fetchError) {
+           return (
+              <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--theme-bg-primary)] text-[var(--theme-text-primary)]">
+                  <div className="text-red-500 text-6xl mb-4">404</div>
+                  <p className="text-xl font-mono">{fetchError}</p>
+                  <button onClick={() => onNavigate(Page.Dashboard)} className="mt-8 px-6 py-2 bg-[var(--theme-primary)] text-white rounded-sm hover:brightness-110">
+                      {t('returnHome') || 'RETURN TO BASE'}
+                  </button>
+              </div>
+          );
+      }
+      // Fallback loading
+      return <LoadingSpinner />;
+  }
+  
+  const isFollowing = currentUser.followingList?.includes(profileUser.username) || false;
 
   const handleSearch = (query: string) => {
     sessionStorage.setItem('chrono_search_query', query);
