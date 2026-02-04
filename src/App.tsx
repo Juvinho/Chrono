@@ -19,8 +19,6 @@ const StoryViewer = React.lazy(() => import('./features/stories/components/Story
 const StoryCreator = React.lazy(() => import('./features/stories/components/StoryCreator'));
 const Marketplace = React.lazy(() => import('./features/marketplace/components/Marketplace'));
 const GlitchiOverlay = React.lazy(() => import('./features/companion/components/GlitchiOverlay'));
-const NyxAI = React.lazy(() => import('./features/companion/components/NyxAI'));
-const CyberCompanion = React.lazy(() => import('./features/companion/components/CyberCompanion'));
 
 export default function App() {
     const navigate = useNavigate();
@@ -54,7 +52,6 @@ export default function App() {
     const [viewingStoryUser, setViewingStoryUser] = useState<User | null>(null);
     const [isCreatingStory, setIsCreatingStory] = useState(false);
     // const [isMarketplaceOpen, setIsMarketplaceOpen] = useState(false); // Moved to route /marketplace
-    const [isNyxOpen, setIsNyxOpen] = useState(false);
     const [openChatUsernames, setOpenChatUsernames] = useState<string[]>([]);
     const [minimizedChatUsernames, setMinimizedChatUsernames] = useState<string[]>([]);
     const [animationKey, setAnimationKey] = useState(0);
@@ -818,18 +815,9 @@ export default function App() {
                             handleFollowToggle={handleFollowToggle}
                             handleSendGlitchi={handleSendGlitchi}
                             handlePasswordReset={handlePasswordReset}
-                            onOpenNyx={() => setIsNyxOpen(true)}
                         />
 
                         {/* Modals and Overlays */}
-                        {currentUser && <CyberCompanion currentUser={currentUser} />}
-                        
-                        {isNyxOpen && (
-                            <NyxAI 
-                                onClose={() => setIsNyxOpen(false)} 
-                                currentUser={currentUser} 
-                            />
-                        )}
 
                         {viewingStoryUser && viewingStoryUser.stories && (
                             <StoryViewer

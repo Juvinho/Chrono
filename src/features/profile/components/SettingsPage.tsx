@@ -38,11 +38,10 @@ interface SettingsPageProps {
   allPosts: Post[];
   conversations: Conversation[];
   onOpenMarketplace?: () => void;
-  onOpenNyx?: () => void;
   onBack?: () => void;
 }
 
-export default function SettingsPage({ user, onLogout, onNavigate, onNotificationClick, onUpdateUser, allUsers, allPosts, conversations, onOpenMarketplace, onOpenNyx, onBack }: SettingsPageProps) {
+export default function SettingsPage({ user, onLogout, onNavigate, onNotificationClick, onUpdateUser, allUsers, allPosts, conversations, onOpenMarketplace, onBack }: SettingsPageProps) {
   const { t, setLanguage, language } = useTranslation();
 
   // FIX: Safely initialize draftUser state to ensure profileSettings always exists.
@@ -282,7 +281,6 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
         allPosts={allPosts}
         conversations={conversations}
         onOpenMarketplace={onOpenMarketplace}
-        onOpenNyx={onOpenNyx}
         onSearch={handleSearch}
         onBack={onBack}
       />

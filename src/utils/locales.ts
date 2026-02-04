@@ -275,12 +275,6 @@ export const translations = {
     send: 'Send',
     conversationWith: 'Conversation with @{username}',
 
-    // NyxAI ChatBot
-    nyxAI_title: 'NyxAI Assistant',
-    nyxAI_placeholder: 'Ask about news, places, or anything...',
-    nyxAI_greeting: "I am NyxAI, your personal assistant integrated into the Chrono network. How can I help you navigate the datastream today?",
-    nyxAI_sources: "Sources:",
-
     // Data Slicer (Video Analysis)
     dataSlicer_title: 'Data Slicer',
     dataSlicer_subtitle: 'Upload a video file to analyze its contents using Gemini.',
@@ -373,7 +367,7 @@ export const translations = {
     alertVerificationSuccess: 'Conta verificada com sucesso!',
 
     // Header & Nav
-    searchPlaceholder: "Buscar @Nyx ou '$artedistopica'...",
+    searchPlaceholder: "Buscar '$artedistopica'...",
     search: 'Buscar',
     notifications: 'Notificações',
     settings: 'Configurações',
@@ -571,12 +565,6 @@ export const translations = {
     typeYourMessage: 'Digite sua mensagem...',
     send: 'Enviar',
     conversationWith: 'Conversa com @{username}',
-
-    // NyxAI ChatBot
-    nyxAI_title: 'Assistente NyxAI',
-    nyxAI_placeholder: 'Pergunte sobre notícias, lugares, ou qualquer coisa...',
-    nyxAI_greeting: "Eu sou NyxAI, sua assistente pessoal integrada à rede Chrono. Como posso ajudá-lo a navegar pelo fluxo de dados hoje?",
-    nyxAI_sources: "Fontes:",
 
     // Data Slicer (Video Analysis)
     dataSlicer_title: 'Analisador de Dados',

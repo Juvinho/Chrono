@@ -36,7 +36,6 @@ interface ProfilePageProps {
   typingParentIds: Set<string>;
   conversations: Conversation[];
   onOpenMarketplace?: () => void;
-  onOpenNyx?: () => void;
   onSendGlitchi: (username: string) => void;
   onBack?: () => void;
 }
@@ -376,7 +375,6 @@ export default function ProfilePage({
                 allUsers={allUsers}
                 conversations={conversations}
                 onOpenMarketplace={onOpenMarketplace}
-                onOpenNyx={onOpenNyx}
                 onBack={onBack}
             />
             <div className="flex-grow flex flex-col items-center justify-center">

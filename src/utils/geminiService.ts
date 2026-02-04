@@ -349,45 +349,6 @@ Responda APENAS com o identificador da categoria (ex: neon-joy).`,
     }
 };
 
-export const generateCompanionReaction = async (
-    notificationType: string,
-    actorName: string,
-    postContent?: string
-): Promise<string | null> => {
-    if (!ai) return null;
-    try {
-        const response = await ai.models.generateContent({
-            model: 'gemini-flash-lite-latest',
-            contents: `Você é um 'CyberCompanion', um assistente digital com personalidade em uma rede social cyberpunk.
-O usuário acabou de receber uma notificação do tipo: '${notificationType}' vinda do usuário '@${actorName}'.
-${postContent ? `Conteúdo relacionado: "${postContent}"` : ''}
-
-Gere uma reação CURTA (máximo 10 palavras) e divertida/temática para alertar o usuário.
-Use gírias cyberpunk leves ou termos técnicos.
-Exemplos: "Sinal detectado de @user!", "Alerta de interferência!", "Novo pacote de dados recebido.", "Glitch na matrix detectado."
-
-Responda APENAS com o texto da reação.`,
-            config: {
-                responseMimeType: 'application/json',
-                responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        reaction: { type: Type.STRING, description: 'A reação curta gerada.' }
-                    },
-                    required: ['reaction']
-                }
-            }
-        });
-
-        const result = JSON.parse(response.text);
-        return result.reaction || null;
-    } catch (error) {
-        console.error("Error generating companion reaction:", error);
-        return null;
-    }
-};
-
-
 export const generateImage = async (prompt: string, aspectRatio: string): Promise<string | null> => {
     if (!ai) return null;
     try {
