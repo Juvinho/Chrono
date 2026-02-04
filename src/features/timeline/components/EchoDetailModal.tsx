@@ -1,9 +1,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { Post, User } from '../types';
-import { apiClient, mapApiPostToPost } from '../services/api';
+import { apiClient, mapApiPostToPost } from '../../../api';
 import PostCard from './PostCard';
-import { useTranslation } from '../hooks/useTranslation';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 interface EchoDetailModalProps {
     postId: string;

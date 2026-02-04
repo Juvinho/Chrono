@@ -228,7 +228,6 @@ export default function AppRoutes(props: AppRoutesProps) {
                     onOpenMarketplace={() => handleNavigate(Page.Dashboard, 'marketplace')}
                     onOpenNyx={onOpenNyx}
                     onBack={handleBack}
-                    onNavigate={handleNavigate}
                 />
             ) : <Navigate to="/welcome" />} />
             
