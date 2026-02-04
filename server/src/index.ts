@@ -281,7 +281,12 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 });
 
 // Initialize Socket.io
-initSocket(httpServer, allowedOrigins);
+// In development, we allow more permissive CORS for local network testing
+const socketOrigins = process.env.NODE_ENV === 'production' 
+    ? allowedOrigins 
+    : [...allowedOrigins, /^http:\/\/192\.168\.\d+\.\d+:\d+$/, /^http:\/\/10\.\d+\.\d+\.\d+:\d+$/, /^http:\/\/172\.(1[6-9]|2\d|3[01])\.\d+\.\d+:\d+$/];
+
+initSocket(httpServer, socketOrigins as any);
 
 // Run migrations and start server
 const startServer = async () => {

@@ -1,8 +1,17 @@
 import React, { useState, useEffect } from "react"; 
 import io from "socket.io-client"; 
 
-// Conecta no seu backend (confira a porta!) 
-const socket = io("http://localhost:3001", {
+// Conecta no seu backend usando o IP dinâmico do acesso atual
+const getSocketUrl = () => {
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    // Se estiver no localhost, usa 3001. Se estiver no IP, usa o IP:3001
+    return `http://${hostname}:3001`;
+  }
+  return "http://localhost:3001";
+};
+
+const socket = io(getSocketUrl(), {
     transports: ['websocket', 'polling']
 }); 
 
