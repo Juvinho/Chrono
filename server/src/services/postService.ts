@@ -13,6 +13,7 @@ export class PostService {
       videoUrl?: string;
       isThread?: boolean;
       isPrivate?: boolean;
+      threadId?: string | null;
       inReplyToId?: string;
       repostOfId?: string;
       pollOptions?: { option: string; votes: number }[];
@@ -22,8 +23,8 @@ export class PostService {
   ): Promise<Post> {
     const result = await pool.query(
       `INSERT INTO posts (author_id, content, image_url, video_url, is_thread, is_private, 
-                         in_reply_to_id, repost_of_id, poll_options, poll_ends_at, unlock_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11)
+                         thread_id, in_reply_to_id, repost_of_id, poll_options, poll_ends_at, unlock_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11, $12)
        RETURNING *`,
       [
         authorId,
@@ -32,6 +33,7 @@ export class PostService {
         options?.videoUrl || null,
         options?.isThread || false,
         options?.isPrivate || false,
+        options?.threadId || null,
         options?.inReplyToId || null,
         options?.repostOfId || null,
         options?.pollOptions ? JSON.stringify(options.pollOptions) : null,
@@ -211,6 +213,7 @@ export class PostService {
       videoUrl: row.video_url,
       isThread: row.is_thread,
       isPrivate: row.is_private,
+      threadId: row.thread_id,
       inReplyToId: row.in_reply_to_id,
       repostOfId: row.repost_of_id,
       pollOptions: row.poll_options,

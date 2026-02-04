@@ -75,6 +75,7 @@ export interface Post {
   videoUrl: string | null;
   isThread: boolean;
   isPrivate: boolean;
+  threadId?: string | null;
   inReplyToId: string | null;
   repostOfId: string | null;
   pollOptions?: { option: string; votes: number }[];
@@ -133,6 +134,17 @@ export interface PollVote {
   userId: string;
   optionIndex: number;
   createdAt: Date;
+}
+
+export interface Thread {
+  id: string;
+  title: string;
+  description?: string;
+  status: 'active' | 'archived';
+  creatorId: string;
+  createdAt: Date;
+  updatedAt: Date;
+  archivedAt?: Date | null;
 }
 
 

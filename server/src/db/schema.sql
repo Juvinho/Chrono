@@ -201,6 +201,145 @@ CREATE INDEX IF NOT EXISTS idx_posts_author_id ON posts(author_id);
 CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_posts_in_reply_to_id ON posts(in_reply_to_id);
 
+-- Threads (Cordões) table
+CREATE TABLE IF NOT EXISTS threads (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title VARCHAR(200) NOT NULL,
+    description TEXT,
+    status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active','archived')),
+    creator_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    archived_at TIMESTAMP
+);
+
+-- Add thread_id to posts if not exists
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'posts' AND column_name = 'thread_id') THEN
+        ALTER TABLE posts ADD COLUMN thread_id UUID REFERENCES threads(id) ON DELETE SET NULL;
+    END IF;
+END $$;
+
+-- Indexes for threads and posts-thread relationship
+CREATE INDEX IF NOT EXISTS idx_threads_status ON threads(status);
+CREATE INDEX IF NOT EXISTS idx_threads_creator_id ON threads(creator_id);
+CREATE INDEX IF NOT EXISTS idx_posts_thread_id ON posts(thread_id);
+
+-- Optional media linking table to ensure attachments are tied to posts (and thus to threads)
+CREATE TABLE IF NOT EXISTS post_media (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+    image_id UUID REFERENCES images(id) ON DELETE SET NULL,
+    video_id UUID REFERENCES videos(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_post_media_post_id ON post_media(post_id);
+
+-- Audit table for thread changes
+CREATE TABLE IF NOT EXISTS thread_audit (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    thread_id UUID NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
+    action VARCHAR(50) NOT NULL,
+    old_status VARCHAR(20),
+    new_status VARCHAR(20),
+    actor_user_id UUID,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Trigger: keep replies inside the same thread as their parent
+CREATE OR REPLACE FUNCTION enforce_reply_same_thread()
+RETURNS TRIGGER AS $$
+DECLARE
+    parent_thread UUID;
+BEGIN
+    IF NEW.in_reply_to_id IS NOT NULL THEN
+        SELECT thread_id INTO parent_thread FROM posts WHERE id = NEW.in_reply_to_id;
+        IF parent_thread IS NOT NULL THEN
+            -- If incoming has no thread_id, inherit. If it has, it must match.
+            IF NEW.thread_id IS NULL THEN
+                NEW.thread_id := parent_thread;
+            ELSIF NEW.thread_id <> parent_thread THEN
+                RAISE EXCEPTION 'Reply must belong to the same thread as parent (expected %, got %)', parent_thread, NEW.thread_id;
+            END IF;
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'enforce_reply_same_thread_trg'
+    ) THEN
+        CREATE TRIGGER enforce_reply_same_thread_trg
+        BEFORE INSERT OR UPDATE OF in_reply_to_id, thread_id ON posts
+        FOR EACH ROW
+        EXECUTE FUNCTION enforce_reply_same_thread();
+    END IF;
+END $$;
+
+-- Trigger: audit thread insert/update (status changes)
+CREATE OR REPLACE FUNCTION thread_audit_trigger()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        INSERT INTO thread_audit (thread_id, action, new_status, actor_user_id)
+        VALUES (NEW.id, 'created', NEW.status, NEW.creator_id);
+        RETURN NEW;
+    ELSIF TG_OP = 'UPDATE' THEN
+        IF NEW.status IS DISTINCT FROM OLD.status THEN
+            INSERT INTO thread_audit (thread_id, action, old_status, new_status, actor_user_id)
+            VALUES (NEW.id, 'status_changed', OLD.status, NEW.status, NEW.creator_id);
+        ELSE
+            INSERT INTO thread_audit (thread_id, action, old_status, new_status, actor_user_id)
+            VALUES (NEW.id, 'updated', OLD.status, NEW.status, NEW.creator_id);
+        END IF;
+        RETURN NEW;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'thread_audit_trg'
+    ) THEN
+        CREATE TRIGGER thread_audit_trg
+        AFTER INSERT OR UPDATE ON threads
+        FOR EACH ROW
+        EXECUTE FUNCTION thread_audit_trigger();
+    END IF;
+END $$;
+
+-- Procedure: archive threads with no activity since cutoff
+CREATE OR REPLACE FUNCTION archive_threads(cutoff_days INTEGER DEFAULT 90)
+RETURNS INTEGER AS $$
+DECLARE
+    archived_count INTEGER := 0;
+BEGIN
+    WITH last_activity AS (
+        SELECT t.id AS thread_id, COALESCE(MAX(p.created_at), t.updated_at) AS last_ts
+        FROM threads t
+        LEFT JOIN posts p ON p.thread_id = t.id
+        GROUP BY t.id, t.updated_at
+    )
+    UPDATE threads t
+    SET status = 'archived',
+        archived_at = CURRENT_TIMESTAMP,
+        updated_at = CURRENT_TIMESTAMP
+    FROM last_activity la
+    WHERE t.id = la.thread_id
+      AND t.status = 'active'
+      AND la.last_ts < (CURRENT_TIMESTAMP - (cutoff_days || ' days')::INTERVAL);
+
+    GET DIAGNOSTICS archived_count = ROW_COUNT;
+    RETURN archived_count;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Reactions table (for cyberpunk reactions: Glitch, Upload, Corrupt, Rewind, Static)
 CREATE TABLE IF NOT EXISTS reactions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
