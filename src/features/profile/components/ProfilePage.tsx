@@ -37,13 +37,15 @@ interface ProfilePageProps {
   conversations: Conversation[];
   onOpenMarketplace?: () => void;
   onBack?: () => void;
+  onToggleChat?: () => void;
+  onOpenChat?: (user: User) => void;
 }
 
 export default function ProfilePage({ 
   currentUser, profileUsername: propProfileUsername, onLogout, onNavigate, onNotificationClick, users, onFollowToggle, 
   allPosts, allUsers, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost,
   onPollVote, selectedDate, setSelectedDate, typingParentIds, conversations, onOpenMarketplace, 
-  onUpdateUser, onBack
+  onUpdateUser, onBack, onToggleChat, onOpenChat
 }: ProfilePageProps & { onUpdateUser?: (user: User) => Promise<{ success: boolean; error?: string }> }) {
   const { t } = useTranslation();
   const { playSound } = useSound();
@@ -403,6 +405,7 @@ export default function ProfilePage({
           conversations={conversations}
           onOpenMarketplace={onOpenMarketplace}
           onBack={onBack}
+          onToggleChat={onToggleChat}
       />
       <main className="flex-grow overflow-y-auto">
         <div className={`max-w-4xl mx-auto ${borderRadius === 'none' ? '' : 'my-4'} animate-fade-in`}>
@@ -551,7 +554,14 @@ export default function ProfilePage({
                       </button>
                   ) : (
                     <>
-                      <button onClick={() => onNavigate(Page.Messages, profileUser.username)} className="follow-btn px-2 py-1 rounded-sm transition-colors" title={t('messageButton')}>
+                      <button 
+                        onClick={() => {
+                            if (onOpenChat) onOpenChat(profileUser);
+                            else onNavigate(Page.Messages, profileUser.username);
+                        }} 
+                        className="follow-btn px-2 py-1 rounded-sm transition-colors" 
+                        title={t('messageButton')}
+                      >
                           <MessageIcon className="w-5 h-5"/>
                       </button>
                       <button ref={followButtonRef} onClick={handleFollowClick} className={`${isFollowing ? 'following-btn' : 'follow-btn'} px-4 py-1 rounded-sm transition-colors`}>

@@ -18,7 +18,7 @@ import AppRoutes from './routes/AppRoutes';
 const StoryViewer = React.lazy(() => import('./features/stories/components/StoryViewer'));
 const StoryCreator = React.lazy(() => import('./features/stories/components/StoryCreator'));
 const Marketplace = React.lazy(() => import('./features/marketplace/components/Marketplace'));
-const GlitchiOverlay = React.lazy(() => import('./features/companion/components/GlitchiOverlay'));
+const ChatDrawer = React.lazy(() => import('./features/messages/components/ChatDrawer'));
 
 export default function App() {
     const navigate = useNavigate();
@@ -33,6 +33,10 @@ export default function App() {
     const [pendingPosts, setPendingPosts] = useState<Post[]>([]);
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [stories, setStories] = useState<Story[]>([]);
+    
+    // Chat Drawer State
+    const [isChatDrawerOpen, setIsChatDrawerOpen] = useState(false);
+    const [drawerActiveUser, setDrawerActiveUser] = useState<User | null>(null);
     
     // 2. Custom Hooks for Session and Theme
     const { 
@@ -280,6 +284,15 @@ export default function App() {
             }
             return [...prev, username];
         });
+    }, []);
+
+    const handleToggleChatDrawer = useCallback(() => {
+        setIsChatDrawerOpen(prev => !prev);
+    }, []);
+
+    const handleOpenChatDrawerWithUser = useCallback((user: User) => {
+        setDrawerActiveUser(user);
+        setIsChatDrawerOpen(true);
     }, []);
 
     // Socket.io Integration
@@ -818,9 +831,23 @@ export default function App() {
                             handleFollowToggle={handleFollowToggle}
                             handleSendGlitchi={handleSendGlitchi}
                             handlePasswordReset={handlePasswordReset}
+                            onToggleChat={handleToggleChatDrawer}
+                            onOpenChat={handleOpenChatDrawerWithUser}
                         />
 
                         {/* Modals and Overlays */}
+
+                        {currentUser && (
+                            <ChatDrawer
+                                isOpen={isChatDrawerOpen}
+                                onClose={() => setIsChatDrawerOpen(false)}
+                                currentUser={currentUser}
+                                conversations={conversations}
+                                activeChatUser={drawerActiveUser}
+                                onSetActiveChatUser={setDrawerActiveUser}
+                                allUsers={combinedUsers}
+                            />
+                        )}
 
                         {viewingStoryUser && viewingStoryUser.stories && (
                             <StoryViewer

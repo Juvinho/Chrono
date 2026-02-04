@@ -21,9 +21,10 @@ interface HeaderProps {
     allUsers: User[];
     allPosts: Post[];
     conversations: Conversation[];
+    onToggleChat?: () => void;
 }
 
-export default function Header({ user, onLogout, onViewProfile, onNavigate, onNotificationClick, onSearch, onOpenMarketplace, onBack, allUsers, allPosts, conversations }: HeaderProps) {
+export default function Header({ user, onLogout, onViewProfile, onNavigate, onNotificationClick, onSearch, onOpenMarketplace, onBack, allUsers, allPosts, conversations, onToggleChat }: HeaderProps) {
     const { t } = useTranslation();
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -76,7 +77,22 @@ export default function Header({ user, onLogout, onViewProfile, onNavigate, onNo
                  <button onClick={() => onNavigate(Page.VideoAnalysis)} title={t('dataSlicer')} className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-secondary)] p-2 rounded-full hover:bg-[var(--theme-bg-tertiary)] transition-colors hidden sm:block">
                     <FilmIcon className="w-5 h-5 md:w-6 md:h-6" />
                  </button>
-                 {/* DM icon removed as per request */}
+                 
+                 {onToggleChat && (
+                    <button 
+                        onClick={onToggleChat} 
+                        title={t('messages')} 
+                        className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-secondary)] p-2 rounded-full hover:bg-[var(--theme-bg-tertiary)] transition-colors relative"
+                    >
+                        <MessageIcon className="w-5 h-5 md:w-6 md:h-6" />
+                        {unreadMessageCount > 0 && (
+                            <span className="absolute top-1 right-1 w-3 h-3 md:w-4 md:h-4 bg-[var(--theme-primary)] text-white text-[10px] md:text-xs rounded-full flex items-center justify-center animate-pulse font-bold">
+                                {unreadMessageCount}
+                            </span>
+                        )}
+                    </button>
+                 )}
+
                  {onOpenMarketplace && (
                     <button onClick={onOpenMarketplace} title={t('marketplace')} className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-secondary)] p-2 rounded-full hover:bg-[var(--theme-bg-tertiary)] transition-colors">
                         <ShoppingBagIcon className="w-5 h-5 md:w-6 md:h-6" />

@@ -80,6 +80,8 @@ interface AppRoutesProps {
     handleFollowToggle: (username: string, actor?: User) => void;
     handleSendGlitchi: (username: string) => void;
     handlePasswordReset: (email: string, pass: string) => void;
+    onToggleChat: () => void;
+    onOpenChat: (user: User) => void;
 }
 
 export default function AppRoutes(props: AppRoutesProps) {
@@ -91,7 +93,7 @@ export default function AppRoutes(props: AppRoutesProps) {
         handleUpdateReaction, handleReply, handleEcho, handleDeletePost, handleEditPost,
         handlePollVote, handleShowNewPosts, setIsCreatingStory, handleUpdateUser,
         setIsMarketplaceOpen, handleBack, handleFollowToggle, handleSendGlitchi, handlePasswordReset,
-        setViewingStoryUser
+        setViewingStoryUser, onToggleChat, onOpenChat
     } = props;
 
     return (
