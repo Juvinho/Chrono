@@ -79,20 +79,24 @@ export default function AvatarStoryWrapper({
 
     // Visual State Determination
     let ringClass = "";
+    let pulseClass = "";
     
     if (hasStories) {
         if (hasUnseenStories) {
-            // New Story: Instagram Gradient
+            // New Story: Instagram Gradient with pulse
             // #f09433, #e6683c, #dc2743, #cc2366, #bc1888
             ringClass = "bg-[linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)] p-[2px]";
+            pulseClass = "animate-pulse";
         } else {
             // Seen Story: Light Gray
             ringClass = "bg-[#dbdbdb] dark:bg-gray-600 p-[2px]";
+            pulseClass = "";
         }
     } else {
         // No Story: No border (but we need to maintain layout if needed, or just 0 padding)
         // Prompt says "Nenhuma borda externa, apenas a foto".
         ringClass = "p-0";
+        pulseClass = "";
     }
 
     // Gap Class
@@ -102,7 +106,7 @@ export default function AvatarStoryWrapper({
     const gapClass = hasStories ? "bg-[var(--theme-bg-primary)] p-[2px]" : "";
 
     return (
-        <div className="flex flex-col items-center gap-1 cursor-pointer group" onClick={handleClick}>
+        <div className={`flex flex-col items-center gap-1 cursor-pointer group ${pulseClass}`} onClick={handleClick}>
             {/* Main Avatar Container */}
             <div className={`relative ${size}`}>
                 
