@@ -23,12 +23,12 @@ export default function UserListModal({ title, users, currentUser, onFollowToggl
 
     return (
         <div className="modal-overlay" onClick={handleOverlayClick}>
-            <div className="modal-content w-full max-w-md max-h-[70vh] flex flex-col">
-                <div className="flex justify-between items-center pb-2 border-b border-[var(--theme-border-primary)]">
+            <div className="modal-content w-full max-w-md max-h-[70vh] flex flex-col overflow-hidden">
+                <div className="flex justify-between items-center pb-2 border-b border-[var(--theme-border-primary)] flex-shrink-0">
                     <h2 className="text-lg font-bold text-[var(--theme-text-light)]">{title}</h2>
                     <button onClick={onClose} className="text-2xl text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-light)]">&times;</button>
                 </div>
-                <div className="flex-grow overflow-y-auto mt-4 pr-2">
+                <div className="flex-grow overflow-y-auto mt-4 pr-2 overflow-x-hidden">
                     {users.length > 0 ? (
                         <div className="space-y-3">
                             {users.map(user => {
@@ -62,14 +62,16 @@ export default function UserListModal({ title, users, currentUser, onFollowToggl
                                                     </div>
                                                 )}
                                             </div>
-                                            <div>
+                                            <div className="min-w-0 flex-1 mr-2">
                                                 <p 
-                                                    className="font-bold text-[var(--theme-text-light)] hover:underline cursor-pointer"
+                                                    className="font-bold text-[var(--theme-text-light)] hover:underline cursor-pointer truncate"
                                                     onClick={() => onViewProfile(user.username)}
                                                 >
                                                     @{user.username}
                                                 </p>
-                                                <p className="text-sm text-[var(--theme-text-secondary)] truncate">{user.bio}</p>
+                                                <p className="text-sm text-[var(--theme-text-secondary)] line-clamp-1 break-all" title={user.bio}>
+                                                    {user.bio}
+                                                </p>
                                             </div>
                                         </div>
                                         {!isCurrentUser && (
