@@ -214,18 +214,22 @@ export default function SearchOverlay({ onClose, onSearch, onViewProfile, allUse
                         <div className="space-y-4">
                             <h2 className="search-section-header">:: {t('foundCords')}</h2>
                             {foundCords.length > 0 ? (
-                                foundCords.map(cord => (
+                                foundCords.map(cord => {
+                                    const match = cord.content.match(/\$[A-Za-z0-9_]+/);
+                                    const tag = match ? match[0] : '';
+                                    return (
                                     <div 
                                         key={cord.id} 
-                                        onClick={() => onSearch(`${cord.id}`)} 
+                                        onClick={() => onSearch(tag || cord.content)} 
                                         tabIndex={0}
-                                        onKeyDown={(e) => e.key === 'Enter' && onSearch(`${cord.id}`)}
+                                        onKeyDown={(e) => e.key === 'Enter' && onSearch(tag || cord.content)}
                                         className="search-result-item text-sm cursor-pointer p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--theme-primary)]"
                                     >
                                         <p className="truncate font-bold text-[var(--theme-text-primary)]">{cord.content}</p>
                                         <p className="text-xs text-[var(--theme-text-secondary)]">{t('byUser', { username: cord.author.username })}</p>
                                     </div>
-                                ))
+                                    );
+                                })
                             ) : (
                                 <p className="text-[var(--theme-text-secondary)] italic text-sm">{t('noRelatedCords')}</p>
                             )}
@@ -285,12 +289,16 @@ export default function SearchOverlay({ onClose, onSearch, onViewProfile, allUse
                                     <div className="space-y-2">
                                         <h2 className="search-section-header text-center">:: {t('popularCords')}</h2>
                                         <div className="flex flex-col gap-2">
-                                            {popularCords.map(cord => (
-                                            <div key={cord.id} onClick={() => onSearch(`${cord.id}`)} className="search-result-item text-sm cursor-pointer p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-sm transition-colors">
+                                            {popularCords.map(cord => {
+                                                const match = cord.content.match(/\$[A-Za-z0-9_]+/);
+                                                const tag = match ? match[0] : '';
+                                                return (
+                                            <div key={cord.id} onClick={() => onSearch(tag || cord.content)} className="search-result-item text-sm cursor-pointer p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-sm transition-colors">
                                                     <p className="truncate text-[var(--theme-text-primary)] font-bold">{cord.content}</p>
                                                     <p className="text-xs text-[var(--theme-text-secondary)]">{t('byUser', { username: cord.author.username })}</p>
                                                 </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                      <div className="space-y-2">
@@ -350,15 +358,19 @@ export default function SearchOverlay({ onClose, onSearch, onViewProfile, allUse
                                     ))}
                                 </div>
                             </div>
-                            <div className="space-y-2">
+                                <div className="space-y-2">
                                 <h2 className="search-section-header text-center">:: {t('popularCords')}</h2>
                                 <div className="flex flex-col gap-2">
-                                    {popularCords.map(cord => (
-                                    <div key={cord.id} onClick={() => onSearch(`${cord.id}`)} className="search-result-item text-sm cursor-pointer p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-sm transition-colors">
+                                    {popularCords.map(cord => {
+                                        const match = cord.content.match(/\$[A-Za-z0-9_]+/);
+                                        const tag = match ? match[0] : '';
+                                        return (
+                                    <div key={cord.id} onClick={() => onSearch(tag || cord.content)} className="search-result-item text-sm cursor-pointer p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-sm transition-colors">
                                             <p className="truncate text-[var(--theme-text-primary)] font-bold">{cord.content}</p>
                                             <p className="text-xs text-[var(--theme-text-secondary)]">{t('byUser', { username: cord.author.username })}</p>
                                         </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                                 <div className="space-y-2">
