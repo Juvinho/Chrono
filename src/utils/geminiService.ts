@@ -1,6 +1,19 @@
 import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+const getApiKey = () => {
+    // In Vite, process.env.API_KEY is replaced by the value from vite.config.ts
+    // which comes from GEMINI_API_KEY environment variable.
+    const key = (process.env.API_KEY as string);
+    if (!key || key === 'undefined' || key === 'null') return null;
+    return key;
+};
+
+const apiKey = getApiKey();
+const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
+
+if (!ai) {
+    console.warn("⚠️ Gemini API Key not found. AI features will be disabled.");
+}
 
 export interface GeneratedPostData {
     username: string;
@@ -33,6 +46,7 @@ async function fileToGenerativePart(file: File) {
 }
 
 export const generatePostContent = async (): Promise<GeneratedPostData | null> => {
+    if (!ai) return null;
     try {
         const response = await ai.models.generateContent({
             model: 'gemini-flash-lite-latest',
@@ -130,6 +144,7 @@ Além da mídia, varie os tipos de post:
 };
 
 export const generateReplyContent = async (originalPostContent: string): Promise<GeneratedPostData | null> => {
+    if (!ai) return null;
     try {
         const response = await ai.models.generateContent({
             model: 'gemini-flash-lite-latest',
@@ -170,6 +185,7 @@ A resposta deve ser concisa.`,
 };
 
 export const generatePollVote = async (pollQuestion: string, pollOptions: string[], voterProfile: { username: string, bio: string }): Promise<number | null> => {
+    if (!ai) return null;
     try {
         const response = await ai.models.generateContent({
             model: 'gemini-flash-lite-latest',
@@ -213,6 +229,7 @@ export const generateDirectMessageReply = async (
     conversationHistory: { sender: string; text: string }[],
     recipientPersona: { username: string; bio: string }
 ): Promise<string | null> => {
+    if (!ai) return null;
     try {
         const historyText = conversationHistory
             .map(msg => `@${msg.sender}: ${msg.text}`)
@@ -249,6 +266,7 @@ export const generateConversationStarter = async (
     recipientUsername: string,
     senderPersona: { username: string; bio: string }
 ): Promise<string | null> => {
+    if (!ai) return null;
     try {
         const response = await ai.models.generateContent({
             model: 'gemini-flash-lite-latest',
@@ -276,7 +294,8 @@ Sua resposta deve ser apenas o texto da mensagem.`,
     }
 };
 
-export const askChatBot = async (prompt: string): Promise<GenerateContentResponse> => {
+export const askChatBot = async (prompt: string): Promise<GenerateContentResponse | null> => {
+    if (!ai) return null;
     const response = await ai.models.generateContent({
         model: "gemini-flash-lite-latest",
         contents: prompt,
@@ -288,6 +307,7 @@ export const askChatBot = async (prompt: string): Promise<GenerateContentRespons
 };
 
 export const analyzeSentiment = async (text: string): Promise<'neon-joy' | 'void-despair' | 'rage-glitch' | 'zen-stream' | 'neutral'> => {
+    if (!ai) return 'neutral';
     try {
         // Create a timeout promise that resolves to 'neutral' after 3 seconds
         const timeoutPromise = new Promise<'neutral'>((resolve) => {
@@ -334,6 +354,7 @@ export const generateCompanionReaction = async (
     actorName: string,
     postContent?: string
 ): Promise<string | null> => {
+    if (!ai) return null;
     try {
         const response = await ai.models.generateContent({
             model: 'gemini-flash-lite-latest',
@@ -368,6 +389,7 @@ Responda APENAS com o texto da reação.`,
 
 
 export const generateImage = async (prompt: string, aspectRatio: string): Promise<string | null> => {
+    if (!ai) return null;
     try {
         const response = await ai.models.generateImages({
             model: 'imagen-4.0-generate-001',
@@ -388,6 +410,7 @@ export const generateImage = async (prompt: string, aspectRatio: string): Promis
 };
 
 export const analyzeVideo = async (prompt: string, videoFile: File): Promise<string | null> => {
+    if (!ai) return null;
     try {
         const videoPart = await fileToGenerativePart(videoFile);
         const textPart = { text: prompt };
@@ -405,6 +428,7 @@ export const analyzeVideo = async (prompt: string, videoFile: File): Promise<str
 };
 
 export const generateBio = async (userData: any): Promise<string | null> => {
+    if (!ai) return null;
     try {
         const { username, bio, location, website, birthday, posts } = userData;
         
