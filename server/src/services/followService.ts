@@ -86,5 +86,75 @@ export class FollowService {
     );
     return result.rows.map((row: any) => row.username);
   }
+
+  async getFollowersFull(userId: string): Promise<any[]> {
+    const result = await pool.query(
+      `SELECT u.id, u.username, u.avatar, p.bio, u.is_verified, 
+              u.verification_badge_label, u.verification_badge_color,
+              (SELECT row_to_json(i) FROM user_items ui JOIN items i ON ui.item_id = i.id WHERE ui.user_id = u.id AND ui.is_equipped = true AND i.type = 'frame' LIMIT 1) as equipped_frame,
+              (SELECT row_to_json(i) FROM user_items ui JOIN items i ON ui.item_id = i.id WHERE ui.user_id = u.id AND ui.is_equipped = true AND i.type = 'effect' LIMIT 1) as equipped_effect
+       FROM follows f 
+       JOIN users u ON f.follower_id = u.id 
+       LEFT JOIN user_profiles p ON u.id = p.user_id
+       WHERE f.following_id = $1`,
+      [userId]
+    );
+    return result.rows.map(row => ({
+        id: row.id,
+        username: row.username,
+        avatar: row.avatar,
+        bio: row.bio || '',
+        isVerified: row.is_verified,
+        verificationBadge: row.verification_badge_label ? {
+            label: row.verification_badge_label,
+            color: row.verification_badge_color
+        } : undefined,
+        equippedFrame: row.equipped_frame ? {
+            id: row.equipped_frame.id,
+            name: row.equipped_frame.name,
+            imageUrl: row.equipped_frame.image_url
+        } : undefined,
+        equippedEffect: row.equipped_effect ? {
+            id: row.equipped_effect.id,
+            name: row.equipped_effect.name,
+            imageUrl: row.equipped_effect.image_url
+        } : undefined
+    }));
+  }
+
+  async getFollowingFull(userId: string): Promise<any[]> {
+    const result = await pool.query(
+      `SELECT u.id, u.username, u.avatar, p.bio, u.is_verified,
+              u.verification_badge_label, u.verification_badge_color,
+              (SELECT row_to_json(i) FROM user_items ui JOIN items i ON ui.item_id = i.id WHERE ui.user_id = u.id AND ui.is_equipped = true AND i.type = 'frame' LIMIT 1) as equipped_frame,
+              (SELECT row_to_json(i) FROM user_items ui JOIN items i ON ui.item_id = i.id WHERE ui.user_id = u.id AND ui.is_equipped = true AND i.type = 'effect' LIMIT 1) as equipped_effect
+       FROM follows f 
+       JOIN users u ON f.following_id = u.id 
+       LEFT JOIN user_profiles p ON u.id = p.user_id
+       WHERE f.follower_id = $1`,
+      [userId]
+    );
+    return result.rows.map(row => ({
+        id: row.id,
+        username: row.username,
+        avatar: row.avatar,
+        bio: row.bio || '',
+        isVerified: row.is_verified,
+        verificationBadge: row.verification_badge_label ? {
+            label: row.verification_badge_label,
+            color: row.verification_badge_color
+        } : undefined,
+        equippedFrame: row.equipped_frame ? {
+            id: row.equipped_frame.id,
+            name: row.equipped_frame.name,
+            imageUrl: row.equipped_frame.image_url
+        } : undefined,
+        equippedEffect: row.equipped_effect ? {
+            id: row.equipped_effect.id,
+            name: row.equipped_effect.name,
+            imageUrl: row.equipped_effect.image_url
+        } : undefined
+    }));
+  }
 }
 
