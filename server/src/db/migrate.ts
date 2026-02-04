@@ -47,12 +47,12 @@ export async function migrate(retries = 3) {
           )
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
           ON CONFLICT (username) DO UPDATE SET 
-              password_hash = EXCLUDED.password_hash,
               is_verified = EXCLUDED.is_verified,
               verification_badge_label = EXCLUDED.verification_badge_label,
               verification_badge_color = EXCLUDED.verification_badge_color,
-              avatar = EXCLUDED.avatar,
-              cover_image = EXCLUDED.cover_image
+              avatar = COALESCE(users.avatar, EXCLUDED.avatar),
+              cover_image = COALESCE(users.cover_image, EXCLUDED.cover_image)
+          -- Note: Password is NOT overwritten if user already exists
       `, [
           'Juvinho', 
           'juvinho@chrono.net', 
@@ -76,12 +76,12 @@ export async function migrate(retries = 3) {
           )
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
           ON CONFLICT (username) DO UPDATE SET 
-              password_hash = EXCLUDED.password_hash,
               is_verified = EXCLUDED.is_verified,
               verification_badge_label = EXCLUDED.verification_badge_label,
               verification_badge_color = EXCLUDED.verification_badge_color,
-              avatar = EXCLUDED.avatar,
-              cover_image = EXCLUDED.cover_image
+              avatar = COALESCE(users.avatar, EXCLUDED.avatar),
+              cover_image = COALESCE(users.cover_image, EXCLUDED.cover_image)
+          -- Note: Password is NOT overwritten if user already exists
       `, [
           'Chrono', 
           'system@chrono.net', 

@@ -457,6 +457,32 @@ export default function App() {
 
 
 
+    const handleOpenChat = useCallback((username: string) => {
+        if (!currentUser || username === currentUser.username) return;
+        
+        setOpenChatUsernames(prev => {
+            if (prev.includes(username)) return prev;
+            // Limit to 3 open chats to avoid cluttering, like FB
+            const next = [username, ...prev].slice(0, 3);
+            return next;
+        });
+        setMinimizedChatUsernames(prev => prev.filter(u => u !== username));
+    }, [currentUser]);
+
+    const handleCloseChat = useCallback((username: string) => {
+        setOpenChatUsernames(prev => prev.filter(u => u !== username));
+        setMinimizedChatUsernames(prev => prev.filter(u => u !== username));
+    }, []);
+
+    const handleMinimizeChat = useCallback((username: string) => {
+        setMinimizedChatUsernames(prev => {
+            if (prev.includes(username)) {
+                return prev.filter(u => u !== username);
+            }
+            return [...prev, username];
+        });
+    }, []);
+
     // Socket.io Integration
     useEffect(() => {
         if (currentUser) {
@@ -1162,32 +1188,6 @@ export default function App() {
         sessionStorage.removeItem('chrono_currentPage');
         apiClient.setToken(null);
     };
-
-    const handleOpenChat = useCallback((username: string) => {
-        if (!currentUser || username === currentUser.username) return;
-        
-        setOpenChatUsernames(prev => {
-            if (prev.includes(username)) return prev;
-            // Limit to 3 open chats to avoid cluttering, like FB
-            const next = [username, ...prev].slice(0, 3);
-            return next;
-        });
-        setMinimizedChatUsernames(prev => prev.filter(u => u !== username));
-    }, [currentUser]);
-
-    const handleCloseChat = useCallback((username: string) => {
-        setOpenChatUsernames(prev => prev.filter(u => u !== username));
-        setMinimizedChatUsernames(prev => prev.filter(u => u !== username));
-    }, []);
-
-    const handleMinimizeChat = useCallback((username: string) => {
-        setMinimizedChatUsernames(prev => {
-            if (prev.includes(username)) {
-                return prev.filter(u => u !== username);
-            }
-            return [...prev, username];
-        });
-    }, []);
 
     const handleUpdateUser = async (updatedUser: User): Promise<{ success: boolean; error?: string }> => {
         // Update local state immediately for responsive UI
