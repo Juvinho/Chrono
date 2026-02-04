@@ -135,13 +135,4 @@ export interface PollVote {
   createdAt: Date;
 }
 
-export interface Story {
-  id: string;
-  userId: string;
-  content: string;
-  type: 'image' | 'video' | 'text';
-  createdAt: Date;
-  expiresAt: Date;
-  viewers: string[]; // Array of user IDs
-}
 

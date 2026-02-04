@@ -180,7 +180,7 @@ export const useAppSession = ({
         } finally {
             isReloading.current = false;
         }
-    }, [playSound, setStories, setPosts, setConversations, setCurrentUser, setUsers]);
+    }, [playSound, setPosts, setConversations, setCurrentUser, setUsers]);
 
     // Validate Session on Mount
     useEffect(() => {
