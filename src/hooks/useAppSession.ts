@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Story, Post, Conversation, Page, Notification } from '../types';
 import { useLocalStorage } from './useLocalStorage';
@@ -6,9 +7,9 @@ import { apiClient, mapApiUserToUser, mapApiStoryToStory, mapApiPostToPost } fro
 import { NotificationManager } from '../utils/notificationManager';
 
 interface UseAppSessionProps {
-    setStories: React.Dispatch<React.SetStateAction<Story[]>>;
-    setPosts: React.Dispatch<React.SetStateAction<Post[]>>;
-    setConversations: React.Dispatch<React.SetStateAction<Conversation[]>>;
+    setStories: Dispatch<SetStateAction<Story[]>>;
+    setPosts: Dispatch<SetStateAction<Post[]>>;
+    setConversations: Dispatch<SetStateAction<Conversation[]>>;
     playSound: (soundName: string) => void;
 }
 

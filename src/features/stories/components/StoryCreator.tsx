@@ -80,8 +80,9 @@ export default function StoryCreator({ currentUser, onClose, onSave }: StoryCrea
                 console.log("Story posted successfully!");
                 onClose();
             } else {
-                console.error("Story post failed:", result?.error);
-                setError(result?.error || "Failed to post story. Please try again.");
+                const errorMessage = result && 'error' in result ? result.error : undefined;
+                console.error("Story post failed:", errorMessage);
+                setError(errorMessage || "Failed to post story. Please try again.");
             }
         } catch (err) {
             console.error("Unexpected error in handleSave:", err);

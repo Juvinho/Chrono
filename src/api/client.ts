@@ -23,6 +23,7 @@ export const API_BASE_URL = getBaseUrl();
 export interface ApiResponse<T> {
   data?: T;
   error?: string;
+  retryAfter?: number;
 }
 
 export class ApiClient {

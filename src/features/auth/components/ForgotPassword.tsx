@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import GlitchText from '../../../components/ui/GlitchText';
 import { User, Page } from '../../../types/index';
 import { useTranslation } from '../../../hooks/useTranslation';
-import { apiClient } from '../../../api';
+import { api } from '../../../api';
 
 interface ForgotPasswordProps {
     users: User[];
@@ -25,7 +25,7 @@ export default function ForgotPassword({ users, onNavigate }: ForgotPasswordProp
 
         try {
             // MIGRATION: API Call for password recovery
-            const response = await apiClient.request('/auth/forgot-password', {
+            const response = await api.client.request('/auth/forgot-password', {
                 method: 'POST',
                 body: JSON.stringify({ 
                     email: method === 'email' ? email : undefined,
