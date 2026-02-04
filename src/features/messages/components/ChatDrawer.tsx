@@ -153,7 +153,6 @@ export default function ChatDrawer({
         if (!messageText.trim() || !activeChatUser || isLoading) return;
 
         const textToSend = messageText.trim();
-        setMessageText(''); // Limpa input otimisticamente
         setIsLoading(true);
 
         // Stop typing indicator
@@ -171,13 +170,30 @@ export default function ChatDrawer({
         }
 
         try {
+            console.log('Enviando mensagem para:', activeChatUser.username, 'Texto:', textToSend);
+            
             // Usa sendMessageToUser que cria/busca conversa automaticamente
             const response = await apiClient.sendMessageToUser(activeChatUser.username, textToSend);
             
+            console.log('Resposta do servidor:', response);
+            
+            // Verifica se houve erro ou se não há data
             if (response.error) {
+                console.error('Erro na resposta:', response.error);
                 throw new Error(response.error);
             }
 
+            // Só limpa o input se a mensagem foi enviada com sucesso (tem data)
+            if (!response.data) {
+                console.error('Resposta sem data:', response);
+                throw new Error('Resposta inválida do servidor. A mensagem pode não ter sido enviada.');
+            }
+
+            console.log('Mensagem enviada com sucesso:', response.data);
+            
+            // Limpa input apenas após sucesso confirmado
+            setMessageText('');
+            
             // Scroll para última mensagem após um pequeno delay
             setTimeout(() => scrollToBottom(), 100);
             
@@ -186,10 +202,13 @@ export default function ChatDrawer({
             const errorMessage = error.message || 'Erro ao enviar mensagem. Tente novamente.';
             showToast(errorMessage, 'error');
             
-            // Restaura texto no input em caso de erro
-            setMessageText(textToSend);
-            
+            // Mantém o texto no input em caso de erro (não precisa restaurar pois não limpamos antes)
             console.error('Failed to send message:', error);
+            console.error('Error details:', {
+                message: error.message,
+                stack: error.stack,
+                response: error.response
+            });
         } finally {
             setIsLoading(false);
         }

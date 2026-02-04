@@ -37,11 +37,35 @@ export const conversationService = {
   },
 
   async sendMessageToUser(recipientUsername: string, text: string, media?: { imageUrl?: string, videoUrl?: string, metadata?: any }) {
-    // First get or create conversation
-    const conv = await this.getOrCreateConversation(recipientUsername);
-    if (conv.data) {
-      return this.sendMessage(conv.data.conversationId || conv.data.id, text, media);
+    try {
+      // First get or create conversation
+      const conv = await this.getOrCreateConversation(recipientUsername);
+      
+      if (conv.error) {
+        console.error('Erro ao criar/buscar conversa:', conv.error);
+        return { error: conv.error };
+      }
+      
+      if (!conv.data) {
+        console.error('Resposta sem data:', conv);
+        return { error: 'Não foi possível criar ou encontrar a conversa' };
+      }
+      
+      // O backend pode retornar conversationId ou id
+      const conversationId = conv.data.conversationId || conv.data.id;
+      if (!conversationId) {
+        console.error('ID da conversa não encontrado na resposta:', conv.data);
+        return { error: 'ID da conversa não encontrado na resposta do servidor' };
+      }
+      
+      console.log('Enviando mensagem para conversa:', conversationId);
+      const result = await this.sendMessage(conversationId, text, media);
+      console.log('Resultado do envio:', result);
+      
+      return result;
+    } catch (error: any) {
+      console.error('Erro em sendMessageToUser:', error);
+      return { error: error.message || 'Erro ao enviar mensagem' };
     }
-    return conv;
   },
 };
