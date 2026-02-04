@@ -21,7 +21,7 @@ console.log(`📡 Connecting to database: ${sanitizedUrl}`);
 const isProduction = process.env.NODE_ENV === 'production';
 const isSupabase = rawDbUrl.includes('supabase.co') || rawDbUrl.includes('supabase.com');
 
-// Force SSL for Supabase/Production
+// Force SSL for Supabase/Production and allow self-signed certificates
 const sslConfig = (isProduction || isSupabase) ? { 
   rejectUnauthorized: false,
 } : false;
@@ -29,9 +29,9 @@ const sslConfig = (isProduction || isSupabase) ? {
 export const pool = new Pool({
   connectionString: rawDbUrl,
   ssl: sslConfig,
-  connectionTimeoutMillis: 30000, // 30s
+  connectionTimeoutMillis: 30000,
   idleTimeoutMillis: 15000,
-  max: 10, // Reduced max connections for stability
+  max: 10,
   keepAlive: true,
 });
 
