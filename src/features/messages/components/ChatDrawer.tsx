@@ -54,7 +54,7 @@ export default function ChatDrawer({
                 });
                 
                 // Join socket room
-                socketService.emit('join_conversation', conversation.id);
+                    socketService.emit('join_conversation', conversation.id);
             }
         } else {
             // Focus search when back to list
@@ -247,6 +247,23 @@ export default function ChatDrawer({
         return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' });
     };
 
+    const formatLastSeen = (lastSeen: Date | string | null | undefined) => {
+        if (!lastSeen) return 'Nunca visto';
+        
+        const date = new Date(lastSeen);
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        if (diffMins < 5) return 'Online agora';
+        if (diffMins < 60) return `Visto há ${diffMins}m`;
+        if (diffHours < 24) return `Visto há ${diffHours}h`;
+        if (diffDays < 7) return `Visto há ${diffDays}d`;
+        return `Visto em ${date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })}`;
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -277,9 +294,9 @@ export default function ChatDrawer({
                                 >
                                     <PlusIcon className="w-5 h-5" />
                                 </button>
-                                <button onClick={onClose} className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)] transition-colors">
-                                    <CloseIcon className="w-6 h-6" />
-                                </button>
+                            <button onClick={onClose} className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)] transition-colors">
+                                <CloseIcon className="w-6 h-6" />
+                            </button>
                             </div>
                         </div>
 
@@ -316,26 +333,29 @@ export default function ChatDrawer({
 
                         {/* New Chat Users List */}
                         {showNewChat && filteredUsers.length > 0 && (
-                            <div className="border-b border-[var(--theme-border-primary)] bg-[var(--theme-bg-secondary)] max-h-48 overflow-y-auto">
+                            <div className="border-b border-[var(--theme-border-primary)] bg-[var(--theme-bg-secondary)] max-h-48 overflow-y-auto overflow-x-hidden">
                                 <div className="p-2 text-xs font-bold text-[var(--theme-text-secondary)] px-4 py-2">
                                     Iniciar conversa
                                 </div>
-                                {filteredUsers.map(user => (
-                                    <div
-                                        key={user.id}
-                                        onClick={() => handleStartNewChat(user)}
-                                        className="flex items-center gap-3 p-3 hover:bg-[var(--theme-bg-tertiary)] cursor-pointer transition-colors"
-                                    >
-                                        <Avatar src={user.avatar} username={user.username} className="w-10 h-10 rounded-full" />
-                                        <div className="flex-1">
-                                            <span className="font-semibold text-[var(--theme-text-primary)]">{user.username}</span>
-                                            {user.bio && (
-                                                <p className="text-xs text-gray-500 truncate">{user.bio}</p>
-                                            )}
+                                {filteredUsers.map(user => {
+                                    const bioText = (user.bio || '').length > 40 ? (user.bio || '').slice(0, 40) + '…' : (user.bio || '');
+                                    return (
+                                        <div
+                                            key={user.id}
+                                            onClick={() => handleStartNewChat(user)}
+                                            className="flex items-center gap-3 p-3 hover:bg-[var(--theme-bg-tertiary)] cursor-pointer transition-colors"
+                                        >
+                                            <Avatar src={user.avatar} username={user.username} className="w-10 h-10 rounded-full flex-shrink-0" />
+                                            <div className="flex-1 min-w-0">
+                                                <span className="font-semibold text-[var(--theme-text-primary)] block truncate">{user.username}</span>
+                                                {bioText && (
+                                                    <p className="text-xs text-gray-500 truncate">{bioText}</p>
+                                                )}
+                                            </div>
+                                            <PaperPlaneIcon className="w-4 h-4 text-[var(--theme-primary)] flex-shrink-0" />
                                         </div>
-                                        <PaperPlaneIcon className="w-4 h-4 text-[var(--theme-primary)]" />
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
 
@@ -414,8 +434,24 @@ export default function ChatDrawer({
                                 <div className="flex flex-col">
                                     <span className="font-bold text-sm text-[var(--theme-text-primary)]">{activeChatUser.username}</span>
                                     <span className="text-[10px] text-[var(--theme-primary)] flex items-center gap-1">
-                                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-                                        Online agora
+                                        {activeChatUser.lastSeen && (() => {
+                                            const lastSeenDate = new Date(activeChatUser.lastSeen);
+                                            const diffMs = new Date().getTime() - lastSeenDate.getTime();
+                                            const diffMins = Math.floor(diffMs / 60000);
+                                            const isOnline = diffMins < 5;
+                                            return (
+                                                <>
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`}></span>
+                                                    {formatLastSeen(activeChatUser.lastSeen)}
+                                                </>
+                                            );
+                                        })()}
+                                        {!activeChatUser.lastSeen && (
+                                            <>
+                                                <span className="w-1.5 h-1.5 bg-gray-500 rounded-full"></span>
+                                                Nunca visto
+                                            </>
+                                        )}
                                     </span>
                                 </div>
                             </div>
@@ -425,18 +461,18 @@ export default function ChatDrawer({
                         <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[var(--theme-bg-primary)]">
                             {currentConversation?.messages.length > 0 ? (
                                 currentConversation.messages.map((msg, idx) => {
-                                    const isMe = msg.senderUsername === currentUser.username;
-                                    
-                                    return (
-                                        <div key={msg.id || idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                                            <div 
-                                                className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm break-words relative group ${
-                                                    isMe 
+                                const isMe = msg.senderUsername === currentUser.username;
+                                
+                                return (
+                                    <div key={msg.id || idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                        <div 
+                                            className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm break-words relative group ${
+                                                isMe 
                                                         ? 'bg-[var(--theme-primary)] text-white rounded-br-sm' 
                                                         : 'bg-gray-800 text-gray-200 rounded-bl-sm'
-                                                }`}
-                                            >
-                                                {msg.text}
+                                            }`}
+                                        >
+                                            {msg.text}
                                                 <div className={`flex items-center justify-between mt-1 gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
                                                     <span className={`text-[10px] opacity-70`}>
                                                         {msg.timestamp ? formatTimestamp(msg.timestamp) : ''}
@@ -444,7 +480,7 @@ export default function ChatDrawer({
                                                     {isMe && msg.status && (
                                                         <span className="text-[10px] opacity-70">
                                                             {msg.status === 'read' ? '✓✓' : msg.status === 'delivered' ? '✓✓' : '✓'}
-                                                        </span>
+                                            </span>
                                                     )}
                                                 </div>
                                             </div>
@@ -494,7 +530,7 @@ export default function ChatDrawer({
                                     {isLoading ? (
                                         <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                                     ) : (
-                                        <SendIcon className="w-5 h-5" />
+                                    <SendIcon className="w-5 h-5" />
                                     )}
                                 </button>
                             </form>

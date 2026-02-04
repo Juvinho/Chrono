@@ -6,7 +6,7 @@ import PostCard from '../../features/timeline/components/PostCard';
 import { useTranslation } from '../../hooks/useTranslation';
 import FramePreview, { getFrameShape } from '../../features/profile/components/FramePreview';
 import Avatar from '../../features/profile/components/Avatar';
-import { apiClient } from '../../api';
+import { apiClient } from '../../utils/api';
 
 interface SearchOverlayProps {
     onClose: () => void;

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { User } from '../../../types/index';
 import { useTranslation } from '../../../hooks/useTranslation';
 import FramePreview, { getFrameShape } from '../../profile/components/FramePreview';
-import { apiClient } from '../../../api';
+import { apiClient } from '../../../utils/api';
 
 interface NewMessageModalProps {
   currentUser: User;
@@ -41,7 +41,7 @@ export default function NewMessageModal({ currentUser, onClose, onSelectUser }: 
 
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal-content w-full max-w-md max-h-[70vh] flex flex-col">
+      <div className="modal-content w-full max-w-md max-h-[70vh] flex flex-col overflow-x-hidden">
         <div className="flex justify-between items-center pb-2 border-b border-[var(--theme-border-primary)]">
           <h2 className="text-lg font-bold text-[var(--theme-text-light)]">{t('newMessageTitle')}</h2>
           <button onClick={onClose} className="text-2xl text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-light)]">&times;</button>
@@ -63,11 +63,12 @@ export default function NewMessageModal({ currentUser, onClose, onSelectUser }: 
             )}
         </div>
         
-        <div className="flex-grow overflow-y-auto mt-4 pr-2 chrono-scrollbar">
+        <div className="flex-grow overflow-y-auto overflow-x-hidden mt-4 pr-2 chrono-scrollbar">
           {results.length > 0 ? (
             <div className="space-y-3">
               {results.map(user => {
                 const avatarShape = user.equippedFrame ? getFrameShape(user.equippedFrame.name) : 'rounded-full';
+                const bioText = (user.bio || '').length > 40 ? (user.bio || '').slice(0, 40) + '…' : (user.bio || '');
                 return (
                   <button 
                     key={user.username} 
@@ -93,7 +94,7 @@ export default function NewMessageModal({ currentUser, onClose, onSelectUser }: 
                     </div>
                     <div className="flex-grow min-w-0">
                       <p className="font-bold text-[var(--theme-text-light)] truncate">@{user.username}</p>
-                      <p className="text-xs text-[var(--theme-text-secondary)] truncate">{user.bio}</p>
+                      <p className="text-xs text-[var(--theme-text-secondary)] truncate">{bioText}</p>
                     </div>
                   </button>
                 );

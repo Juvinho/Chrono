@@ -839,15 +839,15 @@ export default function App() {
 
                         {currentUser && (
                             <Suspense fallback={null}>
-                                <ChatDrawer
-                                    isOpen={isChatDrawerOpen}
-                                    onClose={() => setIsChatDrawerOpen(false)}
-                                    currentUser={currentUser}
-                                    conversations={conversations}
-                                    activeChatUser={drawerActiveUser}
-                                    onSetActiveChatUser={setDrawerActiveUser}
-                                    allUsers={combinedUsers}
-                                />
+                            <ChatDrawer
+                                isOpen={isChatDrawerOpen}
+                                onClose={() => setIsChatDrawerOpen(false)}
+                                currentUser={currentUser}
+                                conversations={conversations}
+                                activeChatUser={drawerActiveUser}
+                                onSetActiveChatUser={setDrawerActiveUser}
+                                allUsers={combinedUsers}
+                            />
                             </Suspense>
                         )}
 

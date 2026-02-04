@@ -40,6 +40,7 @@ export interface User {
   subscriptionExpiresAt?: Date;
   createdAt: Date;
   updatedAt: Date;
+  lastSeen?: Date | null;
   equippedFrame?: Item;
   equippedEffect?: Item;
   followersList?: string[];

@@ -310,6 +310,9 @@ router.post('/login', async (req, res) => {
 
     await securityService.logAction(user.id, 'login', 'user', user.id, 'success', { username }, req);
 
+    // Update last_seen timestamp
+    await userService.updateLastSeen(user.id);
+
     const token = jwt.sign(
       { id: user.id, username: user.username },
       (process.env.JWT_SECRET || 'fallback-secret') as any,
