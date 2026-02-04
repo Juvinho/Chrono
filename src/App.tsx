@@ -473,16 +473,19 @@ export default function App() {
 
     // Story Handlers
     const handleCreateStory = useCallback(async (storyData: Omit<Story, 'id' | 'timestamp' | 'expiresAt' | 'userId' | 'username' | 'userAvatar'>) => {
-        if (!currentUser) return;
+        if (!currentUser) return { success: false, error: 'User not logged in' };
         try {
+            console.log("[App] Creating story...", { type: storyData.type });
             const result = await apiClient.createStory(storyData.content, storyData.type);
             if (result.error) {
                 console.error("Failed to create story via API:", result.error);
-                return;
+                return { success: false, error: result.error };
             }
             await reloadBackendData();
+            return { success: true };
         } catch (error) {
             console.error("Failed to create story via API:", error);
+            return { success: false, error: String(error) };
         }
     }, [currentUser, reloadBackendData]);
 
