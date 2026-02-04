@@ -55,6 +55,13 @@ export default function ChatDrawer({
         }
     }, [activeChatUser, conversations]);
 
+    // Effect to scroll to bottom when messages change
+    useEffect(() => {
+        if (currentConversation?.messages.length) {
+            scrollToBottom();
+        }
+    }, [currentConversation?.messages.length]);
+
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };

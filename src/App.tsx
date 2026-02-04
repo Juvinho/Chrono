@@ -838,15 +838,17 @@ export default function App() {
                         {/* Modals and Overlays */}
 
                         {currentUser && (
-                            <ChatDrawer
-                                isOpen={isChatDrawerOpen}
-                                onClose={() => setIsChatDrawerOpen(false)}
-                                currentUser={currentUser}
-                                conversations={conversations}
-                                activeChatUser={drawerActiveUser}
-                                onSetActiveChatUser={setDrawerActiveUser}
-                                allUsers={combinedUsers}
-                            />
+                            <Suspense fallback={null}>
+                                <ChatDrawer
+                                    isOpen={isChatDrawerOpen}
+                                    onClose={() => setIsChatDrawerOpen(false)}
+                                    currentUser={currentUser}
+                                    conversations={conversations}
+                                    activeChatUser={drawerActiveUser}
+                                    onSetActiveChatUser={setDrawerActiveUser}
+                                    allUsers={combinedUsers}
+                                />
+                            </Suspense>
                         )}
 
                         {viewingStoryUser && viewingStoryUser.stories && (
