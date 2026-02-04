@@ -8,8 +8,6 @@ import { PlusIcon } from '../../../components/ui/icons';
 import { useTranslation } from '../../../hooks/useTranslation';
 import ConfirmationModal from '../../../components/ui/ConfirmationModal';
 import CordView from '../../messages/components/CordView';
-import StoryTray from '../../stories/components/StoryTray';
-import AvatarStoryWrapper from '../../stories/components/AvatarStoryWrapper';
 import { apiClient } from '../../../api';
 
 import FramePreview, { getFrameShape } from '../../profile/components/FramePreview';
@@ -36,9 +34,6 @@ interface EchoFrameProps {
     composerDate: Date | null;
     setComposerDate: (date: Date | null) => void;
     allKnownPosts?: Post[];
-    usersWithStories?: User[];
-    onViewStory?: (user: User) => void;
-    onCreateStory?: () => void;
     nextAutoRefresh?: Date | null;
     isAutoRefreshPaused?: boolean;
 }
@@ -47,7 +42,6 @@ export default function EchoFrame({
     selectedDate, currentUser, posts: allPosts, onViewProfile, onTagClick, 
     onNewPost, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost, onPollVote, searchQuery, focusPostId, isGenerating,
     typingParentIds, activeCordTag, setActiveCordTag, composerDate, setComposerDate, allKnownPosts,
-    usersWithStories = [], onViewStory = () => {}, onCreateStory = () => {},
     nextAutoRefresh, isAutoRefreshPaused
 }: EchoFrameProps) {
     const { t } = useTranslation();
@@ -328,14 +322,28 @@ export default function EchoFrame({
                 <RefreshTimer nextAutoRefresh={nextAutoRefresh} isPaused={isAutoRefreshPaused} />
                 {isToday && !searchQuery && (
                     <div className="bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] p-4 mb-4 flex items-center space-x-4">
-                        <AvatarStoryWrapper
-                            user={currentUser}
-                            currentUser={currentUser}
-                            size="w-10 h-10"
-                            onViewStory={onViewStory}
-                            onCreateStory={onCreateStory}
-                            showName={false}
-                        />
+                        {(() => {
+                            const avatarShape = currentUser.equippedFrame ? getFrameShape(currentUser.equippedFrame.name) : 'rounded-full';
+                            return (
+                                <div className="relative w-10 h-10 flex-shrink-0">
+                                    <img src={currentUser.avatar || 'https://via.placeholder.com/150'} alt={currentUser.username} className={`w-full h-full ${avatarShape} object-cover`} />
+                                    {currentUser.equippedEffect && (
+                                        <div className={`absolute inset-0 pointer-events-none z-10 mix-blend-screen opacity-60 ${avatarShape} overflow-hidden`}>
+                                            <img 
+                                                src={currentUser.equippedEffect.imageUrl} 
+                                                alt="" 
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </div>
+                                    )}
+                                    {currentUser.equippedFrame && (
+                                        <div className="absolute -inset-1 z-20 pointer-events-none">
+                                            <FramePreview item={currentUser.equippedFrame} />
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
                         <button  
                             className="flex-grow bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] rounded-sm py-2 px-3 text-left text-[var(--theme-text-secondary)] cursor-pointer hover:border-[var(--theme-primary)] transition-colors"
                             onClick={() => setIsComposerOpen(true)}

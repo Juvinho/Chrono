@@ -247,9 +247,9 @@ class ApiClient {
   }
 
   async updateReaction(postId: string, reaction: string) {
-    return this.request<any>(`/posts/${postId}/reaction`, {
+    return this.request<any>(`/posts/${postId}/reactions`, {
       method: 'POST',
-      body: JSON.stringify({ reaction }),
+      body: JSON.stringify({ reactionType: reaction }),
     });
   }
 
@@ -343,6 +343,20 @@ class ApiClient {
     });
   }
 
+  // Push subscriptions
+  async subscribePush(subscription: PushSubscriptionJSON) {
+    return this.request<any>('/notifications/push/subscribe', {
+      method: 'POST',
+      body: JSON.stringify(subscription),
+    });
+  }
+  async unsubscribePush(endpoint: string) {
+    return this.request<any>('/notifications/push/unsubscribe', {
+      method: 'POST',
+      body: JSON.stringify({ endpoint }),
+    });
+  }
+
   // Marketplace endpoints
   async getMarketplaceItems() {
     return this.request<any[]>('/marketplace');
@@ -405,23 +419,6 @@ class ApiClient {
     });
   }
 
-  // Stories
-  async getStories() {
-    return this.request<any[]>('/stories');
-  }
-
-  async createStory(content: string, type: 'image' | 'video' | 'text') {
-    return this.request<any>('/stories', {
-      method: 'POST',
-      body: JSON.stringify({ content, type }),
-    });
-  }
-
-  async viewStory(storyId: string) {
-    return this.request<any>(`/stories/${storyId}/view`, {
-      method: 'POST',
-    });
-  }
 }
 
 export const apiClient = new ApiClient();
@@ -462,7 +459,7 @@ export function mapApiUserToUser(apiUser: any): any {
     blockedUsers: apiUser.blockedUsers || apiUser.blocked_users || [],
     notifications: apiUser.notifications || [],
     createdAt: apiUser.createdAt || apiUser.created_at,
-    stories: apiUser.stories ? apiUser.stories.map(mapApiStoryToStory) : [],
+    // stories removed
   };
 }
 
@@ -491,18 +488,4 @@ export function mapApiPostToPost(apiPost: any): any {
   };
 }
 
-// Helper to map API story format to frontend Story type
-export function mapApiStoryToStory(apiStory: any): any {
-  return {
-    id: apiStory.id,
-    userId: apiStory.userId || apiStory.user_id,
-    username: apiStory.username || apiStory.author?.username,
-    userAvatar: apiStory.userAvatar || apiStory.author?.avatar || '',
-    content: apiStory.content,
-    type: apiStory.type,
-    timestamp: new Date(apiStory.createdAt || apiStory.created_at),
-    expiresAt: new Date(apiStory.expiresAt || apiStory.expires_at),
-    viewers: apiStory.viewers || [],
-    author: apiStory.author ? mapApiUserToUser(apiStory.author) : undefined,
-  };
-}
+// stories removed

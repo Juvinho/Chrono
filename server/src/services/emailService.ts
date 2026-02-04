@@ -137,5 +137,23 @@ export class EmailService {
       throw error;
     }
   }
+
+  async sendNotificationEmail(email: string, subject: string, html: string, text: string) {
+    const mailOptions = {
+      from: `"Chrono" <${process.env.SMTP_USER || 'noreply@chrono.com'}>`,
+      to: email,
+      subject,
+      html,
+      text,
+    };
+    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+      if (process.env.NODE_ENV !== 'production') {
+        return true;
+      }
+      throw new Error('SMTP credentials not configured');
+    }
+    const info = await transporter.sendMail(mailOptions);
+    return !!info.messageId;
+  }
 }
 

@@ -14,9 +14,9 @@ import userRoutes from './routes/users.js';
 import postRoutes from './routes/posts.js';
 import conversationRoutes from './routes/conversations.js';
 import notificationRoutes from './routes/notifications.js';
-import storyRoutes from './routes/stories.js';
 import marketplaceRoutes from './routes/marketplace.js';
 import companionRoutes from './routes/companionRoutes.js';
+import { NotificationService } from './services/notificationService.js';
 
 dotenv.config();
 
@@ -132,7 +132,6 @@ app.get('/api', (_req: express.Request, res: express.Response) => {
       posts: '/api/posts',
       conversations: '/api/conversations',
       notifications: '/api/notifications',
-      stories: '/api/stories',
       health: '/health',
     },
   });
@@ -144,7 +143,6 @@ app.use('/api/users', userRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/notifications', notificationRoutes);
-app.use('/api/stories', storyRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
 
 // Health check
@@ -301,6 +299,8 @@ const startServer = async () => {
     console.log('📦 Iniciando migrações do banco de dados...');
     migrate().then(() => {
         console.log('✅ Migrações concluídas com sucesso.');
+        const notifSvc = new NotificationService();
+        notifSvc.startQueueWorker();
     }).catch(err => {
         console.error('❌ Falha na migração do banco:', err);
     });

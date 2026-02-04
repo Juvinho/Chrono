@@ -12,7 +12,6 @@ import UserListModal from '../../../components/ui/UserListModal';
 import { VerifiedIcon, MessageIcon, PaperPlaneIcon } from '../../../components/ui/icons';
 import FramePreview, { getFrameShape } from './FramePreview';
 import Avatar from './Avatar';
-import AvatarStoryWrapper from '../../stories/components/AvatarStoryWrapper';
 import LoadingSpinner from '../../../components/ui/LoadingSpinner';
 import { apiClient } from '../../../api';
 
@@ -41,8 +40,6 @@ interface ProfilePageProps {
   onBack?: () => void;
   onToggleChat?: () => void;
   onOpenChat?: (user: User) => void;
-  onViewStory?: (user: User) => void;
-  onCreateStory?: () => void;
   lastViewedNotifications?: Date | null;
 }
 
@@ -50,7 +47,7 @@ export default function ProfilePage({
   currentUser, profileUsername: propProfileUsername, onLogout, onNavigate, onNotificationClick, onViewNotifications, users, onFollowToggle, 
   allPosts, allUsers, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost,
   onPollVote, selectedDate, setSelectedDate, typingParentIds, conversations, onOpenMarketplace, 
-  onUpdateUser, onBack, onToggleChat, onOpenChat, onViewStory, onCreateStory, lastViewedNotifications
+  onUpdateUser, onBack, onToggleChat, onOpenChat, lastViewedNotifications
 }: ProfilePageProps & { onUpdateUser?: (user: User) => Promise<{ success: boolean; error?: string }> }) {
   const { t } = useTranslation();
   const { playSound } = useSound();
@@ -433,14 +430,26 @@ export default function ProfilePage({
             </div>
             <div className="absolute -bottom-16 left-4 md:left-8 flex items-end z-10">
                 <div className="relative w-24 h-24">
-                    <AvatarStoryWrapper
-                        user={profileUser}
-                        currentUser={currentUser}
-                        size="w-24 h-24"
-                        onViewStory={onViewStory}
-                        onCreateStory={onCreateStory}
-                        showName={false}
+                    <img 
+                        src={profileUser.avatar || 'https://via.placeholder.com/150'}
+                        alt={profileUser.username}
+                        className={`w-full h-full ${avatarShape} object-cover`}
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://via.placeholder.com/150'; }}
                     />
+                    {profileUser.equippedFrame && (
+                        <div className="absolute -inset-1 z-20 pointer-events-none">
+                            <FramePreview item={profileUser.equippedFrame} />
+                        </div>
+                    )}
+                    {profileUser.equippedEffect && profileUser.equippedEffect.imageUrl && (
+                        <div className={`absolute inset-0 pointer-events-none z-10 mix-blend-screen opacity-60 ${avatarShape} overflow-hidden`}>
+                            <img 
+                                src={profileUser.equippedEffect.imageUrl} 
+                                alt="" 
+                                className="w-full h-full object-cover"
+                            />
+                        </div>
+                    )}
                 </div>
             </div>
           </div>

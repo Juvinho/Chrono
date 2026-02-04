@@ -1,8 +1,52 @@
 import { pool } from '../db/connection.js';
 import { Notification, NotificationType } from '../types/index.js';
 import { getIo } from '../socket.js';
+import { EmailService } from './emailService.js';
+
+type NotificationJob = { id: string; userId: string; actorId: string; type: NotificationType; postId?: string; attempts: number };
+let jobQueue: NotificationJob[] = [];
+let isProcessing = false;
 
 export class NotificationService {
+  async startQueueWorker(): Promise<void> {
+    const run = async () => {
+      if (isProcessing) return;
+      isProcessing = true;
+      try {
+        const job = jobQueue.shift();
+        if (!job) return;
+        try {
+          const userRes = await pool.query('SELECT email, is_verified FROM users WHERE id = $1', [job.userId]);
+          const actorRes = await pool.query('SELECT username FROM users WHERE id = $1', [job.actorId]);
+          const userEmail = userRes.rows[0]?.email || null;
+          const actorUsername = actorRes.rows[0]?.username || 'Chrono';
+          if (userEmail && process.env.SMTP_USER) {
+            const emailSvc = new EmailService();
+            const subject = `Chrono: ${job.type}`;
+            const text = `${actorUsername} interagiu com você (${job.type}).`;
+            const html = `<p>${actorUsername} interagiu com você (${job.type}).</p>`;
+            await emailSvc.sendNotificationEmail(userEmail, subject, html, text);
+          }
+          // Placeholder: push notifications will be sent when web-push is available
+          // We still query subscriptions to keep queue flow consistent
+          const subs = await pool.query('SELECT endpoint FROM push_subscriptions WHERE user_id = $1', [job.userId]);
+          if (subs.rows.length > 0) {
+            // Intentionally no-op if web-push library is not configured
+            // This ensures we don't break production while preparing infra
+          }
+        } catch (err) {
+          job.attempts += 1;
+          if (job.attempts < 5) {
+            jobQueue.push(job);
+          }
+        }
+      } finally {
+        isProcessing = false;
+      }
+    };
+    setInterval(run, 1000);
+  }
+
   async createNotification(
     userId: string,
     actorId: string,
@@ -75,6 +119,8 @@ export class NotificationService {
     } catch (error) {
       console.error('Failed to emit notification:', error);
     }
+
+    jobQueue.push({ id: notification.id, userId, actorId, type: notificationType, postId, attempts: 0 });
 
     return notification;
   }

@@ -288,7 +288,7 @@ export const translations = {
     dataSlicer_errorOnlyOneVideo: 'Only one video allowed at a time. Please remove the current one first.',
     
     // Stories
-    yourStory: 'Your Story',
+    yourStory: 'Your Profile',
     share: 'Share',
     typeSomething: 'Type something...',
   },
@@ -579,7 +579,7 @@ export const translations = {
     dataSlicer_errorOnlyOneVideo: 'Apenas um vídeo por vez é permitido. Por favor, remova o atual primeiro.',
     
     // Stories
-    yourStory: 'Seu Story',
+    yourStory: 'Seu Perfil',
     share: 'Compartilhar',
     typeSomething: 'Digite algo...',
   }
