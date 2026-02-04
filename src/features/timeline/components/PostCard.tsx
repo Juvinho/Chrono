@@ -304,11 +304,22 @@ const PostCard: React.FC<PostCardProps> = React.memo(({ post, currentUser, onVie
                                 @{post.author.username}
                             </button>
                             {post.author.isVerified && post.author.verificationBadge && (
-                                <VerifiedIcon 
-                                    className="w-4 h-4"
-                                    style={{ color: post.author.verificationBadge.color }}
-                                    title={post.author.verificationBadge.label}
-                                />
+                                <div className="flex items-center">
+                                    {post.author.verificationBadge.label === 'Criador' && post.author.verificationBadge.color === 'red' ? (
+                                        <span 
+                                            className="bg-[#ff003c] text-white text-[9px] px-1.5 py-0.5 rounded-sm font-bold flex items-center mr-1 uppercase tracking-tighter shadow-[0_0_8px_rgba(255,0,60,0.4)] border border-[#ff4d7a] animate-pulse-soft"
+                                            title="Verificado: Criador do Sistema"
+                                        >
+                                            Criador
+                                        </span>
+                                    ) : (
+                                        <VerifiedIcon 
+                                            className="w-4 h-4"
+                                            style={{ color: post.author.verificationBadge.color }}
+                                            title={post.author.verificationBadge.label}
+                                        />
+                                    )}
+                                </div>
                             )}
                             {post.isPrivate && <LockClosedIcon className="w-3 h-3 text-[var(--theme-text-secondary)]" title={t('postPrivate')} />}
                         </div>
