@@ -19,7 +19,10 @@ const TARGET_URL = "postgresql://postgres:27Set%402004%23%2AJuvinho123%5D@db.aam
 async function migrate() {
     console.log('🚀 Iniciando processo de migração completa...');
     
-    const sourcePool = new Pool({ connectionString: SOURCE_URL });
+    const sourcePool = new Pool({ 
+        connectionString: SOURCE_URL,
+        ssl: { rejectUnauthorized: false }
+    });
     const targetPool = new Pool({ 
         connectionString: TARGET_URL,
         ssl: { rejectUnauthorized: false }
