@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { User, Conversation, Message } from '../../../types';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useToast } from '../../../contexts/ToastContext';
 import Avatar from '../../profile/components/Avatar';
-import { CloseIcon, MessageIcon, SendIcon, ChevronLeftIcon } from '../../../components/ui/icons';
+import { CloseIcon, MessageIcon, SendIcon, ChevronLeftIcon, SearchIcon, PlusIcon, PaperPlaneIcon } from '../../../components/ui/icons';
 import { apiClient } from '../../../api';
+import { socketService } from '../../../utils/socketService';
 
 interface ChatDrawerProps {
     isOpen: boolean;
@@ -29,8 +30,13 @@ export default function ChatDrawer({
     const { showToast } = useToast();
     const [messageText, setMessageText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [showNewChat, setShowNewChat] = useState(false);
+    const [isTyping, setIsTyping] = useState(false);
+    const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+    const searchInputRef = useRef<HTMLInputElement>(null);
 
     // Effect to handle view switching based on activeChatUser
     useEffect(() => {
@@ -48,11 +54,41 @@ export default function ChatDrawer({
                 });
                 
                 // Join socket room
-                import('../../../utils/socketService').then(({ socketService }) => {
-                    socketService.emit('join_conversation', conversation.id);
-                });
+                socketService.emit('join_conversation', conversation.id);
             }
+        } else {
+            // Focus search when back to list
+            setTimeout(() => searchInputRef.current?.focus(), 100);
         }
+    }, [activeChatUser, conversations]);
+
+    // Typing indicator via Socket.io
+    useEffect(() => {
+        if (!activeChatUser) return;
+
+        const conversation = conversations.find(c => c.participants.includes(activeChatUser.username));
+        if (!conversation) return;
+
+        const handleTyping = (data: any) => {
+            if (data.username === activeChatUser.username) {
+                setIsTyping(true);
+                setTimeout(() => setIsTyping(false), 3000);
+            }
+        };
+
+        const handleStopTyping = (data: any) => {
+            if (data.username === activeChatUser.username) {
+                setIsTyping(false);
+            }
+        };
+
+        socketService.on('display_typing', handleTyping);
+        socketService.on('hide_typing', handleStopTyping);
+
+        return () => {
+            socketService.off('display_typing', handleTyping);
+            socketService.off('hide_typing', handleStopTyping);
+        };
     }, [activeChatUser, conversations]);
 
     const scrollToBottom = () => {
@@ -81,6 +117,37 @@ export default function ChatDrawer({
         }
     }, [currentConversation?.messages?.length]);
 
+    // Handle typing indicator
+    const handleMessageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setMessageText(e.target.value);
+        
+        if (!activeChatUser) return;
+        
+        const conversation = conversations.find(c => c.participants.includes(activeChatUser.username));
+        if (!conversation) return;
+
+        // Emit typing event
+        socketService.emit('typing', { 
+            room: `conversation:${conversation.id}`, 
+            username: currentUser.username
+        });
+
+        // Clear previous timeout
+        if (typingTimeout) {
+            clearTimeout(typingTimeout);
+        }
+
+        // Set timeout to stop typing after 2 seconds
+        const timeout = setTimeout(() => {
+            socketService.emit('stop_typing', { 
+                room: `conversation:${conversation.id}`, 
+                username: currentUser.username
+            });
+        }, 2000);
+
+        setTypingTimeout(timeout);
+    };
+
     const handleSendMessage = async (e?: React.FormEvent) => {
         e?.preventDefault();
         if (!messageText.trim() || !activeChatUser || isLoading) return;
@@ -88,6 +155,20 @@ export default function ChatDrawer({
         const textToSend = messageText.trim();
         setMessageText(''); // Limpa input otimisticamente
         setIsLoading(true);
+
+        // Stop typing indicator
+        const conversation = conversations.find(c => c.participants.includes(activeChatUser.username));
+        if (conversation) {
+            socketService.emit('stop_typing', { 
+                room: `conversation:${conversation.id}`, 
+                username: currentUser.username
+            });
+        }
+
+        if (typingTimeout) {
+            clearTimeout(typingTimeout);
+            setTypingTimeout(null);
+        }
 
         try {
             // Usa sendMessageToUser que cria/busca conversa automaticamente
@@ -97,9 +178,6 @@ export default function ChatDrawer({
                 throw new Error(response.error);
             }
 
-            // Feedback de sucesso
-            showToast('Mensagem enviada!', 'success');
-            
             // Scroll para última mensagem após um pequeno delay
             setTimeout(() => scrollToBottom(), 100);
             
@@ -120,6 +198,53 @@ export default function ChatDrawer({
     const handleConversationClick = (conversation: Conversation) => {
         const partner = getPartner(conversation);
         onSetActiveChatUser(partner);
+        setSearchQuery(''); // Limpa busca ao abrir conversa
+    };
+
+    const handleStartNewChat = (user: User) => {
+        onSetActiveChatUser(user);
+        setShowNewChat(false);
+        setSearchQuery('');
+    };
+
+    // Filtered conversations based on search
+    const filteredConversations = useMemo(() => {
+        if (!searchQuery.trim()) return conversations;
+        
+        const query = searchQuery.toLowerCase();
+        return conversations.filter(conv => {
+            const partner = getPartner(conv);
+            return partner.username.toLowerCase().includes(query) ||
+                   conv.messages.some(msg => msg.text.toLowerCase().includes(query));
+        });
+    }, [conversations, searchQuery, currentUser, allUsers]);
+
+    // Filtered users for new chat
+    const filteredUsers = useMemo(() => {
+        if (!searchQuery.trim() || !showNewChat) return [];
+        
+        const query = searchQuery.toLowerCase();
+        return allUsers.filter(user => 
+            user.username.toLowerCase().includes(query) &&
+            user.username !== currentUser.username &&
+            !conversations.some(c => c.participants.includes(user.username))
+        ).slice(0, 10); // Limita a 10 resultados
+    }, [allUsers, searchQuery, showNewChat, currentUser, conversations]);
+
+    // Format timestamp intelligently
+    const formatTimestamp = (timestamp: Date | string) => {
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        if (diffMins < 1) return 'Agora';
+        if (diffMins < 60) return `${diffMins}m`;
+        if (diffHours < 24) return `${diffHours}h`;
+        if (diffDays < 7) return `${diffDays}d`;
+        return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' });
     };
 
     if (!isOpen) return null;
@@ -144,15 +269,80 @@ export default function ChatDrawer({
                                 <MessageIcon className="w-5 h-5" />
                                 Directs
                             </h2>
-                            <button onClick={onClose} className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)] transition-colors">
-                                <CloseIcon className="w-6 h-6" />
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button 
+                                    onClick={() => setShowNewChat(!showNewChat)}
+                                    className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)] transition-colors p-1"
+                                    title="Nova conversa"
+                                >
+                                    <PlusIcon className="w-5 h-5" />
+                                </button>
+                                <button onClick={onClose} className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)] transition-colors">
+                                    <CloseIcon className="w-6 h-6" />
+                                </button>
+                            </div>
                         </div>
 
-                        {/* List */}
+                        {/* Search Bar */}
+                        <div className="p-3 border-b border-[var(--theme-border-primary)] bg-[var(--theme-bg-secondary)]">
+                            <div className="relative">
+                                <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[var(--theme-text-secondary)]" />
+                                <input
+                                    ref={searchInputRef}
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => {
+                                        setSearchQuery(e.target.value);
+                                        if (e.target.value.trim()) {
+                                            setShowNewChat(true);
+                                        }
+                                    }}
+                                    placeholder={showNewChat ? "Buscar usuários..." : "Buscar conversas..."}
+                                    className="w-full bg-[var(--theme-bg-tertiary)] text-[var(--theme-text-primary)] pl-10 pr-4 py-2 rounded-full focus:outline-none focus:ring-1 focus:ring-[var(--theme-primary)] border border-transparent placeholder-gray-500"
+                                />
+                                {searchQuery && (
+                                    <button
+                                        onClick={() => {
+                                            setSearchQuery('');
+                                            setShowNewChat(false);
+                                        }}
+                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)]"
+                                    >
+                                        <CloseIcon className="w-4 h-4" />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* New Chat Users List */}
+                        {showNewChat && filteredUsers.length > 0 && (
+                            <div className="border-b border-[var(--theme-border-primary)] bg-[var(--theme-bg-secondary)] max-h-48 overflow-y-auto">
+                                <div className="p-2 text-xs font-bold text-[var(--theme-text-secondary)] px-4 py-2">
+                                    Iniciar conversa
+                                </div>
+                                {filteredUsers.map(user => (
+                                    <div
+                                        key={user.id}
+                                        onClick={() => handleStartNewChat(user)}
+                                        className="flex items-center gap-3 p-3 hover:bg-[var(--theme-bg-tertiary)] cursor-pointer transition-colors"
+                                    >
+                                        <Avatar src={user.avatar} username={user.username} className="w-10 h-10 rounded-full" />
+                                        <div className="flex-1">
+                                            <span className="font-semibold text-[var(--theme-text-primary)]">{user.username}</span>
+                                            {user.bio && (
+                                                <p className="text-xs text-gray-500 truncate">{user.bio}</p>
+                                            )}
+                                        </div>
+                                        <PaperPlaneIcon className="w-4 h-4 text-[var(--theme-primary)]" />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Conversations List */}
                         <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                            {conversations.length > 0 ? (
-                                conversations.sort((a, b) => new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime()).map(conv => {
+                            {filteredConversations.length > 0 ? (
+                                filteredConversations.sort((a, b) => new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime()).map(conv => {
                                     const partner = getPartner(conv);
                                     const lastMsg = conv.messages[conv.messages.length - 1];
                                     const unreadCount = conv.unreadCount?.[currentUser.username] || 0;
@@ -176,7 +366,7 @@ export default function ChatDrawer({
                                                         {partner.username}
                                                     </span>
                                                     <span className="text-xs text-[var(--theme-text-secondary)] whitespace-nowrap ml-2">
-                                                        {lastMsg?.timestamp ? new Date(lastMsg.timestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : ''}
+                                                        {lastMsg?.timestamp ? formatTimestamp(lastMsg.timestamp) : ''}
                                                     </span>
                                                 </div>
                                                 <p className={`text-sm truncate ${isUnread ? 'text-white font-bold' : 'text-gray-500'}`}>
@@ -187,10 +377,22 @@ export default function ChatDrawer({
                                         </div>
                                     );
                                 })
+                            ) : searchQuery ? (
+                                <div className="flex flex-col items-center justify-center h-full text-[var(--theme-text-secondary)] opacity-50 gap-4">
+                                    <SearchIcon className="w-16 h-16" />
+                                    <p>Nenhuma conversa encontrada</p>
+                                </div>
                             ) : (
                                 <div className="flex flex-col items-center justify-center h-full text-[var(--theme-text-secondary)] opacity-50 gap-4">
                                     <MessageIcon className="w-16 h-16" />
                                     <p>Sua caixa de entrada está vazia</p>
+                                    <button
+                                        onClick={() => setShowNewChat(true)}
+                                        className="mt-4 px-4 py-2 bg-[var(--theme-primary)] text-white rounded-full hover:brightness-110 transition-all flex items-center gap-2"
+                                    >
+                                        <PlusIcon className="w-4 h-4" />
+                                        Iniciar conversa
+                                    </button>
                                 </div>
                             )}
                         </div>
@@ -235,9 +437,16 @@ export default function ChatDrawer({
                                                 }`}
                                             >
                                                 {msg.text}
-                                                <span className={`text-[10px] opacity-70 block ${isMe ? 'text-right' : 'text-left'} mt-1`}>
-                                                    {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}
-                                                </span>
+                                                <div className={`flex items-center justify-between mt-1 gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+                                                    <span className={`text-[10px] opacity-70`}>
+                                                        {msg.timestamp ? formatTimestamp(msg.timestamp) : ''}
+                                                    </span>
+                                                    {isMe && msg.status && (
+                                                        <span className="text-[10px] opacity-70">
+                                                            {msg.status === 'read' ? '✓✓' : msg.status === 'delivered' ? '✓✓' : '✓'}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     );
@@ -245,6 +454,17 @@ export default function ChatDrawer({
                             ) : (
                                 <div className="flex items-center justify-center h-full text-[var(--theme-text-secondary)] opacity-50">
                                     <p>Nenhuma mensagem ainda. Comece a conversa!</p>
+                                </div>
+                            )}
+                            {isTyping && (
+                                <div className="flex justify-start">
+                                    <div className="bg-gray-800 text-gray-200 rounded-2xl rounded-bl-sm px-4 py-2 text-sm">
+                                        <div className="flex items-center gap-1">
+                                            <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                                            <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                                            <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                             <div ref={messagesEndRef} />
@@ -257,8 +477,13 @@ export default function ChatDrawer({
                                     ref={inputRef}
                                     type="text"
                                     value={messageText}
-                                    onChange={(e) => setMessageText(e.target.value)}
-                                    placeholder="Mensagem..."
+                                    onChange={handleMessageInputChange}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            handleSendMessage(e);
+                                        }
+                                    }}
+                                    placeholder="Digite uma mensagem..."
                                     className="flex-1 bg-[var(--theme-bg-tertiary)] text-[var(--theme-text-primary)] px-4 py-2 rounded-full focus:outline-none focus:ring-1 focus:ring-[var(--theme-primary)] border border-transparent placeholder-gray-500"
                                 />
                                 <button 
