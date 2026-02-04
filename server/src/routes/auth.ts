@@ -127,10 +127,12 @@ const validateEmail = async (email: string) => {
         // Use expanded checkSmtp
         const smtpValid = await checkSmtp(domain, email);
         if (!smtpValid) {
-             return { valid: false, error: 'Invalid email (address rejected by server or unreachable)' };
+             console.warn(`[SMTP] Validation failed for ${email}, but allowing anyway for Alpha.`);
+             // return { valid: false, error: 'Invalid email (address rejected by server or unreachable)' };
         }
     } catch (err) {
-        return { valid: false, error: 'Invalid email domain (DNS lookup failed)' };
+        console.warn(`[DNS] MX lookup failed for ${domain}, allowing anyway for Alpha.`);
+        // return { valid: false, error: 'Invalid email domain (DNS lookup failed)' };
     }
 
     return { valid: true };
@@ -246,17 +248,12 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Email already registered' });
     }
 
+    // For Alpha/Development: Auto-verify all new accounts
     const user = await userService.createUser(username, email, password, avatar);
-
-    // Generate verification token
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    await pool.query('UPDATE users SET email_verification_token = $1, is_verified = FALSE WHERE id = $2', [verificationToken, user.id]);
-
-    // Mock Email Sending
-    console.log(`[EMAIL MOCK] Verification Link for ${email}: http://localhost:5173/verify?token=${verificationToken}`);
+    await pool.query('UPDATE users SET is_verified = TRUE WHERE id = $1', [user.id]);
 
     res.status(201).json({
-      message: 'Registration successful. Please check your email to verify your account.',
+      message: 'Registration successful. Welcome to Chrono Alpha!',
       user: {
         username: user.username,
         email: user.email 
