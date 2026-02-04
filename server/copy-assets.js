@@ -60,4 +60,5 @@ if (fs.existsSync(frontendDistDir)) {
 } else {
   console.error(`❌ CRITICAL ERROR: Frontend build directory NOT FOUND at ${frontendDistDir}`);
   console.log('Project Root contents:', fs.readdirSync(projectRoot));
+  process.exit(1);
 }
