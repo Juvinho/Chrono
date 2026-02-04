@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { User, Story } from '../../../types/index';
-import { PlusIcon } from '../../../components/ui/icons';
+import { User } from '../../../types/index';
 import { useTranslation } from '../../../hooks/useTranslation';
-import FramePreview, { getFrameShape } from '../../profile/components/FramePreview';
+import AvatarStoryWrapper from './AvatarStoryWrapper';
 
 interface StoryTrayProps {
     currentUser: User;
@@ -16,60 +15,18 @@ export default function StoryTray({ currentUser, usersWithStories, onViewStory, 
     const { t } = useTranslation();
     const [isExpanded, setIsExpanded] = useState(false);
 
-    const hasMyStory = currentUser.stories && currentUser.stories.length > 0;
-
-    const renderStoryItem = (user: User, isCurrentUser: boolean) => {
-        // FIX: Ensure stories and viewers exist before checking unviewed status.
-        // Use username as fallback for ID if needed for viewer tracking.
-        const userId = currentUser.id || currentUser.username;
-        const hasUnviewedStories = user.stories?.some(s => !(s.viewers || []).includes(userId));
-        const avatarShape = user.equippedFrame ? getFrameShape(user.equippedFrame.name) : 'rounded-full';
-        
+    const renderStoryItem = (user: User) => {
         return (
-            <button 
-                key={user.username} 
-                className={`flex flex-col items-center gap-1 cursor-pointer ${variant === 'row' ? 'min-w-[72px]' : 'w-full'} border-none bg-transparent p-0`} 
-                onClick={() => isCurrentUser ? (hasMyStory ? onViewStory(user) : onCreateStory()) : onViewStory(user)}
-                aria-label={isCurrentUser ? (hasMyStory ? t('viewYourStory') || 'Ver seu Story' : t('createStory') || 'Criar Story') : t('viewUserStory', { username: user.username }) || `Ver Story de ${user.username}`}
-            >
-                <div className={`relative ${variant === 'row' ? 'w-16 h-16' : 'w-14 h-14'} ${avatarShape} p-[2px] ${
-                    isCurrentUser 
-                        ? (hasMyStory ? (hasUnviewedStories ? 'bg-gradient-to-tr from-purple-600 to-purple-400' : 'bg-gray-500') : 'border-2 border-[var(--theme-border)] border-dashed')
-                        : (hasUnviewedStories ? 'bg-gradient-to-tr from-purple-600 to-purple-400 animate-pulse-slow' : 'bg-gray-500')
-                }`}>
-                    <div className={`w-full h-full ${avatarShape} overflow-hidden bg-[var(--theme-bg-primary)] p-[2px] relative z-10`}>
-                        <img 
-                            src={user.avatar || 'https://via.placeholder.com/150'} 
-                            alt={user.username} 
-                            className={`w-full h-full ${avatarShape} object-cover`}
-                            onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/150'; }}
-                        />
-                        {user.equippedEffect && user.equippedEffect.imageUrl && (
-                            <div className={`absolute inset-0 pointer-events-none z-10 mix-blend-screen opacity-60 ${avatarShape} overflow-hidden`}>
-                                <img 
-                                    src={user.equippedEffect.imageUrl} 
-                                    alt="" 
-                                    className="w-full h-full object-cover animate-pulse-soft"
-                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                                />
-                            </div>
-                        )}
-                    </div>
-                    {user.equippedFrame && (
-                        <div className="absolute -inset-1 z-20 pointer-events-none">
-                            <FramePreview item={user.equippedFrame} />
-                        </div>
-                    )}
-                    {isCurrentUser && !hasMyStory && (
-                        <div className="absolute bottom-0 right-0 bg-purple-600 rounded-full p-1 border-2 border-[var(--theme-bg-primary)] z-30">
-                            <PlusIcon className="w-3 h-3 text-white" />
-                        </div>
-                    )}
-                </div>
-                <span className="text-xs text-[var(--theme-text-secondary)] truncate w-full text-center">
-                    {isCurrentUser ? (t('yourStory') || 'Seu Story') : user.username}
-                </span>
-            </button>
+            <div key={user.username} className={variant === 'row' ? 'min-w-[72px]' : 'w-full'}>
+                <AvatarStoryWrapper
+                    user={user}
+                    currentUser={currentUser}
+                    size={variant === 'row' ? 'w-16 h-16' : 'w-14 h-14'}
+                    onViewStory={onViewStory}
+                    onCreateStory={onCreateStory}
+                    showName={true}
+                />
+            </div>
         );
     };
 
@@ -85,9 +42,9 @@ export default function StoryTray({ currentUser, usersWithStories, onViewStory, 
                 <h3 className="text-xs font-bold text-[var(--theme-text-secondary)] mb-3 uppercase tracking-wider">
                     Stories
                 </h3>
-                <div className="grid grid-cols-3 gap-y-4 gap-x-2">
-                    {renderStoryItem(currentUser, true)}
-                    {visibleUsers.map(user => renderStoryItem(user, false))}
+                <div className="grid grid-cols-3 gap-y-4 gap-x-2 justify-items-center">
+                    {renderStoryItem(currentUser)}
+                    {visibleUsers.map(user => renderStoryItem(user))}
                 </div>
                 {hasMore && (
                     <button 
@@ -111,8 +68,8 @@ export default function StoryTray({ currentUser, usersWithStories, onViewStory, 
 
     return (
         <div className="w-full overflow-x-auto py-4 px-2 flex gap-4 no-scrollbar border-b border-[var(--theme-border)] bg-[var(--theme-bg-secondary)]/30 backdrop-blur-sm">
-            {renderStoryItem(currentUser, true)}
-            {usersWithStories.map(user => renderStoryItem(user, false))}
+            {renderStoryItem(currentUser)}
+            {usersWithStories.map(user => renderStoryItem(user))}
         </div>
     );
 }

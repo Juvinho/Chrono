@@ -20,33 +20,81 @@ export class StoryService {
   }
 
   async getActiveStories(currentUserId: string): Promise<any[]> {
-    // Get stories that haven't expired
-    // We can also filter for stories from followed users if we want, 
-    // but for now let's return all active stories or follow-based logic similar to posts.
-    // Let's prioritize followed users + self.
+    // 1. Get all active stories for user + followed users
+    // 2. Group by user
+    // 3. Determine if user has unseen stories relative to currentUserId
+    // 4. Sort: Unseen first, then Seen. Within those groups, maybe by latest story?
+    
+    // Note: 'viewers' is a JSONB array of user IDs who have seen the story.
     
     const query = `
-      SELECT s.*, 
-             u.username as author_username, 
-             u.avatar as author_avatar
-      FROM stories s
-      JOIN users u ON s.user_id = u.id
-      WHERE s.expires_at > NOW()
-      AND (
-        s.user_id = $1
-        OR s.user_id IN (SELECT following_id FROM follows WHERE follower_id = $1)
+      WITH relevant_users AS (
+        SELECT id, username, avatar 
+        FROM users 
+        WHERE id = $1 
+        OR id IN (SELECT following_id FROM follows WHERE follower_id = $1)
+      ),
+      active_stories AS (
+        SELECT s.*
+        FROM stories s
+        WHERE s.expires_at > NOW()
+        AND s.user_id IN (SELECT id FROM relevant_users)
       )
-      ORDER BY s.created_at ASC
+      SELECT 
+        u.id as user_id,
+        u.username,
+        u.avatar,
+        json_agg(
+          json_build_object(
+            'id', s.id,
+            'userId', s.user_id,
+            'content', s.content,
+            'type', s.type,
+            'createdAt', s.created_at,
+            'expiresAt', s.expires_at,
+            'viewers', s.viewers
+          ) ORDER BY s.created_at ASC
+        ) as stories
+      FROM relevant_users u
+      JOIN active_stories s ON s.user_id = u.id
+      GROUP BY u.id, u.username, u.avatar
     `;
 
     const result = await pool.query(query, [currentUserId]);
-    return result.rows.map((row: any) => ({
-        ...this.mapStoryFromDb(row),
-        author: {
-            username: row.author_username,
-            avatar: row.author_avatar
+    
+    // Process results to add 'hasUnseenStories' flag and sort
+    const processedUsers = result.rows.map((row: any) => {
+        const stories = row.stories || [];
+        // Check if ANY story has NOT been viewed by currentUserId
+        // 'viewers' is a JSON array of strings (IDs)
+        const hasUnseenStories = stories.some((story: any) => {
+            const viewers = story.viewers || [];
+            return !viewers.includes(currentUserId);
+        });
+        
+        return {
+            id: row.user_id, // Map for frontend which might expect 'id' or 'userId'
+            userId: row.user_id,
+            username: row.username,
+            avatar: row.avatar,
+            hasUnseenStories,
+            stories: stories.map((s: any) => ({
+                ...s,
+                createdAt: s.createdAt, // Ensure date objects if needed, pg driver usually handles
+                expiresAt: s.expiresAt
+            }))
+        };
+    });
+
+    // Sort: Users with unseen stories first
+    processedUsers.sort((a: any, b: any) => {
+        if (a.hasUnseenStories === b.hasUnseenStories) {
+            return 0; // Maintain DB order or add secondary sort
         }
-    }));
+        return a.hasUnseenStories ? -1 : 1;
+    });
+
+    return processedUsers;
   }
   
   async getUserStories(userId: string): Promise<Story[]> {
