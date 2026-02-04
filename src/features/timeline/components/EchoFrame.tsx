@@ -252,6 +252,13 @@ export default function EchoFrame({
             .slice(0, 5);
     }, [allPosts]);
 
+    const handleComposerClose = useCallback(() => {
+        setIsComposerOpen(false);
+        if (setComposerDate) {
+            setComposerDate(null);
+        }
+    }, [setComposerDate]);
+
     if (activeCordTag) {
         const cordTagLower = activeCordTag.toLowerCase();
         const cordPopular = allPosts
@@ -353,13 +360,6 @@ export default function EchoFrame({
             </main>
         );
     }
-
-    const handleComposerClose = useCallback(() => {
-        setIsComposerOpen(false);
-        if (setComposerDate) {
-            setComposerDate(null);
-        }
-    }, [setComposerDate]);
 
     const renderMobileHeader = () => (
         <div className="lg:hidden mb-6 space-y-4">
