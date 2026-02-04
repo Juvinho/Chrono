@@ -918,32 +918,87 @@ export default function App() {
     const handleSendMessage = async (recipientUsername: string, text: string, media?: { imageUrl?: string, videoUrl?: string, glitchiType?: string }) => {
         if (!currentUser || recipientUsername === currentUser.username) return;
 
-        // MIGRATION: API Call
+        // 1. Optimistic Update
+        const tempId = `temp-${Date.now()}`;
+        const optimisticMessage: Message = {
+            id: tempId,
+            senderUsername: currentUser.username,
+            text,
+            imageUrl: media?.imageUrl,
+            videoUrl: media?.videoUrl,
+            glitchiType: media?.glitchiType,
+            timestamp: new Date(),
+            status: 'sent'
+        };
+
+        setConversations(prev => prev.map(conv => {
+            if (conv.participants.includes(recipientUsername)) {
+                return {
+                    ...conv,
+                    messages: [...conv.messages, optimisticMessage],
+                    lastMessageTimestamp: new Date()
+                };
+            }
+            return conv;
+        }));
+
         try {
             // Find or create conversation first
             const convResult = await apiClient.getOrCreateConversation(recipientUsername);
             if (convResult.data) {
                 const conversationId = convResult.data.conversationId || convResult.data.id;
                 
-                // If it's a glitchi share, we might want to handle it specially or just pass it in media/metadata
                 const result = await apiClient.sendMessage(conversationId, text, media);
                 if (result.error) {
                     console.error("Failed to send message via API:", result.error);
                     showToast(t('errorSendMessage'), 'error');
+                    // Revert optimistic update
+                    setConversations(prev => prev.map(conv => {
+                        if (conv.id === conversationId) {
+                            return {
+                                ...conv,
+                                messages: conv.messages.filter(m => m.id !== tempId)
+                            };
+                        }
+                        return conv;
+                    }));
                     return;
                 }
                 
-                // If it's a glitchi, also trigger the glitchi API for the effect
                 if (media?.glitchiType) {
                     await apiClient.sendGlitchi(recipientUsername);
                 }
 
-                // Reload conversations to get the latest state
-                await reloadBackendData();
+                // Update the temp message with real data
+                if (result.data) {
+                    const realMessage = {
+                        ...result.data,
+                        timestamp: new Date(result.data.createdAt || Date.now())
+                    };
+                    setConversations(prev => prev.map(conv => {
+                        if (conv.id === conversationId) {
+                            return {
+                                ...conv,
+                                messages: conv.messages.map(m => m.id === tempId ? realMessage : m)
+                            };
+                        }
+                        return conv;
+                    }));
+                }
             }
         } catch (error) {
             console.error("Failed to send message via API:", error);
             showToast(t('errorSendMessage'), 'error');
+            // Revert on catch
+            setConversations(prev => prev.map(conv => {
+                if (conv.participants.includes(recipientUsername)) {
+                    return {
+                        ...conv,
+                        messages: conv.messages.filter(m => m.id !== tempId)
+                    };
+                }
+                return conv;
+            }));
         }
     };
 
