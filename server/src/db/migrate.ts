@@ -35,27 +35,64 @@ export async function migrate(retries = 3) {
 
       // 3. Ensure System Users (@Juvinho and @Chrono)
       console.log('Ensuring system creator accounts...');
-      const juvinhoPassword = await bcrypt.hash('chrono2026', 10);
-      await pool.query(`
-          INSERT INTO users (username, email, password_hash, is_verified, verification_badge_label, verification_badge_color, bio)
-          VALUES ($1, $2, $3, $4, $5, $6, $7)
-          ON CONFLICT (username) DO UPDATE SET 
-              is_verified = EXCLUDED.is_verified,
-              verification_badge_label = EXCLUDED.verification_badge_label,
-              verification_badge_color = EXCLUDED.verification_badge_color
-      `, ['Juvinho', 'juvinho@chrono.net', juvinhoPassword, true, 'Criador', 'red', 'Arquiteto da Chrono. "O tempo é uma ilusão, mas a conexão é real."']);
-
-      const chronoPassword = await bcrypt.hash('chrono2026', 10);
-      await pool.query(`
-          INSERT INTO users (username, email, password_hash, is_verified, verification_badge_label, verification_badge_color, bio)
-          VALUES ($1, $2, $3, $4, $5, $6, $7)
-          ON CONFLICT (username) DO UPDATE SET 
-              is_verified = EXCLUDED.is_verified,
-              verification_badge_label = EXCLUDED.verification_badge_label,
-              verification_badge_color = EXCLUDED.verification_badge_color
-      `, ['Chrono', 'system@chrono.net', chronoPassword, true, 'Criador', 'red', 'A voz da rede. Vigilante da temporalidade.']);
       
-      console.log('✅ System accounts ensured.');
+      // @Juvinho: The Creator
+      const juvinhoPassword = await bcrypt.hash('27Set@2004', 10);
+      await pool.query(`
+          INSERT INTO users (
+              username, email, password_hash, is_verified, 
+              verification_badge_label, verification_badge_color, 
+              bio, avatar, cover_image
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          ON CONFLICT (username) DO UPDATE SET 
+              password_hash = EXCLUDED.password_hash,
+              is_verified = EXCLUDED.is_verified,
+              verification_badge_label = EXCLUDED.verification_badge_label,
+              verification_badge_color = EXCLUDED.verification_badge_color,
+              avatar = EXCLUDED.avatar,
+              cover_image = EXCLUDED.cover_image
+      `, [
+          'Juvinho', 
+          'juvinho@chrono.net', 
+          juvinhoPassword, 
+          true, 
+          'Criador', 
+          'red', 
+          'Arquiteto da Chrono. "O tempo é uma ilusão, mas a conexão é real."',
+          'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&h=400&fit=crop',
+          'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1200&h=400&fit=crop'
+      ]);
+
+      // @Chrono: The System Entity
+      const chronoPassword = await bcrypt.hash('chrono_secure_system_2026_!@#', 10);
+      await pool.query(`
+          INSERT INTO users (
+              username, email, password_hash, is_verified, 
+              verification_badge_label, verification_badge_color, 
+              bio, avatar, cover_image
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          ON CONFLICT (username) DO UPDATE SET 
+              password_hash = EXCLUDED.password_hash,
+              is_verified = EXCLUDED.is_verified,
+              verification_badge_label = EXCLUDED.verification_badge_label,
+              verification_badge_color = EXCLUDED.verification_badge_color,
+              avatar = EXCLUDED.avatar,
+              cover_image = EXCLUDED.cover_image
+      `, [
+          'Chrono', 
+          'system@chrono.net', 
+          chronoPassword, 
+          true, 
+          'Criador', 
+          'red', 
+          'A voz da rede. Vigilante da temporalidade.',
+          'https://images.unsplash.com/photo-1614728263952-84ea256f9679?w=400&h=400&fit=crop',
+          'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&h=400&fit=crop'
+      ]);
+      
+      console.log('✅ System accounts ensured with assets and passwords.');
       
       console.log('✅ All database migrations completed successfully!');
       return; // Success!
