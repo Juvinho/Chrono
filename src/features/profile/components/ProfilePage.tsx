@@ -278,6 +278,56 @@ export default function ProfilePage({
       }).filter(Boolean) as User[];
   }
 
+  const handleOpenUserList = async (type: 'followers' | 'following') => {
+    if (!profileUser) return;
+    
+    const title = type === 'followers' ? t('profileFollowers') : t('profileFollowing');
+    const rawList = type === 'followers' ? profileUser.followersList : profileUser.followingList;
+    const count = type === 'followers' ? (profileUser.followers || 0) : (profileUser.following || 0);
+
+    console.log(`[ProfilePage] Request to open ${type}. Count: ${count}. Raw list:`, rawList);
+
+    // 1. If we have a list of objects, use it directly
+    if (Array.isArray(rawList) && rawList.length > 0 && typeof rawList[0] !== 'string') {
+        console.log('[ProfilePage] Using existing full user objects');
+        setUserListModal({ title, users: rawList as User[] });
+        return;
+    }
+
+    // 2. If the count is 0, show empty list immediately
+    if (count === 0) {
+        setUserListModal({ title, users: [] });
+        return;
+    }
+
+    // 3. If we have strings (usernames) and they exist in allUsers, we can try to reconstruct
+    // But for reliability (and to fix the bug), let's fetch the fresh list from API
+    try {
+        console.log(`[ProfilePage] Fetching fresh details for ${profileUser.username} to populate list...`);
+        // Show a loading indicator if needed, or just wait
+        const response = await apiClient.getUser(profileUser.username);
+        
+        if (response.data) {
+            const freshList = type === 'followers' ? response.data.followersList : response.data.followingList;
+            console.log(`[ProfilePage] API returned ${freshList?.length} items for ${type}`);
+            
+            // Map the API response (which might be raw) to User objects if needed, 
+            // but usually apiClient response is already mapped? 
+            // The apiClient returns mapped data from `mappers.ts`.
+            
+            setUserListModal({ title, users: freshList || [] });
+        } else {
+            console.warn('[ProfilePage] API returned no data');
+            setUserListModal({ title, users: [] });
+        }
+    } catch (e) {
+        console.error('[ProfilePage] Error fetching user list:', e);
+        // Fallback: try to show what we have (strings) mapped from allUsers
+        const fallback = getFullUsersFromList(rawList || []);
+        setUserListModal({ title, users: fallback });
+    }
+  };
+
   const borderRadius = profileUser.profileSettings?.borderRadius || 'md';
   const getRadiusClass = (type: 'avatar' | 'container' | 'button') => {
       if (type === 'avatar') {
@@ -512,10 +562,10 @@ export default function ProfilePage({
               </div>
             </div>
             <div className="flex space-x-6 mt-4 text-[var(--theme-text-secondary)]">
-              <button onClick={() => setUserListModal({title: t('profileFollowers'), users: getFullUsersFromList(profileUser.followersList || [])})}>
+              <button onClick={() => handleOpenUserList('followers')}>
                   <span className="font-bold text-[var(--theme-text-light)]">{profileUser.followers}</span> {t('profileFollowers')}
                 </button>
-                <button onClick={() => setUserListModal({title: t('profileFollowing'), users: getFullUsersFromList(profileUser.followingList || [])})}>
+                <button onClick={() => handleOpenUserList('following')}>
                   <span className="font-bold text-[var(--theme-text-light)]">{profileUser.following}</span> {t('profileFollowing')}
                 </button>
             </div>
