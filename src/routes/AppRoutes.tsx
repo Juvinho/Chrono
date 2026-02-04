@@ -15,6 +15,9 @@ const ForgotPassword = React.lazy(() => import('../features/auth/components/Forg
 const ResetPassword = React.lazy(() => import('../features/auth/components/ResetPassword'));
 const DataSlicerPage = React.lazy(() => import('../features/analysis/components/DataSlicerPage'));
 const ChatTest = React.lazy(() => import('../features/messages/components/ChatTest'));
+const MessagesPage = React.lazy(() => import('../features/messages/components/MessagesPage'));
+const Marketplace = React.lazy(() => import('../features/marketplace/components/Marketplace'));
+const EchoDetailModal = React.lazy(() => import('../features/timeline/components/EchoDetailModal'));
 
 const NotFound = ({ onNavigate }: { onNavigate: (page: Page) => void }) => (
     <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--theme-bg-primary)] text-[var(--theme-text-primary)]">
@@ -83,7 +86,8 @@ export default function AppRoutes(props: AppRoutesProps) {
         handleUpdateReaction, handleReply, handleEcho, handleDeletePost, handleEditPost,
         handlePollVote, handleShowNewPosts, setIsCreatingStory, handleUpdateUser,
         setIsMarketplaceOpen, handleBack, handleFollowToggle, handleSendGlitchi, handlePasswordReset,
-        setViewingStoryUser
+        setViewingStoryUser,
+        onOpenNyx
     } = props;
 
     return (
@@ -124,7 +128,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     onViewStory={setViewingStoryUser}
                     onCreateStory={() => setIsCreatingStory(true)}
                     onUpdateUser={handleUpdateUser}
-                    onOpenMarketplace={() => setIsMarketplaceOpen(true)}
+                    onOpenMarketplace={() => handleNavigate(Page.Dashboard, 'marketplace')} // Will be handled by route
                     nextAutoRefresh={nextAutoRefresh}
                     isAutoRefreshPaused={isAutoRefreshPaused}
                     onBack={handleBack}
@@ -165,7 +169,8 @@ export default function AppRoutes(props: AppRoutesProps) {
                 />
             ) : <Navigate to="/welcome" />} />
 
-            <Route path="/@:username" element={currentUser ? (
+            {/* Rota de Perfil Padrão (/profile/username) */}
+            <Route path="/profile/:username" element={currentUser ? (
                 <ProfilePage
                     currentUser={currentUser}
                     onLogout={handleLogout}
@@ -185,12 +190,15 @@ export default function AppRoutes(props: AppRoutesProps) {
                     setSelectedDate={setSelectedDate}
                     typingParentIds={typingParentIds}
                     conversations={conversations}
-                    onOpenMarketplace={() => setIsMarketplaceOpen(true)}
+                    onOpenMarketplace={() => handleNavigate(Page.Dashboard, 'marketplace')}
                     onSendGlitchi={handleSendGlitchi}
                     onUpdateUser={handleUpdateUser}
                     onBack={handleBack}
                 />
             ) : <Navigate to="/welcome" />} />
+            
+            {/* Rota de Perfil Estilo Social (/@username) - Mantendo como alias ou redirect */}
+            <Route path="/@:username" element={currentUser ? <RedirectToProfile /> : <Navigate to="/welcome" />} />
             
             <Route path="/settings" element={currentUser ? (
                 <SettingsPage 
@@ -203,12 +211,25 @@ export default function AppRoutes(props: AppRoutesProps) {
                     allPosts={memoizedPosts}
                     conversations={conversations}
                     onOpenMarketplace={() => setIsMarketplaceOpen(true)}
+                    onOpenNyx={onOpenNyx}
                     onBack={handleBack}
                 />
             ) : <Navigate to="/welcome" />} />
             
             <Route path="/data-slicer" element={currentUser ? (
-                <DataSlicerPage onNavigate={handleNavigate} />
+                <DataSlicerPage 
+                    user={currentUser}
+                    onLogout={handleLogout}
+                    onNavigate={handleNavigate}
+                    onNotificationClick={handleNotificationClick}
+                    allUsers={combinedUsers}
+                    allPosts={memoizedPosts}
+                    conversations={conversations}
+                    onOpenMarketplace={() => handleNavigate(Page.Dashboard, 'marketplace')}
+                    onOpenNyx={onOpenNyx}
+                    onBack={handleBack}
+                    onNavigate={handleNavigate}
+                />
             ) : <Navigate to="/welcome" />} />
             
             <Route path="/teste-chat" element={<ChatTest />} />
