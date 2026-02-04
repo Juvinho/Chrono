@@ -44,7 +44,17 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
             const data = await response.json();
             
             if (data.status === 'error' && data.db === 'disconnected') {
-                setDbError('Banco de dados indisponível. Inicie o Docker e o container postgres.');
+                const errorMsg = data.error || '';
+                if (errorMsg.includes('ENETUNREACH')) {
+                    setDbError('Erro de conexão com o banco de dados (Rede inacessível). Verifique a DATABASE_URL no Render.');
+                } else {
+                    setDbError('Banco de dados indisponível. Verifique as configurações de conexão.');
+                }
+                
+                // If there's a specific error from backend, show it
+                if (data.error) {
+                    setError(`Backend Error: ${data.error}`);
+                }
             } else {
                 setDbError('');
             }

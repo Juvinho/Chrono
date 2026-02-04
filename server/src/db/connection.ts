@@ -5,24 +5,27 @@ dotenv.config();
 
 const { Pool } = pg;
 
-const dbUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/chrono_db';
-const isProduction = process.env.NODE_ENV === 'production';
-const isSupabase = dbUrl.includes('supabase.co') || dbUrl.includes('supabase.com');
+const rawDbUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/chrono_db';
 
-// If using Supabase Pooler (port 6543), some configurations might need specific flags.
-// We'll use a more robust SSL config for cloud environments.
+// Sanitize URL for logging (mask password)
+const sanitizedUrl = rawDbUrl.replace(/:([^:@]+)@/, ':****@');
+console.log(`📡 Connecting to database: ${sanitizedUrl}`);
+
+const isProduction = process.env.NODE_ENV === 'production';
+const isSupabase = rawDbUrl.includes('supabase.co') || rawDbUrl.includes('supabase.com');
+
+// Force SSL for Supabase/Production
+const sslConfig = (isProduction || isSupabase) ? { 
+  rejectUnauthorized: false,
+} : false;
+
 export const pool = new Pool({
-  connectionString: dbUrl,
-  ssl: (isProduction || isSupabase) ? { 
-    rejectUnauthorized: false,
-  } : false,
-  connectionTimeoutMillis: 60000,
-  idleTimeoutMillis: 30000,
-  max: 20,
+  connectionString: rawDbUrl,
+  ssl: sslConfig,
+  connectionTimeoutMillis: 30000, // 30s
+  idleTimeoutMillis: 15000,
+  max: 10, // Reduced max connections for stability
   keepAlive: true,
-  keepAliveInitialDelayMillis: 10000,
-  // Add direct SSL mode to the connection string if missing
-  application_name: 'chrono_backend'
 });
 
 pool.on('error', (err: Error) => {

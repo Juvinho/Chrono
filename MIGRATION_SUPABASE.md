@@ -90,10 +90,12 @@ Este script vai:
 ---
 
 ### 3. URL Codificada para o Render (IMPORTANTE)
-Sua senha do Supabase tem muitos caracteres especiais (`@`, `#`, `*`, `]`). No Render, você **DEVE** usar a versão codificada abaixo na variável `DATABASE_URL`, caso contrário o servidor não conseguirá conectar:
+Sua senha do Supabase tem muitos caracteres especiais (`@`, `#`, `*`, `]`). No Render, você **DEVE** usar a versão codificada abaixo na variável `DATABASE_URL`.
 
-**URL para colocar no Render:**
-`postgresql://postgres:27Set%402004%23%2AJuvinho123%5D@db.aamgqywcifppjgwgspsg.supabase.co:5432/postgres`
+**ALERTA DE IPV6**: O Render às vezes tem problemas para conectar via IPv6 (que o Supabase usa por padrão). Se você vir o erro `ENETUNREACH`, use a URL abaixo que força a conexão via **Porta 6543** (Pooler), que é mais compatível:
+
+**URL RECOMENDADA (Copie e cole no Render):**
+`postgresql://postgres:27Set%402004%23%2AJuvinho123%5D@db.aamgqywcifppjgwgspsg.supabase.co:6543/postgres?sslmode=require`
 
 ---
 
