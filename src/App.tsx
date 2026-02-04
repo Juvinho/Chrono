@@ -19,6 +19,7 @@ const StoryViewer = React.lazy(() => import('./features/stories/components/Story
 const StoryCreator = React.lazy(() => import('./features/stories/components/StoryCreator'));
 const Marketplace = React.lazy(() => import('./features/marketplace/components/Marketplace'));
 const ChatDrawer = React.lazy(() => import('./features/messages/components/ChatDrawer'));
+const GlitchiOverlay = React.lazy(() => import('./features/companion/components/GlitchiOverlay'));
 
 export default function App() {
     const navigate = useNavigate();
