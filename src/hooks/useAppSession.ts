@@ -23,7 +23,8 @@ export const useAppSession = ({
     // 1. Basic User State
     const [users, setUsers] = useLocalStorage<User[]>('chrono_users_v4', []); 
     const [currentUser, setCurrentUser] = useLocalStorage<User | null>('chrono_currentUser_v4', null);
-    const [isSessionLoading, setIsSessionLoading] = useState(true);
+    // Don't block rendering if we already have a user in local storage
+    const [isSessionLoading, setIsSessionLoading] = useState(!currentUser);
 
     // Refs
     const knownNotificationIds = useRef<Set<string>>(new Set());
@@ -198,14 +199,25 @@ export const useAppSession = ({
                         }
                     } else {
                         console.warn("Session expired or invalid, logging out.");
+                        // Only force logout if we don't have a user, or if the server explicitly rejected the token
+                        // But if we have a user locally, maybe we should just keep it and let the user re-login when they try an action?
+                        // For now, let's keep the logout behavior but ensure it doesn't happen on transient network errors.
+                        // However, validateSession failures usually mean 401/403 or invalid token format.
                         setCurrentUser(null);
                         apiClient.setToken(null);
                     }
                 } catch (error) {
                     console.error("Session validation failed:", error);
-                    setCurrentUser(null);
-                    apiClient.setToken(null);
+                    // Don't logout on generic network errors if we have a user
+                    // Only logout if it's clearly a token issue
+                    if (currentUser === null) {
+                        setCurrentUser(null);
+                        apiClient.setToken(null);
+                    }
                 }
+            } else {
+                // No token, ensure no user
+                if (currentUser) setCurrentUser(null);
             }
             setIsSessionLoading(false);
         };

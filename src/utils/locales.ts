@@ -558,6 +558,7 @@ export const translations = {
     // Filters
     filterAll: 'Todos',
     filterFollowing: 'Seguindo',
+    filterTrending: 'Quente',
     filterMedia: 'Mídia',
     filterPolls: 'Enquetes',
 

@@ -78,6 +78,26 @@ export default function EchoFrame({
         let filteredPosts: Post[];
         const lowercasedQuery = searchQuery.toLowerCase();
 
+        if (activeFilter === 'Trending') {
+            // Trending: "Quente" - Posts from the last 24 hours, sorted by engagement
+            const sourcePosts = allKnownPosts || allPosts;
+            const oneDayAgo = new Date();
+            oneDayAgo.setHours(oneDayAgo.getHours() - 24);
+            
+            // Filter posts from the last 24 hours
+            filteredPosts = sourcePosts.filter(p => new Date(p.timestamp) >= oneDayAgo);
+            
+            // Sort by engagement score
+            return filteredPosts.sort((a, b) => {
+                const getScore = (p: Post) => {
+                    const reactionCount = Object.values(p.reactions || {}).reduce((sum, count) => sum + count, 0);
+                    const replyCount = p.replies?.length || 0;
+                    return (reactionCount * 2 + replyCount * 5);
+                };
+                return getScore(b) - getScore(a);
+            });
+        }
+
         if (searchQuery) {
             const sourcePosts = allKnownPosts || allPosts;
             if (lowercasedQuery.startsWith('$')) {
@@ -118,18 +138,6 @@ export default function EchoFrame({
             if (currentUser.followingList?.includes(p.author.username)) return true;
             return false;
         });
-
-        if (activeFilter === 'Trending') {
-            return visiblePosts.sort((a, b) => {
-                const getScore = (p: Post) => {
-                    const reactionCount = Object.values(p.reactions || {}).reduce((sum, count) => sum + count, 0);
-                    const replyCount = p.replies?.length || 0;
-                    const recency = new Date(p.timestamp).getTime() / (1000 * 60 * 60 * 24); // Days since epoch
-                    return (reactionCount * 2 + replyCount * 5) + recency;
-                };
-                return getScore(b) - getScore(a);
-            });
-        }
 
         return visiblePosts.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     }, [selectedDate, searchQuery, allPosts, currentUser, isGenerating, activeFilter, allKnownPosts]);
