@@ -46,6 +46,11 @@ app.use(cors({
       return callback(null, true);
     }
     
+    // Allow Render domains and subdomains
+    if (origin.endsWith('.onrender.com')) {
+      return callback(null, true);
+    }
+    
     // Allow localhost and local IP addresses (for development)
     const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1');
     const isLocalNetwork = /^http:\/\/10\.\d+\.\d+\.\d+:\d+$/.test(origin) || 
@@ -202,10 +207,17 @@ app.use((req: express.Request, res: express.Response, next: express.NextFunction
     const filePath = path.join(clientBuildPath, req.url);
     if (!fs.existsSync(filePath)) {
       console.warn(`⚠️ Static file NOT FOUND: ${filePath}`);
+      // Don't send 500 here, let express.static try to handle it or fall through
     }
   }
   next();
 });
+
+// Explicitly serve assets folder with long cache
+app.use('/assets', express.static(path.join(clientBuildPath, 'assets'), {
+  maxAge: '1y',
+  immutable: true
+}));
 
 app.use(express.static(clientBuildPath));
 
