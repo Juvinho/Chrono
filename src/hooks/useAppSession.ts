@@ -29,11 +29,38 @@ export const useAppSession = ({
     // Refs
     const knownNotificationIds = useRef<Set<string>>(new Set());
     const isFirstLoad = useRef(true);
+    const lastReloadTime = useRef<number>(0);
+    const reloadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const isReloading = useRef<boolean>(false);
 
-    // Helper function to reload data from backend
-    const reloadBackendData = useCallback(async () => {
+    // Helper function to reload data from backend with debounce and rate limiting
+    const reloadBackendData = useCallback(async (force = false) => {
         // Use a ref-based check to avoid dependency on currentUser
         if (!apiClient.getToken()) return;
+        
+        // Debounce: wait at least 2 seconds between reloads (unless forced)
+        const now = Date.now();
+        const timeSinceLastReload = now - lastReloadTime.current;
+        const MIN_RELOAD_INTERVAL = 2000; // 2 seconds
+        
+        if (!force && timeSinceLastReload < MIN_RELOAD_INTERVAL) {
+            // Clear existing timeout and set a new one
+            if (reloadTimeoutRef.current) {
+                clearTimeout(reloadTimeoutRef.current);
+            }
+            reloadTimeoutRef.current = setTimeout(() => {
+                reloadBackendData(false);
+            }, MIN_RELOAD_INTERVAL - timeSinceLastReload);
+            return;
+        }
+        
+        // Prevent concurrent reloads
+        if (isReloading.current && !force) {
+            return;
+        }
+        
+        isReloading.current = true;
+        lastReloadTime.current = now;
         
         try {
             // Reload current user to ensure follow counts and lists are accurate
@@ -92,12 +119,6 @@ export const useAppSession = ({
                 setUsers(prev => prev.map(u => u.username === mappedUser.username ? mappedUser : u));
             }
 
-            // Reload stories
-            const storiesRes = await apiClient.getStories();
-            if (storiesRes.data) {
-                setStories(storiesRes.data.map(mapApiStoryToStory));
-            }
-
             // Reload posts
             const postsResult = await apiClient.getPosts();
             if (postsResult.data) {
@@ -146,10 +167,10 @@ export const useAppSession = ({
                 setConversations(mappedConversations);
             }
             
-            // Reload stories (grouped)
+            // Reload stories (grouped) - only once per reload
             const storiesResult = await apiClient.getStories();
             if (storiesResult.data) {
-                const stories = storiesResult.data.map((s: any) => ({
+                const mappedStories = storiesResult.data.map((s: any) => ({
                     id: s.id,
                     userId: s.userId,
                     username: s.author?.username || 'unknown',
@@ -161,11 +182,24 @@ export const useAppSession = ({
                     viewers: s.viewers || []
                 }));
 
+                // Set stories state
+                setStories(mappedStories.map(mapApiStoryToStory));
+
                 // Group stories by user and update users state
                 const storiesByUser = new Map<string, Story[]>();
-                stories.forEach((s: Story) => {
+                mappedStories.forEach((s: any) => {
                     const existing = storiesByUser.get(s.username) || [];
-                    storiesByUser.set(s.username, [...existing, s]);
+                    storiesByUser.set(s.username, [...existing, {
+                        id: s.id,
+                        userId: s.userId,
+                        username: s.username,
+                        userAvatar: s.userAvatar,
+                        content: s.content,
+                        type: s.type,
+                        timestamp: s.timestamp,
+                        expiresAt: s.expiresAt,
+                        viewers: s.viewers
+                    }]);
                 });
 
                 setUsers(currentUsers =>
@@ -179,8 +213,16 @@ export const useAppSession = ({
             }
             
             isFirstLoad.current = false;
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to reload backend data:", error);
+            
+            // If rate limited, wait longer before retry
+            if (error?.message?.includes('rateLimitError') || error?.error === 'rateLimitError') {
+                console.warn("Rate limited. Waiting 10 seconds before retry...");
+                lastReloadTime.current = Date.now() + 10000; // Wait 10 seconds
+            }
+        } finally {
+            isReloading.current = false;
         }
     }, [playSound, setStories, setPosts, setConversations, setCurrentUser, setUsers]);
 

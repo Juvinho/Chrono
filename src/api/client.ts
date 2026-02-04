@@ -72,7 +72,10 @@ export class ApiClient {
 
       if (!response.ok) {
         if (response.status === 429) {
-          return { error: 'rateLimitError' };
+          const retryAfter = response.headers.get('Retry-After');
+          const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 5000;
+          console.warn(`Rate limited (429). Waiting ${waitTime}ms before retry...`);
+          return { error: 'rateLimitError', retryAfter: waitTime };
         }
         const data = await response.json().catch(() => ({}));
         const errorMessage = data.error || data.details || `Request failed with status ${response.status}`;
