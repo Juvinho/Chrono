@@ -234,7 +234,7 @@ export const useAppSession = ({
         };
         
         validateSession();
-    }, [setCurrentUser, setStories, setUsers]);
+    }, [setCurrentUser, setUsers]);
 
     const handleLogin = (user: User) => { 
         console.log('App.handleLogin called with:', user);
