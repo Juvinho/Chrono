@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { User, Page, Post, Story, Conversation } from '../types';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 
@@ -18,6 +18,11 @@ const ChatTest = React.lazy(() => import('../features/messages/components/ChatTe
 const MessagesPage = React.lazy(() => import('../features/messages/components/MessagesPage'));
 const Marketplace = React.lazy(() => import('../features/marketplace/components/Marketplace'));
 const EchoDetailModal = React.lazy(() => import('../features/timeline/components/EchoDetailModal'));
+
+const RedirectToProfile = () => {
+    const { username } = useParams<{ username: string }>();
+    return <Navigate to={`/profile/${username}`} replace />;
+};
 
 const NotFound = ({ onNavigate }: { onNavigate: (page: Page) => void }) => (
     <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--theme-bg-primary)] text-[var(--theme-text-primary)]">
