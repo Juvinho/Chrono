@@ -191,6 +191,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     onLogout={handleLogout}
                     onNavigate={handleNavigate}
                     onNotificationClick={handleNotificationClick}
+                    onViewNotifications={onViewNotifications}
                     users={memoizedUsers}
                     onFollowToggle={handleFollowToggle}
                     allPosts={memoizedPosts}
@@ -210,6 +211,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     onBack={handleBack}
                     onToggleChat={onToggleChat}
                     onOpenChat={onOpenChat}
+                    lastViewedNotifications={lastViewedNotifications}
                 />
             ) : <Navigate to="/welcome" />} />
             
@@ -222,12 +224,15 @@ export default function AppRoutes(props: AppRoutesProps) {
                     onLogout={handleLogout}
                     onNavigate={handleNavigate}
                     onNotificationClick={handleNotificationClick}
+                    onViewNotifications={onViewNotifications}
                     onUpdateUser={handleUpdateUser}
                     allUsers={combinedUsers}
                     allPosts={memoizedPosts}
                     conversations={conversations}
                     onOpenMarketplace={() => setIsMarketplaceOpen(true)}
                     onBack={handleBack}
+                    onToggleChat={onToggleChat}
+                    lastViewedNotifications={lastViewedNotifications}
                 />
             ) : <Navigate to="/welcome" />} />
             
@@ -237,11 +242,14 @@ export default function AppRoutes(props: AppRoutesProps) {
                     onLogout={handleLogout}
                     onNavigate={handleNavigate}
                     onNotificationClick={handleNotificationClick}
+                    onViewNotifications={onViewNotifications}
                     allUsers={combinedUsers}
                     allPosts={memoizedPosts}
                     conversations={conversations}
                     onOpenMarketplace={() => handleNavigate(Page.Dashboard, 'marketplace')}
                     onBack={handleBack}
+                    onToggleChat={onToggleChat}
+                    lastViewedNotifications={lastViewedNotifications}
                 />
             ) : <Navigate to="/welcome" />} />
             

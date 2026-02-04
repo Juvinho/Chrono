@@ -10,15 +10,18 @@ interface DataSlicerPageProps {
   onLogout: () => void;
   onNavigate: (page: Page, data?: string) => void;
   onNotificationClick: (notification: Notification) => void;
+  onViewNotifications: () => void;
   allUsers: User[];
   allPosts: Post[];
   conversations: Conversation[];
   onOpenMarketplace?: () => void;
   onBack?: () => void;
+  onToggleChat?: () => void;
+  lastViewedNotifications?: Date | null;
 }
 
 export default function DataSlicerPage({
-  user, onLogout, onNavigate, onNotificationClick, allUsers, allPosts, conversations, onOpenMarketplace, onBack
+  user, onLogout, onNavigate, onNotificationClick, onViewNotifications, allUsers, allPosts, conversations, onOpenMarketplace, onBack, onToggleChat, lastViewedNotifications
 }: DataSlicerPageProps) {
   const { t } = useTranslation();
   const [videoFile, setVideoFile] = useState<File | null>(null);
@@ -100,12 +103,15 @@ export default function DataSlicerPage({
         onViewProfile={(username) => onNavigate(Page.Profile, username)}
         onNavigate={onNavigate}
         onNotificationClick={onNotificationClick}
+        onViewNotifications={onViewNotifications}
         onSearch={handleSearch}
         allPosts={allPosts}
         allUsers={allUsers}
         conversations={conversations}
         onOpenMarketplace={onOpenMarketplace}
         onBack={onBack}
+        onToggleChat={onToggleChat}
+        lastViewedNotifications={lastViewedNotifications}
       />
       <main className="flex-grow overflow-y-auto p-8">
         <div className="max-w-4xl mx-auto">

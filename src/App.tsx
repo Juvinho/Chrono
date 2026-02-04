@@ -71,6 +71,41 @@ export default function App() {
     const [isAutoRefreshPaused, setIsAutoRefreshPaused] = useState(false);
     const [lastViewedNotifications, setLastViewedNotifications] = useState<Date | null>(null);
 
+    useEffect(() => {
+        if (!currentUser) {
+            setLastViewedNotifications(null);
+            return;
+        }
+
+        const key = `chrono_last_viewed_notifications_${currentUser.username}`;
+        const stored = localStorage.getItem(key);
+        if (!stored) {
+            setLastViewedNotifications(null);
+            return;
+        }
+
+        const parsed = new Date(stored);
+        if (Number.isNaN(parsed.getTime())) {
+            localStorage.removeItem(key);
+            setLastViewedNotifications(null);
+            return;
+        }
+
+        setLastViewedNotifications(parsed);
+    }, [currentUser?.username]);
+
+    useEffect(() => {
+        if (!currentUser) return;
+        const key = `chrono_last_viewed_notifications_${currentUser.username}`;
+
+        if (!lastViewedNotifications) {
+            localStorage.removeItem(key);
+            return;
+        }
+
+        localStorage.setItem(key, lastViewedNotifications.toISOString());
+    }, [currentUser?.username, lastViewedNotifications]);
+
     // 4. Refs
     const usersRef = useRef(users);
     const postsRef = useRef(posts);
@@ -310,9 +345,6 @@ export default function App() {
 
             const handleNewNotification = (payload: any) => {
                  console.log("New notification received:", payload);
-                 
-                 // Reset last viewed notifications to show the count again
-                 setLastViewedNotifications(null);
                  
                  setCurrentUser(prev => {
                      if (!prev) return prev;
@@ -754,6 +786,13 @@ export default function App() {
             notifications: currentUser.notifications?.map(n => ({ ...n, read: true }))
         };
         
+        setCurrentUser(prev => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                notifications: prev.notifications?.map(n => ({ ...n, read: true }))
+            };
+        });
         handleUpdateUser(updatedUser);
     };
 
