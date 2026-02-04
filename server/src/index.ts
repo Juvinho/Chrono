@@ -235,15 +235,28 @@ app.get('*', (req: express.Request, res: express.Response) => {
     res.sendFile(indexPath);
   } else {
     console.error(`❌ Cannot send index.html, file does not exist at: ${indexPath}`);
-    res.status(500).send(`
+    // Still return 200 with error info so it's visible in browser without crashing
+    res.status(200).send(`
       <html>
-        <body style="background: #000; color: #0f0; font-family: monospace; padding: 20px;">
-          <h1>❌ CHRONO_CRITICAL_ERROR</h1>
-          <p>Frontend assets not found at: ${indexPath}</p>
-          <p>Please check build logs and Render configuration.</p>
-          <hr>
-          <p>CWD: ${process.cwd()}</p>
-          <p>__dirname: ${__dirname}</p>
+        <body style="background: #000; color: #0f0; font-family: monospace; padding: 20px; line-height: 1.6;">
+          <h1 style="color: #f0f; border-bottom: 2px solid #f0f; padding-bottom: 10px;">❌ CHRONO_SYSTEM_FAILURE</h1>
+          <div style="background: #111; padding: 15px; border: 1px solid #333; margin: 20px 0;">
+            <p><strong>Status:</strong> CRITICAL_ASSETS_MISSING</p>
+            <p><strong>Missing File:</strong> <code style="color: #fff;">${indexPath}</code></p>
+          </div>
+          <p>This usually means the frontend build failed or the files were not copied to the server directory.</p>
+          <p><strong>Troubleshooting:</strong></p>
+          <ul>
+            <li>Check Render build logs for errors during <code>vite build</code>.</li>
+            <li>Verify <code>copy-assets.js</code> execution logs.</li>
+            <li>Ensure "Root Directory" in Render settings is empty.</li>
+          </ul>
+          <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0;">
+          <p style="font-size: 0.8em; color: #666;">
+            CWD: ${process.cwd()}<br>
+            __dirname: ${__dirname}<br>
+            NODE_ENV: ${process.env.NODE_ENV}
+          </p>
         </body>
       </html>
     `);
