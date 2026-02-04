@@ -12,6 +12,7 @@ import UserListModal from '../../../components/ui/UserListModal';
 import { VerifiedIcon, MessageIcon, PaperPlaneIcon } from '../../../components/ui/icons';
 import FramePreview, { getFrameShape } from './FramePreview';
 import Avatar from './Avatar';
+import AvatarStoryWrapper from '../../stories/components/AvatarStoryWrapper';
 import LoadingSpinner from '../../../components/ui/LoadingSpinner';
 import { apiClient } from '../../../api';
 
@@ -21,6 +22,7 @@ interface ProfilePageProps {
   onLogout: () => void;
   onNavigate: (page: Page, username?: string) => void;
   onNotificationClick: (notification: Notification) => void;
+  onViewNotifications: () => void;
   users: User[];
   onFollowToggle: (username: string) => void;
   allPosts: Post[];
@@ -39,13 +41,15 @@ interface ProfilePageProps {
   onBack?: () => void;
   onToggleChat?: () => void;
   onOpenChat?: (user: User) => void;
+  onViewStory?: (user: User) => void;
+  onCreateStory?: () => void;
 }
 
 export default function ProfilePage({ 
-  currentUser, profileUsername: propProfileUsername, onLogout, onNavigate, onNotificationClick, users, onFollowToggle, 
+  currentUser, profileUsername: propProfileUsername, onLogout, onNavigate, onNotificationClick, onViewNotifications, users, onFollowToggle, 
   allPosts, allUsers, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost,
   onPollVote, selectedDate, setSelectedDate, typingParentIds, conversations, onOpenMarketplace, 
-  onUpdateUser, onBack, onToggleChat, onOpenChat
+  onUpdateUser, onBack, onToggleChat, onOpenChat, onViewStory, onCreateStory
 }: ProfilePageProps & { onUpdateUser?: (user: User) => Promise<{ success: boolean; error?: string }> }) {
   const { t } = useTranslation();
   const { playSound } = useSound();
@@ -419,32 +423,14 @@ export default function ProfilePage({
             </div>
             <div className="absolute -bottom-16 left-4 md:left-8 flex items-end z-10">
                 <div className="relative w-24 h-24">
-                    <div className={`w-full h-full ${avatarShape} border-4 border-[var(--theme-bg-primary)] overflow-hidden bg-[var(--theme-bg-primary)] relative z-10`}>
-                        <Avatar 
-                          src={profileUser.avatar} 
-                          username={profileUser.username}
-                          className="w-full h-full object-cover" 
-                        />
-                        
-                         {/* Effect Overlay */}
-                        {profileUser.equippedEffect && (
-                             <div className="absolute inset-0 pointer-events-none z-20 mix-blend-screen opacity-60">
-                                 <img 
-                                    src={profileUser.equippedEffect.imageUrl} 
-                                    alt="" 
-                                    className="w-full h-full object-cover animate-pulse-soft"
-                                    onError={(e) => e.currentTarget.style.display = 'none'}
-                                 />
-                             </div>
-                        )}
-                    </div>
-
-                    {/* Frame Overlay */}
-                    {profileUser.equippedFrame && (
-                         <div className="absolute -inset-1 z-20 pointer-events-none">
-                             <FramePreview item={profileUser.equippedFrame} />
-                         </div>
-                    )}
+                    <AvatarStoryWrapper
+                        user={profileUser}
+                        currentUser={currentUser}
+                        size="w-24 h-24"
+                        onViewStory={onViewStory}
+                        onCreateStory={onCreateStory}
+                        showName={false}
+                    />
                 </div>
             </div>
           </div>
