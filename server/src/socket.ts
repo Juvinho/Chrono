@@ -43,7 +43,21 @@ export const initSocket = (httpServer: HttpServer, allowedOrigins: string[]) => 
       // data: { room, username }
       socket.to(data.room).emit("hide_typing", data);
     });
-    // ------------------------------------------------------------------
+    
+    // --- Advanced Conversation Logic ---
+    // Join specific conversation room for real-time updates
+    socket.on("join_conversation", (conversationId) => {
+        const room = `conversation:${conversationId}`;
+        socket.join(room);
+        console.log(`Socket ${socket.id} joined conversation room ${room}`);
+    });
+
+    socket.on("leave_conversation", (conversationId) => {
+        const room = `conversation:${conversationId}`;
+        socket.leave(room);
+        console.log(`Socket ${socket.id} left conversation room ${room}`);
+    });
+    // -----------------------------------
 
     // User joins a room identified by their User ID (Used by Chrono features)
     socket.on('join_user_room', (userId: string) => {

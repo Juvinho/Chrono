@@ -151,9 +151,11 @@ export class ConversationService {
             conversationId
         };
 
-        (participantsResult.rows as any[]).forEach(row => {
-            io.to(row.user_id).emit('new_message', payload);
-        });
+        // Emit to the conversation room instead of individual users
+        io.to(`conversation:${conversationId}`).emit('new_message', payload);
+        
+        // Also emit notification to other participants individually if needed (for push notifications etc)
+        // But the room should handle the real-time chat update
     } catch (error) {
         console.error('Failed to emit message:', error);
     }

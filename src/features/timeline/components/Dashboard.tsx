@@ -38,13 +38,14 @@ interface DashboardProps {
     nextAutoRefresh?: Date | null;
     isAutoRefreshPaused?: boolean;
     onBack?: () => void;
+    onToggleChat?: () => void;
 }
 
 export default function Dashboard({ 
     user, onLogout, onNavigate, onNotificationClick, selectedDate, setSelectedDate, allUsers, allPosts,
     onNewPost, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost, onPollVote, isGenerating, typingParentIds,
     conversations, newPostsCount = 0, onShowNewPosts, allKnownPosts, usersWithStories = [], onViewStory = () => {}, onCreateStory = () => {}, onUpdateUser = () => {}, onOpenMarketplace,
-    nextAutoRefresh, isAutoRefreshPaused, onBack
+    nextAutoRefresh, isAutoRefreshPaused, onBack, onToggleChat
 }: DashboardProps) {
     const { t } = useTranslation();
     const { tag } = useParams<{ tag: string }>();
@@ -180,6 +181,7 @@ export default function Dashboard({
                 allUsers={allUsers} 
                 conversations={conversations}
                 onBack={onBack}
+                onToggleChat={onToggleChat}
             />
             <div className="flex-grow overflow-y-auto relative">
                 {newPostsCount > 0 && onShowNewPosts && (
