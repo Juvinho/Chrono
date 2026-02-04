@@ -187,6 +187,12 @@ export default function Dashboard({
                 onToggleChat={onToggleChat}
                 lastViewedNotifications={lastViewedNotifications}
             />
+            <StoryTray 
+                currentUser={user}
+                usersWithStories={usersWithStories}
+                onViewStory={onViewStory}
+                onCreateStory={onCreateStory}
+            />
             <div className="flex-grow overflow-y-auto relative">
                 {newPostsCount > 0 && onShowNewPosts && (
                     <div className="sticky top-4 z-50 flex justify-center w-full pointer-events-none mb-[-40px]">

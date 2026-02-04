@@ -16,16 +16,47 @@ export default function StoryViewer({ user, stories, onClose, onNextUser, onPrev
     const [currentIndex, setCurrentIndex] = useState(0);
     const [progress, setProgress] = useState(0);
     const [videoDuration, setVideoDuration] = useState<number | null>(null);
+    const [isPaused, setIsPaused] = useState(false);
+    const [touchStart, setTouchStart] = useState<number | null>(null);
+    const [touchEnd, setTouchEnd] = useState<number | null>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
+    const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     const currentStory = stories[currentIndex];
     const DEFAULT_DURATION = 5000; // 5 seconds for text/image
+
+    // Swipe handlers
+    const minSwipeDistance = 50;
+    
+    const onTouchStart = (e: React.TouchEvent) => {
+        setTouchEnd(null);
+        setTouchStart(e.targetTouches[0].clientX);
+    };
+
+    const onTouchMove = (e: React.TouchEvent) => {
+        setTouchEnd(e.targetTouches[0].clientX);
+    };
+
+    const onTouchEnd = () => {
+        if (!touchStart || !touchEnd) return;
+        
+        const distance = touchStart - touchEnd;
+        const isLeftSwipe = distance > minSwipeDistance;
+        const isRightSwipe = distance < -minSwipeDistance;
+
+        if (isLeftSwipe) {
+            handleNext();
+        } else if (isRightSwipe) {
+            handlePrev();
+        }
+    };
 
     const handleNext = useCallback(() => {
         if (currentIndex < stories.length - 1) {
             setCurrentIndex(prev => prev + 1);
             setProgress(0);
-            setVideoDuration(null); // Reset video duration
+            setVideoDuration(null);
+            setIsPaused(false);
         } else {
             if (onNextUser) {
                 onNextUser();
@@ -39,18 +70,30 @@ export default function StoryViewer({ user, stories, onClose, onNextUser, onPrev
         if (currentIndex > 0) {
             setCurrentIndex(prev => prev - 1);
             setProgress(0);
-            setVideoDuration(null); // Reset video duration
+            setVideoDuration(null);
+            setIsPaused(false);
         } else {
             if (onPrevUser) {
                 onPrevUser();
             } else {
-                // Restart current user stories? or Close?
                 setCurrentIndex(0);
                 setProgress(0);
                 setVideoDuration(null);
+                setIsPaused(false);
             }
         }
     }, [currentIndex, onPrevUser]);
+
+    const togglePause = useCallback(() => {
+        setIsPaused(prev => !prev);
+        if (videoRef.current) {
+            if (isPaused) {
+                videoRef.current.play();
+            } else {
+                videoRef.current.pause();
+            }
+        }
+    }, [isPaused]);
 
     useEffect(() => {
         if (currentStory && onViewStory) {
@@ -59,19 +102,23 @@ export default function StoryViewer({ user, stories, onClose, onNextUser, onPrev
     }, [currentStory, onViewStory]);
 
     useEffect(() => {
+        // Clear any existing interval
+        if (progressIntervalRef.current) {
+            clearInterval(progressIntervalRef.current);
+        }
+
         const isVideo = currentStory?.type === 'video';
         
-        // If it's a video, we rely on onTimeUpdate and onEnded, so we don't need this interval timer
-        // unless the video fails to load or something, but let's stick to video events for accuracy.
-        if (isVideo) {
-             return; 
+        // Don't run interval if paused or if it's a video (rely on video events)
+        if (isPaused || isVideo) {
+            return;
         }
 
         const duration = DEFAULT_DURATION;
         const intervalTime = 100;
         const step = 100 / (duration / intervalTime);
 
-        const timer = setInterval(() => {
+        progressIntervalRef.current = setInterval(() => {
             setProgress(old => {
                 if (old >= 100) {
                     handleNext();
@@ -81,15 +128,19 @@ export default function StoryViewer({ user, stories, onClose, onNextUser, onPrev
             });
         }, intervalTime);
 
-        return () => clearInterval(timer);
-    }, [currentIndex, handleNext, currentStory?.type]);
+        return () => {
+            if (progressIntervalRef.current) {
+                clearInterval(progressIntervalRef.current);
+            }
+        };
+    }, [currentIndex, handleNext, currentStory?.type, isPaused]);
 
     const handleVideoEnded = () => {
         handleNext();
     };
 
     const handleVideoTimeUpdate = () => {
-        if (videoRef.current && videoRef.current.duration) {
+        if (videoRef.current && videoRef.current.duration && !isPaused) {
              const percentage = (videoRef.current.currentTime / videoRef.current.duration) * 100;
              setProgress(percentage);
         }
@@ -98,7 +149,9 @@ export default function StoryViewer({ user, stories, onClose, onNextUser, onPrev
     const handleVideoLoadedMetadata = () => {
         if (videoRef.current) {
             setVideoDuration(videoRef.current.duration);
-            videoRef.current.play().catch(e => console.error("Auto-play failed:", e));
+            if (!isPaused) {
+                videoRef.current.play().catch(e => console.error("Auto-play failed:", e));
+            }
         }
     };
 
@@ -108,10 +161,14 @@ export default function StoryViewer({ user, stories, onClose, onNextUser, onPrev
             if (e.key === 'Escape') onClose();
             if (e.key === 'ArrowRight') handleNext();
             if (e.key === 'ArrowLeft') handlePrev();
+            if (e.key === ' ') {
+                e.preventDefault();
+                togglePause();
+            }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [handleNext, handlePrev, onClose]);
+    }, [handleNext, handlePrev, onClose, togglePause]);
 
     // Preload next story
     const nextStory = stories[currentIndex + 1];
@@ -179,14 +236,37 @@ export default function StoryViewer({ user, stories, onClose, onNextUser, onPrev
                         <span className="text-white font-bold text-sm shadow-black drop-shadow-md">{user.username}</span>
                         <span className="text-gray-300 text-xs">{new Date(currentStory.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                     </div>
-                    <button onClick={onClose} className="text-white hover:bg-white/20 p-1 rounded-full">
-                        <CloseIcon className="w-6 h-6" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {currentStory.type === 'video' && (
+                            <button 
+                                onClick={togglePause}
+                                className="text-white hover:bg-white/20 p-1 rounded-full transition-colors"
+                            >
+                                {isPaused ? (
+                                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M8 5v14l11-7z"/>
+                                    </svg>
+                                ) : (
+                                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                                    </svg>
+                                )}
+                            </button>
+                        )}
+                        <button onClick={onClose} className="text-white hover:bg-white/20 p-1 rounded-full transition-colors">
+                            <CloseIcon className="w-6 h-6" />
+                        </button>
+                    </div>
                 </div>
             </div>
 
             {/* Content */}
-            <div className="relative w-full max-w-md h-full md:h-[80vh] bg-[#111] md:rounded-lg overflow-hidden flex items-center justify-center">
+            <div 
+                className="relative w-full max-w-md h-full md:h-[80vh] bg-[#111] md:rounded-lg overflow-hidden flex items-center justify-center"
+                onTouchStart={onTouchStart}
+                onTouchMove={onTouchMove}
+                onTouchEnd={onTouchEnd}
+            >
                 {/* Click areas for navigation */}
                 <div className="absolute inset-y-0 left-0 w-1/3 z-10" onClick={handlePrev} />
                 <div className="absolute inset-y-0 right-0 w-1/3 z-10" onClick={(e) => {
@@ -206,7 +286,6 @@ export default function StoryViewer({ user, stories, onClose, onNextUser, onPrev
                         ref={videoRef}
                         src={currentStory.content} 
                         className="w-full h-full object-contain"
-                        autoPlay
                         playsInline
                         onEnded={handleVideoEnded}
                         onLoadedMetadata={handleVideoLoadedMetadata}
@@ -217,6 +296,17 @@ export default function StoryViewer({ user, stories, onClose, onNextUser, onPrev
                         <p className="text-white text-2xl font-bold text-center font-mono animate-pulse">
                             {currentStory.content}
                         </p>
+                    </div>
+                )}
+
+                {/* Pause indicator */}
+                {isPaused && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="bg-black/50 rounded-full p-4">
+                            <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                        </div>
                     </div>
                 )}
             </div>
