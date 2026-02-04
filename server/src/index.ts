@@ -151,8 +151,17 @@ app.use('/api/companions', companionRoutes);
 // Health check
 app.get('/health', async (_req: express.Request, res: express.Response) => {
   try {
-    await pool.query('SELECT 1');
-    res.json({ status: 'ok', db: 'connected', timestamp: new Date().toISOString() });
+    const userCount = await pool.query('SELECT COUNT(*) FROM users');
+    const postCount = await pool.query('SELECT COUNT(*) FROM posts');
+    res.json({ 
+      status: 'ok', 
+      db: 'connected', 
+      stats: {
+        users: parseInt(userCount.rows[0].count),
+        posts: parseInt(postCount.rows[0].count)
+      },
+      timestamp: new Date().toISOString() 
+    });
   } catch (err: any) {
     console.error('Health check failed:', err);
     res.status(500).json({ 
@@ -284,16 +293,13 @@ const startServer = async () => {
       console.log(`Allowed Origins: ${allowedOrigins.join(', ')}`);
     });
 
-    // Run migrations in the background (idempotent)
-    if (process.env.NODE_ENV === 'production') {
-       console.log('Starting background migrations...');
-       migrate().then(() => {
-           console.log('✅ Migrations completed successfully.');
-       }).catch(err => {
-           console.error('❌ Background migration failed:', err);
-           // We don't exit here because the server is already serving
-       });
-    }
+    // Run migrations (idempotent)
+    console.log('📦 Iniciando migrações do banco de dados...');
+    migrate().then(() => {
+        console.log('✅ Migrações concluídas com sucesso.');
+    }).catch(err => {
+        console.error('❌ Falha na migração do banco:', err);
+    });
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
