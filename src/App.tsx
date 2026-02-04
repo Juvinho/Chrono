@@ -744,6 +744,8 @@ export default function App() {
     
     const handleViewNotifications = () => {
         if (!currentUser) return;
+        console.log("Marking notifications as read. Current count:", currentUser.notifications?.filter(n => !n.read).length);
+        
         setLastViewedNotifications(new Date());
         
         // Mark all notifications as read
@@ -751,6 +753,8 @@ export default function App() {
             ...currentUser,
             notifications: currentUser.notifications?.map(n => ({ ...n, read: true }))
         };
+        
+        console.log("After marking as read. New count:", updatedUser.notifications?.filter(n => !n.read).length);
         handleUpdateUser(updatedUser);
     };
 
