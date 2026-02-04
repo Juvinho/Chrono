@@ -6,7 +6,7 @@ import { useTranslation } from '../../../hooks/useTranslation';
 interface StoryCreatorProps {
     currentUser: User;
     onClose: () => void;
-    onSave: (story: Omit<Story, 'id' | 'timestamp' | 'expiresAt' | 'userId' | 'username' | 'userAvatar'>) => void;
+    onSave: (story: Omit<Story, 'id' | 'timestamp' | 'expiresAt' | 'userId' | 'username' | 'userAvatar'>) => Promise<{ success: boolean; error?: string } | void>;
 }
 
 export default function StoryCreator({ currentUser, onClose, onSave }: StoryCreatorProps) {
@@ -18,9 +18,12 @@ export default function StoryCreator({ currentUser, onClose, onSave }: StoryCrea
     const fileInputRef = useRef<HTMLInputElement>(null);
     const cameraInputRef = useRef<HTMLInputElement>(null);
 
+    const [isPosting, setIsPosting] = useState(false);
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            console.log("File selected:", file.name, file.type, file.size);
             setError(null);
             
             if (file.type.startsWith('video/')) {
@@ -57,16 +60,35 @@ export default function StoryCreator({ currentUser, onClose, onSave }: StoryCrea
         }
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (mode === 'text' && !content.trim()) return;
         if ((mode === 'image' || mode === 'video') && !previewUrl) return;
 
-        onSave({
-            content: (mode === 'image' || mode === 'video') ? previewUrl! : content,
-            type: mode,
-            viewers: []
-        });
-        onClose();
+        setIsPosting(true);
+        const storyContent = (mode === 'image' || mode === 'video') ? previewUrl! : content;
+        
+        console.log("Preparing to send story:", { type: mode, contentLength: storyContent.length });
+
+        try {
+            const result = await onSave({
+                content: storyContent,
+                type: mode,
+                viewers: []
+            });
+
+            if (result && result.success) {
+                console.log("Story posted successfully!");
+                onClose();
+            } else {
+                console.error("Story post failed:", result?.error);
+                setError(result?.error || "Failed to post story. Please try again.");
+            }
+        } catch (err) {
+            console.error("Unexpected error in handleSave:", err);
+            setError("An unexpected error occurred.");
+        } finally {
+            setIsPosting(false);
+        }
     };
 
     const triggerFileInput = () => {
@@ -106,10 +128,17 @@ export default function StoryCreator({ currentUser, onClose, onSave }: StoryCrea
                 </div>
                 <button 
                     onClick={handleSave}
-                    className="bg-purple-600 text-white px-6 py-2 rounded-full font-bold hover:bg-purple-500 disabled:opacity-50"
-                    disabled={(mode === 'text' && !content) || ((mode === 'image' || mode === 'video') && !previewUrl)}
+                    className="bg-purple-600 text-white px-6 py-2 rounded-full font-bold hover:bg-purple-500 disabled:opacity-50 flex items-center gap-2"
+                    disabled={isPosting || (mode === 'text' && !content) || ((mode === 'image' || mode === 'video') && !previewUrl)}
                 >
-                    {t('share') || 'Share'}
+                    {isPosting ? (
+                        <>
+                            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                            <span>{t('posting') || 'Sending...'}</span>
+                        </>
+                    ) : (
+                        t('share') || 'Share'
+                    )}
                 </button>
             </div>
 
