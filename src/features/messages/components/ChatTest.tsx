@@ -95,9 +95,13 @@ function ChatTest() {
       setMessageList((list) => [...list, data]); 
       
       // Tocar som se a aba estiver em segundo plano ou não for o autor
-      if (document.hidden || data.author !== username) {
+      if (data.author !== username) {
         try {
-            playSound('notification');
+            if (document.hidden) {
+                playSound('blim');
+            } else {
+                playSound('notification');
+            }
         } catch (e) {
             console.warn("Could not play notification sound:", e);
         }

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef } from 'react';
 
-type SoundType = 'notification' | 'post' | 'reply' | 'like' | 'follow';
+type SoundType = 'notification' | 'post' | 'reply' | 'like' | 'follow' | 'blim';
 
 interface SoundContextType {
     playSound: (type: SoundType) => void;
@@ -108,6 +108,21 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 
                 oscillator.start(now);
                 oscillator.stop(now + 0.4);
+                break;
+
+            case 'blim':
+                // High-pitched sweet "blim" sound
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(1200, now);
+                oscillator.frequency.exponentialRampToValueAtTime(1500, now + 0.05);
+                oscillator.frequency.exponentialRampToValueAtTime(1000, now + 0.15);
+                
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(0.2, now + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+                
+                oscillator.start(now);
+                oscillator.stop(now + 0.3);
                 break;
 
             case 'notification':
