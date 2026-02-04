@@ -138,6 +138,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     nextAutoRefresh={nextAutoRefresh}
                     isAutoRefreshPaused={isAutoRefreshPaused}
                     onBack={handleBack}
+                    onToggleChat={onToggleChat}
                 />
             ) : <Navigate to="/welcome" />} />
 
@@ -199,6 +200,8 @@ export default function AppRoutes(props: AppRoutesProps) {
                     onOpenMarketplace={() => handleNavigate(Page.Dashboard, 'marketplace')}
                     onUpdateUser={handleUpdateUser}
                     onBack={handleBack}
+                    onToggleChat={onToggleChat}
+                    onOpenChat={onOpenChat}
                 />
             ) : <Navigate to="/welcome" />} />
             
