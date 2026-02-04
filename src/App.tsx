@@ -21,7 +21,6 @@ const Register = React.lazy(() => import('./features/auth/components/Register'))
 const Verify = React.lazy(() => import('./features/auth/components/Verify'));
 const ForgotPassword = React.lazy(() => import('./features/auth/components/ForgotPassword'));
 const ResetPassword = React.lazy(() => import('./features/auth/components/ResetPassword'));
-const MessagesPage = React.lazy(() => import('./features/messages/components/MessagesPage'));
 const DataSlicerPage = React.lazy(() => import('./features/analysis/components/DataSlicerPage'));
 const StoryViewer = React.lazy(() => import('./features/stories/components/StoryViewer'));
 const StoryCreator = React.lazy(() => import('./features/stories/components/StoryCreator'));
@@ -1201,17 +1200,12 @@ export default function App() {
         }
     }, []);
 
-    const handleNavigate = (page: Page, username?: string) => {
+    const handleNavigate = (page: Page, data?: string) => {
         if(page === Page.Profile && data) setProfileUsername(data);
         else setProfileUsername(null);
 
         if (page === Page.Verify && data) setUserToVerify(data);
         if (page === Page.ResetPassword && data) setEmailToReset(data);
-        
-        if (page === Page.Messages && data) {
-            handleOpenChat(data);
-            return; // Don't navigate away, just open the chat window like FB
-        }
         
         setCurrentPage(page);
         // Save current page to sessionStorage for refresh persistence
@@ -1891,25 +1885,6 @@ export default function App() {
                 ) : (
                     <LoginScreen onLogin={handleLogin} onNavigate={handleNavigate} />
                 );
-            case Page.Messages:
-                return currentUser ? (
-                    <MessagesPage
-                        currentUser={currentUser}
-                        onLogout={handleLogout}
-                        onNavigate={handleNavigate}
-                        onNotificationClick={handleNotificationClick}
-                        allUsers={combinedUsers}
-                        allPosts={memoizedPosts}
-                        conversations={conversations}
-                        onSendMessage={handleSendMessage}
-                        onMarkConversationAsRead={handleMarkConversationAsRead}
-                        onCreateOrFindConversation={handleCreateOrFindConversation}
-                        onOpenMarketplace={() => setIsMarketplaceOpen(true)}
-                        onBack={handleBack}
-                    />
-                ) : (
-                    <LoginScreen onLogin={handleLogin} onNavigate={handleNavigate} />
-                );
              case Page.VideoAnalysis:
                 return currentUser ? (
                     <DataSlicerPage
@@ -2034,21 +2009,8 @@ export default function App() {
                         />
                     )}
                     
-                    {currentUser && (
-                        <ChatSystem
-                            currentUser={currentUser}
-                            allUsers={combinedUsers}
-                            conversations={conversations}
-                            openChatUsernames={openChatUsernames}
-                            minimizedChatUsernames={minimizedChatUsernames}
-                            onCloseChat={handleCloseChat}
-                            onMinimizeChat={handleMinimizeChat}
-                            onSendMessage={handleSendMessage}
-                            onMarkAsRead={handleMarkConversationAsRead}
-                        />
-                    )}
+                    {/* ChatSystem removed as per request */}
                     
-
                 </Suspense>
             </div>
         </LanguageProvider>
