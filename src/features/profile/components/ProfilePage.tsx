@@ -427,11 +427,22 @@ export default function ProfilePage({
                 <div className="flex items-center space-x-2">
                     <h1 className="text-2xl font-bold text-[var(--theme-text-light)]">@{profileUser.username}</h1>
                     {profileUser.isVerified && profileUser.verificationBadge && (
-                        <VerifiedIcon 
-                            className="w-6 h-6 animate-pulse-soft"
-                            style={{ color: profileUser.verificationBadge.color }}
-                            title={profileUser.verificationBadge.label}
-                        />
+                        <div className="flex items-center">
+                            {profileUser.verificationBadge.label === 'Criador' && profileUser.verificationBadge.color === 'red' ? (
+                                <span 
+                                    className="bg-[#ff003c] text-white text-[10px] px-2 py-0.5 rounded-sm font-bold flex items-center uppercase tracking-tighter shadow-[0_0_10px_rgba(255,0,60,0.5)] border border-[#ff4d7a] animate-pulse"
+                                    title="Verificado: Criador do Sistema"
+                                >
+                                    Criador
+                                </span>
+                            ) : (
+                                <VerifiedIcon 
+                                    className="w-6 h-6 animate-pulse-soft"
+                                    style={{ color: profileUser.verificationBadge.color }}
+                                    title={profileUser.verificationBadge.label}
+                                />
+                            )}
+                        </div>
                     )}
                     {profileUser.pronouns && (
                         <span className="text-sm text-[var(--theme-text-secondary)] bg-[var(--theme-bg-tertiary)] px-2 py-0.5 rounded-full">{profileUser.pronouns}</span>

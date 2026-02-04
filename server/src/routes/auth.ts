@@ -229,6 +229,12 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Please verify that you are not a robot' });
     }
 
+    // Validation: Prevent registration of system protected usernames
+    const systemUsernames = ['juvinho', 'chrono', 'chronobot', 'system', 'admin'];
+    if (systemUsernames.includes(username.toLowerCase())) {
+      return res.status(400).json({ error: 'This username is reserved by the system.' });
+    }
+
     // Check if user already exists
     const existingUser = await userService.getUserByUsername(username);
     if (existingUser) {
