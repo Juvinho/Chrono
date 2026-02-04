@@ -14,21 +14,18 @@ const { Pool } = pg;
 
 const rawDbUrl = process.env.DATABASE_URL || 'postgresql://postgres:postgres@127.0.0.1:5432/chrono_db';
 
+// Clean URL: Remove sslmode parameter if present to avoid conflicts with our object config
+const cleanDbUrl = rawDbUrl.split('?')[0];
+
 // Sanitize URL for logging (mask password)
-const sanitizedUrl = rawDbUrl.replace(/:([^:@]+)@/, ':****@');
+const sanitizedUrl = cleanDbUrl.replace(/:([^:@]+)@/, ':****@');
 console.log(`📡 Connecting to database: ${sanitizedUrl}`);
 
-const isProduction = process.env.NODE_ENV === 'production';
-const isSupabase = rawDbUrl.includes('supabase.co') || rawDbUrl.includes('supabase.com');
-
-// Force SSL for Supabase/Production and allow self-signed certificates
-const sslConfig = (isProduction || isSupabase) ? { 
-  rejectUnauthorized: false,
-} : false;
-
 export const pool = new Pool({
-  connectionString: rawDbUrl,
-  ssl: sslConfig,
+  connectionString: cleanDbUrl,
+  ssl: {
+    rejectUnauthorized: false // This is the key fix for "self-signed certificate"
+  },
   connectionTimeoutMillis: 30000,
   idleTimeoutMillis: 15000,
   max: 10,
