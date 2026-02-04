@@ -1,20 +1,18 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Story, Post, Conversation, Page, Notification } from '../types';
+import { User, Post, Conversation, Page, Notification } from '../types';
 import { useLocalStorage } from './useLocalStorage';
-import { apiClient, mapApiUserToUser, mapApiStoryToStory, mapApiPostToPost } from '../api';
+import { apiClient, mapApiUserToUser, mapApiPostToPost } from '../api';
 import { NotificationManager } from '../utils/notificationManager';
 
 interface UseAppSessionProps {
-    setStories: Dispatch<SetStateAction<Story[]>>;
     setPosts: Dispatch<SetStateAction<Post[]>>;
     setConversations: Dispatch<SetStateAction<Conversation[]>>;
     playSound: (soundName: string) => void;
 }
 
 export const useAppSession = ({
-    setStories,
     setPosts,
     setConversations,
     playSound
@@ -168,50 +166,7 @@ export const useAppSession = ({
                 setConversations(mappedConversations);
             }
             
-            // Reload stories (grouped) - only once per reload
-            const storiesResult = await apiClient.getStories();
-            if (storiesResult.data) {
-                const mappedStories = storiesResult.data.map((s: any) => ({
-                    id: s.id,
-                    userId: s.userId,
-                    username: s.author?.username || 'unknown',
-                    userAvatar: s.author?.avatar || null,
-                    content: s.content,
-                    type: s.type,
-                    timestamp: new Date(s.createdAt || s.created_at),
-                    expiresAt: new Date(s.expiresAt || s.expires_at),
-                    viewers: s.viewers || []
-                }));
-
-                // Set stories state
-                setStories(mappedStories.map(mapApiStoryToStory));
-
-                // Group stories by user and update users state
-                const storiesByUser = new Map<string, Story[]>();
-                mappedStories.forEach((s: any) => {
-                    const existing = storiesByUser.get(s.username) || [];
-                    storiesByUser.set(s.username, [...existing, {
-                        id: s.id,
-                        userId: s.userId,
-                        username: s.username,
-                        userAvatar: s.userAvatar,
-                        content: s.content,
-                        type: s.type,
-                        timestamp: s.timestamp,
-                        expiresAt: s.expiresAt,
-                        viewers: s.viewers
-                    }]);
-                });
-
-                setUsers(currentUsers =>
-                    currentUsers.map(u => {
-                        if (storiesByUser.has(u.username)) {
-                            return { ...u, stories: storiesByUser.get(u.username) };
-                        }
-                        return u;
-                    })
-                );
-            }
+            // Stories feature removed
             
             isFirstLoad.current = false;
         } catch (error: any) {
@@ -246,10 +201,7 @@ export const useAppSession = ({
                         const mappedUser = mapApiUserToUser(result.data);
                         setCurrentUser(mappedUser);
 
-                        const storiesResult = await apiClient.getStories();
-                        if (storiesResult.data) {
-                            setStories(storiesResult.data.map(mapApiStoryToStory));
-                        }
+                        // Stories feature removed
 
                         // Load initial users (recommended/popular)
                         const usersRes = await apiClient.searchUsers('');

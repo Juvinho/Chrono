@@ -1,6 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
-import { User, Page, Post, Story, Conversation } from '../types';
+import { User, Page, Post, Conversation } from '../types';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 
 // Lazy load components
@@ -47,7 +47,7 @@ interface AppRoutesProps {
     memoizedUsers: User[];
     memoizedAllPosts: Post[];
     pendingPosts: Post[];
-    usersWithStories: User[];
+    
     conversations: Conversation[];
     selectedDate: Date;
     setSelectedDate: (date: Date) => void;
@@ -57,8 +57,7 @@ interface AppRoutesProps {
     typingParentIds: Set<string>;
     nextAutoRefresh: Date | null;
     isAutoRefreshPaused: boolean;
-    viewingStoryUser: User | null;
-    setViewingStoryUser: (user: User | null) => void;
+    
     lastViewedNotifications: Date | null;
     
     // Handlers
@@ -75,7 +74,7 @@ interface AppRoutesProps {
     handleEditPost: (postId: string, data: any) => void;
     handlePollVote: (postId: string, optionIndex: number, actor?: User) => void;
     handleShowNewPosts: () => void;
-    setIsCreatingStory: (val: boolean) => void;
+    
     handleUpdateUser: (user: User) => Promise<{ success: boolean; error?: string }>;
     setIsMarketplaceOpen: (val: boolean) => void;
     handleBack: () => void;
@@ -89,12 +88,12 @@ interface AppRoutesProps {
 export default function AppRoutes(props: AppRoutesProps) {
     const {
         currentUser, users, setUsers, combinedUsers, memoizedPosts, memoizedAllPosts, memoizedUsers,
-        pendingPosts, usersWithStories, conversations, selectedDate, setSelectedDate,
+        pendingPosts, conversations, selectedDate, setSelectedDate,
         userToVerify, emailToReset, isGenerating, typingParentIds, nextAutoRefresh, isAutoRefreshPaused,
-        viewingStoryUser, setViewingStoryUser, lastViewedNotifications,
+        lastViewedNotifications,
         handleNavigate, handleLogin, handleLogout, handleNotificationClick, onViewNotifications, handleNewPost,
         handleUpdateReaction, handleReply, handleEcho, handleDeletePost, handleEditPost,
-        handlePollVote, handleShowNewPosts, setIsCreatingStory, handleUpdateUser,
+        handlePollVote, handleShowNewPosts, handleUpdateUser,
         setIsMarketplaceOpen, handleBack, handleFollowToggle, handleSendGlitchi, handlePasswordReset,
         onToggleChat, onOpenChat
     } = props;
@@ -134,9 +133,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     conversations={conversations}
                     newPostsCount={pendingPosts.length}
                     onShowNewPosts={handleShowNewPosts}
-                    usersWithStories={usersWithStories}
-                    onViewStory={setViewingStoryUser}
-                    onCreateStory={() => setIsCreatingStory(true)}
+                    
                     onUpdateUser={handleUpdateUser}
                     onOpenMarketplace={() => handleNavigate(Page.Dashboard, 'marketplace')} // Will be handled by route
                     nextAutoRefresh={nextAutoRefresh}
@@ -171,9 +168,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     conversations={conversations}
                     newPostsCount={pendingPosts.length}
                     onShowNewPosts={handleShowNewPosts}
-                    usersWithStories={usersWithStories}
-                    onViewStory={setViewingStoryUser}
-                    onCreateStory={() => setIsCreatingStory(true)}
+                    
                     onUpdateUser={handleUpdateUser}
                     onOpenMarketplace={() => setIsMarketplaceOpen(true)}
                     nextAutoRefresh={nextAutoRefresh}
@@ -279,9 +274,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     conversations={conversations}
                     newPostsCount={pendingPosts.length}
                     onShowNewPosts={handleShowNewPosts}
-                    usersWithStories={usersWithStories}
-                    onViewStory={setViewingStoryUser}
-                    onCreateStory={() => setIsCreatingStory(true)}
+                    
                     onUpdateUser={handleUpdateUser}
                     onOpenMarketplace={() => setIsMarketplaceOpen(true)}
                     nextAutoRefresh={nextAutoRefresh}

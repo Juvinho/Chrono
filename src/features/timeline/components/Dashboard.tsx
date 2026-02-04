@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from '../../../hooks/useTranslation';
-import { User, Page, Post, CyberpunkReaction, Notification, Conversation, Story } from '../../../types/index';
+import { User, Page, Post, CyberpunkReaction, Notification, Conversation } from '../../../types/index';
 import Header from '../../../components/ui/Header';
 import EchoFrame from './EchoFrame';
 import Timeline from './Timeline';
-import StoryTray from '../../stories/components/StoryTray';
 import { SparklesIcon } from '../../../components/ui/icons';
 
 interface DashboardProps {
@@ -31,9 +30,6 @@ interface DashboardProps {
     newPostsCount?: number;
     onShowNewPosts?: () => void;
     allKnownPosts?: Post[];
-    usersWithStories?: User[];
-    onViewStory?: (user: User) => void;
-    onCreateStory?: () => void;
     onUpdateUser?: (user: User) => void;
     onOpenMarketplace?: () => void;
     nextAutoRefresh?: Date | null;
@@ -46,7 +42,7 @@ interface DashboardProps {
 export default function Dashboard({ 
     user, onLogout, onNavigate, onNotificationClick, onViewNotifications, selectedDate, setSelectedDate, allUsers, allPosts,
     onNewPost, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost, onPollVote, isGenerating, typingParentIds,
-    conversations, newPostsCount = 0, onShowNewPosts, allKnownPosts, usersWithStories = [], onViewStory = () => {}, onCreateStory = () => {}, onUpdateUser = () => {}, onOpenMarketplace,
+    conversations, newPostsCount = 0, onShowNewPosts, allKnownPosts, onUpdateUser = () => {}, onOpenMarketplace,
     nextAutoRefresh, isAutoRefreshPaused, onBack, onToggleChat, lastViewedNotifications
 }: DashboardProps) {
     const { t } = useTranslation();
@@ -223,9 +219,6 @@ export default function Dashboard({
                     setActiveCordTag={setActiveCordTag}
                     composerDate={composerDate}
                     setComposerDate={setComposerDate}
-                    usersWithStories={usersWithStories}
-                    onViewStory={onViewStory}
-                    onCreateStory={onCreateStory}
                     nextAutoRefresh={nextAutoRefresh}
                     isAutoRefreshPaused={isAutoRefreshPaused}
                 />

@@ -34,7 +34,6 @@ export function mapApiUserToUser(apiUser: any): any {
     notifications: apiUser.notifications || [],
     createdAt: apiUser.createdAt || apiUser.created_at,
     lastSeen: apiUser.lastSeen || apiUser.last_seen || null,
-    stories: apiUser.stories ? apiUser.stories.map(mapApiStoryToStory) : [],
   };
 }
 
@@ -62,17 +61,4 @@ export function mapApiPostToPost(apiPost: any): any {
   };
 }
 
-export function mapApiStoryToStory(apiStory: any): any {
-  return {
-    id: apiStory.id,
-    userId: apiStory.userId || apiStory.user_id,
-    username: apiStory.username || apiStory.author?.username,
-    userAvatar: apiStory.userAvatar || apiStory.author?.avatar || '',
-    content: apiStory.content,
-    type: apiStory.type,
-    timestamp: new Date(apiStory.createdAt || apiStory.created_at),
-    expiresAt: new Date(apiStory.expiresAt || apiStory.expires_at),
-    viewers: apiStory.viewers || [],
-    author: apiStory.author ? mapApiUserToUser(apiStory.author) : undefined,
-  };
-}
+// stories removed

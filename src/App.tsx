@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, Suspense, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { User, Page, Post, CyberpunkReaction, Notification, NotificationType, Conversation, Message, Story } from './types';
+import { User, Page, Post, CyberpunkReaction, Notification, NotificationType, Conversation, Message } from './types';
 import { CORE_USERS } from './utils/constants';
 import { useAppSession } from './hooks/useAppSession';
 import { useAppTheme } from './hooks/useAppTheme';
@@ -15,8 +15,6 @@ import LoadingSpinner from './components/ui/LoadingSpinner';
 import AppRoutes from './routes/AppRoutes';
 
 // Lazy load components for performance
-const StoryViewer = React.lazy(() => import('./features/stories/components/StoryViewer'));
-const StoryCreator = React.lazy(() => import('./features/stories/components/StoryCreator'));
 const Marketplace = React.lazy(() => import('./features/marketplace/components/Marketplace'));
 const ChatDrawer = React.lazy(() => import('./features/messages/components/ChatDrawer'));
 const GlitchiOverlay = React.lazy(() => import('./features/companion/components/GlitchiOverlay'));
@@ -33,7 +31,7 @@ export default function App() {
     const [displayedPosts, setDisplayedPosts] = useState<Post[]>([]);
     const [pendingPosts, setPendingPosts] = useState<Post[]>([]);
     const [conversations, setConversations] = useState<Conversation[]>([]);
-    const [stories, setStories] = useState<Story[]>([]);
+    // Stories feature removed
     
     // Chat Drawer State
     const [isChatDrawerOpen, setIsChatDrawerOpen] = useState(false);
@@ -49,13 +47,12 @@ export default function App() {
         handleLogout, 
         handleUpdateUser,
         handleFollowToggle
-    } = useAppSession({ setStories, setPosts, setConversations, playSound });
+    } = useAppSession({ setPosts, setConversations, playSound });
 
     useAppTheme(currentUser);
 
     // 3. Other Local State
-    const [viewingStoryUser, setViewingStoryUser] = useState<User | null>(null);
-    const [isCreatingStory, setIsCreatingStory] = useState(false);
+    // Stories feature removed
     // const [isMarketplaceOpen, setIsMarketplaceOpen] = useState(false); // Moved to route /marketplace
     const [openChatUsernames, setOpenChatUsernames] = useState<string[]>([]);
     const [minimizedChatUsernames, setMinimizedChatUsernames] = useState<string[]>([]);
@@ -162,47 +159,7 @@ export default function App() {
         }
     }, [navigate, currentUser]);
 
-    // 5. Derived State
-    const usersWithStories = useMemo(() => {
-        if (!currentUser) return [];
-        
-        const storiesByUser = new Map<string, Story[]>();
-        stories.forEach(story => {
-            const userId = story.userId;
-            if (!storiesByUser.has(userId)) {
-                storiesByUser.set(userId, []);
-            }
-            storiesByUser.get(userId)!.push(story);
-        });
-
-        const usersWithStoriesList: User[] = [];
-        
-        storiesByUser.forEach((userStories, userId) => {
-             const firstStory = userStories[0];
-             if (firstStory.author) {
-                 // Incluir todos os usuários com stories, exceto o atual
-                 if (firstStory.author.username !== currentUser.username) {
-                     usersWithStoriesList.push({
-                         ...firstStory.author,
-                         stories: userStories
-                     });
-                 }
-             }
-        });
-        
-        return usersWithStoriesList;
-    }, [stories, currentUser]);
-
-    // 6. Logic and Effects
-    // Update current user stories
-    useEffect(() => {
-        if (currentUser) {
-            const myStories = stories.filter(s => s.userId === currentUser.id || s.userId === currentUser.username);
-            if (JSON.stringify(currentUser.stories) !== JSON.stringify(myStories)) {
-                setCurrentUser(prev => prev ? { ...prev, stories: myStories } : null);
-            }
-        }
-    }, [stories]);
+    // Stories feature removed
 
     // Sync posts to displayedPosts and pendingPosts
     useEffect(() => {
@@ -524,42 +481,7 @@ export default function App() {
         NotificationManager.requestPermission();
     }, [currentUser]);
 
-    // Story Handlers
-    const handleCreateStory = useCallback(async (storyData: Omit<Story, 'id' | 'timestamp' | 'expiresAt' | 'userId' | 'username' | 'userAvatar'>) => {
-        if (!currentUser) return { success: false, error: 'User not logged in' };
-        try {
-            console.log("[App] Creating story...", { type: storyData.type });
-            const result = await apiClient.createStory(storyData.content, storyData.type);
-            if (result.error) {
-                console.error("Failed to create story via API:", result.error);
-                return { success: false, error: result.error };
-            }
-            await reloadBackendData();
-            return { success: true };
-        } catch (error) {
-            console.error("Failed to create story via API:", error);
-            return { success: false, error: String(error) };
-        }
-    }, [currentUser, reloadBackendData]);
-
-    const handleViewStory = useCallback(async (storyId: string) => {
-        if (!currentUser) return;
-        setStories(prevStories => prevStories.map(story => {
-            if (story.id === storyId) {
-                const viewers = story.viewers || [];
-                if (!viewers.includes(currentUser.id || '')) {
-                    return { ...story, viewers: [...viewers, currentUser.id || ''] };
-                }
-            }
-            return story;
-        }));
-
-        try {
-            await apiClient.viewStory(storyId);
-        } catch (error) {
-            console.error("Failed to view story via API:", error);
-        }
-    }, [currentUser]);
+    // Stories feature removed
 
     const handleReply = async (parentPostId: string, content: string, isPrivate: boolean, media?: { imageUrl?: string, videoUrl?: string }, actor?: User) => {
         const replier = actor || currentUser;
@@ -864,7 +786,6 @@ export default function App() {
                             memoizedUsers={memoizedUsers}
                             memoizedAllPosts={memoizedAllPosts}
                             pendingPosts={pendingPosts}
-                            usersWithStories={usersWithStories}
                             conversations={conversations}
                             selectedDate={selectedDate}
                             setSelectedDate={setSelectedDate}
@@ -874,9 +795,6 @@ export default function App() {
                             typingParentIds={typingParentIds}
                             nextAutoRefresh={nextAutoRefresh}
                             isAutoRefreshPaused={isAutoRefreshPaused}
-                            viewingStoryUser={viewingStoryUser}
-                            setViewingStoryUser={setViewingStoryUser}
-                            lastViewedNotifications={lastViewedNotifications}
                             handleNavigate={handleNavigate}
                             handleLogin={handleLogin}
                             handleLogout={handleLogout}
@@ -890,8 +808,7 @@ export default function App() {
                             handleEditPost={handleEditPost}
                             handlePollVote={handlePollVote}
                             handleShowNewPosts={handleShowNewPosts}
-                            setIsCreatingStory={setIsCreatingStory}
-                            handleUpdateUser={handleUpdateUser}
+                            
                             setIsMarketplaceOpen={() => navigate('/marketplace')}
                             handleBack={handleBack}
                             handleFollowToggle={handleFollowToggle}
@@ -900,6 +817,7 @@ export default function App() {
                             onToggleChat={handleToggleChatDrawer}
                             onOpenChat={handleOpenChatDrawerWithUser}
                         />
+
 
                         {/* Modals and Overlays */}
 
@@ -917,38 +835,7 @@ export default function App() {
                             </Suspense>
                         )}
 
-                        {viewingStoryUser && viewingStoryUser.stories && (
-                            <StoryViewer
-                                user={viewingStoryUser}
-                                stories={viewingStoryUser.stories}
-                                onClose={() => setViewingStoryUser(null)}
-                                onViewStory={handleViewStory}
-                                onNextUser={() => {
-                                    const currentIndex = usersWithStories.findIndex(u => u.username === viewingStoryUser.username);
-                                    if (currentIndex < usersWithStories.length - 1) {
-                                        setViewingStoryUser(usersWithStories[currentIndex + 1]);
-                                    } else {
-                                        setViewingStoryUser(null);
-                                    }
-                                }}
-                                onPrevUser={() => {
-                                    const currentIndex = usersWithStories.findIndex(u => u.username === viewingStoryUser.username);
-                                    if (currentIndex > 0) {
-                                        setViewingStoryUser(usersWithStories[currentIndex - 1]);
-                                    } else {
-                                        setViewingStoryUser(null);
-                                    }
-                                }}
-                            />
-                        )}
-
-                        {isCreatingStory && currentUser && (
-                            <StoryCreator
-                                currentUser={currentUser}
-                                onClose={() => setIsCreatingStory(false)}
-                                onSave={handleCreateStory}
-                            />
-                        )}
+                        
                         {/* Marketplace moved to route /marketplace */}
                         {/* {isMarketplaceOpen && currentUser && (
                             <Marketplace

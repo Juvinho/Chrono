@@ -73,7 +73,6 @@ async function migrate() {
             'messages',
             'message_status',
             'notifications',
-            'stories',
             'encrypted_cords'
         ];
 

@@ -46,18 +46,6 @@ export interface Notification {
   timestamp: Date;
 }
 
-export interface Story {
-  id: string;
-  userId: string;
-  username: string;
-  userAvatar: string;
-  content: string; // Image URL, Video URL or Text
-  type: 'image' | 'text' | 'video';
-  timestamp: Date;
-  expiresAt: Date;
-  viewers?: string[];
-  author?: User;
-}
 
 export interface User {
   id: string;
@@ -99,7 +87,6 @@ export interface User {
     color: string;
   };
   createdAt?: string | Date;
-  stories?: Story[];
   subscriptionTier?: 'free' | 'pro' | 'pro_plus';
   subscriptionExpiresAt?: Date;
   lastSeen?: Date | string | null;

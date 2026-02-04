@@ -281,20 +281,20 @@ CREATE TABLE IF NOT EXISTS notifications (
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
 
--- Stories table
-CREATE TABLE IF NOT EXISTS stories (
+-- Remove Stories feature: drop table if exists (idempotent)
+DROP TABLE IF EXISTS stories CASCADE;
+
+-- Push Subscriptions (for Web Push)
+CREATE TABLE IF NOT EXISTS push_subscriptions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    content TEXT NOT NULL,
-    type VARCHAR(10) NOT NULL CHECK (type IN ('image', 'video', 'text')),
+    endpoint TEXT NOT NULL,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    expires_at TIMESTAMP NOT NULL,
-    viewers JSONB DEFAULT '[]'::jsonb
+    UNIQUE(user_id, endpoint)
 );
-
--- Indexes for stories
-CREATE INDEX IF NOT EXISTS idx_stories_user_id ON stories(user_id);
-CREATE INDEX IF NOT EXISTS idx_stories_expires_at ON stories(expires_at);
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user_id ON push_subscriptions(user_id);
 
 -- Migrations for existing databases
 DO $$
