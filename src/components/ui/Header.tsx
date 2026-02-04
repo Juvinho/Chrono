@@ -48,18 +48,8 @@ export default function Header({ user, onLogout, onViewProfile, onNavigate, onNo
     const unreadNotificationCount = useMemo(() => {
         const notifications = user.notifications || [];
         if (notifications.length === 0) return 0;
-
-        if (!lastViewedNotifications) {
-            return notifications.filter(n => !n.read).length;
-        }
-
-        const viewedAt = new Date(lastViewedNotifications);
-        return notifications.filter(n => {
-            if (n.read) return false;
-            const ts = new Date(n.timestamp);
-            return ts > viewedAt;
-        }).length;
-    }, [user.notifications, lastViewedNotifications]);
+        return notifications.filter(n => !n.read).length;
+    }, [user.notifications]);
 
     const unreadMessageCount = useMemo(() => {
         if (!conversations) return 0;
