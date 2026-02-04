@@ -152,11 +152,12 @@ export default function ChatWindow({
           </div>
         )}
         <div className="flex items-center space-x-1">
-          <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" accept="image/*,video/*" />
+          <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" accept=".webp,.png,.jpg,.jpeg,.gif,image/*,video/*" />
           <button 
             type="button" 
             onClick={() => fileInputRef.current?.click()}
             className="p-1.5 text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)]"
+            title="Upload Media (.webp, .png, .jpg, .gif, video)"
           >
             <UploadIcon className="w-4 h-4" />
           </button>
