@@ -28,9 +28,20 @@ export const initSocket = (httpServer: HttpServer, allowedOrigins: string[]) => 
 
     // Quando o usuário manda mensagem
     socket.on("send_message", (data) => {
-      // data deve ter: { room, author, message, time }
+      // data deve ter: { room, author, message, time, imageUrl }
       // Envia para todo mundo QUE ESTÁ NA MESMA SALA
       socket.to(data.room).emit("receive_message", data);
+    });
+
+    // Eventos de digitação
+    socket.on("typing", (data) => {
+      // data: { room, username }
+      socket.to(data.room).emit("display_typing", data);
+    });
+
+    socket.on("stop_typing", (data) => {
+      // data: { room, username }
+      socket.to(data.room).emit("hide_typing", data);
     });
     // ------------------------------------------------------------------
 
