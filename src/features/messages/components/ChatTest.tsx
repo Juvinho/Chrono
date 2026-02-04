@@ -300,11 +300,11 @@ function ChatTest() {
               <button 
                 onClick={() => fileInputRef.current?.click()}
                 style={{ background: 'none', border: '1px solid #333', color: '#0f0', padding: '8px', cursor: 'pointer', borderRadius: '4px' }}
-                title="Upload Image"
+                title="Upload Image (.webp, .png, .jpg, .gif)"
               >
                 🖼️
               </button>
-              <input type="file" ref={fileInputRef} onChange={handleImageSelect} style={{ display: 'none' }} accept="image/*" />
+              <input type="file" ref={fileInputRef} onChange={handleImageSelect} style={{ display: 'none' }} accept=".webp,.png,.jpg,.jpeg,.gif,image/*" />
               
               <div style={{ position: 'relative' }}>
                 <button 
