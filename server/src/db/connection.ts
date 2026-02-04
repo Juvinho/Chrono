@@ -15,14 +15,15 @@ const cleanDbUrl = rawDbUrl.split('?')[0];
 const sanitizedUrl = cleanDbUrl.replace(/:([^:@]+)@/, ':****@');
 console.log(`📡 Connecting to database: ${sanitizedUrl}`);
 
-export const pool = new Pool({
+// Create pool config with any to bypass strict typing for 'lookup' property
+const poolConfig: any = {
   connectionString: cleanDbUrl,
   ssl: {
     rejectUnauthorized: false
   },
   // FORCE IPv4 ONLY - This is the ultimate fix for ENETUNREACH on Render
   // It overrides the default DNS lookup to only return IPv4 addresses.
-  lookup: (hostname, _options, callback) => {
+  lookup: (hostname: string, _options: any, callback: any) => {
     dns.lookup(hostname, { family: 4 }, (err, address, family) => {
       callback(err, address, family);
     });
@@ -31,7 +32,9 @@ export const pool = new Pool({
   idleTimeoutMillis: 15000,
   max: 10,
   keepAlive: true,
-});
+};
+
+export const pool = new Pool(poolConfig);
 
 pool.on('error', (err: Error) => {
   console.error('Unexpected error on idle client', err);
