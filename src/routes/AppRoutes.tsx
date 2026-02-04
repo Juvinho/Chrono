@@ -196,6 +196,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     typingParentIds={typingParentIds}
                     conversations={conversations}
                     onOpenMarketplace={() => handleNavigate(Page.Dashboard, 'marketplace')}
+                    onOpenNyx={onOpenNyx}
                     onSendGlitchi={handleSendGlitchi}
                     onUpdateUser={handleUpdateUser}
                     onBack={handleBack}
