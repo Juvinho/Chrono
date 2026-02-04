@@ -2,10 +2,15 @@
 const getBaseUrl = () => {
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
-    const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
+    const isLocal = hostname === 'localhost' || 
+                   hostname === '127.0.0.1' || 
+                   hostname.startsWith('192.168.') || 
+                   hostname.startsWith('10.') || 
+                   hostname.startsWith('172.');
     
     if (isLocal) {
-      return 'http://127.0.0.1:3001/api';
+      // Se estiver acessando via rede local, usa o mesmo hostname mas na porta do backend (3001)
+      return `http://${hostname}:3001/api`;
     }
     // No Railway ou Render, usamos URL relativa para evitar problemas de domínio fixo
     return '/api';

@@ -3,10 +3,16 @@ import { io, Socket } from 'socket.io-client';
 // Use the same base URL as the API, removing '/api' if present or just the host
 const getSocketUrl = () => {
     if (typeof window !== 'undefined') {
-        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const hostname = window.location.hostname;
+        const isLocal = hostname === 'localhost' || 
+                       hostname === '127.0.0.1' || 
+                       hostname.startsWith('192.168.') || 
+                       hostname.startsWith('10.') || 
+                       hostname.startsWith('172.');
+        
         if (isLocal) {
-            // Force local socket when running locally
-            return `http://127.0.0.1:3001`;
+            // Force socket to the backend port on the same host
+            return `http://${hostname}:3001`;
         }
         // In production, socket is on the same origin
         return window.location.origin;
