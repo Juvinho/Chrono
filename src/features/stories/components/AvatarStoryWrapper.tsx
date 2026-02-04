@@ -107,7 +107,7 @@ export default function AvatarStoryWrapper({
             <div className={`relative ${size}`}>
                 
                 {/* The Ring Container */}
-                <div className={`absolute inset-0 ${avatarShape} ${ringClass} transition-all duration-300`}>
+                <div className={`absolute inset-0 ${avatarShape} ${ringClass}`}>
                     {/* The Gap Container */}
                     <div className={`w-full h-full ${avatarShape} ${gapClass} overflow-hidden`}>
                         {/* The Image */}
@@ -123,7 +123,7 @@ export default function AvatarStoryWrapper({
                                 <img 
                                     src={user.equippedEffect.imageUrl} 
                                     alt="" 
-                                    className="w-full h-full object-cover animate-pulse-soft"
+                                    className="w-full h-full object-cover"
                                 />
                             </div>
                         )}
