@@ -140,27 +140,6 @@ export default function AvatarStoryWrapper({
                         <FramePreview item={user.equippedFrame} />
                     </div>
                 )}
-
-                {/* Add Story Icon (+) */}
-                {isCurrentUser && !hasStories && (
-                    <div className="absolute bottom-0 right-0 z-30 translate-x-[10%] translate-y-[10%]">
-                        <div className="bg-blue-500 rounded-full p-[2px] border-[2px] border-[var(--theme-bg-primary)]">
-                            <PlusIcon className="w-2.5 h-2.5 text-white" />
-                        </div>
-                    </div>
-                )}
-                
-                {/* Hidden File Input for strict requirement compliance */}
-                {isCurrentUser && !hasStories && (
-                    <input 
-                        type="file" 
-                        ref={fileInputRef}
-                        className="hidden"
-                        accept="image/*,video/*"
-                        onChange={handleFileChange}
-                        onClick={(e) => e.stopPropagation()} // Prevent double trigger
-                    />
-                )}
             </div>
 
             {/* Username */}
