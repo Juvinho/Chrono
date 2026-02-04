@@ -24,6 +24,10 @@ export const authService = {
     return baseClient.request<any>('/auth/me');
   },
 
+  async getCurrentUser() {
+    return this.getMe();
+  },
+
   async updateProfile(data: any) {
     return baseClient.request<any>('/auth/update-profile', {
       method: 'PUT',

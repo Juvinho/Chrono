@@ -47,8 +47,64 @@ export function useLocalStorage<T>(key: string, initialValue: T | (() => T)) {
       } else {
         localStorage.setItem(key, JSON.stringify(value));
       }
-    } catch (error) {
-      console.error(`[useLocalStorage] Error saving to localStorage key "${key}":`, error);
+    } catch (error: any) {
+      // Handle QuotaExceededError by cleaning old data
+      if (error.name === 'QuotaExceededError' || error.code === 22) {
+        console.warn(`[useLocalStorage] Quota exceeded for key "${key}". Attempting to free space...`);
+        
+        try {
+          // Try to clear old/unused keys first
+          const keysToClean = [
+            'chrono_posts_v2',
+            'chrono_posts_v3',
+            'chrono_conversations_v2',
+            'chrono_conversations_v3',
+            'chrono_users_v2',
+            'chrono_users_v3',
+          ];
+          
+          // Don't clean the current key or critical keys
+          const criticalKeys = ['chrono_token', 'chrono_currentUser_v4', key];
+          
+          for (const oldKey of keysToClean) {
+            if (!criticalKeys.includes(oldKey)) {
+              try {
+                localStorage.removeItem(oldKey);
+                console.log(`[useLocalStorage] Cleaned old key: ${oldKey}`);
+              } catch (e) {
+                // Ignore errors when cleaning
+              }
+            }
+          }
+          
+          // Try to save again after cleaning
+          try {
+            localStorage.setItem(key, JSON.stringify(value));
+            console.log(`[useLocalStorage] Successfully saved after cleaning old data`);
+            return;
+          } catch (retryError) {
+            // If still fails, try to reduce data size for arrays/objects
+            if (Array.isArray(value) && value.length > 0) {
+              // Keep only last 50 items for arrays
+              const reduced = value.slice(-50);
+              try {
+                localStorage.setItem(key, JSON.stringify(reduced));
+                console.warn(`[useLocalStorage] Reduced array size for key "${key}" to last 50 items`);
+                return;
+              } catch (e) {
+                // Still failed
+              }
+            }
+          }
+        } catch (cleanError) {
+          console.error(`[useLocalStorage] Failed to clean localStorage:`, cleanError);
+        }
+        
+        console.error(`[useLocalStorage] Error saving to localStorage key "${key}":`, error);
+        console.warn(`[useLocalStorage] Please clear your browser's localStorage manually or use less data.`);
+      } else {
+        console.error(`[useLocalStorage] Error saving to localStorage key "${key}":`, error);
+      }
     }
   }, [key, value]);
 
