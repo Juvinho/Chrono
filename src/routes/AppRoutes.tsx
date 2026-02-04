@@ -173,6 +173,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     nextAutoRefresh={nextAutoRefresh}
                     isAutoRefreshPaused={isAutoRefreshPaused}
                     onBack={handleBack}
+                    onToggleChat={onToggleChat}
                 />
             ) : <Navigate to="/welcome" />} />
 
