@@ -83,14 +83,14 @@ export default function AvatarStoryWrapper({
     
     if (hasStories) {
         if (hasUnseenStories) {
-            // New Story: Instagram Gradient with pulse
+            // New Story: Instagram Gradient with continuous pulse
             // #f09433, #e6683c, #dc2743, #cc2366, #bc1888
             ringClass = "bg-[linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)] p-[2px]";
             pulseClass = "animate-pulse";
         } else {
-            // Seen Story: Light Gray
+            // Seen Story: Light Gray with subtle animation
             ringClass = "bg-[#dbdbdb] dark:bg-gray-600 p-[2px]";
-            pulseClass = "";
+            pulseClass = "animate-pulse opacity-75"; // Subtle pulse for seen stories
         }
     } else {
         // No Story: No border (but we need to maintain layout if needed, or just 0 padding)
