@@ -7,7 +7,8 @@ const getBaseUrl = () => {
     if (isLocal) {
       return 'http://127.0.0.1:3001/api';
     }
-    return 'https://chrono-pisx.onrender.com/api';
+    // No Railway ou Render, usamos URL relativa para evitar problemas de domínio fixo
+    return '/api';
   }
   return 'http://127.0.0.1:3001/api';
 };
