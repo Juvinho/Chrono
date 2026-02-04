@@ -43,13 +43,14 @@ interface ProfilePageProps {
   onOpenChat?: (user: User) => void;
   onViewStory?: (user: User) => void;
   onCreateStory?: () => void;
+  lastViewedNotifications?: Date | null;
 }
 
 export default function ProfilePage({ 
   currentUser, profileUsername: propProfileUsername, onLogout, onNavigate, onNotificationClick, onViewNotifications, users, onFollowToggle, 
   allPosts, allUsers, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost,
   onPollVote, selectedDate, setSelectedDate, typingParentIds, conversations, onOpenMarketplace, 
-  onUpdateUser, onBack, onToggleChat, onOpenChat, onViewStory, onCreateStory
+  onUpdateUser, onBack, onToggleChat, onOpenChat, onViewStory, onCreateStory, lastViewedNotifications
 }: ProfilePageProps & { onUpdateUser?: (user: User) => Promise<{ success: boolean; error?: string }> }) {
   const { t } = useTranslation();
   const { playSound } = useSound();
@@ -68,6 +69,10 @@ export default function ProfilePage({
   const [userListModal, setUserListModal] = useState<{title: string, users: User[]} | null>(null);
   const [postToEdit, setPostToEdit] = useState<Post | null>(null);
   const [activeTab, setActiveTab] = useState<'posts' | 'media' | 'temporal' | 'professional'>('posts');
+
+  const handleTabChange = (tab: 'posts' | 'media' | 'temporal' | 'professional') => {
+    setActiveTab(tab);
+  };
   const [visiblePostsCount, setVisiblePostsCount] = useState(10);
   
   const followButtonRef = useRef<HTMLButtonElement>(null);
@@ -375,12 +380,15 @@ export default function ProfilePage({
                 onViewProfile={(username) => onNavigate(Page.Profile, username)} 
                 onNavigate={onNavigate}
                 onNotificationClick={onNotificationClick}
+                onViewNotifications={onViewNotifications}
                 onSearch={handleSearch} 
                 allPosts={allPosts} 
                 allUsers={allUsers}
                 conversations={conversations}
                 onOpenMarketplace={onOpenMarketplace}
                 onBack={onBack}
+                onToggleChat={onToggleChat}
+                lastViewedNotifications={lastViewedNotifications}
             />
             <div className="flex-grow flex flex-col items-center justify-center">
                 <div className="text-center space-y-4">
@@ -403,6 +411,7 @@ export default function ProfilePage({
           onViewProfile={(username) => onNavigate(Page.Profile, username)} 
           onNavigate={onNavigate}
           onNotificationClick={onNotificationClick}
+          onViewNotifications={onViewNotifications}
           onSearch={handleSearch} 
           allPosts={allPosts} 
           allUsers={allUsers} 
@@ -410,6 +419,7 @@ export default function ProfilePage({
           onOpenMarketplace={onOpenMarketplace}
           onBack={onBack}
           onToggleChat={onToggleChat}
+          lastViewedNotifications={lastViewedNotifications}
       />
       <main className="flex-grow overflow-y-auto">
         <div className={`max-w-4xl mx-auto ${borderRadius === 'none' ? '' : 'my-4'} animate-fade-in`}>

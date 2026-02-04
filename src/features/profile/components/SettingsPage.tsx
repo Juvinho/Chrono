@@ -33,15 +33,20 @@ interface SettingsPageProps {
   onLogout: () => void;
   onNavigate: (page: Page, username?: string) => void;
   onNotificationClick: (notification: Notification) => void;
+  onViewNotifications: () => void;
   onUpdateUser: (user: User) => Promise<{ success: boolean; error?: string }>;
   allUsers: User[];
   allPosts: Post[];
   conversations: Conversation[];
   onOpenMarketplace?: () => void;
   onBack?: () => void;
+  onToggleChat?: () => void;
+  lastViewedNotifications?: Date | null;
 }
 
-export default function SettingsPage({ user, onLogout, onNavigate, onNotificationClick, onUpdateUser, allUsers, allPosts, conversations, onOpenMarketplace, onBack }: SettingsPageProps) {
+export default function SettingsPage({
+  user, onLogout, onNavigate, onNotificationClick, onViewNotifications, onUpdateUser, allUsers, allPosts, conversations, onOpenMarketplace, onBack, onToggleChat, lastViewedNotifications
+}: SettingsPageProps) {
   const { t, setLanguage, language } = useTranslation();
 
   // FIX: Safely initialize draftUser state to ensure profileSettings always exists.
@@ -189,7 +194,7 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
       const result = await onUpdateUser(userToSave);
       console.log('Save result:', result);
       
-      if (result === true || (typeof result === 'object' && (result as any).success)) {
+      if (result && result.success) {
         setSaveStatus('success');
         setSaveMessage(t('settingsSaved') || 'Settings saved successfully');
         
@@ -200,7 +205,7 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
 
         setTimeout(() => setSaveStatus('idle'), 3000);
       } else {
-        throw new Error((result as any).error || 'Failed to save settings');
+        throw new Error(result?.error || 'Failed to save settings');
       }
     } catch (error: any) {
         console.error('Save error:', error);
@@ -290,12 +295,15 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
         onViewProfile={(username) => onNavigate(Page.Profile, username)}
         onNavigate={onNavigate}
         onNotificationClick={onNotificationClick}
+        onViewNotifications={onViewNotifications}
         allUsers={allUsers}
         allPosts={allPosts}
         conversations={conversations}
         onOpenMarketplace={onOpenMarketplace}
         onSearch={handleSearch}
         onBack={onBack}
+        onToggleChat={onToggleChat}
+        lastViewedNotifications={lastViewedNotifications}
       />
 
       <main className="pt-20 pb-20 px-4 max-w-4xl mx-auto space-y-6">

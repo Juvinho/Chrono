@@ -46,19 +46,20 @@ export default function Header({ user, onLogout, onViewProfile, onNavigate, onNo
     };
 
     const unreadNotificationCount = useMemo(() => {
-        if (!user.notifications || user.notifications.length === 0) return 0;
-        
-        // Contar apenas notificações não lidas que são recentes (últimas 24 horas)
-        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-        
-        return user.notifications.filter(n => {
+        const notifications = user.notifications || [];
+        if (notifications.length === 0) return 0;
+
+        if (!lastViewedNotifications) {
+            return notifications.filter(n => !n.read).length;
+        }
+
+        const viewedAt = new Date(lastViewedNotifications);
+        return notifications.filter(n => {
             if (n.read) return false;
-            
-            // Considerar apenas notificações das últimas 24 horas para evitar contagem infinita
-            const notificationTime = new Date(n.timestamp);
-            return notificationTime > oneDayAgo;
+            const ts = new Date(n.timestamp);
+            return ts > viewedAt;
         }).length;
-    }, [user.notifications]);
+    }, [user.notifications, lastViewedNotifications]);
 
     const unreadMessageCount = useMemo(() => {
         if (!conversations) return 0;
