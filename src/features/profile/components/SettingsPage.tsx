@@ -53,6 +53,7 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
     profileType: user.profileType || 'personal',
     profileSettings: {
         ...defaultSettings,
+        coverImage: user.profileSettings?.coverImage || user.coverImage || '',
         ...(user.profileSettings || {})
     }
   }));
@@ -66,6 +67,7 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
         profileType: user.profileType || 'personal',
         profileSettings: {
             ...defaultSettings,
+            coverImage: user.profileSettings?.coverImage || user.coverImage || '',
             ...(user.profileSettings || {})
         }
     });
@@ -97,13 +99,24 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
   };
 
   const handleProfileSettingChange = (setting: keyof ProfileSettings, value: any) => {
-    setDraftUser(prev => ({
-      ...prev,
-      profileSettings: {
-        ...(prev.profileSettings || defaultSettings),
-        [setting]: value
-      }
-    }));
+    setDraftUser(prev => {
+        const updates: User = {
+            ...prev,
+            profileSettings: {
+                ...(prev.profileSettings || defaultSettings),
+                // Ensure coverImage is preserved if we are updating other settings and it was missing in defaultSettings
+                coverImage: prev.profileSettings?.coverImage || prev.coverImage || '', 
+                [setting]: value
+            }
+        };
+
+        // Sync root coverImage if we are updating the profile setting coverImage
+        if (setting === 'coverImage') {
+            updates.coverImage = value;
+        }
+
+        return updates;
+    });
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'cover') => {
@@ -568,22 +581,6 @@ export default function SettingsPage({ user, onLogout, onNavigate, onNotificatio
                                     PT
                                 </button>
                             </div>
-                         </div>
-
-                         <div className="flex items-center justify-between p-4 bg-black/20 rounded border border-[var(--theme-border)]">
-                            <div>
-                                <h3 className="font-bold">Glitchis</h3>
-                                <p className="text-sm text-[var(--theme-text-secondary)]">Permitir receber efeitos visuais Glitchi de outros usuários</p>
-                            </div>
-                            <label className="relative inline-flex items-center cursor-pointer">
-                                <input 
-                                    type="checkbox" 
-                                    checked={draftUser.profileSettings?.canReceiveGlitchis ?? true}
-                                    onChange={(e) => handleProfileSettingChange('canReceiveGlitchis', e.target.checked)}
-                                    className="sr-only peer" 
-                                />
-                                <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--theme-primary)]"></div>
-                            </label>
                          </div>
 
                          <div className="flex items-center justify-between p-4 bg-black/20 rounded border border-[var(--theme-border)]">

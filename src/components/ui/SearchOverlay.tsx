@@ -93,37 +93,7 @@ export default function SearchOverlay({ onClose, onSearch, onViewProfile, allUse
         }
     };
 
-    const { popularCords, popularPosts, relevantUsers, trendingTags, foundUsers, foundCords, foundPosts, hasResults } = useMemo(() => {
-        const getPopularity = (post: Post) => post.reactions ? Object.values(post.reactions).reduce((a, c) => a + c, 0) : 0;
-
-        const popularCords = [...allPosts]
-            .filter(p => p.isThread)
-            .sort((a, b) => getPopularity(b) - getPopularity(a))
-            .slice(0, 3);
-        
-        const popularPosts = [...allPosts]
-            .filter(p => !p.isThread)
-            .sort((a, b) => getPopularity(b) - getPopularity(a))
-            .slice(0, 5);
-        
-        const relevantUsers = allUsers
-            .filter(u => u.username !== currentUser.username && !currentUser.followingList?.includes(u.username))
-            .slice(0, 5);
-
-        // Extract and count tags
-        const tagCounts: Record<string, number> = {};
-        allPosts.forEach(p => {
-            const matches = p.content.match(/\$[a-zA-Z0-9_]+/g);
-            if (matches) {
-                matches.forEach(tag => {
-                    tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-                });
-            }
-        });
-        const trendingTags = Object.entries(tagCounts)
-            .sort(([, a], [, b]) => b - a)
-            .slice(0, 10);
-
+    const { foundUsers, foundCords, foundPosts, hasResults } = useMemo(() => {
         let foundUsers: User[] = [];
         let foundCords: Post[] = [];
         let foundPosts: Post[] = [];
@@ -146,8 +116,8 @@ export default function SearchOverlay({ onClose, onSearch, onViewProfile, allUse
             hasResults = foundUsers.length > 0 || foundCords.length > 0 || foundPosts.length > 0;
         }
 
-        return { popularCords, popularPosts, relevantUsers, trendingTags, foundUsers, foundCords, foundPosts, hasResults };
-    }, [allPosts, allUsers, currentUser, searchTerm, searchResults]);
+        return { foundUsers, foundCords, foundPosts, hasResults };
+    }, [allPosts, searchTerm, searchResults]);
 
     return (
         <div className="search-overlay" onClick={onClose}>
@@ -226,22 +196,6 @@ export default function SearchOverlay({ onClose, onSearch, onViewProfile, allUse
                         </div>
 
                         <div className="space-y-4">
-                            <h2 className="search-section-header">:: {t('trendingTags') || 'TRENDING TAGS'}</h2>
-                            <div className="flex flex-wrap gap-2">
-                                {trendingTags.map(([tag, count]) => (
-                                    <button 
-                                        key={tag} 
-                                        onClick={() => onSearch(tag)}
-                                        className="bg-[var(--theme-bg-tertiary)] px-3 py-1 rounded-full text-xs border border-[var(--theme-border-secondary)] hover:border-[var(--theme-primary)] transition-all flex items-center space-x-2"
-                                    >
-                                        <span className="font-bold text-[var(--theme-primary)]">{tag}</span>
-                                        <span className="opacity-50 text-[10px]">[{count}]</span>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
                             <h2 className="search-section-header">:: {t('foundCords')}</h2>
                             {foundCords.length > 0 ? (
                                 foundCords.map(cord => (
@@ -282,104 +236,13 @@ export default function SearchOverlay({ onClose, onSearch, onViewProfile, allUse
                         </div>
                     </div>
                     ) : (
-                        <div className="flex flex-col space-y-8 animate-[fadeIn_0.5s_ease-out]">
-                            <NoSignal message={t('noResultsFound') || "NO DATA FOUND IN ARCHIVES"} />
-                            
-                            <div className="border-t border-[var(--theme-border-primary)] pt-8">
-                                <h3 className="text-xl font-bold text-[var(--theme-secondary)] mb-6 text-center glitch-effect" data-text={t('recommendedForYou')}>:: {t('recommendedForYou') || "ALTERNATIVE TIMELINES"}</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                    <div className="space-y-4">
-                                        <h2 className="search-section-header">:: {t('relevantUsers')}</h2>
-                                        {relevantUsers.map(user => (
-                                            <a 
-                                                key={user.username} 
-                                                href={`/@${user.username}`}
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    onViewProfile(user.username);
-                                                }}
-                                                className="flex items-center space-x-3 cursor-pointer group"
-                                            >
-                                                <div className="relative w-8 h-8 flex-shrink-0">
-                                                    <Avatar src={user.avatar} username={user.username} className="w-full h-full rounded-full object-cover" />
-                                                </div>
-                                                <span className="text-[var(--theme-text-primary)] group-hover:text-[var(--theme-secondary)]">@{user.username}</span>
-                                            </a>
-                                        ))}
-                                    </div>
-                                    <div className="space-y-2">
-                                        <h2 className="search-section-header">:: {t('popularCords')}</h2>
-                                        {popularCords.map(cord => (
-                                           <div key={cord.id} onClick={() => onSearch(`${cord.id}`)} className="search-result-item text-sm">
-                                                <p className="truncate text-[var(--theme-text-primary)]">{cord.content}</p>
-                                                <p className="text-xs text-[var(--theme-text-secondary)]">{t('byUser', { username: cord.author.username })}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                     <div className="space-y-2">
-                                        <h2 className="search-section-header">:: {t('popularPosts')}</h2>
-                                        {popularPosts.map(post => (
-                                            <div key={post.id} onClick={() => onSearch(`${post.id}`)} className="search-result-item text-sm">
-                                                <p className="truncate text-[var(--theme-text-primary)]">{post.content}</p>
-                                                <p className="text-xs text-[var(--theme-text-secondary)]">{t('byUser', { username: post.author.username })}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
+                        <div className="flex flex-col items-center justify-center h-64 animate-[fadeIn_0.5s_ease-out] text-[var(--theme-text-secondary)] opacity-50">
+                            <p className="font-mono text-sm tracking-[0.2em] uppercase blink">:: {t('awaitingInput') || "AWAITING SEARCH QUERY"} ::</p>
                         </div>
                     )
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        <div className="space-y-4">
-                            <h2 className="search-section-header">:: {t('relevantUsers')}</h2>
-                            {relevantUsers.map(user => (
-                                <a 
-                                    key={user.username} 
-                                    href={`/@${user.username}`}
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        onViewProfile(user.username);
-                                    }}
-                                    className="flex items-center space-x-3 cursor-pointer group"
-                                >
-                                    <div className="relative w-8 h-8 flex-shrink-0">
-                                        {(() => {
-                                            const avatarShape = user.equippedFrame ? getFrameShape(user.equippedFrame.name) : 'rounded-full';
-                                            return (
-                                                <>
-                                                    <Avatar src={user.avatar} username={user.username} className={`w-full h-full ${avatarShape} object-cover`} />
-                                                    {user.equippedFrame && (
-                                                        <div className="absolute -inset-1 z-20 pointer-events-none">
-                                                            <FramePreview item={user.equippedFrame} />
-                                                        </div>
-                                                    )}
-                                                </>
-                                            );
-                                        })()}
-                                    </div>
-                                    <span className="text-[var(--theme-text-primary)] group-hover:text-[var(--theme-secondary)]">@{user.username}</span>
-                                </a>
-                            ))}
-                        </div>
-                        <div className="space-y-2">
-                            <h2 className="search-section-header">:: {t('popularCords')}</h2>
-                            {popularCords.map(cord => (
-                               <div key={cord.id} onClick={() => onSearch(`${cord.id}`)} className="search-result-item text-sm">
-                                    <p className="truncate text-[var(--theme-text-primary)]">{cord.content}</p>
-                                    <p className="text-xs text-[var(--theme-text-secondary)]">{t('byUser', { username: cord.author.username })}</p>
-                                </div>
-                            ))}
-                        </div>
-                         <div className="space-y-2">
-                            <h2 className="search-section-header">:: {t('popularPosts')}</h2>
-                            {popularPosts.map(post => (
-                                <div key={post.id} onClick={() => onSearch(`${post.id}`)} className="search-result-item text-sm">
-                                    <p className="truncate text-[var(--theme-text-primary)]">{post.content}</p>
-                                    <p className="text-xs text-[var(--theme-text-secondary)]">{t('byUser', { username: post.author.username })}</p>
-                                </div>
-                            ))}
-                        </div>
+                    <div className="flex flex-col items-center justify-center h-64 animate-[fadeIn_0.5s_ease-out] text-[var(--theme-text-secondary)] opacity-50">
+                         <p className="font-mono text-sm tracking-[0.2em] uppercase blink">:: {t('awaitingInput') || "AWAITING SEARCH QUERY"} ::</p>
                     </div>
                 )}
             </div>
