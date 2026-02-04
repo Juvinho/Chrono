@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react"; 
 import io from "socket.io-client"; 
+import { useSound } from "../../../contexts/SoundContext";
 
 // Conecta no seu backend usando o IP dinâmico do acesso atual
 const getSocketUrl = () => {
@@ -17,6 +18,7 @@ const socket = io(getSocketUrl(), {
 const COMMON_EMOJIS = ["💀", "💜", "🔥", "⚡", "🤖", "🎮", "🛸", "✨", "⛓️", "💊"];
 
 function ChatTest() { 
+  const { playSound } = useSound();
   const [username, setUsername] = useState(""); 
   const [room, setRoom] = useState(""); 
   const [showChat, setShowChat] = useState(false); 
@@ -91,6 +93,15 @@ function ChatTest() {
   useEffect(() => { 
     const receiveHandler = (data: any) => { 
       setMessageList((list) => [...list, data]); 
+      
+      // Tocar som se a aba estiver em segundo plano ou não for o autor
+      if (document.hidden || data.author !== username) {
+        try {
+            playSound('notification');
+        } catch (e) {
+            console.warn("Could not play notification sound:", e);
+        }
+      }
     }; 
 
     const typingHandler = (data: any) => {
