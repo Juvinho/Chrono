@@ -143,11 +143,14 @@ export default function App() {
         
         storiesByUser.forEach((userStories, userId) => {
              const firstStory = userStories[0];
-             if (firstStory.author && firstStory.author.username !== currentUser.username) {
-                 usersWithStoriesList.push({
-                     ...firstStory.author,
-                     stories: userStories
-                 });
+             if (firstStory.author) {
+                 // Incluir todos os usuários com stories, exceto o atual
+                 if (firstStory.author.username !== currentUser.username) {
+                     usersWithStoriesList.push({
+                         ...firstStory.author,
+                         stories: userStories
+                     });
+                 }
              }
         });
         

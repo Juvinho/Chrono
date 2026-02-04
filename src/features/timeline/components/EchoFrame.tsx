@@ -288,34 +288,7 @@ export default function EchoFrame({
 
     const renderMobileHeader = () => (
         <div className="lg:hidden mb-6 space-y-4">
-            {/* Mobile Stories */}
-            <StoryTray 
-                currentUser={currentUser}
-                usersWithStories={usersWithStories}
-                onViewStory={onViewStory}
-                onCreateStory={onCreateStory}
-                variant="row"
-            />
-
-            {/* Mobile Cord Hub (Topics) */}
-            <div className="overflow-x-auto pb-2 -mx-2 px-2 flex gap-2 no-scrollbar">
-                 <button onClick={() => setIsCordModalOpen(true)} className="flex-shrink-0 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] text-[var(--theme-text-primary)] px-4 py-1.5 rounded-full text-sm font-bold whitespace-nowrap hover:border-[var(--theme-primary)]">
-                     + {t('createCord')}
-                 </button>
-                 {cordTopics.map(([tag, count]) => (
-                     <button 
-                        key={tag} 
-                        onClick={() => onTagClick(tag)} 
-                        className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-bold whitespace-nowrap border transition-colors ${
-                            activeCordTag === tag 
-                                ? 'bg-[var(--theme-primary)] text-white border-[var(--theme-primary)]' 
-                                : 'bg-[var(--theme-bg-secondary)] text-[var(--theme-text-secondary)] border-[var(--theme-border-secondary)]'
-                        }`}
-                    >
-                         {tag} <span className="opacity-70 text-xs">[{count}]</span>
-                     </button>
-                 ))}
-            </div>
+            {/* Mobile header content without stories */}
         </div>
     );
 
@@ -463,15 +436,6 @@ export default function EchoFrame({
                             <p className="text-sm">{t('noRelatedCords')}</p>
                         </div>
                      )}
-
-                     {/* Stories Grid */}
-                     <StoryTray 
-                        currentUser={currentUser}
-                        usersWithStories={usersWithStories}
-                        onViewStory={onViewStory}
-                        onCreateStory={onCreateStory}
-                        variant="grid"
-                     />
                 </aside>
                 
                 {/* Center Column: Main Feed */}
