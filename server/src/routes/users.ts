@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿import express, { Response } from 'express';
+﻿﻿﻿﻿﻿﻿﻿﻿import express, { Response } from 'express';
 import { UserService } from '../services/userService.js';
 import { FollowService } from '../services/followService.js';
 import { NotificationService } from '../services/notificationService.js';
@@ -159,12 +159,22 @@ router.get('/:username', optionalAuthenticateToken, async (req: AuthRequest, res
         followingList = await followService.getFollowingFull(user.id);
     }
 
+    // Ensure counts are accurate by using the actual list length if available, 
+    // or falling back to the stored count (and syncing it in the background)
+    const followersCount = canViewDetails ? followersList.length : (user.followers || 0);
+    const followingCount = canViewDetails ? followingList.length : (user.following || 0);
+
+    // Background sync if stored count differs from actual count
+    if (canViewDetails && (followersCount !== user.followers || followingCount !== user.following)) {
+        userService.syncUserFollowCounts(user.id).catch(err => console.error('Sync error:', err));
+    }
+
     res.json({
         ...user,
         email: undefined, // Ensure email is not leaked
         isFollowing,
-        followers: user.followers || 0, // Ensure camelCase counts are present
-        following: user.following || 0,
+        followers: followersCount,
+        following: followingCount,
         followersList,
         followingList,
         isPrivate: user.isPrivate,
