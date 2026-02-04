@@ -19,6 +19,8 @@ const StoryViewer = React.lazy(() => import('./features/stories/components/Story
 const StoryCreator = React.lazy(() => import('./features/stories/components/StoryCreator'));
 const Marketplace = React.lazy(() => import('./features/marketplace/components/Marketplace'));
 const GlitchiOverlay = React.lazy(() => import('./features/companion/components/GlitchiOverlay'));
+const NyxAI = React.lazy(() => import('./features/companion/components/NyxAI'));
+const CyberCompanion = React.lazy(() => import('./features/companion/components/CyberCompanion'));
 
 export default function App() {
     const navigate = useNavigate();
@@ -51,7 +53,8 @@ export default function App() {
     // 3. Other Local State
     const [viewingStoryUser, setViewingStoryUser] = useState<User | null>(null);
     const [isCreatingStory, setIsCreatingStory] = useState(false);
-    const [isMarketplaceOpen, setIsMarketplaceOpen] = useState(false);
+    // const [isMarketplaceOpen, setIsMarketplaceOpen] = useState(false); // Moved to route /marketplace
+    const [isNyxOpen, setIsNyxOpen] = useState(false);
     const [openChatUsernames, setOpenChatUsernames] = useState<string[]>([]);
     const [minimizedChatUsernames, setMinimizedChatUsernames] = useState<string[]>([]);
     const [animationKey, setAnimationKey] = useState(0);
@@ -82,14 +85,15 @@ export default function App() {
                 navigate('/echoframe');
                 break;
             case Page.Profile:
-                if (data) navigate(`/@${data}`);
-                else if (currentUser) navigate(`/@${currentUser.username}`);
+                if (data) navigate(`/profile/${data}`);
+                else if (currentUser) navigate(`/profile/${currentUser.username}`);
                 else navigate('/login');
                 break;
             case Page.Settings:
                 navigate('/settings');
                 break;
             case Page.Messages:
+                navigate(data ? `/messages/${data}` : '/messages');
                 break;
             case Page.VideoAnalysis:
                 navigate('/data-slicer');
@@ -809,14 +813,24 @@ export default function App() {
                             handleShowNewPosts={handleShowNewPosts}
                             setIsCreatingStory={setIsCreatingStory}
                             handleUpdateUser={handleUpdateUser}
-                            setIsMarketplaceOpen={setIsMarketplaceOpen}
+                            setIsMarketplaceOpen={() => navigate('/marketplace')}
                             handleBack={handleBack}
                             handleFollowToggle={handleFollowToggle}
                             handleSendGlitchi={handleSendGlitchi}
                             handlePasswordReset={handlePasswordReset}
+                            onOpenNyx={() => setIsNyxOpen(true)}
                         />
 
                         {/* Modals and Overlays */}
+                        {currentUser && <CyberCompanion currentUser={currentUser} />}
+                        
+                        {isNyxOpen && (
+                            <NyxAI 
+                                onClose={() => setIsNyxOpen(false)} 
+                                currentUser={currentUser} 
+                            />
+                        )}
+
                         {viewingStoryUser && viewingStoryUser.stories && (
                             <StoryViewer
                                 user={viewingStoryUser}
@@ -849,13 +863,14 @@ export default function App() {
                                 onSave={handleCreateStory}
                             />
                         )}
-                        {isMarketplaceOpen && currentUser && (
+                        {/* Marketplace moved to route /marketplace */}
+                        {/* {isMarketplaceOpen && currentUser && (
                             <Marketplace
                                 currentUser={currentUser}
                                 onClose={() => setIsMarketplaceOpen(false)}
                                 onUserUpdate={handleUpdateUser}
                             />
-                        )}
+                        )} */}
                         
                         {activeGlitchi && (
                             <GlitchiOverlay 

@@ -35,6 +35,7 @@ interface DashboardProps {
     onCreateStory?: () => void;
     onUpdateUser?: (user: User) => void;
     onOpenMarketplace?: () => void;
+    onOpenNyx?: () => void;
     nextAutoRefresh?: Date | null;
     isAutoRefreshPaused?: boolean;
     onBack?: () => void;
@@ -176,6 +177,7 @@ export default function Dashboard({
                 onNotificationClick={onNotificationClick}
                 onSearch={handleSearch} 
                 onOpenMarketplace={onOpenMarketplace}
+                onOpenNyx={onOpenNyx}
                 allPosts={postsForSearch} 
                 allUsers={allUsers} 
                 conversations={conversations}

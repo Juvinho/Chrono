@@ -36,6 +36,7 @@ interface ProfilePageProps {
   typingParentIds: Set<string>;
   conversations: Conversation[];
   onOpenMarketplace?: () => void;
+  onOpenNyx?: () => void;
   onSendGlitchi: (username: string) => void;
   onBack?: () => void;
 }
@@ -375,6 +376,7 @@ export default function ProfilePage({
                 allUsers={allUsers}
                 conversations={conversations}
                 onOpenMarketplace={onOpenMarketplace}
+                onOpenNyx={onOpenNyx}
                 onBack={onBack}
             />
             <div className="flex-grow flex flex-col items-center justify-center">
@@ -777,6 +779,8 @@ export default function ProfilePage({
       {/* FIX: Pass allPosts to Timeline component */}
       <Timeline selectedDate={selectedDate} setSelectedDate={setSelectedDate} onNavigate={onNavigate} allPosts={allPosts} />
       
+      {/* Modal de Detalhes do Post (Legacy: Se ainda usado via state interno) */}
+      {/* Agora preferimos usar a rota /post/:id */}
       {postToEdit && (
         <PostComposer 
             currentUser={currentUser}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useParams } from 'react-router-dom';
 import { User, Page, Post, Conversation, Message, Notification } from '../../../types/index';
 import Header from '../../../components/ui/Header';
 import { useTranslation } from '../../../hooks/useTranslation';
@@ -28,6 +29,7 @@ export default function MessagesPage({
   conversations, onSendMessage, onSendGlitchi, onMarkConversationAsRead, onCreateOrFindConversation, onOpenMarketplace, onBack 
 }: MessagesPageProps) {
   const { t } = useTranslation();
+  const { username: routeUsername } = useParams<{ username: string }>();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
   const [isNewMessageModalOpen, setIsNewMessageModalOpen] = useState(false);
@@ -68,14 +70,14 @@ export default function MessagesPage({
 
     // Handle focusing on a conversation from a notification or direct link
   useEffect(() => {
-    const focusUser = sessionStorage.getItem('chrono_focus_conversation_user');
+    const focusUser = sessionStorage.getItem('chrono_focus_conversation_user') || routeUsername;
     if (focusUser) {
       sessionStorage.removeItem('chrono_focus_conversation_user');
       onCreateOrFindConversation(focusUser).then(newConversationId => {
           setSelectedConversationId(newConversationId);
       });
     }
-  }, [currentUser.username, onCreateOrFindConversation]);
+  }, [currentUser.username, onCreateOrFindConversation, routeUsername]);
 
   // Mark conversation as read whenever it's selected
   useEffect(() => {
