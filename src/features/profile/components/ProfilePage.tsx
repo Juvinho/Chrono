@@ -341,8 +341,6 @@ export default function ProfilePage({
                 onViewProfile={(username) => onNavigate(Page.Profile, username)} 
                 onNavigate={onNavigate}
                 onNotificationClick={onNotificationClick}
-                onAcceptConnection={onAcceptConnection}
-                onDeclineConnection={onDeclineConnection}
                 onSearch={handleSearch} 
                 allPosts={allPosts} 
                 allUsers={allUsers}
@@ -371,8 +369,6 @@ export default function ProfilePage({
           onViewProfile={(username) => onNavigate(Page.Profile, username)} 
           onNavigate={onNavigate}
           onNotificationClick={onNotificationClick}
-          onAcceptConnection={onAcceptConnection}
-          onDeclineConnection={onDeclineConnection}
           onSearch={handleSearch} 
           allPosts={allPosts} 
           allUsers={allUsers} 
