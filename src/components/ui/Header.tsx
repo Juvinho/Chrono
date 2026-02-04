@@ -23,9 +23,10 @@ interface HeaderProps {
     allPosts: Post[];
     conversations: Conversation[];
     onToggleChat?: () => void;
+    lastViewedNotifications?: Date | null;
 }
 
-export default function Header({ user, onLogout, onViewProfile, onNavigate, onNotificationClick, onViewNotifications, onSearch, onOpenMarketplace, onBack, allUsers, allPosts, conversations, onToggleChat }: HeaderProps) {
+export default function Header({ user, onLogout, onViewProfile, onNavigate, onNotificationClick, onViewNotifications, onSearch, onOpenMarketplace, onBack, allUsers, allPosts, conversations, onToggleChat, lastViewedNotifications }: HeaderProps) {
     const { t } = useTranslation();
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -45,8 +46,17 @@ export default function Header({ user, onLogout, onViewProfile, onNavigate, onNo
     };
 
     const unreadNotificationCount = useMemo(() => {
-        return user.notifications?.filter(n => !n.read).length || 0;
-    }, [user.notifications]);
+        if (!user.notifications || !lastViewedNotifications) {
+            return user.notifications?.filter(n => !n.read).length || 0;
+        }
+        
+        // Contar apenas notificações não lidas que chegaram após a última visualização
+        return user.notifications.filter(n => {
+            const notificationTime = new Date(n.timestamp);
+            const viewedTime = new Date(lastViewedNotifications);
+            return !n.read && notificationTime > viewedTime;
+        }).length;
+    }, [user.notifications, lastViewedNotifications]);
 
     const unreadMessageCount = useMemo(() => {
         if (!conversations) return 0;

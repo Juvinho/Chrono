@@ -831,6 +831,7 @@ export default function App() {
                             isAutoRefreshPaused={isAutoRefreshPaused}
                             viewingStoryUser={viewingStoryUser}
                             setViewingStoryUser={setViewingStoryUser}
+                            lastViewedNotifications={lastViewedNotifications}
                             handleNavigate={handleNavigate}
                             handleLogin={handleLogin}
                             handleLogout={handleLogout}
