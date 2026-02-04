@@ -7,7 +7,6 @@ import { isSameDay } from '../../../utils/date';
 import { PlusIcon } from '../../../components/ui/icons';
 import { useTranslation } from '../../../hooks/useTranslation';
 import ConfirmationModal from '../../../components/ui/ConfirmationModal';
-import CordView from '../../messages/components/CordView';
 import { apiClient } from '../../../api';
 
 import FramePreview, { getFrameShape } from '../../profile/components/FramePreview';
@@ -254,23 +253,104 @@ export default function EchoFrame({
     }, [allPosts]);
 
     if (activeCordTag) {
+        const cordTagLower = activeCordTag.toLowerCase();
+        const cordPopular = allPosts
+            .filter(p => p.content.toLowerCase().includes(cordTagLower))
+            .sort((a, b) => {
+                const scoreA = (a.replies?.length || 0) * 2 + Object.values(a.reactions || {}).reduce((sum, v) => sum + v, 0);
+                const scoreB = (b.replies?.length || 0) * 2 + Object.values(b.reactions || {}).reduce((sum, v) => sum + v, 0);
+                return scoreB - scoreA;
+            })
+            .slice(0, 10);
+        const cordRecent = allPosts
+            .filter(p => p.content.toLowerCase().includes(cordTagLower))
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+        const handleCordPostSubmit = (postData: Omit<Post, 'id' | 'author' | 'timestamp' | 'replies' | 'repostOf' | 'likes' | 'likedBy'>, existingPostId?: string) => {
+            const withTag = postData.content.includes(activeCordTag) ? postData : { ...postData, content: `${postData.content} ${activeCordTag}` };
+            handlePostSubmit(withTag, existingPostId);
+        };
+
         return (
-            <CordView
-                cordTag={activeCordTag}
-                onClose={() => setActiveCordTag(null)}
-                allPosts={allPosts}
-                currentUser={currentUser}
-                onViewProfile={onViewProfile}
-                onUpdateReaction={onUpdateReaction}
-                onReply={onReply}
-                onEcho={onEcho}
-                onDeletePost={onDeletePost}
-                onEditPost={onEditPost}
-                onPollVote={onPollVote}
-                onTagClick={onTagClick}
-                typingParentIds={typingParentIds}
-                onNewPost={onNewPost}
-            />
+            <main className="py-8 max-w-7xl mx-auto px-4">
+                {postToEdit && (
+                    <PostComposer 
+                        currentUser={currentUser}
+                        onClose={() => setPostToEdit(null)}
+                        onSubmit={handleCordPostSubmit}
+                        postToEdit={postToEdit}
+                    />
+                )}
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl font-bold text-[var(--theme-secondary)]">:: CORD :: {activeCordTag}</h2>
+                    <button onClick={() => setActiveCordTag(null)} className="back-to-echo-btn">&lt; {t('backToEchoFrame') || 'Voltar'}</button>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div>
+                        <h3 className="text-xl font-bold text-[var(--theme-text-light)] mb-4 border-b border-[var(--theme-border-primary)] pb-2">
+                            {t('popularCords') || 'Cordões Populares'}
+                        </h3>
+                        <div className="space-y-4">
+                            {cordPopular.length > 0 ? cordPopular.map(post => (
+                                <div key={post.id}>
+                                    <PostCard
+                                        post={post}
+                                        currentUser={currentUser}
+                                        onViewProfile={onViewProfile}
+                                        onUpdateReaction={onUpdateReaction}
+                                        onReply={onReply}
+                                        onEcho={onEcho}
+                                        onDelete={onDeletePost}
+                                        onEdit={setPostToEdit}
+                                        onTagClick={onTagClick}
+                                        onPollVote={onPollVote}
+                                        typingParentIds={typingParentIds}
+                                    />
+                                </div>
+                            )) : (
+                                <div className="text-center text-[var(--theme-text-secondary)] p-10 border border-dashed border-[var(--theme-border-primary)]">
+                                    <p className="text-lg">{t('noEchoesFoundFor', { query: activeCordTag })}</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    <div>
+                        <div className="mb-8">
+                            <h3 className="text-lg font-bold text-[var(--theme-text-light)] mb-2">{t('createCord') || 'Criar Cordão'}</h3>
+                            <PostComposer 
+                                currentUser={currentUser}
+                                onClose={() => {}}
+                                onSubmit={handleCordPostSubmit}
+                                initialContent={`${activeCordTag} `}
+                                inline={true}
+                            />
+                        </div>
+                        <h3 className="text-xl font-bold text-[var(--theme-text-light)] mb-4 border-b border-[var(--theme-border-primary)] pb-2 flex justify-between items-center">
+                            <span>{t('recentPosts') || 'Posts Recentes'}</span>
+                            <span className="text-xs text-[var(--theme-primary)] animate-pulse">● LIVE</span>
+                        </h3>
+                        <div className="space-y-4">
+                            {cordRecent.map(post => (
+                                <div key={post.id}>
+                                    <PostCard
+                                        post={post}
+                                        currentUser={currentUser}
+                                        onViewProfile={onViewProfile}
+                                        onUpdateReaction={onUpdateReaction}
+                                        onReply={onReply}
+                                        onEcho={onEcho}
+                                        onDelete={onDeletePost}
+                                        onEdit={setPostToEdit}
+                                        onTagClick={onTagClick}
+                                        onPollVote={onPollVote}
+                                        typingParentIds={typingParentIds}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </main>
         );
     }
 
