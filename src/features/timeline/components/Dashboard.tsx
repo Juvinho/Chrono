@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { User, Page, Post, CyberpunkReaction, Notification, Conversation } from '../../../types/index';
 import Header from '../../../components/ui/Header';
@@ -47,6 +47,7 @@ export default function Dashboard({
 }: DashboardProps) {
     const { t } = useTranslation();
     const { tag } = useParams<{ tag: string }>();
+    const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
     const [focusPostId, setFocusPostId] = useState<string | null>(null);
     const [activeCordTag, setActiveCordTag] = useState<string | null>(null);
@@ -64,41 +65,24 @@ export default function Dashboard({
         if (query.startsWith('@')) {
             const username = query.substring(1);
             onNavigate(Page.Profile, username);
-        } else {
-            setSearchQuery(query);
+            setActiveCordTag(null);
+            return;
         }
-        setActiveCordTag(null); // When searching, always leave cord view
+        if (query.startsWith('$')) {
+            handleTagClick(query);
+            return;
+        }
+        setSearchQuery(query);
+        setActiveCordTag(null);
     }, [onNavigate]);
     
     const handleTagClick = React.useCallback((tag: string) => {
-        setActiveCordTag(tag);
+        const normalized = tag.startsWith('$') ? tag : `$${tag}`;
+        setActiveCordTag(normalized);
         setSearchQuery('');
-
-        if (typeof window !== 'undefined' && window.history && window.location) {
-            const monthSlugs = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-            const formatDateSegment = (date: Date) => {
-                const month = monthSlugs[date.getMonth()];
-                const day = String(date.getDate()).padStart(2, '0');
-                const year = date.getFullYear();
-                return `${month}-${day}-${year}`;
-            };
-
-            const cleanTag = tag.startsWith('$') ? tag.substring(1) : tag;
-            const today = new Date();
-            const isToday = today.toDateString() === selectedDate.toDateString();
-
-            let path = `/$${encodeURIComponent(cleanTag)}`;
-            if (!isToday) {
-                path = `${path}/${formatDateSegment(selectedDate)}`;
-            }
-
-            const currentFullPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-            const nextFullPath = `${path}${window.location.search}${window.location.hash}`;
-            if (currentFullPath !== nextFullPath) {
-                window.history.pushState({ cordTag: tag, date: selectedDate.toISOString() }, '', nextFullPath);
-            }
-        }
-    }, [selectedDate]);
+        const cleanTag = normalized.substring(1);
+        navigate(`/cordao/${encodeURIComponent(cleanTag)}`);
+    }, [navigate]);
 
     const handleViewProfile = React.useCallback((username: string) => {
         onNavigate(Page.Profile, username);
