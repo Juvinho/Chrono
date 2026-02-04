@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { Post, User } from '../types';
+import { Post, User } from '../../../types/index';
 import { apiClient, mapApiPostToPost } from '../../../api';
 import PostCard from './PostCard';
 import { useTranslation } from '../../../hooks/useTranslation';

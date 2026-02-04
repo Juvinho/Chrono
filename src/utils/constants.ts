@@ -1,5 +1,5 @@
 
-import { User, Post, Notification, NotificationType } from './types';
+import { User, Post, Notification, NotificationType } from '../types/index';
 
 const mockNotifications: Notification[] = [];
 

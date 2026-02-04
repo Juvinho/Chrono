@@ -1,5 +1,5 @@
 import React from 'react';
-import { Item } from '../types';
+import { Item } from '../../../types/index';
 
 interface FramePreviewProps {
     item: Item;

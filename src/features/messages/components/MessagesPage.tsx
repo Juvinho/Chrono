@@ -13,6 +13,7 @@ interface MessagesPageProps {
   onLogout: () => void;
   onNavigate: (page: Page, data?: string) => void;
   onNotificationClick: (notification: Notification) => void;
+  onViewNotifications: () => void;
   allUsers: User[];
   allPosts: Post[];
   conversations: Conversation[];
@@ -22,11 +23,13 @@ interface MessagesPageProps {
   onCreateOrFindConversation: (recipientUsername: string, options?: { isEncrypted?: boolean, selfDestructTimer?: number }) => Promise<string>;
   onOpenMarketplace?: () => void;
   onBack?: () => void;
+  onToggleChat?: () => void;
+  lastViewedNotifications?: Date | null;
 }
 
 export default function MessagesPage({ 
-  currentUser, onLogout, onNavigate, onNotificationClick, allUsers, allPosts, 
-  conversations, onSendMessage, onSendGlitchi, onMarkConversationAsRead, onCreateOrFindConversation, onOpenMarketplace, onBack 
+  currentUser, onLogout, onNavigate, onNotificationClick, onViewNotifications, allUsers, allPosts, 
+  conversations, onSendMessage, onSendGlitchi, onMarkConversationAsRead, onCreateOrFindConversation, onOpenMarketplace, onBack, onToggleChat, lastViewedNotifications
 }: MessagesPageProps) {
   const { t } = useTranslation();
   const { username: routeUsername } = useParams<{ username: string }>();
@@ -160,12 +163,15 @@ export default function MessagesPage({
         onViewProfile={(username) => onNavigate(Page.Profile, username)}
         onNavigate={onNavigate}
         onNotificationClick={onNotificationClick}
+        onViewNotifications={onViewNotifications}
         onSearch={handleSearch}
         allPosts={allPosts}
         allUsers={allUsers}
         conversations={conversations}
         onOpenMarketplace={onOpenMarketplace}
         onBack={onBack}
+        onToggleChat={onToggleChat}
+        lastViewedNotifications={lastViewedNotifications}
       />
       <main className="flex-grow flex border-t-2 border-[var(--theme-border-primary)] overflow-hidden">
         {/* Left Column: Conversation List */}
@@ -260,11 +266,11 @@ export default function MessagesPage({
                         {msg.senderUsername === currentUser.username && (
                             <div className="flex items-center ml-2">
                                 {msg.status === 'read' ? (
-                                    <CheckCircleIcon className="w-3 h-3 text-emerald-400" title="Lida" />
+                                    <CheckCircleIcon className="w-3 h-3 text-emerald-400" />
                                 ) : msg.status === 'delivered' ? (
-                                    <CheckCircleIcon className="w-3 h-3 text-white/40" title="Entregue" />
+                                    <CheckCircleIcon className="w-3 h-3 text-white/40" />
                                 ) : (
-                                    <div className="w-2 h-2 rounded-full bg-white/20" title="Enviada" />
+                                    <div className="w-2 h-2 rounded-full bg-white/20" />
                                 )}
                             </div>
                         )}
@@ -331,7 +337,6 @@ export default function MessagesPage({
       </main>
       {isNewMessageModalOpen && (
         <NewMessageModal
-          allUsers={allUsers}
           currentUser={currentUser}
           onClose={() => setIsNewMessageModalOpen(false)}
           onSelectUser={async (username) => {
