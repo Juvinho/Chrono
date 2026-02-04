@@ -37,7 +37,15 @@ export const useAppSession = ({
         
         try {
             // Reload current user to ensure follow counts and lists are accurate
-            const userResult = await apiClient.getCurrentUser();
+            // Check if getCurrentUser exists (for compatibility)
+            let userResult;
+            if (!apiClient.getCurrentUser || typeof apiClient.getCurrentUser !== 'function') {
+                console.error('apiClient.getCurrentUser is not a function. Using getMe instead.');
+                userResult = await apiClient.getMe();
+            } else {
+                userResult = await apiClient.getCurrentUser();
+            }
+            
             if (userResult.data) {
                 const mappedUser = mapApiUserToUser(userResult.data);
                 
@@ -182,7 +190,15 @@ export const useAppSession = ({
             const token = apiClient.getToken();
             if (token) {
                 try {
-                    const result = await apiClient.getCurrentUser();
+                    // Check if getCurrentUser exists (for compatibility)
+                    let result;
+                    if (!apiClient.getCurrentUser || typeof apiClient.getCurrentUser !== 'function') {
+                        console.error('apiClient.getCurrentUser is not a function. Using getMe instead.');
+                        result = await apiClient.getMe();
+                    } else {
+                        result = await apiClient.getCurrentUser();
+                    }
+                    
                     if (result.data) {
                         const mappedUser = mapApiUserToUser(result.data);
                         setCurrentUser(mappedUser);
