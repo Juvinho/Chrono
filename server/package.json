@@ -10,6 +10,7 @@
     "build:full": "cd .. && npm install && npm run build",
     "start": "node dist/index.js",
     "db:migrate": "tsx src/db/migrate.ts",
+    "db:migrate-data": "tsx src/scripts/migrate-data.ts",
     "db:seed": "tsx src/db/seed.ts",
     "db:clear": "tsx src/db/clear.ts"
   },

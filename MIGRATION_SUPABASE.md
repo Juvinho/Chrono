@@ -64,4 +64,37 @@ Provavelmente você tentou usar uma funcionalidade chamada **Supabase Launch** o
 Para o seu caso (um servidor Express completo), a integração deve ser feita no **Render**, apontando para o banco do **Supabase**. Essa combinação é a favorita da comunidade para projetos gratuitos.
 
 ---
+
+## Passo Extra: Migrar Dados do Railway (Opcional)
+
+Se você quiser trazer seus posts e usuários antigos do Railway para o Supabase, siga este processo:
+
+### 1. Obtenha as URLs de Conexão
+*   **Railway**: Vá no seu projeto antigo, clique no banco de dados > **Connect** > **External Connection String**.
+*   **Supabase**: Vá em **Project Settings** > **Database** > **URI** (Porta 5432).
+
+### 2. Comandos de Migração (Via Script Node.js - RECOMENDADO)
+Como o seu Windows não reconheceu o comando `pg_dump`, criei um script que faz a migração usando o próprio Node.js do projeto. Siga estes passos:
+
+1. Abra o terminal na pasta raiz do projeto.
+2. Rode o comando:
+```bash
+npm run db:migrate-data
+```
+
+Este script vai:
+- Conectar no seu banco antigo do Railway.
+- Conectar no seu banco novo do Supabase.
+- Copiar todos os usuários, posts, mensagens e configurações automaticamente.
+
+---
+
+### 3. URL Codificada para o Render (IMPORTANTE)
+Sua senha do Supabase tem muitos caracteres especiais (`@`, `#`, `*`, `]`). No Render, você **DEVE** usar a versão codificada abaixo na variável `DATABASE_URL`, caso contrário o servidor não conseguirá conectar:
+
+**URL para colocar no Render:**
+`postgresql://postgres:27Set%402004%23%2AJuvinho123%5D@db.aamgqywcifppjgwgspsg.supabase.co:5432/postgres`
+
+---
+
 *Guia gerado pelo Assistente Chrono em 03/02/2026.*
