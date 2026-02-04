@@ -14,13 +14,13 @@ const cleanDbUrl = rawDbUrl.split('?')[0];
 const sanitizedUrl = cleanDbUrl.replace(/:([^:@]+)@/, ':****@');
 console.log(`📡 Conectando ao banco de dados: ${sanitizedUrl}`);
 
-const isProduction = process.env.NODE_ENV === 'production';
+const isLocal = cleanDbUrl.includes('localhost') || cleanDbUrl.includes('127.0.0.1');
 
 export const pool = new Pool({
   connectionString: cleanDbUrl,
-  ssl: isProduction ? {
+  ssl: isLocal ? false : {
     rejectUnauthorized: false
-  } : false,
+  },
   connectionTimeoutMillis: 30000,
   idleTimeoutMillis: 15000,
   max: 20,

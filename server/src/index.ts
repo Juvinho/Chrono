@@ -46,8 +46,8 @@ app.use(cors({
       return callback(null, true);
     }
     
-    // Allow Render domains and subdomains
-    if (origin.endsWith('.onrender.com')) {
+    // Allow Render and Railway domains and subdomains
+    if (origin.endsWith('.onrender.com') || origin.endsWith('.railway.app')) {
       return callback(null, true);
     }
     
