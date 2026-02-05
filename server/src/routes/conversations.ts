@@ -1,4 +1,5 @@
 import express, { Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import { ConversationService } from '../services/conversationService.js';
 import { UserService } from '../services/userService.js';
 import { NotificationService } from '../services/notificationService.js';
@@ -9,6 +10,22 @@ const router = express.Router();
 const conversationService = new ConversationService();
 const userService = new UserService();
 const notificationService = new NotificationService();
+
+// Rate limiting for messaging endpoints to prevent spam
+const messageRateLimiter = rateLimit({
+  windowMs: 10_000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+// Basic sanitization
+const sanitizeText = (text: string) => {
+  return text
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/[\u0000-\u001F]+/g, ' ')
+    .trim();
+};
 
 // Get all conversations for current user
 router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
@@ -115,7 +132,7 @@ router.get('/with/:username', authenticateToken, async (req: AuthRequest, res: R
 });
 
 // Send message
-router.post('/:id/messages', authenticateToken, async (req: AuthRequest, res: Response) => {
+router.post('/:id/messages', authenticateToken, messageRateLimiter, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { text, media } = req.body;
@@ -124,9 +141,11 @@ router.post('/:id/messages', authenticateToken, async (req: AuthRequest, res: Re
       return res.status(400).json({ error: 'Message text or media is required' });
     }
 
+    const cleanText = typeof text === 'string' ? sanitizeText(text) : text;
+
     const startTs = Date.now();
-    if (typeof text === 'string') {
-      const len = text.length;
+    if (typeof cleanText === 'string') {
+      const len = cleanText.length;
       console.log(`[DM] Validating message length: ${len} chars for conversation ${id}`);
       if (len > 10000) {
         console.warn(`[DM] Message too long: ${len} > 10000`);
@@ -134,7 +153,7 @@ router.post('/:id/messages', authenticateToken, async (req: AuthRequest, res: Re
       }
     }
 
-    const message = await conversationService.sendMessage(id, req.userId!, text, media);
+    const message = await conversationService.sendMessage(id, req.userId!, cleanText, media);
     console.log(`[DM] Inserted message ${message.id} in ${Date.now() - startTs}ms`);
 
     // Create notification for recipient
@@ -221,6 +240,32 @@ router.post('/:id/read', authenticateToken, async (req: AuthRequest, res: Respon
   } catch (error: any) {
     console.error('Mark read error:', error);
     res.status(500).json({ error: error.message || 'Failed to mark as read' });
+  }
+});
+
+// Search messages in a conversation
+router.get('/:id/messages/search', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const q = (req.query.q as string || '').trim();
+    const limit = Math.min(Math.max(parseInt((req.query.limit as string) || '50'), 1), 200);
+    if (!q || q.length < 2) {
+      return res.json([]);
+    }
+    const rows = await pool.query(
+      `SELECT id, conversation_id, sender_id, text, created_at 
+       FROM messages 
+       WHERE conversation_id = $1 
+         AND (delete_at IS NULL OR delete_at > CURRENT_TIMESTAMP)
+         AND text ILIKE '%' || $2 || '%'
+       ORDER BY created_at DESC, id DESC
+       LIMIT ${limit}`,
+      [id, q]
+    );
+    res.json(rows.rows);
+  } catch (error: any) {
+    console.error('[DM] Search messages error:', error);
+    res.status(500).json({ error: error.message || 'Failed to search messages' });
   }
 });
 
