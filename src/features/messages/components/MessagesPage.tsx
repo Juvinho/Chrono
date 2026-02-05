@@ -238,7 +238,11 @@ export default function MessagesPage({
                 </div>
               </div>
               <div className="flex-grow p-4 overflow-y-auto flex flex-col space-y-4">
-                {activeConversation.messages.map(msg => (
+                {[...activeConversation.messages].sort((a: any, b: any) => {
+                  const at = a.timestamp || a.createdAt;
+                  const bt = b.timestamp || b.createdAt;
+                  return new Date(at).getTime() - new Date(bt).getTime();
+                }).map(msg => (
                   <div key={msg.id} className={`flex ${msg.senderUsername === currentUser.username ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-md p-3 rounded-lg ${msg.senderUsername === currentUser.username ? 'bg-[var(--theme-primary)] text-white' : 'bg-[var(--theme-bg-tertiary)] text-[var(--theme-text-primary)]'}`}>
                       {msg.imageUrl && (
