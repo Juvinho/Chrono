@@ -14,8 +14,7 @@ const Verify = React.lazy(() => import('../features/auth/components/Verify'));
 const ForgotPassword = React.lazy(() => import('../features/auth/components/ForgotPassword'));
 const ResetPassword = React.lazy(() => import('../features/auth/components/ResetPassword'));
 const DataSlicerPage = React.lazy(() => import('../features/analysis/components/DataSlicerPage'));
-const ChatTest = React.lazy(() => import('../features/messages/components/ChatTest'));
-const MessagesPage = React.lazy(() => import('../features/messages/components/MessagesPage'));
+// Chat system removed
 const Marketplace = React.lazy(() => import('../features/marketplace/components/Marketplace'));
 const EchoDetailModal = React.lazy(() => import('../features/timeline/components/EchoDetailModal'));
 
@@ -248,7 +247,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                 />
             ) : <Navigate to="/welcome" />} />
             
-            <Route path="/teste-chat" element={<ChatTest />} />
+            {/* Chat test route removed */}
             
             <Route path="/cordao/:tag" element={currentUser ? (
                     <Dashboard 

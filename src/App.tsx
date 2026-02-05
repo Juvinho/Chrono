@@ -7,7 +7,6 @@ import { useAppTheme } from './hooks/useAppTheme';
 import { LanguageProvider } from './hooks/useTranslation';
 import { generateReplyContent } from './utils/geminiService';
 import { apiClient, mapApiPostToPost } from './api';
-import { socketService } from './utils/socketService';
 import { useSound } from './contexts/SoundContext';
 import { useToast } from './contexts/ToastContext';
 import LoadingSpinner from './components/ui/LoadingSpinner';
@@ -15,7 +14,7 @@ import AppRoutes from './routes/AppRoutes';
 
 // Lazy load components for performance
 const Marketplace = React.lazy(() => import('./features/marketplace/components/Marketplace'));
-const ChatDrawer = React.lazy(() => import('./features/messages/components/ChatDrawer'));
+// Chat system removed
 const GlitchiOverlay = React.lazy(() => import('./features/companion/components/GlitchiOverlay'));
 
 export default function App() {
@@ -32,9 +31,7 @@ export default function App() {
     const [conversations, setConversations] = useState<Conversation[]>([]);
     // Stories feature removed
     
-    // Chat Drawer State
-    const [isChatDrawerOpen, setIsChatDrawerOpen] = useState(false);
-    const [drawerActiveUser, setDrawerActiveUser] = useState<User | null>(null);
+    // Chat system removed
     
     // 2. Custom Hooks for Session and Theme
     const { 
@@ -91,9 +88,7 @@ export default function App() {
             case Page.Settings:
                 navigate('/settings');
                 break;
-            case Page.Messages:
-                navigate(data ? `/messages/${data}` : '/messages');
-                break;
+            // Messages page removed
             case Page.VideoAnalysis:
                 navigate('/data-slicer');
                 break;
@@ -115,9 +110,7 @@ export default function App() {
             case Page.Welcome:
                 navigate('/welcome');
                 break;
-            case Page.ChatTest:
-                navigate('/teste-chat');
-                break;
+            // ChatTest route removed
             default:
                 navigate('/echoframe');
         }
@@ -281,202 +274,17 @@ export default function App() {
         return () => clearInterval(checkInterval);
     }, [currentUser?.profileSettings?.autoRefreshEnabled, currentUser?.profileSettings?.autoRefreshInterval, reloadBackendData]);
 
-    const handleOpenChat = useCallback((username: string) => {
-        if (!currentUser || username === currentUser.username) return;
-        
-        setOpenChatUsernames(prev => {
-            if (prev.includes(username)) return prev;
-            const next = [username, ...prev].slice(0, 3);
-            return next;
-        });
-        setMinimizedChatUsernames(prev => prev.filter(u => u !== username));
-    }, [currentUser]);
+    // Chat open/minimize handlers removed
 
-    const handleCloseChat = useCallback((username: string) => {
-        setOpenChatUsernames(prev => prev.filter(u => u !== username));
-        setMinimizedChatUsernames(prev => prev.filter(u => u !== username));
-    }, []);
+    // Chat close handler removed
 
-    const handleMinimizeChat = useCallback((username: string) => {
-        setMinimizedChatUsernames(prev => {
-            if (prev.includes(username)) {
-                return prev.filter(u => u !== username);
-            }
-            return [...prev, username];
-        });
-    }, []);
+    // Chat minimize handler removed
 
-    const handleToggleChatDrawer = useCallback(() => {
-        setIsChatDrawerOpen(prev => !prev);
-    }, []);
+    // Chat drawer toggle removed
 
-    const handleOpenChatDrawerWithUser = useCallback((user: User) => {
-        setDrawerActiveUser(user);
-        setIsChatDrawerOpen(true);
-    }, []);
+    // Chat drawer open removed
 
-    // Socket.io Integration
-    useEffect(() => {
-        if (currentUser) {
-            socketService.connect();
-            if (currentUser.id) {
-                socketService.joinUserRoom(currentUser.id);
-            }
-
-            const handleNewNotification = (payload: any) => {
-                 console.log("New notification received:", payload);
-                 
-                 setCurrentUser(prev => {
-                     if (!prev) return prev;
-                     if (prev.notifications?.some(n => n.id === payload.id)) return prev;
-                     
-                     const notification = {
-                         ...payload,
-                         timestamp: new Date(payload.createdAt || Date.now())
-                     };
-
-                     return {
-                         ...prev,
-                         notifications: [notification, ...(prev.notifications || [])]
-                     };
-                 });
-            };
-
-            const handleNewMessage = async (payload: any) => {
-                 const conversationExists = conversationsRef.current.some(c => c.id === payload.conversationId);
-                 
-                 if (!conversationExists) {
-                     try {
-                         const conversationsResult = await apiClient.getConversations();
-                         if (conversationsResult.data) {
-                             const mappedConversations = conversationsResult.data.map((conv: any) => ({
-                                 id: conv.id,
-                                 participants: conv.participants.map((p: any) => typeof p === 'string' ? p : (p.username || p)),
-                                 messages: (conv.messages || []).map((msg: any) => ({
-                                     id: msg.id,
-                                     senderId: msg.senderId,
-                                     senderUsername: msg.senderUsername || 'unknown',
-                                     text: msg.text,
-                                     imageUrl: msg.imageUrl,
-                                     videoUrl: msg.videoUrl,
-                                     status: msg.status,
-                                     isEncrypted: msg.isEncrypted,
-                                     timestamp: new Date(msg.createdAt || msg.created_at || Date.now()),
-                                })).sort((a: any, b: any) => {
-                                    const at = (a as any).timestamp || (a as any).createdAt;
-                                    const bt = (b as any).timestamp || (b as any).createdAt;
-                                    return new Date(at).getTime() - new Date(bt).getTime();
-                                }),
-                                 lastMessageTimestamp: new Date(conv.lastMessageTimestamp || conv.updated_at || Date.now()),
-                                 unreadCount: conv.unreadCount || {},
-                                 isEncrypted: conv.isEncrypted,
-                                 selfDestructTimer: conv.selfDestructTimer
-                             }));
-                             setConversations(mappedConversations);
-                         }
-                     } catch (err) {
-                         console.error("Error fetching new conversation:", err);
-                     }
-                 } else {
-                     setConversations(prev => {
-                        return prev.map(conv => {
-                             if (conv.id === payload.conversationId) {
-                                 if (conv.messages.some(m => m.id === payload.id)) return conv;
-    
-                                 const newMessage = {
-                                     id: payload.id,
-                                     senderId: payload.senderId,
-                                     senderUsername: payload.senderUsername,
-                                     text: payload.text,
-                                     imageUrl: payload.imageUrl,
-                                     videoUrl: payload.videoUrl,
-                                     status: payload.status,
-                                     isEncrypted: payload.isEncrypted,
-                                     timestamp: new Date(payload.createdAt || Date.now())
-                                 };
-                                 
-                                const msgs = [...conv.messages, newMessage].sort((a: any, b: any) => {
-                                    const at = new Date((a as any).createdAt || (a as any).timestamp || 0).getTime();
-                                    const bt = new Date((b as any).createdAt || (b as any).timestamp || 0).getTime();
-                                    if (at !== bt) return at - bt;
-                                    const ac = (a as any).clientSeq || 0;
-                                    const bc = (b as any).clientSeq || 0;
-                                    if (ac !== bc) return ac - bc;
-                                    return ((a as any).id > (b as any).id ? 1 : -1);
-                                });
-                                return {
-                                    ...conv,
-                                    messages: msgs,
-                                    lastMessageTimestamp: (msgs[msgs.length - 1] as any)?.createdAt || newMessage.timestamp,
-                                };
-                             }
-                             return conv;
-                         });
-                     });
-                 }
-                 
-                 if (payload.senderUsername !== currentUser.username) {
-                     playSound('notification');
-                     try {
-                         await apiClient.updateMessageStatus(payload.conversationId, payload.id, 'delivered');
-                     } catch (e) {}
-                     handleOpenChat(payload.senderUsername);
-                 }
-            };
-
-            const handleNewPost = (newPost: any) => {
-                console.log("New post received via socket:", newPost.id);
-                const mappedPost = mapApiPostToPost(newPost);
-                
-                setPosts(prevPosts => {
-                    if (prevPosts.some(p => p.id === mappedPost.id)) return prevPosts;
-                    return [mappedPost, ...prevPosts];
-                });
-
-                if (newPost.author?.username !== currentUser.username) {
-                    playSound('post');
-                }
-                reloadBackendData();
-            };
-
-            const handleGlitchiReceived = (payload: any) => {
-                console.log("Glitchi received from:", payload.senderUsername);
-                setActiveGlitchi({ senderUsername: payload.senderUsername });
-                playSound('notification');
-            };
-
-            const handleMessageStatusUpdate = (payload: { messageId: string, status: string, conversationId: string }) => {
-                setConversations(prev => prev.map(conv => {
-                    if (conv.id === payload.conversationId) {
-                        return {
-                            ...conv,
-                            messages: conv.messages.map(msg => 
-                                msg.id === payload.messageId ? { ...msg, status: payload.status as any } : msg
-                            )
-                        };
-                    }
-                    return conv;
-                }));
-            };
-
-            socketService.on('new_notification', handleNewNotification);
-            socketService.on('new_message', handleNewMessage);
-            socketService.on('new_post', handleNewPost);
-            socketService.on('glitchi_received', handleGlitchiReceived);
-            socketService.on('message_status_update', handleMessageStatusUpdate);
-
-            return () => {
-                socketService.off('new_notification', handleNewNotification);
-                socketService.off('new_message', handleNewMessage);
-                socketService.off('new_post', handleNewPost);
-                socketService.off('glitchi_received', handleGlitchiReceived);
-                socketService.off('message_status_update', handleMessageStatusUpdate);
-                socketService.disconnect();
-            };
-        } else {
-            socketService.disconnect();
-        }
-    }, [currentUser, reloadBackendData, handleOpenChat]);
+    // Real-time socket integration removed
 
     // MIGRATION: Fetch initial data from Backend
     useEffect(() => {
@@ -844,21 +652,7 @@ export default function App() {
 
                         {/* Modals and Overlays */}
 
-                        {currentUser && (
-                            <Suspense fallback={null}>
-                            <ChatDrawer
-                                isOpen={isChatDrawerOpen}
-                                onClose={() => setIsChatDrawerOpen(false)}
-                                currentUser={currentUser}
-                                conversations={conversations}
-                                activeChatUser={drawerActiveUser}
-                                onSetActiveChatUser={setDrawerActiveUser}
-                                allUsers={combinedUsers}
-                                onMessageSent={handleMessageSent}
-                                onAppendMessages={handleAppendMessages}
-                            />
-                            </Suspense>
-                        )}
+                        {/* Chat drawer removed */}
 
                         
                         {/* Marketplace moved to route /marketplace */}

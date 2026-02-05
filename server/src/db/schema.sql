@@ -360,57 +360,6 @@ CREATE TABLE IF NOT EXISTS poll_votes (
     UNIQUE(post_id, user_id)
 );
 
--- Conversations table
-CREATE TABLE IF NOT EXISTS conversations (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
--- Index to optimize sorting by latest activity
-CREATE INDEX IF NOT EXISTS idx_conversations_updated_at ON conversations(updated_at DESC);
-
--- Conversation participants table
-CREATE TABLE IF NOT EXISTS conversation_participants (
-    conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    unread_count INTEGER DEFAULT 0,
-    last_read_at TIMESTAMP,
-    PRIMARY KEY (conversation_id, user_id)
-);
--- Index to quickly fetch conversations by user
-CREATE INDEX IF NOT EXISTS idx_conv_participants_user_id ON conversation_participants(user_id);
-
--- Messages table
-CREATE TABLE IF NOT EXISTS messages (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-    sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    text TEXT NOT NULL,
-    image_url TEXT,
-    video_url TEXT,
-    metadata JSONB DEFAULT '{}'::jsonb,
-    status VARCHAR(20) DEFAULT 'sent' CHECK (status IN ('sent','delivered','read')),
-    is_encrypted BOOLEAN DEFAULT FALSE,
-    delete_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Message Status table (per-user status)
-CREATE TABLE IF NOT EXISTS message_status (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    status VARCHAR(20) DEFAULT 'sent', -- 'sent', 'delivered', 'read'
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(message_id, user_id)
-);
-
--- Indexes for messages
-CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
-CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_messages_sender_id ON messages(sender_id);
-CREATE INDEX IF NOT EXISTS idx_messages_status ON messages(status);
-CREATE INDEX IF NOT EXISTS idx_messages_conv_created_at ON messages(conversation_id, created_at DESC, id DESC);
 
 -- Enable pg_trgm extension for fast LIKE searches
 DO $$
@@ -420,30 +369,7 @@ BEGIN
     END IF;
 END $$;
 
--- Optimized indexes for search and retrieval
-CREATE INDEX IF NOT EXISTS idx_messages_conv_created ON messages(conversation_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_messages_text_trgm ON messages USING gin (text gin_trgm_ops);
 
--- Trigger: bump conversations.updated_at when a new message is inserted
-CREATE OR REPLACE FUNCTION bump_conversation_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.conversation_id;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_trigger WHERE tgname = 'bump_conversation_updated_at_trg'
-    ) THEN
-        CREATE TRIGGER bump_conversation_updated_at_trg
-        AFTER INSERT ON messages
-        FOR EACH ROW
-        EXECUTE FUNCTION bump_conversation_updated_at();
-    END IF;
-END $$;
 
 -- Notifications table
 CREATE TABLE IF NOT EXISTS notifications (
@@ -462,6 +388,7 @@ CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created
 
 -- Remove Stories feature: drop table if exists (idempotent)
 DROP TABLE IF EXISTS stories CASCADE;
+
 
 -- Push Subscriptions (for Web Push)
 CREATE TABLE IF NOT EXISTS push_subscriptions (
@@ -522,29 +449,6 @@ BEGIN
         ALTER TABLE posts ADD COLUMN mood VARCHAR(20) DEFAULT 'neutral';
     END IF;
 
-    -- Add is_encrypted to messages
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='is_encrypted') THEN
-        ALTER TABLE messages ADD COLUMN is_encrypted BOOLEAN DEFAULT FALSE;
-    END IF;
-
-    -- Add delete_at to messages
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='delete_at') THEN
-        ALTER TABLE messages ADD COLUMN delete_at TIMESTAMP;
-    END IF;
-
-    -- Add media and status columns to messages
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='image_url') THEN
-        ALTER TABLE messages ADD COLUMN image_url TEXT;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='video_url') THEN
-        ALTER TABLE messages ADD COLUMN video_url TEXT;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='metadata') THEN
-        ALTER TABLE messages ADD COLUMN metadata JSONB DEFAULT '{}'::jsonb;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='status') THEN
-        ALTER TABLE messages ADD COLUMN status VARCHAR(20) DEFAULT 'sent';
-    END IF;
 
     -- Clean up duplicate notifications (same user, actor, type, post)
     -- Keep only the most recent one
@@ -557,12 +461,3 @@ BEGIN
     AND (n1.post_id = n2.post_id OR (n1.post_id IS NULL AND n2.post_id IS NULL));
 END $$;
 
--- Encrypted Cords table (for secure conversations)
-CREATE TABLE IF NOT EXISTS encrypted_cords (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-    self_destruct_timer INTEGER DEFAULT 3600,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(conversation_id)
-);
