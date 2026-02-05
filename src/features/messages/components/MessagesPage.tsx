@@ -58,7 +58,11 @@ export default function MessagesPage({
   };
 
   const sortedConversations = useMemo(() => {
-    return [...conversations].sort((a, b) => b.lastMessageTimestamp.getTime() - a.lastMessageTimestamp.getTime());
+    return [...conversations].sort((a, b) => {
+      const at = a.lastMessageTimestamp ? new Date(a.lastMessageTimestamp).getTime() : 0;
+      const bt = b.lastMessageTimestamp ? new Date(b.lastMessageTimestamp).getTime() : 0;
+      return bt - at;
+    });
   }, [conversations]);
 
   const activeConversation = useMemo(() => {

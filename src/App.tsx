@@ -169,13 +169,15 @@ export default function App() {
             if (conv.id !== conversationId) return conv;
             const incomingId = (message as any)._replaceId || message.id;
             const replaceId = (message as any)._replaceId;
-            const msgTs = (message as any).createdAt ? new Date((message as any).createdAt) : undefined;
+            const msgTs = (message as any).createdAt
+                ? new Date((message as any).createdAt)
+                : ((message as any).timestamp ? new Date((message as any).timestamp as any) : new Date());
             const idx = conv.messages.findIndex(m => (m as any).id === incomingId || (replaceId && (m as any).id === replaceId));
             let nextMessages: any[] = [];
             if (idx >= 0) {
                 nextMessages = conv.messages.slice();
                 const base = nextMessages[idx];
-                nextMessages[idx] = { ...base, ...message, createdAt: msgTs || (base as any).createdAt };
+                nextMessages[idx] = { ...base, ...message, createdAt: msgTs || (base as any).createdAt || new Date() };
                 // Se veio ID do servidor, substitui
                 if (replaceId) {
                     nextMessages[idx].id = (message as any).id || (base as any).id;
@@ -186,10 +188,11 @@ export default function App() {
             }
             // Ordena por createdAt desc
             nextMessages.sort((a, b) => new Date((b as any).createdAt).getTime() - new Date((a as any).createdAt).getTime() || ((b as any).id > (a as any).id ? 1 : -1));
+            const latestTs = (nextMessages[0] as any)?.createdAt || conv.lastMessageTimestamp || new Date();
             return {
                 ...conv,
                 messages: nextMessages,
-                lastMessageTimestamp: (nextMessages[0] as any).createdAt || conv.lastMessageTimestamp,
+                lastMessageTimestamp: latestTs,
             };
         }));
     }, []);
