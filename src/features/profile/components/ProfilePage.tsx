@@ -556,6 +556,14 @@ export default function ProfilePage({
                       </button>
                   ) : (
                     <>
+                      <button 
+                        onClick={() => onNavigate(Page.Messages, profileUser.username)} 
+                        className="follow-btn px-4 py-1 rounded-sm transition-colors flex items-center gap-2" 
+                        title={t('messageButton') || 'Enviar Mensagem'}
+                      >
+                        <PaperPlaneIcon className="w-5 h-5"/>
+                        <span className="hidden sm:inline">{t('messageButton') || 'Enviar Mensagem'}</span>
+                      </button>
                       <button ref={followButtonRef} onClick={handleFollowClick} className={`${isFollowing ? 'following-btn' : 'follow-btn'} px-4 py-1 rounded-sm transition-colors`}>
                         {isFollowing ? t('profileFollowing') : t('profileFollow')}
                       </button>
