@@ -115,8 +115,8 @@ export default function ChatWindow({
           </div>
         ) : (
           conversation.messages.map(msg => (
-            <div key={msg.id} className={`flex ${msg.senderUsername === currentUser.username ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[85%] p-2 rounded-lg text-xs ${msg.senderUsername === currentUser.username ? 'bg-[var(--theme-primary)] text-white' : 'bg-[var(--theme-bg-tertiary)] text-[var(--theme-text-primary)] border border-[var(--theme-border-primary)]'}`}>
+            <div key={msg.id} className={`flex ${((msg as any).senderId ? (msg as any).senderId === currentUser.id : msg.senderUsername === currentUser.username) ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[85%] p-2 rounded-lg text-xs ${((msg as any).senderId ? (msg as any).senderId === currentUser.id : msg.senderUsername === currentUser.username) ? 'bg-red-600 text-white' : 'bg-[var(--theme-bg-tertiary)] text-[var(--theme-text-primary)] border border-[var(--theme-border-primary)]'}`}>
                 {msg.imageUrl && (
                   <img src={msg.imageUrl} alt="Media" className="max-w-full rounded-sm mb-1" />
                 )}

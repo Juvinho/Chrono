@@ -324,6 +324,7 @@ export default function App() {
                                  participants: conv.participants.map((p: any) => typeof p === 'string' ? p : (p.username || p)),
                                  messages: (conv.messages || []).map((msg: any) => ({
                                      id: msg.id,
+                                     senderId: msg.senderId,
                                      senderUsername: msg.senderUsername || 'unknown',
                                      text: msg.text,
                                      imageUrl: msg.imageUrl,
@@ -350,6 +351,7 @@ export default function App() {
     
                                  const newMessage = {
                                      id: payload.id,
+                                     senderId: payload.senderId,
                                      senderUsername: payload.senderUsername,
                                      text: payload.text,
                                      imageUrl: payload.imageUrl,
