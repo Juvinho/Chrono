@@ -16,6 +16,7 @@ interface ChatDrawerProps {
     onSetActiveChatUser: (user: User | null) => void;
     allUsers: User[]; // To find user details for conversations
     onMessageSent?: (conversationId: string, message: Message) => void;
+    onAppendMessages?: (conversationId: string, messages: Message[]) => void;
 }
 
 export default function ChatDrawer({
@@ -26,7 +27,8 @@ export default function ChatDrawer({
     activeChatUser,
     onSetActiveChatUser,
     allUsers,
-    onMessageSent
+    onMessageSent,
+    onAppendMessages
 }: ChatDrawerProps) {
     const { t } = useTranslation();
     const { showToast } = useToast();
@@ -193,13 +195,32 @@ export default function ChatDrawer({
 
             console.log('Mensagem enviada com sucesso:', response.data);
             
+            const localId = `local-${Date.now()}`;
+            // Inserir mensagem "sending" antes de confirmar
+            if (currentConversation && onMessageSent) {
+                const sendingMsg: Message = {
+                    id: localId,
+                    conversationId: currentConversation.id,
+                    senderId: currentUser.id,
+                    text: textToSend,
+                    imageUrl: null,
+                    videoUrl: null,
+                    glitchiType: null,
+                    metadata: undefined,
+                    status: 'sending',
+                    isEncrypted: false,
+                    createdAt: new Date(),
+                };
+                onMessageSent(currentConversation.id, sendingMsg);
+            }
+            
             // Limpa input apenas após sucesso confirmado
             setMessageText('');
             
-            // Atualização otimista caso o socket não entregue o evento
+            // Atualiza status para 'sent' com dados do servidor
             if (currentConversation && onMessageSent && response.data) {
-                const optimistic: Message = {
-                    id: response.data.id || `local-${Date.now()}`,
+                const confirmed: Message = {
+                    id: response.data.id || localId,
                     conversationId: currentConversation.id,
                     senderId: currentUser.id,
                     text: response.data.text,
@@ -211,7 +232,7 @@ export default function ChatDrawer({
                     isEncrypted: response.data.isEncrypted || false,
                     createdAt: new Date(response.data.createdAt || Date.now()),
                 };
-                onMessageSent(currentConversation.id, optimistic);
+                onMessageSent(currentConversation.id, confirmed);
             }
             
             // Scroll para última mensagem após um pequeno delay
@@ -221,6 +242,24 @@ export default function ChatDrawer({
             // Feedback de erro
             const errorMessage = error.message || 'Erro ao enviar mensagem. Tente novamente.';
             showToast(errorMessage, 'error');
+            
+            // Marcar última mensagem local como falha
+            if (currentConversation && onMessageSent) {
+                const failed: Message = {
+                    id: `local-failed-${Date.now()}`,
+                    conversationId: currentConversation.id,
+                    senderId: currentUser.id,
+                    text: textToSend,
+                    imageUrl: null,
+                    videoUrl: null,
+                    glitchiType: null,
+                    metadata: undefined,
+                    status: 'failed',
+                    isEncrypted: false,
+                    createdAt: new Date(),
+                };
+                onMessageSent(currentConversation.id, failed);
+            }
             
             // Mantém o texto no input em caso de erro (não precisa restaurar pois não limpamos antes)
             console.error('Failed to send message:', error);
@@ -496,10 +535,48 @@ export default function ChatDrawer({
                             </div>
                         </div>
 
-                        {/* Messages Body */}
+                        {/* Messages Body + Carregar mais */}
                         <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[var(--theme-bg-primary)]">
+                            {currentConversation && currentConversation.messages.length >= 50 && (
+                                <div className="flex justify-center">
+                                    <button
+                                        className="text-xs px-3 py-1 rounded-full bg-[var(--theme-bg-tertiary)] hover:bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)]"
+                                        onClick={async () => {
+                                            const oldest = [...currentConversation.messages].sort((a, b) => {
+                                                const at = (a as any).timestamp || (a as any).createdAt;
+                                                const bt = (b as any).timestamp || (b as any).createdAt;
+                                                return new Date(at).getTime() - new Date(bt).getTime();
+                                            })[0];
+                                            try {
+                                                const more = await apiClient.getMessages(currentConversation.id, { before: (oldest as any).timestamp?.toISOString?.() || (oldest as any).createdAt?.toISOString?.(), limit: 50 });
+                                                if (more.data && more.data.length > 0) {
+                                                    const mapped = more.data.map((m: any) => ({
+                                                        id: m.id,
+                                                        senderUsername: m.sender_id ? allUsers.find(u => u.id === m.sender_id)?.username || currentUser.username : currentUser.username,
+                                                        text: m.text,
+                                                        imageUrl: m.image_url,
+                                                        videoUrl: m.video_url,
+                                                        status: m.status,
+                                                        isEncrypted: m.is_encrypted,
+                                                        timestamp: new Date(m.created_at || Date.now())
+                                                    }));
+                                                    onAppendMessages?.(currentConversation.id, mapped);
+                                                }
+                                            } catch (e) {
+                                                showToast('Falha ao carregar mais mensagens', 'error');
+                                            }
+                                        }}
+                                    >
+                                        Carregar mais
+                                    </button>
+                                </div>
+                            )}
                             {currentConversation?.messages.length > 0 ? (
-                                currentConversation.messages.map((msg, idx) => {
+                                [...currentConversation.messages].sort((a, b) => {
+                                    const at = (a as any).timestamp || (a as any).createdAt;
+                                    const bt = (b as any).timestamp || (b as any).createdAt;
+                                    return new Date(bt).getTime() - new Date(at).getTime();
+                                }).map((msg, idx) => {
                                 const isMe = msg.senderUsername === currentUser.username;
                                 
                                 return (
@@ -518,7 +595,7 @@ export default function ChatDrawer({
                                                     </span>
                                                     {isMe && msg.status && (
                                                         <span className="text-[10px] opacity-70">
-                                                            {msg.status === 'read' ? '✓✓' : msg.status === 'delivered' ? '✓✓' : '✓'}
+                                                            {msg.status === 'failed' ? 'Falha' : msg.status === 'sending' ? 'Enviando…' : (msg.status === 'read' ? '✓✓' : msg.status === 'delivered' ? '✓✓' : '✓')}
                                             </span>
                                                     )}
                                                 </div>

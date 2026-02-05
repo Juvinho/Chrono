@@ -115,6 +115,11 @@ describe('ConversationService', () => {
     expect(incUnread).toBeTruthy();
   });
 
+  it('rejects too long messages', async () => {
+    const svc = new ConversationService();
+    await expect(svc.sendMessage('c1', 'u1', 'x'.repeat(10001))).rejects.toThrow(/Message too long/);
+  });
+
   it('marks messages as read and updates message status when all read', async () => {
     const svc = new ConversationService();
     await svc.updateMessageStatus('m1', 'u2', 'read');

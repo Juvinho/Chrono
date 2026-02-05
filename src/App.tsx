@@ -169,13 +169,25 @@ export default function App() {
             if (conv.id === conversationId) {
                 const msgTs = new Date((message as any).createdAt || Date.now());
                 const updatedMessages = [...conv.messages, { ...message, createdAt: msgTs }].sort(
-                    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() || (b.id > a.id ? 1 : -1)
                 );
                 return {
                     ...conv,
                     messages: updatedMessages,
                     lastMessageTimestamp: msgTs,
                 };
+            }
+            return conv;
+        }));
+    }, []);
+
+    const handleAppendMessages = useCallback((conversationId: string, messages: any[]) => {
+        setConversations(prev => prev.map(conv => {
+            if (conv.id === conversationId) {
+                const merged = [...conv.messages, ...messages].sort(
+                    (a, b) => new Date((b as any).createdAt || (b as any).timestamp).getTime() - new Date((a as any).createdAt || (a as any).timestamp).getTime()
+                );
+                return { ...conv, messages: merged };
             }
             return conv;
         }));
@@ -335,7 +347,7 @@ export default function App() {
                      }
                  } else {
                      setConversations(prev => {
-                         return prev.map(conv => {
+                        return prev.map(conv => {
                              if (conv.id === payload.conversationId) {
                                  if (conv.messages.some(m => m.id === payload.id)) return conv;
     
@@ -352,7 +364,7 @@ export default function App() {
                                  
                                  return {
                                      ...conv,
-                                     messages: [...conv.messages, newMessage].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime()),
+                                    messages: [...conv.messages, newMessage].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()),
                                      lastMessageTimestamp: newMessage.timestamp,
                                  };
                              }
@@ -801,6 +813,7 @@ export default function App() {
                                 onSetActiveChatUser={setDrawerActiveUser}
                                 allUsers={combinedUsers}
                                 onMessageSent={handleMessageSent}
+                                onAppendMessages={handleAppendMessages}
                             />
                             </Suspense>
                         )}

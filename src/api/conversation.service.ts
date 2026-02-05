@@ -5,8 +5,12 @@ export const conversationService = {
     return baseClient.request<any[]>('/conversations');
   },
 
-  async getMessages(conversationId: string) {
-    return baseClient.request<any[]>(`/conversations/${conversationId}/messages`);
+  async getMessages(conversationId: string, opts?: { before?: string, limit?: number }) {
+    const params = new URLSearchParams();
+    if (opts?.before) params.set('before', opts.before);
+    if (opts?.limit) params.set('limit', String(opts.limit));
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return baseClient.request<any[]>(`/conversations/${conversationId}/messages${qs}`);
   },
 
   async sendMessage(conversationId: string, text: string, media?: { imageUrl?: string, videoUrl?: string, metadata?: any }) {
