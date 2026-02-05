@@ -35,7 +35,6 @@ interface DashboardProps {
     nextAutoRefresh?: Date | null;
     isAutoRefreshPaused?: boolean;
     onBack?: () => void;
-    onToggleChat?: () => void;
     lastViewedNotifications?: Date | null;
 }
 
@@ -43,7 +42,7 @@ export default function Dashboard({
     user, onLogout, onNavigate, onNotificationClick, onViewNotifications, selectedDate, setSelectedDate, allUsers, allPosts,
     onNewPost, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost, onPollVote, isGenerating, typingParentIds,
     conversations, newPostsCount = 0, onShowNewPosts, allKnownPosts, onUpdateUser = () => {}, onOpenMarketplace,
-    nextAutoRefresh, isAutoRefreshPaused, onBack, onToggleChat, lastViewedNotifications
+    nextAutoRefresh, isAutoRefreshPaused, onBack, lastViewedNotifications
 }: DashboardProps) {
     const { t } = useTranslation();
     const { tag } = useParams<{ tag: string }>();
@@ -164,7 +163,6 @@ export default function Dashboard({
                 allUsers={allUsers} 
                 conversations={conversations}
                 onBack={onBack}
-                onToggleChat={onToggleChat}
                 lastViewedNotifications={lastViewedNotifications}
             />
             <div className="flex-grow overflow-y-auto relative">
