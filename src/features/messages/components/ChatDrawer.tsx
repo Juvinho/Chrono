@@ -550,16 +550,17 @@ export default function ChatDrawer({
                                             try {
                                                 const more = await apiClient.getMessages(currentConversation.id, { before: (oldest as any).timestamp?.toISOString?.() || (oldest as any).createdAt?.toISOString?.(), limit: 50 });
                                                 if (more.data && more.data.length > 0) {
-                                                    const mapped = more.data.map((m: any) => ({
-                                                        id: m.id,
-                                                        senderUsername: m.sender_id ? allUsers.find(u => u.id === m.sender_id)?.username || currentUser.username : currentUser.username,
-                                                        text: m.text,
-                                                        imageUrl: m.image_url,
-                                                        videoUrl: m.video_url,
-                                                        status: m.status,
-                                                        isEncrypted: m.is_encrypted,
-                                                        timestamp: new Date(m.created_at || Date.now())
-                                                    }));
+                                                const mapped = more.data.map((m: any) => ({
+                                                    id: m.id,
+                                                    senderId: m.sender_id,
+                                                    senderUsername: m.sender_id === currentUser.id ? currentUser.username : (activeChatUser?.username || 'unknown'),
+                                                    text: m.text,
+                                                    imageUrl: m.image_url,
+                                                    videoUrl: m.video_url,
+                                                    status: m.status,
+                                                    isEncrypted: m.is_encrypted,
+                                                    timestamp: new Date(m.created_at || Date.now())
+                                                }));
                                                     onAppendMessages?.(currentConversation.id, mapped);
                                                 }
                                             } catch (e) {
@@ -577,15 +578,15 @@ export default function ChatDrawer({
                                     const bt = (b as any).timestamp || (b as any).createdAt;
                                     return new Date(bt).getTime() - new Date(at).getTime();
                                 }).map((msg, idx) => {
-                                const isMe = msg.senderUsername === currentUser.username;
+                                const isMe = (msg as any).senderId ? (msg as any).senderId === currentUser.id : msg.senderUsername === currentUser.username;
                                 
                                 return (
                                     <div key={msg.id || idx} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                                         <div 
                                             className={`max-w-[75%] px-4 py-2 rounded-2xl text-sm break-words relative group ${
                                                 isMe 
-                                                        ? 'bg-[var(--theme-primary)] text-white rounded-br-sm' 
-                                                        : 'bg-gray-800 text-gray-200 rounded-bl-sm'
+                                                    ? 'bg-red-600 text-white rounded-br-sm' 
+                                                    : 'bg-gray-800 text-gray-200 rounded-bl-sm'
                                             }`}
                                         >
                                             {msg.text}
