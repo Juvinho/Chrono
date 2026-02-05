@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { User, Post, Page, Notification, Conversation } from '../../types/index';
 import GlitchText from './GlitchText';
-import { SearchIcon, LogoutIcon, BellIcon, SettingsIcon, MessageIcon, FilmIcon, ShoppingBagIcon, ChevronLeftIcon } from './icons';
+import { SearchIcon, LogoutIcon, BellIcon, SettingsIcon, MessageIcon, FilmIcon, ShoppingBagIcon, ChevronLeftIcon, PaperPlaneIcon } from './icons';
 import SearchOverlay from './SearchOverlay';
 import NotificationsPanel from './NotificationsPanel';
 import ConfirmationModal from './ConfirmationModal';
@@ -80,6 +80,9 @@ export default function Header({ user, onLogout, onViewProfile, onNavigate, onNo
             <div className="flex items-center space-x-4">
                  <button onClick={() => onNavigate(Page.VideoAnalysis)} title={t('dataSlicer')} className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-secondary)] p-2 rounded-full hover:bg-[var(--theme-bg-tertiary)] transition-colors hidden sm:block">
                     <FilmIcon className="w-5 h-5 md:w-6 md:h-6" />
+                 </button>
+                 <button onClick={() => onNavigate(Page.Messages)} title={t('send') || 'Enviar'} className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)] p-2 rounded-full hover:bg-[var(--theme-bg-tertiary)] transition-colors">
+                    <PaperPlaneIcon className="w-5 h-5 md:w-6 md:h-6" />
                  </button>
 
                  {onOpenMarketplace && (
