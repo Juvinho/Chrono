@@ -193,7 +193,7 @@ export default function ChatDrawer({
                     status: 'sending',
                     messageStatus: 'sending',
                     isEncrypted: false,
-                    // sem createdAt/timestamp até completar a animação
+                    createdAt: new Date(),
                 } as any);
 
                 // 800ms em "sending"
@@ -210,6 +210,7 @@ export default function ChatDrawer({
                         status: 'sending',
                         messageStatus: 'arrow',
                         isEncrypted: false,
+                        createdAt: new Date(),
                     } as any);
 
                     // +200ms transição para "sent" e fixa horário HH:MM
