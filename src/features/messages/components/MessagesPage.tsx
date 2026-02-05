@@ -65,6 +65,8 @@ export default function MessagesPage({
         const msgs = await apiClient.getMessages(id);
         if (!mounted) return;
         setMessages(msgs.data || []);
+        sessionStorage.setItem('chrono_open_conversation_id', id);
+        onNavigate(Page.Dashboard);
       }
     };
     initByUsername();
@@ -75,6 +77,11 @@ export default function MessagesPage({
     setActiveConversationId(id);
     const msgs = await apiClient.getMessages(id);
     setMessages(msgs.data || []);
+    const last = (msgs.data || []).slice(-1)[0];
+    if (last && last.sender_id && last.sender_id !== currentUser.id) {
+      sessionStorage.setItem('chrono_open_conversation_id', id);
+      onNavigate(Page.Dashboard);
+    }
   };
 
   const handleSend = async () => {

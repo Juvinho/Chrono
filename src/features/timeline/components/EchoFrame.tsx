@@ -52,12 +52,63 @@ export default function EchoFrame({
     const [activeFilter, setActiveFilter] = useState<'All' | 'Following' | 'Trending' | 'Media' | 'Polls'>('All');
     const [isSubmitting, setIsSubmitting] = useState(false);
     // Removed local timeToRefresh state to prevent re-renders
+    const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+    const [chatMessages, setChatMessages] = useState<any[]>([]);
+    const [chatInput, setChatInput] = useState('');
+    const [isChatLoading, setIsChatLoading] = useState(false);
 
     useEffect(() => {
         if (composerDate) {
             setIsComposerOpen(true);
         }
     }, [composerDate]);
+
+    useEffect(() => {
+        const convId = sessionStorage.getItem('chrono_open_conversation_id');
+        const convUser = sessionStorage.getItem('chrono_open_conversation_username');
+        if (!convId && !convUser) return;
+        setIsChatLoading(true);
+        const open = async () => {
+            try {
+                let id = convId;
+                if (!id && convUser) {
+                    const res = await apiClient.getOrCreateConversation(convUser);
+                    id = res.data?.id || res.data?.conversationId;
+                }
+                if (!id) {
+                    setIsChatLoading(false);
+                    return;
+                }
+                setActiveConversationId(id);
+                const msgs = await apiClient.getMessages(id);
+                setChatMessages(msgs.data || []);
+            } finally {
+                setIsChatLoading(false);
+                sessionStorage.removeItem('chrono_open_conversation_id');
+                sessionStorage.removeItem('chrono_open_conversation_username');
+            }
+        };
+        open();
+    }, []);
+
+    const handleSendChat = useCallback(async () => {
+        if (!activeConversationId || !chatInput.trim()) return;
+        const optimistic = {
+            id: `tmp-${Date.now()}`,
+            sender_id: currentUser.id,
+            text: chatInput,
+            created_at: new Date().toISOString()
+        };
+        setChatMessages(prev => [...prev, optimistic]);
+        setChatInput('');
+        const res = await apiClient.sendMessage(activeConversationId, optimistic.text);
+        if (res.error) {
+            setChatMessages(prev => prev.filter(m => m.id !== optimistic.id));
+            return;
+        }
+        const real = res.data!;
+        setChatMessages(prev => prev.map(m => m.id === optimistic.id ? real : m));
+    }, [activeConversationId, chatInput, currentUser.id]);
 
     useEffect(() => {
         if (focusPostId) {
@@ -515,6 +566,48 @@ export default function EchoFrame({
 
                 {/* Right Column: Cord Hub */}
                 <aside className="hidden lg:block">
+                     <div className="mb-6 bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] rounded-lg p-4">
+                         <div className="flex items-center justify-between mb-3">
+                             <h2 className="text-lg font-bold text-[var(--theme-text-light)]">:: Direct Chat</h2>
+                             {activeConversationId && (
+                                <button onClick={() => { setActiveConversationId(null); setChatMessages([]); }} className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)]">
+                                    {t('close') || 'Fechar'}
+                                </button>
+                             )}
+                         </div>
+                         {isChatLoading ? (
+                            <div className="text-[var(--theme-text-secondary)]">{t('loading') || 'Carregando...'}</div>
+                         ) : activeConversationId ? (
+                            <>
+                                <div className="space-y-3 mb-4 max-h-[40vh] overflow-y-auto pr-2">
+                                    {chatMessages.map(m => (
+                                        <div key={m.id} className={`p-2 rounded border border-[var(--theme-border-primary)] ${m.sender_id === currentUser.id ? 'bg-[var(--theme-bg-tertiary)]' : ''}`}>
+                                            <div className="text-xs text-[var(--theme-text-secondary)] mb-1">
+                                                {new Date(m.created_at).toLocaleString()}
+                                            </div>
+                                            <div className="text-sm">{m.text}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="flex gap-2">
+                                    <input 
+                                        value={chatInput} 
+                                        onChange={(e) => setChatInput(e.target.value)} 
+                                        placeholder={t('typeMessage') || 'Digite uma mensagem...'} 
+                                        className="flex-1 px-3 py-2 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] rounded"
+                                    />
+                                    <button 
+                                        onClick={handleSendChat}
+                                        className="px-4 py-2 bg-[var(--theme-primary)] text-black rounded hover:opacity-80"
+                                    >
+                                        {t('send') || 'Enviar'}
+                                    </button>
+                                </div>
+                            </>
+                         ) : (
+                            <div className="text-[var(--theme-text-secondary)]">{t('selectConversation') || 'Selecione uma conversa para começar'}</div>
+                         )}
+                     </div>
                      <h2 className="text-lg font-bold text-[var(--theme-secondary)] mb-2 pb-2 border-b-2 border-[var(--theme-border-primary)]">:: {t('cordHub')}</h2>
                      <button onClick={() => setIsCordModalOpen(true)} className="create-cord-btn mb-4">
                          {t('createCord')}
