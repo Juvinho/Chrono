@@ -1,6 +1,5 @@
 import express from 'express';
 import { createServer } from 'http';
-import { initSocket } from './socket.js';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -12,7 +11,7 @@ import { pool } from './db/connection.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import postRoutes from './routes/posts.js';
-import conversationRoutes from './routes/conversations.js';
+// Conversations API removed
 import reactionsRoutes from './routes/reactions.js';
 import notificationRoutes from './routes/notifications.js';
 import marketplaceRoutes from './routes/marketplace.js';
@@ -133,7 +132,7 @@ app.get('/api', (_req: express.Request, res: express.Response) => {
       auth: '/api/auth',
       users: '/api/users',
       posts: '/api/posts',
-      conversations: '/api/conversations',
+      // conversations removed
       notifications: '/api/notifications',
       health: '/health',
     },
@@ -145,7 +144,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/posts', reactionsRoutes);
-app.use('/api/conversations', conversationRoutes);
+// conversations API removed
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
 
@@ -281,13 +280,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
-// Initialize Socket.io
-// In development, we allow more permissive CORS for local network testing
-const socketOrigins = process.env.NODE_ENV === 'production' 
-    ? allowedOrigins 
-    : [...allowedOrigins, /^http:\/\/192\.168\.\d+\.\d+:\d+$/, /^http:\/\/10\.\d+\.\d+\.\d+:\d+$/, /^http:\/\/172\.(1[6-9]|2\d|3[01])\.\d+\.\d+:\d+$/];
-
-initSocket(httpServer, socketOrigins as any);
+// Socket.io initialization removed
 
 // Run migrations and start server
 const startServer = async () => {

@@ -1,6 +1,5 @@
 import { pool } from '../db/connection.js';
 import { Notification, NotificationType } from '../types/index.js';
-import { getIo } from '../socket.js';
 import { EmailService } from './emailService.js';
 
 type NotificationJob = { id: string; userId: string; actorId: string; type: NotificationType; postId?: string; attempts: number };
@@ -95,30 +94,7 @@ export class NotificationService {
 
     const notification = this.mapNotificationFromDb(result.rows[0]);
 
-    // Emit real-time notification
-    try {
-      const io = getIo();
-      
-      // Fetch actor details for the notification payload
-      const actorResult = await pool.query('SELECT username, avatar FROM users WHERE id = $1', [actorId]);
-      const actor = actorResult.rows[0];
-
-      let post = null;
-      if (postId) {
-          const postResult = await pool.query('SELECT content FROM posts WHERE id = $1', [postId]);
-          post = postResult.rows[0];
-      }
-
-      const payload = {
-          ...notification,
-          actor: actor ? { username: actor.username, avatar: actor.avatar } : undefined,
-          post: post ? { content: post.content } : undefined
-      };
-
-      io.to(userId).emit('new_notification', payload);
-    } catch (error) {
-      console.error('Failed to emit notification:', error);
-    }
+    // Real-time emission removed
 
     jobQueue.push({ id: notification.id, userId, actorId, type: notificationType, postId, attempts: 0 });
 

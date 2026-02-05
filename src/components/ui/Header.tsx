@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { User, Post, Page, Notification, Conversation } from '../../types/index';
 import GlitchText from './GlitchText';
-import { SearchIcon, LogoutIcon, BellIcon, SettingsIcon, MessageIcon, FilmIcon, ShoppingBagIcon, ChevronLeftIcon, PaperPlaneIcon } from './icons';
+import { SearchIcon, LogoutIcon, BellIcon, SettingsIcon, MessageIcon, FilmIcon, ShoppingBagIcon, ChevronLeftIcon } from './icons';
 import SearchOverlay from './SearchOverlay';
 import NotificationsPanel from './NotificationsPanel';
 import ConfirmationModal from './ConfirmationModal';
@@ -21,7 +21,7 @@ interface HeaderProps {
     onBack?: () => void;
     allUsers: User[];
     allPosts: Post[];
-    conversations: Conversation[];
+    conversations?: Conversation[];
     onToggleChat?: () => void;
     lastViewedNotifications?: Date | null;
 }
@@ -50,13 +50,6 @@ export default function Header({ user, onLogout, onViewProfile, onNavigate, onNo
         if (notifications.length === 0) return 0;
         return notifications.filter(n => !n.read).length;
     }, [user.notifications]);
-
-    const unreadMessageCount = useMemo(() => {
-        if (!conversations) return 0;
-        return conversations.reduce((acc, convo) => {
-            return acc + (convo.unreadCount?.[user.username] || 0);
-        }, 0);
-    }, [conversations, user.username]);
 
     return (
         <header className="h-16 bg-[var(--theme-bg-primary)] border-b-2 border-[var(--theme-border-primary)] z-50 relative flex items-center justify-between px-6 flex-shrink-0">
@@ -89,21 +82,6 @@ export default function Header({ user, onLogout, onViewProfile, onNavigate, onNo
                  <button onClick={() => onNavigate(Page.VideoAnalysis)} title={t('dataSlicer')} className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-secondary)] p-2 rounded-full hover:bg-[var(--theme-bg-tertiary)] transition-colors hidden sm:block">
                     <FilmIcon className="w-5 h-5 md:w-6 md:h-6" />
                  </button>
-                 
-                 {onToggleChat && (
-                    <button 
-                        onClick={onToggleChat} 
-                        title={t('messages') || 'Mensagens'} 
-                        className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-secondary)] p-2 rounded-full hover:bg-[var(--theme-bg-tertiary)] transition-colors relative"
-                    >
-                        <PaperPlaneIcon className="w-5 h-5 md:w-6 md:h-6" />
-                        {unreadMessageCount > 0 && (
-                            <span className="absolute top-1 right-1 w-3 h-3 md:w-4 md:h-4 bg-[var(--theme-primary)] text-white text-[10px] md:text-xs rounded-full flex items-center justify-center animate-pulse font-bold">
-                                {unreadMessageCount}
-                            </span>
-                        )}
-                    </button>
-                 )}
 
                  {onOpenMarketplace && (
                     <button onClick={onOpenMarketplace} title={t('marketplace')} className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-secondary)] p-2 rounded-full hover:bg-[var(--theme-bg-tertiary)] transition-colors">

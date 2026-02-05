@@ -2,11 +2,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
-import SettingsPage from '../SettingsPage';
+import SettingsPage from '../components/SettingsPage';
 import { Page, User } from '../../types';
 
 // Mock dependencies
-vi.mock('../../hooks/useTranslation', () => ({
+vi.mock('../../../hooks/useTranslation', () => ({
   useTranslation: () => ({
     t: (key: string) => {
         const translations: Record<string, string> = {
@@ -21,13 +21,13 @@ vi.mock('../../hooks/useTranslation', () => ({
   }),
 }));
 
-vi.mock('../../services/api', () => ({
+vi.mock('../../../api', () => ({
   apiClient: {
     changePassword: vi.fn(),
   },
 }));
 
-vi.mock('../ImageCropper', () => ({
+vi.mock('../../../components/ui/ImageCropper', () => ({
   ImageCropper: ({ onCrop, onCancel }: any) => (
     <div data-testid="image-cropper">
       <button onClick={() => onCrop('cropped-image-data')}>Apply Crop</button>
@@ -36,18 +36,13 @@ vi.mock('../ImageCropper', () => ({
   ),
 }));
 
-vi.mock('../Header', () => ({
+vi.mock('../../../components/ui/Header', () => ({
   default: () => <div data-testid="header" />,
 }));
 
-vi.mock('../Avatar', () => ({
-  default: () => <div data-testid="avatar" />,
-}));
+// Let Avatar and FramePreview render normally; they are simple and won't affect tests
 
-vi.mock('../FramePreview', () => ({
-  default: () => <div data-testid="frame-preview" />,
-  getFrameShape: () => 'rounded-full',
-}));
+// No need to mock FramePreview for current tests
 
 vi.mock('./icons', () => ({
   BlockIcon: () => <div />,
@@ -114,7 +109,7 @@ describe('SettingsPage', () => {
   });
 
   it('calls onUpdateUser when Save button is clicked', async () => {
-    mockOnUpdateUser.mockResolvedValue(true);
+    mockOnUpdateUser.mockResolvedValue({ success: true } as any);
     render(<SettingsPage {...defaultProps} />);
     
     const saveButton = screen.getByText('Save Changes');
@@ -126,7 +121,7 @@ describe('SettingsPage', () => {
   });
 
   it('displays success message on successful save', async () => {
-    mockOnUpdateUser.mockResolvedValue(true);
+    mockOnUpdateUser.mockResolvedValue({ success: true } as any);
     render(<SettingsPage {...defaultProps} />);
     
     const saveButton = screen.getByText('Save Changes');

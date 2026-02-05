@@ -6,7 +6,6 @@ import { NotificationService } from '../services/notificationService.js';
 import { UserService } from '../services/userService.js';
 import { ModerationService } from '../services/moderationService.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
-import { getIo } from '../socket.js';
 import { validateNoEmojis } from '../utils/validation.js';
 
 const router = express.Router();
@@ -228,14 +227,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 
     const enrichedPost = await enrichPost(post);
 
-    // Emit real-time post if public
-    if (!post.isPrivate) {
-      try {
-        getIo().emit('new_post', enrichedPost);
-      } catch (e) {
-        console.error('Socket emit error', e);
-      }
-    }
+    // Real-time emission removed
 
     res.status(201).json(enrichedPost);
   } catch (error: any) {

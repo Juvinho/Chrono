@@ -358,12 +358,7 @@ export class UserService {
       [senderId]
     );
 
-    // Emit real-time glitchi
-    try {
-      const io = (global as any).getIo();
-      const sender = await this.getUserById(senderId);
-      io.to(recipientId).emit('glitchi_received', { senderUsername: sender?.username });
-    } catch (e) { }
+    // Real-time emission removed
   }
 
   async setCanReceiveGlitchis(userId: string, enabled: boolean): Promise<void> {

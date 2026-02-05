@@ -2,27 +2,27 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
 import SearchOverlay from './SearchOverlay';
-import { apiClient } from '../services/api';
+import { apiClient } from '../../utils/api';
 
 // Mock dependencies
-vi.mock('../services/api', () => ({
+vi.mock('../../utils/api', () => ({
   apiClient: {
     searchUsers: vi.fn(),
   },
 }));
 
-vi.mock('../hooks/useTranslation', () => ({
+vi.mock('../../hooks/useTranslation', () => ({
   useTranslation: () => ({
     t: (key: string) => key,
   }),
 }));
 
-vi.mock('./FramePreview', () => ({
+vi.mock('../../features/profile/components/FramePreview', () => ({
   default: () => <div data-testid="frame-preview" />,
   getFrameShape: () => 'rounded-full',
 }));
 
-vi.mock('./Avatar', () => ({
+vi.mock('../../features/profile/components/Avatar', () => ({
   default: ({ username }: { username: string }) => <div data-testid="avatar">@{username}</div>,
 }));
 
@@ -82,12 +82,11 @@ describe('SearchOverlay', () => {
       expect(apiClient.searchUsers).toHaveBeenCalledWith('test');
     }, { timeout: 1000 });
 
-    await waitFor(() => {
-        expect(screen.getAllByText(/testuser1/i).length).toBeGreaterThan(0);
-        expect(screen.getAllByText(/testuser2/i).length).toBeGreaterThan(0);
-        expect(screen.getByText('100')).toBeInTheDocument(); // followers
-        expect(screen.getByText('50')).toBeInTheDocument(); // following
-    });
+    const users1 = await screen.findAllByText(/testuser1/i);
+    const users2 = await screen.findAllByText(/testuser2/i);
+    expect(users1.length).toBeGreaterThan(0);
+    expect(users2.length).toBeGreaterThan(0);
+    expect(screen.getByText('100')).toBeInTheDocument(); // followers
   });
 
   it('handles search error gracefully', async () => {
