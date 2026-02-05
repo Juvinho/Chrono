@@ -465,7 +465,11 @@ export default function ChatDrawer({
                         {/* Conversations List */}
                         <div className="flex-1 overflow-y-auto p-2 space-y-1">
                             {filteredConversations.length > 0 ? (
-                                filteredConversations.sort((a, b) => new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime()).map(conv => {
+                                filteredConversations.sort((a, b) => {
+                                    const at = a.lastMessageTimestamp ? new Date(a.lastMessageTimestamp).getTime() : 0;
+                                    const bt = b.lastMessageTimestamp ? new Date(b.lastMessageTimestamp).getTime() : 0;
+                                    return bt - at;
+                                }).map(conv => {
                                     const partner = getPartner(conv);
                                     const lastMsg = conv.messages[conv.messages.length - 1];
                                     const unreadCount = conv.unreadCount?.[currentUser.username] || 0;
