@@ -166,18 +166,31 @@ export default function App() {
 
     const handleMessageSent = useCallback((conversationId: string, message: Message) => {
         setConversations(prev => prev.map(conv => {
-            if (conv.id === conversationId) {
-                const msgTs = new Date((message as any).createdAt || Date.now());
-                const updatedMessages = [...conv.messages, { ...message, createdAt: msgTs }].sort(
-                    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime() || (b.id > a.id ? 1 : -1)
-                );
-                return {
-                    ...conv,
-                    messages: updatedMessages,
-                    lastMessageTimestamp: msgTs,
-                };
+            if (conv.id !== conversationId) return conv;
+            const incomingId = (message as any)._replaceId || message.id;
+            const replaceId = (message as any)._replaceId;
+            const msgTs = (message as any).createdAt ? new Date((message as any).createdAt) : undefined;
+            const idx = conv.messages.findIndex(m => (m as any).id === incomingId || (replaceId && (m as any).id === replaceId));
+            let nextMessages: any[] = [];
+            if (idx >= 0) {
+                nextMessages = conv.messages.slice();
+                const base = nextMessages[idx];
+                nextMessages[idx] = { ...base, ...message, createdAt: msgTs || (base as any).createdAt };
+                // Se veio ID do servidor, substitui
+                if (replaceId) {
+                    nextMessages[idx].id = (message as any).id || (base as any).id;
+                }
+            } else {
+                const created = msgTs || new Date();
+                nextMessages = [...conv.messages, { ...message, createdAt: created }];
             }
-            return conv;
+            // Ordena por createdAt desc
+            nextMessages.sort((a, b) => new Date((b as any).createdAt).getTime() - new Date((a as any).createdAt).getTime() || ((b as any).id > (a as any).id ? 1 : -1));
+            return {
+                ...conv,
+                messages: nextMessages,
+                lastMessageTimestamp: (nextMessages[0] as any).createdAt || conv.lastMessageTimestamp,
+            };
         }));
     }, []);
 
