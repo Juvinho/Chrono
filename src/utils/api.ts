@@ -2,6 +2,10 @@
 
 const getBaseUrl = () => {
   if (typeof window !== 'undefined') {
+    const envBase = (import.meta as any)?.env?.VITE_API_URL as string | undefined;
+    if (envBase && typeof envBase === 'string' && envBase.length > 0) {
+      return envBase;
+    }
     const hostname = window.location.hostname;
     const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
     
@@ -57,6 +61,10 @@ class ApiClient {
 
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
+    }
+    const apiKey = ((import.meta as any)?.env?.VITE_API_KEY as string | undefined) || (process.env as any)?.API_KEY;
+    if (apiKey) {
+      headers['X-API-Key'] = apiKey;
     }
 
     try {
