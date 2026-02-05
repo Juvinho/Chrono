@@ -80,8 +80,6 @@ interface AppRoutesProps {
     handleFollowToggle: (username: string, actor?: User) => void;
     handleSendGlitchi: (username: string) => void;
     handlePasswordReset: (email: string, pass: string) => void;
-    onToggleChat: () => void;
-    onOpenChat: (user: User) => void;
 }
 
 export default function AppRoutes(props: AppRoutesProps) {
@@ -93,8 +91,7 @@ export default function AppRoutes(props: AppRoutesProps) {
         handleNavigate, handleLogin, handleLogout, handleNotificationClick, onViewNotifications, handleNewPost,
         handleUpdateReaction, handleReply, handleEcho, handleDeletePost, handleEditPost,
         handlePollVote, handleShowNewPosts, handleUpdateUser,
-        setIsMarketplaceOpen, handleBack, handleFollowToggle, handleSendGlitchi, handlePasswordReset,
-        onToggleChat, onOpenChat
+        setIsMarketplaceOpen, handleBack, handleFollowToggle, handleSendGlitchi, handlePasswordReset
     } = props;
 
     return (
@@ -138,7 +135,6 @@ export default function AppRoutes(props: AppRoutesProps) {
                     nextAutoRefresh={nextAutoRefresh}
                     isAutoRefreshPaused={isAutoRefreshPaused}
                     onBack={handleBack}
-                    onToggleChat={onToggleChat}
                     lastViewedNotifications={lastViewedNotifications}
                 />
             ) : <Navigate to="/welcome" />} />
@@ -173,7 +169,6 @@ export default function AppRoutes(props: AppRoutesProps) {
                     nextAutoRefresh={nextAutoRefresh}
                     isAutoRefreshPaused={isAutoRefreshPaused}
                     onBack={handleBack}
-                    onToggleChat={onToggleChat}
                     lastViewedNotifications={lastViewedNotifications}
                 />
             ) : <Navigate to="/welcome" />} />
@@ -203,8 +198,6 @@ export default function AppRoutes(props: AppRoutesProps) {
                     onOpenMarketplace={() => handleNavigate(Page.Dashboard, 'marketplace')}
                     onUpdateUser={handleUpdateUser}
                     onBack={handleBack}
-                    onToggleChat={onToggleChat}
-                    onOpenChat={onOpenChat}
                     lastViewedNotifications={lastViewedNotifications}
                 />
             ) : <Navigate to="/welcome" />} />
@@ -225,7 +218,6 @@ export default function AppRoutes(props: AppRoutesProps) {
                     conversations={conversations}
                     onOpenMarketplace={() => setIsMarketplaceOpen(true)}
                     onBack={handleBack}
-                    onToggleChat={onToggleChat}
                     lastViewedNotifications={lastViewedNotifications}
                 />
             ) : <Navigate to="/welcome" />} />
@@ -242,7 +234,6 @@ export default function AppRoutes(props: AppRoutesProps) {
                     conversations={conversations}
                     onOpenMarketplace={() => handleNavigate(Page.Dashboard, 'marketplace')}
                     onBack={handleBack}
-                    onToggleChat={onToggleChat}
                     lastViewedNotifications={lastViewedNotifications}
                 />
             ) : <Navigate to="/welcome" />} />

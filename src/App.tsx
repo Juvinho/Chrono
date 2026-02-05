@@ -645,8 +645,6 @@ export default function App() {
                             handleFollowToggle={handleFollowToggle}
                             handleSendGlitchi={handleSendGlitchi}
                             handlePasswordReset={handlePasswordReset}
-                            onToggleChat={handleToggleChatDrawer}
-                            onOpenChat={handleOpenChatDrawerWithUser}
                         />
 
 

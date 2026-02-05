@@ -22,11 +22,10 @@ interface HeaderProps {
     allUsers: User[];
     allPosts: Post[];
     conversations?: Conversation[];
-    onToggleChat?: () => void;
     lastViewedNotifications?: Date | null;
 }
 
-export default function Header({ user, onLogout, onViewProfile, onNavigate, onNotificationClick, onViewNotifications, onSearch, onOpenMarketplace, onBack, allUsers, allPosts, conversations, onToggleChat, lastViewedNotifications }: HeaderProps) {
+export default function Header({ user, onLogout, onViewProfile, onNavigate, onNotificationClick, onViewNotifications, onSearch, onOpenMarketplace, onBack, allUsers, allPosts, conversations, lastViewedNotifications }: HeaderProps) {
     const { t } = useTranslation();
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);

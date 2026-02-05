@@ -38,8 +38,6 @@ interface ProfilePageProps {
   conversations: Conversation[];
   onOpenMarketplace?: () => void;
   onBack?: () => void;
-  onToggleChat?: () => void;
-  onOpenChat?: (user: User) => void;
   lastViewedNotifications?: Date | null;
 }
 
@@ -47,7 +45,7 @@ export default function ProfilePage({
   currentUser, profileUsername: propProfileUsername, onLogout, onNavigate, onNotificationClick, onViewNotifications, users, onFollowToggle, 
   allPosts, allUsers, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost,
   onPollVote, selectedDate, setSelectedDate, typingParentIds, conversations, onOpenMarketplace, 
-  onUpdateUser, onBack, onToggleChat, onOpenChat, lastViewedNotifications
+  onUpdateUser, onBack, lastViewedNotifications
 }: ProfilePageProps & { onUpdateUser?: (user: User) => Promise<{ success: boolean; error?: string }> }) {
   const { t } = useTranslation();
   const { playSound } = useSound();
@@ -415,7 +413,6 @@ export default function ProfilePage({
           conversations={conversations}
           onOpenMarketplace={onOpenMarketplace}
           onBack={onBack}
-          onToggleChat={onToggleChat}
           lastViewedNotifications={lastViewedNotifications}
       />
       <main className="flex-grow overflow-y-auto">
@@ -559,17 +556,6 @@ export default function ProfilePage({
                       </button>
                   ) : (
                     <>
-                      <button 
-                        onClick={() => {
-                            if (onOpenChat) onOpenChat(profileUser);
-                            else onNavigate(Page.Messages, profileUser.username);
-                        }} 
-                        className="follow-btn px-4 py-1 rounded-sm transition-colors flex items-center gap-2" 
-                        title={t('messageButton') || 'Enviar Mensagem'}
-                      >
-                          <PaperPlaneIcon className="w-5 h-5"/>
-                          <span className="hidden sm:inline">{t('messageButton') || 'Enviar Mensagem'}</span>
-                      </button>
                       <button ref={followButtonRef} onClick={handleFollowClick} className={`${isFollowing ? 'following-btn' : 'follow-btn'} px-4 py-1 rounded-sm transition-colors`}>
                         {isFollowing ? t('profileFollowing') : t('profileFollow')}
                       </button>

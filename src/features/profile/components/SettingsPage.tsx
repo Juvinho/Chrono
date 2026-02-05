@@ -40,12 +40,11 @@ interface SettingsPageProps {
   conversations: Conversation[];
   onOpenMarketplace?: () => void;
   onBack?: () => void;
-  onToggleChat?: () => void;
   lastViewedNotifications?: Date | null;
 }
 
 export default function SettingsPage({
-  user, onLogout, onNavigate, onNotificationClick, onViewNotifications, onUpdateUser, allUsers, allPosts, conversations, onOpenMarketplace, onBack, onToggleChat, lastViewedNotifications
+  user, onLogout, onNavigate, onNotificationClick, onViewNotifications, onUpdateUser, allUsers, allPosts, conversations, onOpenMarketplace, onBack, lastViewedNotifications
 }: SettingsPageProps) {
   const { t, setLanguage, language } = useTranslation();
 
@@ -302,7 +301,6 @@ export default function SettingsPage({
         onOpenMarketplace={onOpenMarketplace}
         onSearch={handleSearch}
         onBack={onBack}
-        onToggleChat={onToggleChat}
         lastViewedNotifications={lastViewedNotifications}
       />
 
