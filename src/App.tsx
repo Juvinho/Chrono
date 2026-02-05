@@ -288,9 +288,6 @@ export default function App() {
     // Socket.io Integration
     useEffect(() => {
         if (currentUser) {
-            socketService.setToastHandler((msg, type) => {
-                showToast(msg, type);
-            });
             socketService.connect();
             if (currentUser.id) {
                 socketService.joinUserRoom(currentUser.id);

@@ -1,6 +1,10 @@
 // src/api/client.ts
 const getBaseUrl = () => {
   if (typeof window !== 'undefined') {
+    const envBase = (import.meta as any)?.env?.VITE_API_URL as string | undefined;
+    if (envBase && typeof envBase === 'string' && envBase.length > 0) {
+      return envBase;
+    }
     const hostname = window.location.hostname;
     const isLocal = hostname === 'localhost' || 
                    hostname === '127.0.0.1' || 
@@ -58,6 +62,10 @@ export class ApiClient {
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
+    const apiKey = ((import.meta as any)?.env?.VITE_API_KEY as string | undefined) || (process.env as any)?.API_KEY;
+    if (apiKey) {
+      headers['X-API-Key'] = apiKey;
+    }
 
     try {
       const controller = new AbortController();
@@ -75,7 +83,7 @@ export class ApiClient {
         if (response.status === 429) {
           const retryAfter = response.headers.get('Retry-After');
           const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 5000;
-          console.warn(`Rate limited (429). Waiting ${waitTime}ms before retry...`);
+          console.warn(`Rate limited (429). Server suggests waiting ${waitTime}ms`);
           return { error: 'rateLimitError', retryAfter: waitTime };
         }
         const data = await response.json().catch(() => ({}));
