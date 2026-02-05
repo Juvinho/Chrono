@@ -11,7 +11,7 @@ import { pool } from './db/connection.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import postRoutes from './routes/posts.js';
-// Conversations API removed
+import conversationsRoutes from './routes/conversations.js';
 import reactionsRoutes from './routes/reactions.js';
 import notificationRoutes from './routes/notifications.js';
 import marketplaceRoutes from './routes/marketplace.js';
@@ -144,7 +144,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/posts', reactionsRoutes);
-// conversations API removed
+app.use('/api/conversations', conversationsRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
 
