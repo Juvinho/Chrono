@@ -348,7 +348,11 @@ export default function App() {
                                      status: msg.status,
                                      isEncrypted: msg.isEncrypted,
                                      timestamp: new Date(msg.createdAt || msg.created_at || Date.now()),
-                                 })).sort((a: any, b: any) => a.timestamp.getTime() - b.timestamp.getTime()),
+                                })).sort((a: any, b: any) => {
+                                    const at = (a as any).timestamp || (a as any).createdAt;
+                                    const bt = (b as any).timestamp || (b as any).createdAt;
+                                    return new Date(at).getTime() - new Date(bt).getTime();
+                                }),
                                  lastMessageTimestamp: new Date(conv.lastMessageTimestamp || conv.updated_at || Date.now()),
                                  unreadCount: conv.unreadCount || {},
                                  isEncrypted: conv.isEncrypted,
@@ -379,7 +383,11 @@ export default function App() {
                                  
                                  return {
                                      ...conv,
-                                    messages: [...conv.messages, newMessage].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()),
+                                    messages: [...conv.messages, newMessage].sort((a: any, b: any) => {
+                                        const at = (a as any).timestamp || (a as any).createdAt;
+                                        const bt = (b as any).timestamp || (b as any).createdAt;
+                                        return new Date(bt).getTime() - new Date(at).getTime();
+                                    }),
                                      lastMessageTimestamp: newMessage.timestamp,
                                  };
                              }
