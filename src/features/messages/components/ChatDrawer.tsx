@@ -39,6 +39,8 @@ export default function ChatDrawer({
     const [isTyping, setIsTyping] = useState(false);
     const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
     const [isLoadingOlder, setIsLoadingOlder] = useState(false);
+    const sendSeqRef = useRef<Record<string, number>>({});
+    const sendQueueRef = useRef<Record<string, string[]>>({});
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
@@ -156,9 +158,19 @@ export default function ChatDrawer({
 
     const handleSendMessage = async (e?: React.FormEvent) => {
         e?.preventDefault();
-        if (!messageText.trim() || !activeChatUser || isLoading) return;
-
+        if (!activeChatUser) return;
         const textToSend = messageText.trim();
+        if (!textToSend) return;
+        if (isLoading) {
+            const convId = conversations.find(c => c.participants.includes(activeChatUser.username))?.id;
+            if (convId) {
+                const q = sendQueueRef.current[convId] || [];
+                q.push(textToSend);
+                sendQueueRef.current[convId] = q;
+            }
+            return;
+        }
+        setMessageText('');
         setIsLoading(true);
 
         // Stop typing indicator
@@ -178,6 +190,8 @@ export default function ChatDrawer({
         try {
             console.log('Enviando mensagem para:', activeChatUser.username, 'Texto:', textToSend);
             const localId = `local-${Date.now()}`;
+            const seq = currentConversation ? ((sendSeqRef.current[currentConversation.id] || 0) + 1) : 1;
+            if (currentConversation) sendSeqRef.current[currentConversation.id] = seq;
 
             // Otimista: inicia sequência única de animação
             if (currentConversation && onMessageSent) {
@@ -192,6 +206,7 @@ export default function ChatDrawer({
                     metadata: undefined,
                     status: 'sending',
                     messageStatus: 'sending',
+                    clientSeq: seq,
                     isEncrypted: false,
                     createdAt: new Date(),
                 } as any);
@@ -209,6 +224,7 @@ export default function ChatDrawer({
                         metadata: undefined,
                         status: 'sending',
                         messageStatus: 'arrow',
+                        clientSeq: seq,
                         isEncrypted: false,
                         createdAt: new Date(),
                     } as any);
@@ -226,6 +242,7 @@ export default function ChatDrawer({
                             metadata: undefined,
                             status: 'sent',
                             messageStatus: 'sent',
+                            clientSeq: seq,
                             isEncrypted: false,
                             createdAt: new Date(),
                         } as any);
@@ -240,7 +257,7 @@ export default function ChatDrawer({
                 throw new Error(response.error);
             }
 
-            setMessageText('');
+            // input já foi limpo para permitir nova digitação rápida
 
             // Concilia ID do servidor sem reprocessar animação
             if (currentConversation && onMessageSent && response?.data?.id) {
@@ -295,6 +312,16 @@ export default function ChatDrawer({
             });
         } finally {
             setIsLoading(false);
+            const convId = conversations.find(c => c.participants.includes(activeChatUser.username))?.id;
+            if (convId) {
+                const q = sendQueueRef.current[convId] || [];
+                const next = q.shift();
+                sendQueueRef.current[convId] = q;
+                if (next) {
+                    setMessageText(next);
+                    setTimeout(() => handleSendMessage(), 0);
+                }
+            }
         }
     };
 

@@ -186,9 +186,17 @@ export default function App() {
                 const created = msgTs || new Date();
                 nextMessages = [...conv.messages, { ...message, createdAt: created }];
             }
-            // Ordena por createdAt desc
-            nextMessages.sort((a, b) => new Date((b as any).createdAt).getTime() - new Date((a as any).createdAt).getTime() || ((b as any).id > (a as any).id ? 1 : -1));
-            const latestTs = (nextMessages[0] as any)?.createdAt || conv.lastMessageTimestamp || new Date();
+            // Ordena por createdAt asc, com tie-breaker clientSeq e id
+            nextMessages.sort((a: any, b: any) => {
+                const at = new Date(a.createdAt || a.timestamp || 0).getTime();
+                const bt = new Date(b.createdAt || b.timestamp || 0).getTime();
+                if (at !== bt) return at - bt;
+                const ac = a.clientSeq || 0;
+                const bc = b.clientSeq || 0;
+                if (ac !== bc) return ac - bc;
+                return (a.id > b.id ? 1 : -1);
+            });
+            const latestTs = (nextMessages[nextMessages.length - 1] as any)?.createdAt || conv.lastMessageTimestamp || new Date();
             return {
                 ...conv,
                 messages: nextMessages,
@@ -200,10 +208,16 @@ export default function App() {
     const handleAppendMessages = useCallback((conversationId: string, messages: any[]) => {
         setConversations(prev => prev.map(conv => {
             if (conv.id === conversationId) {
-                const merged = [...conv.messages, ...messages].sort(
-                    (a, b) => new Date((b as any).createdAt || (b as any).timestamp).getTime() - new Date((a as any).createdAt || (a as any).timestamp).getTime()
-                );
-                return { ...conv, messages: merged };
+                const merged = [...conv.messages, ...messages].sort((a: any, b: any) => {
+                    const at = new Date(a.createdAt || a.timestamp || 0).getTime();
+                    const bt = new Date(b.createdAt || b.timestamp || 0).getTime();
+                    if (at !== bt) return at - bt;
+                    const ac = (a as any).clientSeq || 0;
+                    const bc = (b as any).clientSeq || 0;
+                    if (ac !== bc) return ac - bc;
+                    return ((a as any).id > (b as any).id ? 1 : -1);
+                });
+                return { ...conv, messages: merged, lastMessageTimestamp: (merged[merged.length - 1] as any)?.createdAt || conv.lastMessageTimestamp };
             }
             return conv;
         }));
@@ -381,15 +395,20 @@ export default function App() {
                                      timestamp: new Date(payload.createdAt || Date.now())
                                  };
                                  
-                                 return {
-                                     ...conv,
-                                    messages: [...conv.messages, newMessage].sort((a: any, b: any) => {
-                                        const at = (a as any).timestamp || (a as any).createdAt;
-                                        const bt = (b as any).timestamp || (b as any).createdAt;
-                                        return new Date(bt).getTime() - new Date(at).getTime();
-                                    }),
-                                     lastMessageTimestamp: newMessage.timestamp,
-                                 };
+                                const msgs = [...conv.messages, newMessage].sort((a: any, b: any) => {
+                                    const at = new Date((a as any).createdAt || (a as any).timestamp || 0).getTime();
+                                    const bt = new Date((b as any).createdAt || (b as any).timestamp || 0).getTime();
+                                    if (at !== bt) return at - bt;
+                                    const ac = (a as any).clientSeq || 0;
+                                    const bc = (b as any).clientSeq || 0;
+                                    if (ac !== bc) return ac - bc;
+                                    return ((a as any).id > (b as any).id ? 1 : -1);
+                                });
+                                return {
+                                    ...conv,
+                                    messages: msgs,
+                                    lastMessageTimestamp: (msgs[msgs.length - 1] as any)?.createdAt || newMessage.timestamp,
+                                };
                              }
                              return conv;
                          });
