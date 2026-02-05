@@ -69,6 +69,9 @@ export class ConversationService {
     text: string,
     media?: { imageUrl?: string, videoUrl?: string, glitchiType?: string, metadata?: any }
   ): Promise<Message> {
+    if (typeof text === 'string' && text.length > 10000) {
+      throw new Error('Message too long (max 10000 characters)');
+    }
     // Check if user is a participant
     const participantCheck = await pool.query(
         'SELECT 1 FROM conversation_participants WHERE conversation_id = $1 AND user_id = $2',
@@ -123,7 +126,7 @@ export class ConversationService {
         );
     }
 
-    // Update conversation timestamp
+    // Update conversation timestamp (trigger also covers inserts, this is a fallback)
     await pool.query(
       'UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
       [conversationId]

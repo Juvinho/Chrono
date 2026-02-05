@@ -124,7 +124,18 @@ router.post('/:id/messages', authenticateToken, async (req: AuthRequest, res: Re
       return res.status(400).json({ error: 'Message text or media is required' });
     }
 
+    const startTs = Date.now();
+    if (typeof text === 'string') {
+      const len = text.length;
+      console.log(`[DM] Validating message length: ${len} chars for conversation ${id}`);
+      if (len > 10000) {
+        console.warn(`[DM] Message too long: ${len} > 10000`);
+        return res.status(413).json({ error: 'Message too long (max 10000 characters)' });
+      }
+    }
+
     const message = await conversationService.sendMessage(id, req.userId!, text, media);
+    console.log(`[DM] Inserted message ${message.id} in ${Date.now() - startTs}ms`);
 
     // Create notification for recipient
     const conv = await pool.query(
@@ -144,11 +155,45 @@ router.post('/:id/messages', authenticateToken, async (req: AuthRequest, res: Re
       senderUsername: sender?.username || 'unknown',
     });
   } catch (error: any) {
-    console.error('Send message error:', error);
+    console.error('[DM] Send message error:', {
+      message: error.message,
+      stack: error.stack,
+      payloadSize: typeof req.body?.text === 'string' ? req.body.text.length : 0,
+      conversation: req.params.id
+    });
     res.status(500).json({ error: error.message || 'Failed to send message' });
   }
 });
 
+// Paginated messages listing (newest first)
+router.get('/:id/messages', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { before, limit } = req.query as { before?: string, limit?: string };
+    const lim = Math.min(Math.max(parseInt(limit || '50'), 1), 200);
+    const beforeTs = before ? new Date(before) : null;
+
+    const baseSql = `
+      SELECT m.* 
+      FROM messages m
+      WHERE m.conversation_id = $1
+        AND (m.delete_at IS NULL OR m.delete_at > CURRENT_TIMESTAMP)
+        ${beforeTs ? 'AND m.created_at < $2' : ''}
+      ORDER BY m.created_at DESC, m.id DESC
+      LIMIT ${lim}
+    `;
+    const params: any[] = [id];
+    if (beforeTs) params.push(beforeTs.toISOString());
+
+    const rows = await pool.query(baseSql, params);
+    res.json(rows.rows);
+  } catch (error: any) {
+    console.error('[DM] Get messages error:', error);
+    res.status(500).json({ error: error.message || 'Failed to get messages' });
+  }
+});
+
+// Update message status (delivered/read)
 // Update message status (delivered/read)
 router.post('/:id/messages/:messageId/status', authenticateToken, async (req: AuthRequest, res: Response) => {
     try {

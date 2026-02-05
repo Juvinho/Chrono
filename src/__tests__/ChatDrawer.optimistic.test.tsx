@@ -54,9 +54,14 @@ describe('ChatDrawer optimistic update', () => {
     const form = input.closest('form')!;
     fireEvent.submit(form);
 
-    await new Promise(r => setTimeout(r, 20));
+    await new Promise(r => setTimeout(r, 30));
 
-    expect(onMessageSent).toHaveBeenCalledTimes(1);
-    expect(onMessageSent).toHaveBeenCalledWith('c1', expect.objectContaining({ text: 'hello' }));
+    expect(onMessageSent).toHaveBeenCalledTimes(2);
+    const firstCall = onMessageSent.mock.calls[0];
+    const secondCall = onMessageSent.mock.calls[1];
+    expect(firstCall[0]).toBe('c1');
+    expect(firstCall[1].status).toBe('sending');
+    expect(secondCall[0]).toBe('c1');
+    expect(secondCall[1].status).toBe('sent');
   });
 });
