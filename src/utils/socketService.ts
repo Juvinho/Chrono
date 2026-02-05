@@ -22,6 +22,7 @@ const getSocketUrl = () => {
 
 class SocketService {
     private socket: Socket | null = null;
+    private toastHandler?: (message: string, type?: 'success' | 'error' | 'info' | 'warning') => void;
 
     connect() {
         if (this.socket?.connected) return;
@@ -37,10 +38,28 @@ class SocketService {
 
         this.socket.on('connect', () => {
             console.log('Socket connected:', this.socket?.id);
+            this.toastHandler?.('Conectado ao chat em tempo real', 'success');
         });
 
         this.socket.on('connect_error', (err) => {
             console.error('Socket connection error:', err);
+            this.toastHandler?.('Falha ao conectar ao chat em tempo real. Tentando reconectar…', 'warning');
+        });
+
+        this.socket.io.on('reconnect_attempt', (attempt) => {
+            console.log('Socket reconnect attempt:', attempt);
+        });
+
+        this.socket.io.on('reconnect_failed', () => {
+            console.error('Socket reconnection failed');
+            this.toastHandler?.('Não foi possível reconectar ao chat. Algumas mensagens podem demorar.', 'error');
+        });
+
+        this.socket.on('disconnect', (reason) => {
+            console.warn('Socket disconnected:', reason);
+            if (reason !== 'io client disconnect') {
+                this.toastHandler?.('Conexão com o chat perdida. Reconectando…', 'warning');
+            }
         });
     }
 
@@ -68,6 +87,10 @@ class SocketService {
 
     emit(event: string, data: any) {
         this.socket?.emit(event, data);
+    }
+
+    setToastHandler(handler: (message: string, type?: 'success' | 'error' | 'info' | 'warning') => void) {
+        this.toastHandler = handler;
     }
 }
 
