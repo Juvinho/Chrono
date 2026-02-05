@@ -38,6 +38,7 @@ export default function ChatDrawer({
     const [showNewChat, setShowNewChat] = useState(false);
     const [isTyping, setIsTyping] = useState(false);
     const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
+    const [isLoadingOlder, setIsLoadingOlder] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
@@ -116,10 +117,11 @@ export default function ChatDrawer({
 
     // Effect to scroll to bottom when messages change
     useEffect(() => {
+        if (isLoadingOlder) return;
         if (currentConversation?.messages && currentConversation.messages.length > 0) {
             scrollToBottom();
         }
-    }, [currentConversation?.messages?.length]);
+    }, [currentConversation?.messages?.length, isLoadingOlder]);
 
     // Handle typing indicator
     const handleMessageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -564,6 +566,7 @@ export default function ChatDrawer({
                                     <button
                                         className="text-xs px-3 py-1 rounded-full bg-[var(--theme-bg-tertiary)] hover:bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)]"
                                         onClick={async () => {
+                                            setIsLoadingOlder(true);
                                             const oldest = [...currentConversation.messages].sort((a, b) => {
                                                 const at = (a as any).timestamp || (a as any).createdAt;
                                                 const bt = (b as any).timestamp || (b as any).createdAt;
@@ -587,6 +590,8 @@ export default function ChatDrawer({
                                                 }
                                             } catch (e) {
                                                 showToast('Falha ao carregar mais mensagens', 'error');
+                                            } finally {
+                                                setIsLoadingOlder(false);
                                             }
                                         }}
                                     >
@@ -598,7 +603,7 @@ export default function ChatDrawer({
                                 [...currentConversation.messages].sort((a, b) => {
                                     const at = (a as any).timestamp || (a as any).createdAt;
                                     const bt = (b as any).timestamp || (b as any).createdAt;
-                                    return new Date(bt).getTime() - new Date(at).getTime();
+                                    return new Date(at).getTime() - new Date(bt).getTime();
                                 }).map((msg, idx) => {
                                 const isMe = (msg as any).senderId ? (msg as any).senderId === currentUser.id : msg.senderUsername === currentUser.username;
                                 
