@@ -366,6 +366,8 @@ CREATE TABLE IF NOT EXISTS conversations (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+-- Index to optimize sorting by latest activity
+CREATE INDEX IF NOT EXISTS idx_conversations_updated_at ON conversations(updated_at DESC);
 
 -- Conversation participants table
 CREATE TABLE IF NOT EXISTS conversation_participants (
@@ -375,6 +377,8 @@ CREATE TABLE IF NOT EXISTS conversation_participants (
     last_read_at TIMESTAMP,
     PRIMARY KEY (conversation_id, user_id)
 );
+-- Index to quickly fetch conversations by user
+CREATE INDEX IF NOT EXISTS idx_conv_participants_user_id ON conversation_participants(user_id);
 
 -- Messages table
 CREATE TABLE IF NOT EXISTS messages (
@@ -385,7 +389,7 @@ CREATE TABLE IF NOT EXISTS messages (
     image_url TEXT,
     video_url TEXT,
     metadata JSONB DEFAULT '{}'::jsonb,
-    status VARCHAR(20) DEFAULT 'sent',
+    status VARCHAR(20) DEFAULT 'sent' CHECK (status IN ('sent','delivered','read')),
     is_encrypted BOOLEAN DEFAULT FALSE,
     delete_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -404,6 +408,29 @@ CREATE TABLE IF NOT EXISTS message_status (
 -- Indexes for messages
 CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_sender_id ON messages(sender_id);
+CREATE INDEX IF NOT EXISTS idx_messages_status ON messages(status);
+
+-- Trigger: bump conversations.updated_at when a new message is inserted
+CREATE OR REPLACE FUNCTION bump_conversation_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.conversation_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'bump_conversation_updated_at_trg'
+    ) THEN
+        CREATE TRIGGER bump_conversation_updated_at_trg
+        AFTER INSERT ON messages
+        FOR EACH ROW
+        EXECUTE FUNCTION bump_conversation_updated_at();
+    END IF;
+END $$;
 
 -- Notifications table
 CREATE TABLE IF NOT EXISTS notifications (

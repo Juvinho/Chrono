@@ -32,7 +32,9 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 const allowedOrigins = process.env.CORS_ORIGIN 
   ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
-  : ['http://localhost:3000', 'http://localhost:5173'];
+  : (process.env.NODE_ENV === 'production'
+      ? ['*']
+      : ['http://localhost:3000', 'http://localhost:5173']);
 
 // Get host IP from environment or detect automatically
 const HOST = process.env.HOST || '0.0.0.0'; // 0.0.0.0 allows connections from any IP

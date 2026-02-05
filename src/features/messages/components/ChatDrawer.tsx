@@ -15,6 +15,7 @@ interface ChatDrawerProps {
     activeChatUser: User | null; // If present, shows chat view
     onSetActiveChatUser: (user: User | null) => void;
     allUsers: User[]; // To find user details for conversations
+    onMessageSent?: (conversationId: string, message: Message) => void;
 }
 
 export default function ChatDrawer({
@@ -24,7 +25,8 @@ export default function ChatDrawer({
     conversations,
     activeChatUser,
     onSetActiveChatUser,
-    allUsers
+    allUsers,
+    onMessageSent
 }: ChatDrawerProps) {
     const { t } = useTranslation();
     const { showToast } = useToast();
@@ -193,6 +195,24 @@ export default function ChatDrawer({
             
             // Limpa input apenas após sucesso confirmado
             setMessageText('');
+            
+            // Atualização otimista caso o socket não entregue o evento
+            if (currentConversation && onMessageSent && response.data) {
+                const optimistic: Message = {
+                    id: response.data.id || `local-${Date.now()}`,
+                    conversationId: currentConversation.id,
+                    senderId: currentUser.id,
+                    text: response.data.text,
+                    imageUrl: response.data.imageUrl || null,
+                    videoUrl: response.data.videoUrl || null,
+                    glitchiType: response.data.glitchiType || null,
+                    metadata: response.data.metadata || undefined,
+                    status: 'sent',
+                    isEncrypted: response.data.isEncrypted || false,
+                    createdAt: new Date(response.data.createdAt || Date.now()),
+                };
+                onMessageSent(currentConversation.id, optimistic);
+            }
             
             // Scroll para última mensagem após um pequeno delay
             setTimeout(() => scrollToBottom(), 100);

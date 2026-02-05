@@ -164,6 +164,23 @@ export default function App() {
         setPendingPosts([]);
     };
 
+    const handleMessageSent = useCallback((conversationId: string, message: Message) => {
+        setConversations(prev => prev.map(conv => {
+            if (conv.id === conversationId) {
+                const msgTs = new Date((message as any).createdAt || Date.now());
+                const updatedMessages = [...conv.messages, { ...message, createdAt: msgTs }].sort(
+                    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                );
+                return {
+                    ...conv,
+                    messages: updatedMessages,
+                    lastMessageTimestamp: msgTs,
+                };
+            }
+            return conv;
+        }));
+    }, []);
+
     // User Interaction Tracking
     useEffect(() => {
         const handleInteraction = () => {
@@ -259,6 +276,9 @@ export default function App() {
     // Socket.io Integration
     useEffect(() => {
         if (currentUser) {
+            socketService.setToastHandler((msg, type) => {
+                showToast(msg, type);
+            });
             socketService.connect();
             if (currentUser.id) {
                 socketService.joinUserRoom(currentUser.id);
@@ -780,6 +800,7 @@ export default function App() {
                                 activeChatUser={drawerActiveUser}
                                 onSetActiveChatUser={setDrawerActiveUser}
                                 allUsers={combinedUsers}
+                                onMessageSent={handleMessageSent}
                             />
                             </Suspense>
                         )}
