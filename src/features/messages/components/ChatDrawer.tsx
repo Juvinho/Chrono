@@ -175,30 +175,11 @@ export default function ChatDrawer({
 
         try {
             console.log('Enviando mensagem para:', activeChatUser.username, 'Texto:', textToSend);
-            
-            // Usa sendMessageToUser que cria/busca conversa automaticamente
-            const response = await apiClient.sendMessageToUser(activeChatUser.username, textToSend);
-            
-            console.log('Resposta do servidor:', response);
-            
-            // Verifica se houve erro ou se não há data
-            if (response.error) {
-                console.error('Erro na resposta:', response.error);
-                throw new Error(response.error);
-            }
-
-            // Só limpa o input se a mensagem foi enviada com sucesso (tem data)
-            if (!response.data) {
-                console.error('Resposta sem data:', response);
-                throw new Error('Resposta inválida do servidor. A mensagem pode não ter sido enviada.');
-            }
-
-            console.log('Mensagem enviada com sucesso:', response.data);
-            
             const localId = `local-${Date.now()}`;
-            // Inserir mensagem "sending" antes de confirmar
+
+            // Otimista: inicia sequência única de animação
             if (currentConversation && onMessageSent) {
-                const sendingMsg: Message = {
+                onMessageSent(currentConversation.id, {
                     id: localId,
                     conversationId: currentConversation.id,
                     senderId: currentUser.id,
@@ -208,36 +189,76 @@ export default function ChatDrawer({
                     glitchiType: null,
                     metadata: undefined,
                     status: 'sending',
+                    messageStatus: 'sending',
                     isEncrypted: false,
-                    createdAt: new Date(),
-                };
-                onMessageSent(currentConversation.id, sendingMsg);
+                    // sem createdAt/timestamp até completar a animação
+                } as any);
+
+                // 800ms em "sending"
+                setTimeout(() => {
+                    onMessageSent(currentConversation.id, {
+                        id: localId,
+                        conversationId: currentConversation.id,
+                        senderId: currentUser.id,
+                        text: textToSend,
+                        imageUrl: null,
+                        videoUrl: null,
+                        glitchiType: null,
+                        metadata: undefined,
+                        status: 'sending',
+                        messageStatus: 'arrow',
+                        isEncrypted: false,
+                    } as any);
+
+                    // +200ms transição para "sent" e fixa horário HH:MM
+                    setTimeout(() => {
+                        onMessageSent(currentConversation.id, {
+                            id: localId,
+                            conversationId: currentConversation.id,
+                            senderId: currentUser.id,
+                            text: textToSend,
+                            imageUrl: null,
+                            videoUrl: null,
+                            glitchiType: null,
+                            metadata: undefined,
+                            status: 'sent',
+                            messageStatus: 'sent',
+                            isEncrypted: false,
+                            createdAt: new Date(),
+                        } as any);
+                    }, 200);
+                }, 800);
             }
-            
-            // Limpa input apenas após sucesso confirmado
+
+            // Dispara envio real ao backend em paralelo
+            const response = await apiClient.sendMessageToUser(activeChatUser.username, textToSend);
+            console.log('Resposta do servidor:', response);
+            if (response?.error) {
+                throw new Error(response.error);
+            }
+
             setMessageText('');
-            
-            // Atualiza status para 'sent' com dados do servidor
-            if (currentConversation && onMessageSent && response.data) {
-                const confirmed: Message = {
-                    id: response.data.id || localId,
+
+            // Concilia ID do servidor sem reprocessar animação
+            if (currentConversation && onMessageSent && response?.data?.id) {
+                onMessageSent(currentConversation.id, {
+                    id: response.data.id,
                     conversationId: currentConversation.id,
                     senderId: currentUser.id,
-                    text: response.data.text,
+                    text: response.data.text || textToSend,
                     imageUrl: response.data.imageUrl || null,
                     videoUrl: response.data.videoUrl || null,
                     glitchiType: response.data.glitchiType || null,
                     metadata: response.data.metadata || undefined,
                     status: 'sent',
+                    messageStatus: 'sent',
                     isEncrypted: response.data.isEncrypted || false,
                     createdAt: new Date(response.data.createdAt || Date.now()),
-                };
-                onMessageSent(currentConversation.id, confirmed);
+                    _replaceId: localId, // dica para atualização por ID
+                } as any);
             }
-            
-            // Scroll para última mensagem após um pequeno delay
+
             setTimeout(() => scrollToBottom(), 100);
-            
         } catch (error: any) {
             // Feedback de erro
             const errorMessage = error.message || 'Erro ao enviar mensagem. Tente novamente.';
@@ -255,6 +276,7 @@ export default function ChatDrawer({
                     glitchiType: null,
                     metadata: undefined,
                     status: 'failed',
+                    messageStatus: 'sent',
                     isEncrypted: false,
                     createdAt: new Date(),
                 };
@@ -592,12 +614,22 @@ export default function ChatDrawer({
                                             {msg.text}
                                                 <div className={`flex items-center justify-between mt-1 gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
                                                     <span className={`text-[10px] opacity-70`}>
-                                                        {msg.timestamp ? formatTimestamp(msg.timestamp) : ''}
+                                                        {((msg as any).messageStatus === 'sent') 
+                                                            ? (() => {
+                                                                const ts = (msg as any).timestamp || (msg as any).createdAt;
+                                                                const d = ts ? new Date(ts) : null;
+                                                                return d ? d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+                                                              })()
+                                                            : ''
+                                                        }
                                                     </span>
-                                                    {isMe && msg.status && (
-                                                        <span className="text-[10px] opacity-70">
-                                                            {msg.status === 'failed' ? 'Falha' : msg.status === 'sending' ? 'Enviando…' : (msg.status === 'read' ? '✓✓' : msg.status === 'delivered' ? '✓✓' : '✓')}
-                                            </span>
+                                                    {isMe && (
+                                                        <span className="text-[10px] opacity-70 flex items-center gap-1">
+                                                            {((msg as any).messageStatus === 'sending') && <span className="animate-pulse">Enviando…</span>}
+                                                            {((msg as any).messageStatus === 'arrow') && <SendIcon className="w-3 h-3 transition-transform duration-200 translate-x-0" />}
+                                                            {((msg as any).messageStatus === 'sent' || msg.status === 'sent') && <span className="text-green-300">✓</span>}
+                                                            {msg.status === 'failed' && <span className="text-amber-300">Falha</span>}
+                                                        </span>
                                                     )}
                                                 </div>
                                             </div>
