@@ -412,6 +412,18 @@ CREATE INDEX IF NOT EXISTS idx_messages_sender_id ON messages(sender_id);
 CREATE INDEX IF NOT EXISTS idx_messages_status ON messages(status);
 CREATE INDEX IF NOT EXISTS idx_messages_conv_created_at ON messages(conversation_id, created_at DESC, id DESC);
 
+-- Enable pg_trgm extension for fast LIKE searches
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_trgm') THEN
+        CREATE EXTENSION pg_trgm;
+    END IF;
+END $$;
+
+-- Optimized indexes for search and retrieval
+CREATE INDEX IF NOT EXISTS idx_messages_conv_created ON messages(conversation_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_text_trgm ON messages USING gin (text gin_trgm_ops);
+
 -- Trigger: bump conversations.updated_at when a new message is inserted
 CREATE OR REPLACE FUNCTION bump_conversation_updated_at()
 RETURNS TRIGGER AS $$
