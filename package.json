@@ -9,6 +9,7 @@
     "start": "node server/dist/index.js",
     "db:migrate": "node server/dist/db/migrate.js",
     "db:migrate-data": "tsx server/src/scripts/migrate-data.ts",
+    "db:migrate:orchestrate": "tsx server/src/scripts/migrate-orchestrator.ts",
     "db:seed": "node server/dist/db/seed.js",
     "preview": "vite preview",
     "dev:server": "tsx watch server/src/index.ts",

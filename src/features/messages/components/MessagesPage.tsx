@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import Header from '../../../components/ui/Header';
 import { User, Conversation, Page } from '../../../types';
@@ -28,6 +28,8 @@ export default function MessagesPage({
 }: MessagesPageProps) {
   const { t } = useTranslation();
   const { username: presetUsername } = useParams<{ username: string }>();
+  
+  // Estados
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inbox, setInbox] = useState<any[]>([]);
@@ -35,13 +37,16 @@ export default function MessagesPage({
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
-  const [es, setEs] = useState<EventSource | null>(null);
   const [peerStatus, setPeerStatus] = useState<{ username?: string; online?: boolean; lastSeen?: string } | null>(null);
   const [hasMore, setHasMore] = useState(true);
 
+  // Ref para controlar o scroll automático (opcional, mas bom ter)
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // 1. Carregar Inbox (Conversas laterais)
   useEffect(() => {
     let mounted = true;
-    const load = async () => {
+    const loadInbox = async () => {
       setLoading(true);
       setError(null);
       const res = await apiClient.getConversations();
@@ -54,76 +59,73 @@ export default function MessagesPage({
       setInbox(res.data || []);
       setLoading(false);
     };
-    load();
+    loadInbox();
     return () => { mounted = false; };
   }, []);
 
+  // 2. Lógica de Polling (O CORAÇÃO DO CHAT) - Atualiza mensagens a cada 3s
   useEffect(() => {
-    let mounted = true;
+    if (!activeConversationId) return;
+
+    // Função que busca mensagens silenciosamente
+    const fetchLatestMessages = async () => {
+      try {
+        // Busca as ultimas 50. 
+        // DICA: Se quiser economizar banda, o ideal seria buscar "after: lastMessageId", 
+        // mas vamos buscar tudo para garantir que funciona agora.
+        const res = await apiClient.getMessages(activeConversationId, { limit: 50 });
+        if (res.data) {
+          // Atualiza o estado apenas com os dados novos
+          // O React é inteligente o suficiente para não repintar tudo se for igual
+          setMessages(res.data);
+          
+          // Marca como lido silenciosamente
+          apiClient.markConversationAsRead(activeConversationId).catch(() => {});
+        }
+      } catch (err) {
+        console.error("Erro no polling do chat:", err);
+      }
+    };
+
+    // Executa imediatamente ao abrir
+    fetchLatestMessages();
+
+    // Cria o intervalo de 3 segundos
+    const intervalId = setInterval(fetchLatestMessages, 3000);
+
+    // Limpa o intervalo ao sair da conversa ou desmontar o componente
+    return () => clearInterval(intervalId);
+  }, [activeConversationId]);
+
+  // 3. Inicializar via URL (ex: /messages/username)
+  useEffect(() => {
     const initByUsername = async () => {
       if (!presetUsername) return;
+      
+      // Tenta achar ou criar a conversa
       const conv = await apiClient.getOrCreateConversation(presetUsername);
-      if (conv.data?.id || conv.data?.conversationId) {
-        const id = conv.data.id || conv.data.conversationId;
+      
+      const id = conv.data?.id || conv.data?.conversationId;
+      if (id) {
         setActiveConversationId(id);
-        const msgs = await apiClient.getMessages(id, { limit: 50 });
-        setMessages(msgs.data || []);
-        try {
-          await apiClient.markConversationAsRead(id);
-        } catch {}
+        // O useEffect do Polling acima vai cuidar de carregar as mensagens assim que o ID mudar
+        
+        // Carrega status do usuário
         const status = await apiClient.getUserStatus(presetUsername);
         setPeerStatus(status.data || null);
-        const stream = apiClient.subscribeConversation(id, {
-          onMessages: (msgs) => {
-            if (!mounted) return;
-            setMessages(prev => [...prev, ...msgs]);
-            try {
-              const last = msgs[msgs.length - 1];
-              if (last?.id) {
-                apiClient.updateMessageStatus(id, last.id, 'delivered').catch(() => {});
-                apiClient.updateMessageStatus(id, last.id, 'read').catch(() => {});
-              }
-            } catch {}
-          },
-          onTyping: (data) => {
-            if (!mounted) return;
-            setTypingUsers(data.users || []);
-          }
-        });
-        setEs(stream);
       }
     };
     initByUsername();
-    return () => { 
-      mounted = false; 
-      es?.close();
-    };
   }, [presetUsername]);
 
-  const handleOpenConversation = async (id: string) => {
+  // Handler para clicar na conversa lateral
+  const handleOpenConversation = (id: string) => {
     setActiveConversationId(id);
-    const msgs = await apiClient.getMessages(id, { limit: 50 });
-    setMessages(msgs.data || []);
-    try {
-      await apiClient.markConversationAsRead(id);
-    } catch {}
-    const stream = apiClient.subscribeConversation(id, {
-      onMessages: (newMsgs) => {
-        setMessages(prev => [...prev, ...newMsgs]);
-        try {
-          const last = newMsgs[newMsgs.length - 1];
-          if (last?.id) {
-            apiClient.updateMessageStatus(id, last.id, 'delivered').catch(() => {});
-            apiClient.updateMessageStatus(id, last.id, 'read').catch(() => {});
-          }
-        } catch {}
-      },
-      onTyping: (data) => setTypingUsers(data.users || [])
-    });
-    es?.close();
-    setEs(stream);
+    setMessages([]); // Limpa mensagens antigas visualmente enquanto carrega as novas
+    // O useEffect do polling vai disparar automaticamente e preencher isso
   };
   
+  // Carregar mensagens antigas (Paginação)
   const loadOlder = async () => {
     if (!activeConversationId || messages.length === 0) return;
     const oldest = messages[0]?.created_at;
@@ -136,36 +138,38 @@ export default function MessagesPage({
     }
   };
 
+  // Enviar Mensagem
   const handleSend = async () => {
     if (!activeConversationId || !input.trim()) return;
+    
+    // Optimistic UI (Mostra a mensagem antes de confirmar)
     const optimistic = {
       id: `tmp-${Date.now()}`,
       sender_id: currentUser.id,
       text: input,
       created_at: new Date().toISOString()
     };
+    
     setMessages(prev => [...prev, optimistic]);
     setInput('');
+
     const res = await apiClient.sendMessage(activeConversationId, optimistic.text);
+    
     if (res.error) {
       setError(res.error);
-      // simple rollback: remove optimistic on error
+      // Remove a mensagem otimista se der erro
       setMessages(prev => prev.filter(m => m.id !== optimistic.id));
       return;
     }
+
+    // Substitui a mensagem temporária pela real que veio do backend
     const real = res.data!;
     setMessages(prev => prev.map(m => m.id === optimistic.id ? real : m));
-    try {
-      await apiClient.updateMessageStatus(activeConversationId, real.id, 'delivered');
-      await apiClient.updateMessageStatus(activeConversationId, real.id, 'read');
-    } catch {}
   };
   
   const handleTyping = async (value: string) => {
     setInput(value);
-    if (activeConversationId) {
-      apiClient.sendTyping(activeConversationId);
-    }
+    // Opcional: Implementar lógica de typing aqui se o backend suportar
   };
 
   return (
@@ -186,6 +190,7 @@ export default function MessagesPage({
       />
 
       <div className="max-w-6xl mx-auto px-4 py-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* LISTA DE CONVERSAS (INBOX) */}
         <div className="bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] rounded-lg p-4">
           <h2 className="font-bold mb-3">{t('inbox') || 'Inbox'}</h2>
           {loading ? (
@@ -211,17 +216,19 @@ export default function MessagesPage({
           )}
         </div>
 
+        {/* ÁREA DE CHAT */}
         <div className="md:col-span-2 bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] rounded-lg p-4">
           {activeConversationId ? (
             <>
-              <div className="space-y-3 mb-4">
+              <div className="space-y-3 mb-4 h-[400px] overflow-y-auto flex flex-col">
                 {hasMore && (
-                  <button onClick={loadOlder} className="text-xs text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)]">
+                  <button onClick={loadOlder} className="text-xs text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)] self-center p-2">
                     {t('loadOlder') || 'Carregar mais'}
                   </button>
                 )}
+                
                 {messages.map(msg => (
-                  <div key={msg.id} className="p-2 rounded border border-[var(--theme-border-primary)]">
+                  <div key={msg.id} className={`p-2 rounded border max-w-[80%] ${msg.sender_id === currentUser.id ? 'self-end bg-[var(--theme-bg-tertiary)] border-[var(--theme-primary)]' : 'self-start border-[var(--theme-border-primary)]'}`}>
                     <div className="text-xs text-[var(--theme-text-secondary)] mb-1">
                       {new Date(msg.created_at).toLocaleString()}
                     </div>
@@ -232,15 +239,21 @@ export default function MessagesPage({
                     </div>
                   </div>
                 ))}
+                <div ref={messagesEndRef} />
               </div>
+
               {peerStatus && (
                 <div className="mb-2 text-xs text-[var(--theme-text-secondary)]">
-                  @{peerStatus.username} — {peerStatus.online ? (t('online') || 'Online') : (t('offline') || 'Offline')} {peerStatus.lastSeen ? `• ${new Date(peerStatus.lastSeen).toLocaleString()}` : ''}
+                  @{peerStatus.username} — {peerStatus.online ? (t('online') || 'Online') : (t('offline') || 'Offline')} 
                 </div>
               )}
+
               {typingUsers.length > 0 && (
-                <div className="mb-2 text-xs text-[var(--theme-text-secondary)]">{t('typing') || 'Digitando...'} {typingUsers.join(', ')}</div>
+                <div className="mb-2 text-xs text-[var(--theme-text-secondary)]">
+                  {t('typing') || 'Digitando...'} {typingUsers.join(', ')}
+                </div>
               )}
+              
               <div className="flex gap-2">
                 <input 
                   value={input} 
@@ -250,7 +263,7 @@ export default function MessagesPage({
                 />
                 <button 
                   onClick={handleSend}
-                   className="px-4 py-2 bg-[var(--theme-primary)] text-black rounded hover:opacity-80"
+                  className="px-4 py-2 bg-[var(--theme-primary)] text-black rounded hover:opacity-80"
                   disabled={!input.trim() || !activeConversationId}
                 >
                   {t('send') || 'Send'}
