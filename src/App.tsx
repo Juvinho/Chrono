@@ -12,6 +12,8 @@ import { useToast } from './contexts/ToastContext';
 import { AuthProvider } from './contexts/AuthContext';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 import AppRoutes from './routes/AppRoutes';
+import { FloatingChatContainer } from './components/FloatingChatContainer';
+import './styles/floating-chats.css';
 
 // Lazy load components for performance
 const Marketplace = React.lazy(() => import('./features/marketplace/components/Marketplace'));
@@ -607,6 +609,8 @@ export default function App() {
                                     onComplete={() => setActiveGlitchi(null)}
                                 />
                             )}
+
+                            <FloatingChatContainer />
                         </div>
                     </Suspense>
                 </div>
