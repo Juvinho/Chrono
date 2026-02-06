@@ -9,6 +9,7 @@ import { generateReplyContent } from './utils/geminiService';
 import { apiClient, mapApiPostToPost } from './api';
 import { useSound } from './contexts/SoundContext';
 import { useToast } from './contexts/ToastContext';
+import { AuthProvider } from './contexts/AuthContext';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 import AppRoutes from './routes/AppRoutes';
 
@@ -556,74 +557,60 @@ export default function App() {
 
     return (
         <LanguageProvider>
-            <div key={animationKey} className="page-transition">
-                <Suspense fallback={<LoadingSpinner />}>
-                    <div className={`app-container ${currentUser?.profileSettings?.theme || 'theme-cyberpunk'}`}>
-                        <AppRoutes
-                            currentUser={currentUser}
-                            users={users}
-                            setUsers={setUsers}
-                            posts={posts}
-                            combinedUsers={combinedUsers}
-                            memoizedPosts={memoizedPosts}
-                            memoizedUsers={memoizedUsers}
-                            memoizedAllPosts={memoizedAllPosts}
-                            pendingPosts={pendingPosts}
-                            conversations={conversations}
-                            selectedDate={selectedDate}
-                            setSelectedDate={setSelectedDate}
-                            userToVerify={userToVerify}
-                            emailToReset={emailToReset}
-                            isGenerating={isGenerating}
-                            typingParentIds={typingParentIds}
-                            nextAutoRefresh={nextAutoRefresh}
-                            isAutoRefreshPaused={isAutoRefreshPaused}
-                            handleNavigate={handleNavigate}
-                            handleLogin={handleLogin}
-                            handleLogout={handleLogout}
-                            handleNotificationClick={handleNotificationClick}
-                            onViewNotifications={handleViewNotifications}
-                            handleNewPost={handleNewPost}
-                            handleUpdateReaction={handleUpdateReaction}
-                            handleReply={handleReply}
-                            handleEcho={handleEcho}
-                            handleDeletePost={handleDeletePost}
-                            handleEditPost={handleEditPost}
-                            handlePollVote={handlePollVote}
-                            handleShowNewPosts={handleShowNewPosts}
-                            
-                            setIsMarketplaceOpen={() => navigate('/marketplace')}
-                            handleBack={handleBack}
-                            handleFollowToggle={handleFollowToggle}
-                            handleSendGlitchi={handleSendGlitchi}
-                            handlePasswordReset={handlePasswordReset}
-                        />
-
-
-                        {/* Modals and Overlays */}
-
-                        {/* Chat drawer removed */}
-
-                        
-                        {/* Marketplace moved to route /marketplace */}
-                        {/* {isMarketplaceOpen && currentUser && (
-                            <Marketplace
+            <AuthProvider user={currentUser}>
+                <div key={animationKey} className="page-transition">
+                    <Suspense fallback={<LoadingSpinner />}>
+                        <div className={`app-container ${currentUser?.profileSettings?.theme || 'theme-cyberpunk'}`}>
+                            <AppRoutes
                                 currentUser={currentUser}
-                                onClose={() => setIsMarketplaceOpen(false)}
-                                onUserUpdate={handleUpdateUser}
+                                users={users}
+                                setUsers={setUsers}
+                                posts={posts}
+                                combinedUsers={combinedUsers}
+                                memoizedPosts={memoizedPosts}
+                                memoizedUsers={memoizedUsers}
+                                memoizedAllPosts={memoizedAllPosts}
+                                pendingPosts={pendingPosts}
+                                conversations={conversations}
+                                selectedDate={selectedDate}
+                                setSelectedDate={setSelectedDate}
+                                userToVerify={userToVerify}
+                                emailToReset={emailToReset}
+                                isGenerating={isGenerating}
+                                typingParentIds={typingParentIds}
+                                nextAutoRefresh={nextAutoRefresh}
+                                isAutoRefreshPaused={isAutoRefreshPaused}
+                                handleNavigate={handleNavigate}
+                                handleLogin={handleLogin}
+                                handleLogout={handleLogout}
+                                handleNotificationClick={handleNotificationClick}
+                                onViewNotifications={handleViewNotifications}
+                                handleNewPost={handleNewPost}
+                                handleUpdateReaction={handleUpdateReaction}
+                                handleReply={handleReply}
+                                handleEcho={handleEcho}
+                                handleDeletePost={handleDeletePost}
+                                handleEditPost={handleEditPost}
+                                handlePollVote={handlePollVote}
+                                handleShowNewPosts={handleShowNewPosts}
+                                
+                                setIsMarketplaceOpen={() => navigate('/marketplace')}
+                                handleBack={handleBack}
+                                handleFollowToggle={handleFollowToggle}
+                                handleSendGlitchi={handleSendGlitchi}
+                                handlePasswordReset={handlePasswordReset}
                             />
-                        )} */}
-                        
-                        {activeGlitchi && (
-                            <GlitchiOverlay 
-                                senderUsername={activeGlitchi.senderUsername}
-                                onComplete={() => setActiveGlitchi(null)}
-                            />
-                        )}
-                        
-                    </div>
-                </Suspense>
-            </div>
+
+                            {activeGlitchi && (
+                                <GlitchiOverlay 
+                                    senderUsername={activeGlitchi.senderUsername}
+                                    onComplete={() => setActiveGlitchi(null)}
+                                />
+                            )}
+                        </div>
+                    </Suspense>
+                </div>
+            </AuthProvider>
         </LanguageProvider>
     );
 }

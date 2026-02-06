@@ -1,7 +1,6 @@
 import { authService } from './auth.service';
 import { postService } from './post.service';
 import { userService } from './user.service';
-import { conversationService } from './conversation.service';
 import { notificationService } from './notification.service';
 import { marketplaceService } from './marketplace.service';
 import { companionService } from './companion.service';
@@ -11,7 +10,6 @@ export const api = {
   auth: authService,
   posts: postService,
   users: userService,
-  conversations: conversationService,
   notifications: notificationService,
   marketplace: marketplaceService,
   companion: companionService,
@@ -23,7 +21,6 @@ export const apiClient = {
   ...authService,
   ...postService,
   ...userService,
-  ...conversationService,
   ...notificationService,
   ...marketplaceService,
   ...companionService,
