@@ -262,6 +262,73 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
 
 // Reactions endpoints moved to reactions router
 
+router.post('/:id/echo', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    if (!req.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const originalPost = await postService.getPostById(id);
+    if (!originalPost) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+    const newPost = await postService.createPost(req.userId, '', {
+      repostOfId: id,
+      isPrivate: false,
+    });
+    if (originalPost.authorId !== req.userId) {
+      await notificationService.createNotification(originalPost.authorId, req.userId, 'repost', id);
+    }
+    const enrichedPost = await enrichPost(newPost);
+    res.status(201).json(enrichedPost);
+  } catch (error: any) {
+    console.error('Echo post error:', error);
+    res.status(500).json({ error: error.message || 'Failed to echo post' });
+  }
+});
+
+router.post('/:id/reply', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { content, isPrivate, imageUrl, videoUrl } = req.body || {};
+    if (!req.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const parentPost = await postService.getPostById(id);
+    if (!parentPost) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+    if (!content && !imageUrl && !videoUrl) {
+      return res.status(400).json({ error: 'Reply content or media is required' });
+    }
+    if (content) {
+      const words = content.split(/\s+/);
+      const hasInvalidMention = words.some((w: string) => w.startsWith('@') && !validateNoEmojis(w, 'Menção').valid);
+      if (hasInvalidMention) {
+        return res.status(400).json({ error: 'Menções não podem conter emojis.' });
+      }
+      const moderationResult = await moderationService.checkContent(content);
+      if (moderationResult.flagged) {
+        return res.status(400).json({ error: moderationResult.reason || 'Conteúdo sinalizado pela moderação.' });
+      }
+    }
+    const replyPost = await postService.createPost(req.userId, content || '', {
+      inReplyToId: id,
+      isPrivate: !!isPrivate,
+      imageUrl,
+      videoUrl,
+    });
+    if (parentPost.authorId !== req.userId) {
+      await notificationService.createNotification(parentPost.authorId, req.userId, 'reply', id);
+    }
+    const enrichedPost = await enrichPost(replyPost);
+    res.status(201).json(enrichedPost);
+  } catch (error: any) {
+    console.error('Reply post error:', error);
+    res.status(500).json({ error: error.message || 'Failed to reply to post' });
+  }
+});
+
 // Vote on poll
 router.post('/:id/vote', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
@@ -283,6 +350,26 @@ router.post('/:id/vote', authenticateToken, async (req: AuthRequest, res: Respon
     res.json({ voters: votes });
   } catch (error: any) {
     console.error('Vote error:', error);
+    res.status(500).json({ error: error.message || 'Failed to vote' });
+  }
+});
+
+router.post('/:id/poll/vote', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { optionIndex } = req.body;
+    if (typeof optionIndex !== 'number') {
+      return res.status(400).json({ error: 'optionIndex must be a number' });
+    }
+    await pollService.vote(id, req.userId!, optionIndex);
+    const post = await postService.getPostById(id);
+    if (!post) {
+      return res.status(404).json({ error: 'Post not found' });
+    }
+    const votes = await pollService.getVotesForPost(id);
+    res.json({ voters: votes });
+  } catch (error: any) {
+    console.error('Vote error (alias):', error);
     res.status(500).json({ error: error.message || 'Failed to vote' });
   }
 });
