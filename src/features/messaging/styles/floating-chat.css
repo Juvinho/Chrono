@@ -169,8 +169,8 @@
 }
 
 .floating-chat-message.mine .floating-message-content {
-  background: var(--theme-primary);
-  color: var(--theme-bg-primary);
+  background: #ff2b2b;
+  color: #ffffff;
 }
 
 .floating-message-time {
