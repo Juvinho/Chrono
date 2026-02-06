@@ -148,11 +148,15 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await apiClient.post('/chat/init', { targetUserId });
       const conversation = res.data;
+      if (!conversation) {
+        console.warn('Init conversation returned no data', res.error);
+        return;
+      }
       
       // Check if conversation already exists in list
-      const exists = conversations.find(c => c.id === conversation.id);
+      const exists = Array.isArray(conversations) ? conversations.find(c => c.id === conversation.id) : undefined;
       if (!exists) {
-        setConversations(prev => [conversation, ...prev]);
+        setConversations(prev => [conversation, ...(Array.isArray(prev) ? prev : [])]);
       }
       
       setActiveConversation(conversation);
