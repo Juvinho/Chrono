@@ -4,10 +4,11 @@
   bottom: 0;
   right: 20px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row-reverse;
   gap: 8px;
   z-index: 9998;
   pointer-events: none;
+  align-items: flex-end;
 }
 
 .floating-chats-container > * {
