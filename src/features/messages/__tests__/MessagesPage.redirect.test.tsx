@@ -16,6 +16,7 @@ vi.mock('../../../api', () => ({
     getConversations: vi.fn().mockResolvedValue({ data: [{ id: 'conv1', updated_at: new Date().toISOString(), other_username: 'other' }] }),
     getMessages: vi.fn().mockResolvedValue({ data: [{ id: 'm1', sender_id: 'other', text: 'hi', created_at: new Date().toISOString() }] }),
     getOrCreateConversation: vi.fn().mockResolvedValue({ data: { id: 'conv1' } }),
+    subscribeConversation: vi.fn(() => ({ close: vi.fn() })),
   }
 }));
 

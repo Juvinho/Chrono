@@ -291,10 +291,34 @@ class ApiClient {
     return this.request<any[]>(`/conversations/${conversationId}/messages`);
   }
 
+  subscribeConversation(conversationId: string, handlers: { onMessages?: (msgs: any[]) => void; onTyping?: (data: { users: string[] }) => void }) {
+    const es = new EventSource(`${API_BASE_URL}/conversations/${conversationId}/stream`, { withCredentials: true } as any);
+    es.addEventListener('messages', (e: MessageEvent) => {
+      try {
+        const data = JSON.parse((e as any).data);
+        handlers.onMessages && handlers.onMessages(data);
+      } catch {}
+    });
+    es.addEventListener('typing', (e: MessageEvent) => {
+      try {
+        const data = JSON.parse((e as any).data);
+        handlers.onTyping && handlers.onTyping(data);
+      } catch {}
+    });
+    return es;
+  }
+
   async sendMessage(conversationId: string, text: string, media?: { imageUrl?: string, videoUrl?: string, metadata?: any }) {
     return this.request<any>(`/conversations/${conversationId}/messages`, {
       method: 'POST',
       body: JSON.stringify({ text, media }),
+    });
+  }
+
+  async sendTyping(conversationId: string) {
+    return this.request<any>(`/conversations/${conversationId}/typing`, {
+      method: 'POST',
+      body: JSON.stringify({}),
     });
   }
 
