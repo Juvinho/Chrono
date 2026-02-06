@@ -11,26 +11,28 @@ const __dirname = path.dirname(__filename);
 
 const { Pool } = pg;
 
-// Railway URL (Source)
-const SOURCE_URL = "postgresql://postgres:BoFGapolkDlHsoPiOTzhJMhxpCibElvB@crossover.proxy.rlwy.net:32792/railway";
-// Supabase URL (Target) - Using Pooler Port 6543 for better reliability
-const TARGET_URL = "postgresql://postgres:27Set%402004%23%2AJuvinho123%5D@db.aamgqywcifppjgwgspsg.supabase.co:6543/postgres";
+// Prefer environment variables, fallback to known endpoints (masked in logs)
+const SOURCE_URL = process.env.SOURCE_DB_URL || "postgresql://postgres:BoFGapolkDlHsoPiOTzhJMhxpCibElvB@crossover.proxy.rlwy.net:32792/railway";
+const TARGET_URL = process.env.TARGET_DB_URL || "postgresql://postgres:27Set%402004%23%2AJuvinho123%5D@db.aamgqywcifppjgwgspsg.supabase.co:6543/postgres";
 
 async function migrate() {
     console.log('🚀 Iniciando processo de migração completa...');
     
     const sourcePool = new Pool({ 
-        connectionString: SOURCE_URL,
+        connectionString: SOURCE_URL.split('?')[0],
         ssl: { rejectUnauthorized: false }
     });
     const targetPool = new Pool({ 
-        connectionString: TARGET_URL,
+        connectionString: TARGET_URL.split('?')[0],
         ssl: { rejectUnauthorized: false }
     });
 
     try {
         // 1. TEST CONNECTIONS
+        const mask = (url: string) => url.replace(/:([^:@]+)@/, ':****@');
         console.log('🔗 Testando conexões...');
+        console.log(`   • Origem: ${mask(SOURCE_URL)}`);
+        console.log(`   • Destino: ${mask(TARGET_URL)}`);
         try {
             await sourcePool.query('SELECT 1');
             console.log('✅ Conexão com Railway OK.');
@@ -77,6 +79,7 @@ async function migrate() {
         ];
 
         // 3. MIGRATE DATA
+        const counts: Record<string, { source: number; targetBefore: number; targetAfter: number }> = {};
         for (const table of tables) {
             console.log(`📦 Migrando tabela: ${table}...`);
             
@@ -84,10 +87,13 @@ async function migrate() {
             
             if (rows.length === 0) {
                 console.log(`ℹ️ Tabela ${table} está vazia. Pulando.`);
+                const tb = await targetPool.query(`SELECT COUNT(*) AS c FROM ${table}`);
+                counts[table] = { source: 0, targetBefore: parseInt(tb.rows[0].c || '0'), targetAfter: parseInt(tb.rows[0].c || '0') };
                 continue;
             }
 
             console.log(`  - Encontrados ${rows.length} registros.`);
+            const before = await targetPool.query(`SELECT COUNT(*) AS c FROM ${table}`);
 
             for (const row of rows) {
                 const keys = Object.keys(row);
@@ -113,8 +119,14 @@ async function migrate() {
                 }
             }
             console.log(`✅ Tabela ${table} migrada.`);
+            const after = await targetPool.query(`SELECT COUNT(*) AS c FROM ${table}`);
+            counts[table] = { source: rows.length, targetBefore: parseInt(before.rows[0].c || '0'), targetAfter: parseInt(after.rows[0].c || '0') };
         }
 
+        console.log('\n🧾 Relatório de integridade:');
+        for (const [table, c] of Object.entries(counts)) {
+            console.log(`   • ${table}: origem=${c.source} | destino antes=${c.targetBefore} → depois=${c.targetAfter}`);
+        }
         console.log('\n✨ MIGRACÃO CONCLUÍDA COM SUCESSO! ✨');
     } catch (error: any) {
         console.error('\n❌ ERRO CRÍTICO:', error.message);
