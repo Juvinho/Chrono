@@ -126,6 +126,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     onPollVote={handlePollVote}
                     isGenerating={isGenerating}
                     typingParentIds={typingParentIds}
+                    conversations={conversations}
                     newPostsCount={pendingPosts.length}
                     onShowNewPosts={handleShowNewPosts}
                     
