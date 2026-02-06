@@ -1,7 +1,7 @@
 import { Conversation, Message, SendMessageRequest } from '../types';
 import { baseClient } from '../../../api/client';
 
-const API_BASE = '/api/chat';
+const API_BASE = '/chat';
 
 /**
  * CONVERSAS
