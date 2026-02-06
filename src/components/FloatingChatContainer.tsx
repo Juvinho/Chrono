@@ -8,6 +8,11 @@ export const FloatingChatContainer: React.FC = () => {
   const { openChats, closeChat } = useFloatingChat();
   const [conversations, setConversations] = useState<{ [key: string]: number | string }>({});
 
+  // Debug: Log quando chats abrem
+  useEffect(() => {
+    console.log('📱 FloatingChatContainer - openChats:', openChats);
+  }, [openChats]);
+
   // Ao abrir um chat, busca ou cria a conversa
   useEffect(() => {
     const loadConversations = async () => {

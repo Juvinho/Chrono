@@ -19,12 +19,16 @@ export const FloatingChatProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [openChats, setOpenChats] = useState<OpenChat[]>([]);
 
   const openChat = useCallback((userId: number | string, username: string, avatar?: string) => {
+    console.log('💬 FloatingChatContext.openChat called with:', { userId, username, avatar });
     setOpenChats((prev) => {
       // Se já está aberto, não adiciona novamente
       if (prev.some((chat) => chat.userId === userId)) {
+        console.log('⚠️  Chat já estava aberto:', userId);
         return prev;
       }
-      return [...prev, { userId, username, avatar }];
+      const newChats = [...prev, { userId, username, avatar }];
+      console.log('✅ Abrindo novo chat. Total de chats:', newChats.length);
+      return newChats;
     });
   }, []);
 
