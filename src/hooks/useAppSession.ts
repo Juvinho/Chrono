@@ -8,13 +8,11 @@ import { NotificationManager } from '../utils/notificationManager';
 
 interface UseAppSessionProps {
     setPosts: Dispatch<SetStateAction<Post[]>>;
-    setConversations: Dispatch<SetStateAction<Conversation[]>>;
     playSound: (soundName: string) => void;
 }
 
 export const useAppSession = ({
     setPosts,
-    setConversations,
     playSound
 }: UseAppSessionProps) => {
     const navigate = useNavigate();
@@ -170,7 +168,7 @@ export const useAppSession = ({
         } finally {
             isReloading.current = false;
         }
-    }, [playSound, setPosts, setConversations, setCurrentUser, setUsers]);
+    }, [playSound, setPosts, setCurrentUser, setUsers]);
 
     // Validate Session on Mount
     useEffect(() => {

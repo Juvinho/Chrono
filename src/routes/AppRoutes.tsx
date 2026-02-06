@@ -126,7 +126,6 @@ export default function AppRoutes(props: AppRoutesProps) {
                     onPollVote={handlePollVote}
                     isGenerating={isGenerating}
                     typingParentIds={typingParentIds}
-                    conversations={conversations}
                     newPostsCount={pendingPosts.length}
                     onShowNewPosts={handleShowNewPosts}
                     
@@ -194,7 +193,6 @@ export default function AppRoutes(props: AppRoutesProps) {
                     selectedDate={selectedDate}
                     setSelectedDate={setSelectedDate}
                     typingParentIds={typingParentIds}
-                    conversations={conversations}
                     onOpenMarketplace={() => handleNavigate(Page.Dashboard, 'marketplace')}
                     onUpdateUser={handleUpdateUser}
                     onBack={handleBack}
@@ -274,31 +272,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                 />
             ) : <Navigate to="/welcome" />} />
 
-            {/* Messages */}
-            <Route path="/messages" element={currentUser ? (
-                <MessagesPage
-                    currentUser={currentUser}
-                    onLogout={handleLogout}
-                    onNavigate={handleNavigate}
-                    onNotificationClick={handleNotificationClick}
-                    onViewNotifications={onViewNotifications}
-                    allUsers={combinedUsers}
-                    conversations={conversations}
-                    lastViewedNotifications={lastViewedNotifications}
-                />
-            ) : <Navigate to="/welcome" />} />
-            <Route path="/messages/:username" element={currentUser ? (
-                <MessagesPage
-                    currentUser={currentUser}
-                    onLogout={handleLogout}
-                    onNavigate={handleNavigate}
-                    onNotificationClick={handleNotificationClick}
-                    onViewNotifications={onViewNotifications}
-                    allUsers={combinedUsers}
-                    conversations={conversations}
-                    lastViewedNotifications={lastViewedNotifications}
-                />
-            ) : <Navigate to="/welcome" />} />
+            <Route path="/messages" element={currentUser ? <ChatLayout /> : <Navigate to="/welcome" />} />
 
             {/* Redirect root */}
             <Route path="/" element={<Navigate to={currentUser ? "/echoframe" : "/welcome"} replace />} />

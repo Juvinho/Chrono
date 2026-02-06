@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, Page, Post, ProfileSettings, Notification, Conversation, Item } from '../../../types/index';
+import { User, Page, Post, ProfileSettings, Notification, Item } from '../../../types/index';
 import Header from '../../../components/ui/Header';
 import Avatar from './Avatar';
 import { BlockIcon, FlagIcon } from '../../../components/ui/icons';
@@ -44,7 +44,7 @@ interface SettingsPageProps {
 }
 
 export default function SettingsPage({
-  user, onLogout, onNavigate, onNotificationClick, onViewNotifications, onUpdateUser, allUsers, allPosts, conversations, onOpenMarketplace, onBack, lastViewedNotifications
+  user, onLogout, onNavigate, onNotificationClick, onViewNotifications, onUpdateUser, allUsers, allPosts, onOpenMarketplace, onBack, lastViewedNotifications
 }: SettingsPageProps) {
   const { t, setLanguage, language } = useTranslation();
 

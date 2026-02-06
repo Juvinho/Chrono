@@ -36,7 +36,6 @@ export * from './client';
 export * from './auth.service';
 export * from './post.service';
 export * from './user.service';
-export * from './conversation.service';
 export * from './notification.service';
 export * from './marketplace.service';
 export * from './companion.service';
