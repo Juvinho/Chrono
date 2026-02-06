@@ -1,13 +1,13 @@
--- Create database (run this manually first)
--- CREATE DATABASE chrono_db;
+-- Chrono: Temporal Social Network - Database Schema
+-- Clean version without problematic DO blocks
 
--- Enable UUID extension
+-- Enable extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- Enable pg_trgm for efficient text search
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
--- Users table
+-- ============================================================================
+-- USERS TABLE
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     username VARCHAR(50) UNIQUE NOT NULL,
@@ -24,49 +24,32 @@ CREATE TABLE IF NOT EXISTS users (
     public_key TEXT,
     followers_count INTEGER DEFAULT 0,
     following_count INTEGER DEFAULT 0,
+    connections_count INTEGER DEFAULT 0,
     is_private BOOLEAN DEFAULT FALSE,
     is_verified BOOLEAN DEFAULT FALSE,
     email_verification_token VARCHAR(255),
     verification_badge_label VARCHAR(100),
     verification_badge_color VARCHAR(20),
     profile_settings JSONB DEFAULT '{"theme":"light","accentColor":"purple","effect":"none","animationsEnabled":true}'::jsonb,
+    profile_type VARCHAR(20) DEFAULT 'personal',
+    headline VARCHAR(255),
+    skills TEXT[] DEFAULT '{}',
+    work_experience JSONB DEFAULT '[]'::jsonb,
+    education JSONB DEFAULT '[]'::jsonb,
+    subscription_tier VARCHAR(20) DEFAULT 'free',
+    subscription_expires_at TIMESTAMP,
     blocked_users TEXT[] DEFAULT '{}',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Add subscription fields if they don't exist
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'subscription_tier') THEN
-        ALTER TABLE users ADD COLUMN subscription_tier VARCHAR(20) DEFAULT 'free';
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'subscription_expires_at') THEN
-        ALTER TABLE users ADD COLUMN subscription_expires_at TIMESTAMP;
-    END IF;
+CREATE INDEX IF NOT EXISTS idx_users_username_trgm ON users USING GIN (username gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at DESC);
 
-    -- Add professional fields to users
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'profile_type') THEN
-        ALTER TABLE users ADD COLUMN profile_type VARCHAR(20) DEFAULT 'personal';
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'headline') THEN
-        ALTER TABLE users ADD COLUMN headline VARCHAR(255);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'connections_count') THEN
-        ALTER TABLE users ADD COLUMN connections_count INTEGER DEFAULT 0;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'skills') THEN
-        ALTER TABLE users ADD COLUMN skills TEXT[] DEFAULT '{}';
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'work_experience') THEN
-        ALTER TABLE users ADD COLUMN work_experience JSONB DEFAULT '[]'::jsonb;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'education') THEN
-        ALTER TABLE users ADD COLUMN education JSONB DEFAULT '[]'::jsonb;
-    END IF;
-END $$;
-
--- Direct Messages: Conversations
+-- ============================================================================
+-- CONVERSATIONS (Direct Messages)
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS conversations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user1_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -77,11 +60,14 @@ CREATE TABLE IF NOT EXISTS conversations (
     CONSTRAINT uk_conv_participants UNIQUE (user1_id, user2_id),
     CONSTRAINT chk_conv_order CHECK (user1_id < user2_id)
 );
+
 CREATE INDEX IF NOT EXISTS idx_conversations_updated_at ON conversations(updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_conversations_user1 ON conversations(user1_id);
 CREATE INDEX IF NOT EXISTS idx_conversations_user2 ON conversations(user2_id);
 
--- Messages in conversations
+-- ============================================================================
+-- MESSAGES
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS messages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
@@ -89,26 +75,17 @@ CREATE TABLE IF NOT EXISTS messages (
     content TEXT NOT NULL,
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT messages_content_len_chk CHECK (char_length(content) BETWEEN 1 AND 1000)
 );
-CREATE INDEX IF NOT EXISTS idx_messages_conversation_created ON messages(conversation_id, created_at);
-CREATE INDEX IF NOT EXISTS idx_messages_sender_created ON messages(sender_id, created_at);
 
--- Add missing columns if they don't exist (for legacy setup)
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='is_read') THEN
-        ALTER TABLE messages ADD COLUMN is_read BOOLEAN DEFAULT FALSE;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='content') THEN
-        ALTER TABLE messages ADD COLUMN content TEXT DEFAULT '';
-    THEN
-        UPDATE messages SET content = '' WHERE content IS NULL;
-        ALTER TABLE messages ALTER COLUMN content SET NOT NULL;
-    END IF;
-END $$;
+CREATE INDEX IF NOT EXISTS idx_messages_conversation_created ON messages(conversation_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_messages_conversation_sender ON messages(conversation_id, sender_id);
+CREATE INDEX IF NOT EXISTS idx_messages_sender_created ON messages(sender_id, created_at DESC);
 
--- Message status per user (delivered/read)
+-- ============================================================================
+-- MESSAGE STATUS TRACKING
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS message_status (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
@@ -117,9 +94,12 @@ CREATE TABLE IF NOT EXISTS message_status (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (message_id, user_id, status)
 );
+
 CREATE INDEX IF NOT EXISTS idx_message_status_message ON message_status(message_id);
 
--- Encrypted Cords (private groups/messages - base table)
+-- ============================================================================
+-- ENCRYPTED CORDS (Private Groups)
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS encrypted_cords (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(100),
@@ -129,18 +109,9 @@ CREATE TABLE IF NOT EXISTS encrypted_cords (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Ensure columns exist on conversations for running systems
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='conversations' AND column_name='last_message_at') THEN
-        ALTER TABLE conversations ADD COLUMN last_message_at TIMESTAMP;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='conversations' AND column_name='updated_at') THEN
-        ALTER TABLE conversations ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-    END IF;
-END $$;
-
--- Images table for multimedia content
+-- ============================================================================
+-- MEDIA TABLES
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS images (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     url TEXT NOT NULL,
@@ -152,7 +123,6 @@ CREATE TABLE IF NOT EXISTS images (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Videos table for multimedia content
 CREATE TABLE IF NOT EXISTS videos (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     url TEXT NOT NULL,
@@ -166,20 +136,21 @@ CREATE TABLE IF NOT EXISTS videos (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Items table (Cosmetics)
+-- ============================================================================
+-- MARKETPLACE ITEMS (Cosmetics)
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS items (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    type VARCHAR(20) NOT NULL, -- 'frame', 'effect', 'badge', 'theme'
+    type VARCHAR(20) NOT NULL,
     name VARCHAR(100) NOT NULL,
     description TEXT,
     price DECIMAL(10, 2) NOT NULL,
     currency VARCHAR(10) DEFAULT 'BRL',
     image_url TEXT,
-    rarity VARCHAR(20) DEFAULT 'common', -- 'common', 'rare', 'epic', 'legendary'
+    rarity VARCHAR(20) DEFAULT 'common',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- User Items (Inventory)
 CREATE TABLE IF NOT EXISTS user_items (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -189,7 +160,10 @@ CREATE TABLE IF NOT EXISTS user_items (
     UNIQUE(user_id, item_id)
 );
 
--- Seed Items
+CREATE INDEX IF NOT EXISTS idx_items_type ON items(type);
+CREATE INDEX IF NOT EXISTS idx_user_items_user_id ON user_items(user_id);
+
+-- Seed default items
 INSERT INTO items (type, name, description, price, image_url, rarity) VALUES
 ('frame', 'Neon Demon', 'A pulsing purple and pink neon border.', 5.00, 'frame_neon_demon', 'rare'),
 ('frame', 'Glitch Border', 'A chaotic, glitching border style.', 7.00, 'frame_glitch', 'epic'),
@@ -198,20 +172,11 @@ INSERT INTO items (type, name, description, price, image_url, rarity) VALUES
 ('effect', 'Matrix Rain', 'Green code raining down your profile.', 15.00, 'effect_matrix', 'epic'),
 ('effect', 'Hologram', 'Flickering holographic overlay.', 10.00, 'effect_hologram', 'rare'),
 ('badge', 'OG User', 'Badge for early adopters.', 0.00, 'badge_og', 'rare')
-ON CONFLICT DO NOTHING; -- Note: This requires a unique constraint on name or similar to work perfectly, but for now it's fine as we don't have unique constraint on name. 
--- To prevent duplicates on multiple runs, let's just leave it as simple inserts that might duplicate if not careful, OR better:
--- We can skip seeding here and do it in a seed script, but for simplicity I'll wrap in a DO block or just assume the user won't run migrate 100 times without resetting.
--- Actually, let's rely on the user interface to show these, or I can create a seed script.
--- Let's just create the tables for now.
+ON CONFLICT (name) DO NOTHING;
 
--- Indexes for items
-CREATE INDEX IF NOT EXISTS idx_items_type ON items(type);
-CREATE INDEX IF NOT EXISTS idx_user_items_user_id ON user_items(user_id);
-
--- Indexes for users
-CREATE INDEX IF NOT EXISTS idx_users_username_trgm ON users USING GIN (username gin_trgm_ops);
-
--- User Profiles table (Bio, Location, etc.)
+-- ============================================================================
+-- USER PROFILE & SETTINGS
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS user_profiles (
     user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     bio TEXT DEFAULT '',
@@ -224,7 +189,6 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- User Settings table (Preferences, Customizations)
 CREATE TABLE IF NOT EXISTS user_settings (
     user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     theme VARCHAR(20) DEFAULT 'light',
@@ -236,7 +200,9 @@ CREATE TABLE IF NOT EXISTS user_settings (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Follows table (many-to-many relationship)
+-- ============================================================================
+-- FOLLOWS
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS follows (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     follower_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -246,72 +212,32 @@ CREATE TABLE IF NOT EXISTS follows (
     CHECK(follower_id != following_id)
 );
 
--- Posts table
-CREATE TABLE IF NOT EXISTS posts (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    author_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    content TEXT NOT NULL,
-    image_url TEXT,
-    video_url TEXT,
-    is_thread BOOLEAN DEFAULT FALSE,
-    is_private BOOLEAN DEFAULT FALSE,
-    in_reply_to_id UUID REFERENCES posts(id) ON DELETE CASCADE,
-    repost_of_id UUID REFERENCES posts(id) ON DELETE CASCADE,
-    poll_options JSONB,
-    poll_ends_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+CREATE INDEX IF NOT EXISTS idx_follows_follower ON follows(follower_id);
+CREATE INDEX IF NOT EXISTS idx_follows_following ON follows(following_id);
 
--- Ensure unlock_at exists (from migration)
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'posts' AND column_name = 'unlock_at') THEN
-        ALTER TABLE posts ADD COLUMN unlock_at TIMESTAMP WITH TIME ZONE;
-    END IF;
-END $$;
-
--- Indexes for posts
-CREATE INDEX IF NOT EXISTS idx_posts_author_id ON posts(author_id);
-CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_posts_in_reply_to_id ON posts(in_reply_to_id);
-
--- Threads (Cordões) table
+-- ============================================================================
+-- THREADS (Cordões)
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS threads (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     title VARCHAR(200) NOT NULL,
     description TEXT,
-    status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active','archived')),
+    status VARCHAR(20) NOT NULL DEFAULT 'active',
     creator_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    archived_at TIMESTAMP
+    archived_at TIMESTAMP,
+    unlock_at TIMESTAMP WITH TIME ZONE,
+    CONSTRAINT chk_thread_status CHECK (status IN ('active', 'archived'))
 );
 
--- Add thread_id to posts if not exists
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'posts' AND column_name = 'thread_id') THEN
-        ALTER TABLE posts ADD COLUMN thread_id UUID REFERENCES threads(id) ON DELETE SET NULL;
-    END IF;
-END $$;
-
--- Indexes for threads and posts-thread relationship
 CREATE INDEX IF NOT EXISTS idx_threads_status ON threads(status);
 CREATE INDEX IF NOT EXISTS idx_threads_creator_id ON threads(creator_id);
-CREATE INDEX IF NOT EXISTS idx_posts_thread_id ON posts(thread_id);
+CREATE INDEX IF NOT EXISTS idx_threads_created_at ON threads(created_at DESC);
 
--- Optional media linking table to ensure attachments are tied to posts (and thus to threads)
-CREATE TABLE IF NOT EXISTS post_media (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
-    image_id UUID REFERENCES images(id) ON DELETE SET NULL,
-    video_id UUID REFERENCES videos(id) ON DELETE SET NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-CREATE INDEX IF NOT EXISTS idx_post_media_post_id ON post_media(post_id);
-
--- Audit table for thread changes
+-- ============================================================================
+-- THREAD AUDIT LOG
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS thread_audit (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     thread_id UUID NOT NULL REFERENCES threads(id) ON DELETE CASCADE,
@@ -322,7 +248,113 @@ CREATE TABLE IF NOT EXISTS thread_audit (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Trigger: keep replies inside the same thread as their parent
+CREATE INDEX IF NOT EXISTS idx_thread_audit_thread_id ON thread_audit(thread_id);
+
+-- ============================================================================
+-- POSTS
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS posts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    author_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    content TEXT NOT NULL,
+    image_url TEXT,
+    video_url TEXT,
+    is_thread BOOLEAN DEFAULT FALSE,
+    is_private BOOLEAN DEFAULT FALSE,
+    mood VARCHAR(20) DEFAULT 'neutral',
+    in_reply_to_id UUID REFERENCES posts(id) ON DELETE CASCADE,
+    repost_of_id UUID REFERENCES posts(id) ON DELETE CASCADE,
+    thread_id UUID REFERENCES threads(id) ON DELETE SET NULL,
+    poll_options JSONB,
+    poll_ends_at TIMESTAMP,
+    unlock_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_posts_author_id ON posts(author_id);
+CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_posts_in_reply_to_id ON posts(in_reply_to_id);
+CREATE INDEX IF NOT EXISTS idx_posts_thread_id ON posts(thread_id);
+
+-- ============================================================================
+-- POST MEDIA
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS post_media (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+    image_id UUID REFERENCES images(id) ON DELETE SET NULL,
+    video_id UUID REFERENCES videos(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_post_media_post_id ON post_media(post_id);
+
+-- ============================================================================
+-- REACTIONS
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS reactions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    reaction_type VARCHAR(20) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(post_id, user_id),
+    CONSTRAINT chk_reaction_type CHECK (reaction_type IN ('Glitch', 'Upload', 'Corrupt', 'Rewind', 'Static'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_reactions_post_id ON reactions(post_id);
+
+-- ============================================================================
+-- POLL VOTES
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS poll_votes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    option_index INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(post_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_poll_votes_post_id ON poll_votes(post_id);
+
+-- ============================================================================
+-- NOTIFICATIONS
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS notifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    actor_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    notification_type VARCHAR(20) NOT NULL,
+    post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
+
+-- ============================================================================
+-- PUSH SUBSCRIPTIONS (Web Push)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    endpoint TEXT NOT NULL,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, endpoint)
+);
+
+CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user_id ON push_subscriptions(user_id);
+
+-- ============================================================================
+-- STORED PROCEDURES & FUNCTIONS
+-- ============================================================================
+
+-- Function: enforce_reply_same_thread
 CREATE OR REPLACE FUNCTION enforce_reply_same_thread()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -331,7 +363,6 @@ BEGIN
     IF NEW.in_reply_to_id IS NOT NULL THEN
         SELECT thread_id INTO parent_thread FROM posts WHERE id = NEW.in_reply_to_id;
         IF parent_thread IS NOT NULL THEN
-            -- If incoming has no thread_id, inherit. If it has, it must match.
             IF NEW.thread_id IS NULL THEN
                 NEW.thread_id := parent_thread;
             ELSIF NEW.thread_id <> parent_thread THEN
@@ -343,19 +374,14 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_trigger WHERE tgname = 'enforce_reply_same_thread_trg'
-    ) THEN
-        CREATE TRIGGER enforce_reply_same_thread_trg
-        BEFORE INSERT OR UPDATE OF in_reply_to_id, thread_id ON posts
-        FOR EACH ROW
-        EXECUTE FUNCTION enforce_reply_same_thread();
-    END IF;
-END $$;
+-- Trigger: enforce_reply_same_thread_trg
+DROP TRIGGER IF EXISTS enforce_reply_same_thread_trg ON posts;
+CREATE TRIGGER enforce_reply_same_thread_trg
+BEFORE INSERT OR UPDATE OF in_reply_to_id, thread_id ON posts
+FOR EACH ROW
+EXECUTE FUNCTION enforce_reply_same_thread();
 
--- Trigger: audit thread insert/update (status changes)
+-- Function: thread_audit_trigger
 CREATE OR REPLACE FUNCTION thread_audit_trigger()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -377,19 +403,14 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-DO $$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_trigger WHERE tgname = 'thread_audit_trg'
-    ) THEN
-        CREATE TRIGGER thread_audit_trg
-        AFTER INSERT OR UPDATE ON threads
-        FOR EACH ROW
-        EXECUTE FUNCTION thread_audit_trigger();
-    END IF;
-END $$;
+-- Trigger: thread_audit_trg
+DROP TRIGGER IF EXISTS thread_audit_trg ON threads;
+CREATE TRIGGER thread_audit_trg
+AFTER INSERT OR UPDATE ON threads
+FOR EACH ROW
+EXECUTE FUNCTION thread_audit_trigger();
 
--- Procedure: archive threads with no activity since cutoff
+-- Function: archive_threads
 CREATE OR REPLACE FUNCTION archive_threads(cutoff_days INTEGER DEFAULT 90)
 RETURNS INTEGER AS $$
 DECLARE
@@ -415,133 +436,49 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Reactions table (for cyberpunk reactions: Glitch, Upload, Corrupt, Rewind, Static)
-CREATE TABLE IF NOT EXISTS reactions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    reaction_type VARCHAR(20) NOT NULL CHECK (reaction_type IN ('Glitch', 'Upload', 'Corrupt', 'Rewind', 'Static')),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(post_id, user_id)
-);
+-- ============================================================================
+-- MIGRATION DATA (Idempotent Inserts)
+-- ============================================================================
 
--- Poll votes table
-CREATE TABLE IF NOT EXISTS poll_votes (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    option_index INTEGER NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(post_id, user_id)
-);
+-- Migrate Profiles from users table
+INSERT INTO user_profiles (user_id, bio, birthday, location, website, cover_image, pronouns)
+SELECT id, bio, birthday, location, website, cover_image, pronouns
+FROM users
+WHERE id NOT IN (SELECT user_id FROM user_profiles)
+ON CONFLICT DO NOTHING;
 
+-- Migrate Settings from users table
+INSERT INTO user_settings (user_id, theme, accent_color, effect, animations_enabled, is_private)
+SELECT 
+    id, 
+    COALESCE(profile_settings->>'theme', 'light'),
+    COALESCE(profile_settings->>'accentColor', 'purple'),
+    COALESCE(profile_settings->>'effect', 'none'),
+    COALESCE((profile_settings->>'animationsEnabled')::boolean, true),
+    is_private
+FROM users
+WHERE id NOT IN (SELECT user_id FROM user_settings)
+ON CONFLICT DO NOTHING;
 
--- Enable pg_trgm extension for fast LIKE searches
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_trgm') THEN
-        CREATE EXTENSION pg_trgm;
-    END IF;
-END $$;
+-- Clean up duplicate notifications (keep only the most recent)
+DELETE FROM notifications n1
+USING notifications n2
+WHERE n1.id < n2.id 
+  AND n1.user_id = n2.user_id 
+  AND n1.actor_id = n2.actor_id 
+  AND n1.notification_type = n2.notification_type 
+  AND (n1.post_id = n2.post_id OR (n1.post_id IS NULL AND n2.post_id IS NULL));
 
+-- Clean up duplicate reactions (keep only the most recent)
+DELETE FROM reactions r1
+USING reactions r2
+WHERE r1.id < r2.id 
+  AND r1.post_id = r2.post_id 
+  AND r1.user_id = r2.user_id;
 
-
--- Notifications table
-CREATE TABLE IF NOT EXISTS notifications (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    actor_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    notification_type VARCHAR(20) NOT NULL,
-    post_id UUID REFERENCES posts(id) ON DELETE CASCADE,
-    is_read BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='notifications') THEN
-        CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
-        CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
-    END IF;
-END $$;
-
--- Remove Stories feature: drop table if exists (idempotent)
-DROP TABLE IF EXISTS stories CASCADE;
-
-
--- Push Subscriptions (for Web Push)
-CREATE TABLE IF NOT EXISTS push_subscriptions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    endpoint TEXT NOT NULL,
-    p256dh TEXT NOT NULL,
-    auth TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(user_id, endpoint)
-);
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='push_subscriptions') THEN
-        CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user_id ON push_subscriptions(user_id);
-    END IF;
-END $$;
-
--- Migrations for existing databases
-DO $$
-BEGIN
-    -- Add location column if not exists
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='location') THEN
-        ALTER TABLE users ADD COLUMN location VARCHAR(100);
-    END IF;
-
-    -- Add website column if not exists
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='website') THEN
-        ALTER TABLE users ADD COLUMN website VARCHAR(255);
-    END IF;
-
-    -- Update reactions unique constraint
-    IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'reactions_post_id_user_id_reaction_type_key') THEN
-        ALTER TABLE reactions DROP CONSTRAINT reactions_post_id_user_id_reaction_type_key;
-    END IF;
-    
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'reactions_post_id_user_id_key') THEN
-        -- Clean up potential duplicates before adding unique constraint
-        DELETE FROM reactions a USING reactions b WHERE a.id < b.id AND a.post_id = b.post_id AND a.user_id = b.user_id;
-        ALTER TABLE reactions ADD CONSTRAINT reactions_post_id_user_id_key UNIQUE (post_id, user_id);
-    END IF;
-
-    -- Migrate Profiles (Idempotent)
-    INSERT INTO user_profiles (user_id, bio, birthday, location, website, cover_image, pronouns)
-    SELECT id, bio, birthday, location, website, cover_image, pronouns
-    FROM users
-    WHERE id NOT IN (SELECT user_id FROM user_profiles);
-
-    -- Migrate Settings (Idempotent)
-    INSERT INTO user_settings (user_id, theme, accent_color, effect, animations_enabled, is_private)
-    SELECT 
-        id, 
-        COALESCE(profile_settings->>'theme', 'light'),
-        COALESCE(profile_settings->>'accentColor', 'purple'),
-        COALESCE(profile_settings->>'effect', 'none'),
-        COALESCE((profile_settings->>'animationsEnabled')::boolean, true),
-        is_private
-    FROM users
-    WHERE id NOT IN (SELECT user_id FROM user_settings);
-
-    -- Add mood column to posts if not exists
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='posts' AND column_name='mood') THEN
-        ALTER TABLE posts ADD COLUMN mood VARCHAR(20) DEFAULT 'neutral';
-    END IF;
-
-
-    -- Clean up duplicate notifications (same user, actor, type, post)
-    -- Keep only the most recent one
-    DELETE FROM notifications n1
-    USING notifications n2
-    WHERE n1.id < n2.id 
-    AND n1.user_id = n2.user_id 
-    AND n1.actor_id = n2.actor_id 
-    AND n1.notification_type = n2.notification_type 
-    AND (n1.post_id = n2.post_id OR (n1.post_id IS NULL AND n2.post_id IS NULL));
-END $$;
+-- ============================================================================
+-- SCHEMA VERSION
+-- ============================================================================
+-- Remember: This is our clean, consolidated schema for production
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" CASCADE;
 
