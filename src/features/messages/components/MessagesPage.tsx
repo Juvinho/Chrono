@@ -39,6 +39,7 @@ export default function MessagesPage({
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [peerStatus, setPeerStatus] = useState<{ username?: string; online?: boolean; lastSeen?: string } | null>(null);
   const [hasMore, setHasMore] = useState(true);
+  const [conversationDetails, setConversationDetails] = useState<any | null>(null);
 
   // Ref para controlar o scroll automático (opcional, mas bom ter)
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -95,6 +96,18 @@ export default function MessagesPage({
 
     // Limpa o intervalo ao sair da conversa ou desmontar o componente
     return () => clearInterval(intervalId);
+  }, [activeConversationId]);
+
+  // Fetch conversation details (participants) for header
+  useEffect(() => {
+    const loadDetails = async () => {
+      if (!activeConversationId) return;
+      const fn = (apiClient as any).getConversation;
+      if (typeof fn !== 'function') return;
+      const res = await fn(activeConversationId);
+      if (res && !res.error && res.data) setConversationDetails(res.data);
+    };
+    loadDetails();
   }, [activeConversationId]);
 
   // 3. Inicializar via URL (ex: /messages/username)
@@ -220,6 +233,13 @@ export default function MessagesPage({
         <div className="md:col-span-2 bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] rounded-lg p-4">
           {activeConversationId ? (
             <>
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-medium">
+                  {conversationDetails?.participants?.length
+                    ? conversationDetails.participants.map((p: any) => p.displayName || p.username).join(', ')
+                    : `#${activeConversationId.substring(0, 6)}`}
+                </div>
+              </div>
               <div className="space-y-3 mb-4 h-[400px] overflow-y-auto flex flex-col">
                 {hasMore && (
                   <button onClick={loadOlder} className="text-xs text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)] self-center p-2">
