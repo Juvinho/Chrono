@@ -34,9 +34,10 @@ export default function MessagesPage({
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
-  const [isNewConversation, setIsNewConversation] = useState(false);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [es, setEs] = useState<EventSource | null>(null);
+  const [peerStatus, setPeerStatus] = useState<{ username?: string; online?: boolean; lastSeen?: string } | null>(null);
+  const [hasMore, setHasMore] = useState(true);
 
   useEffect(() => {
     let mounted = true;
@@ -61,12 +62,14 @@ export default function MessagesPage({
     let mounted = true;
     const initByUsername = async () => {
       if (!presetUsername) return;
-      setIsNewConversation(true);
-      const conv = await apiClient.createConversation(presetUsername);
+      const conv = await apiClient.getOrCreateConversation(presetUsername);
       if (conv.data?.id || conv.data?.conversationId) {
         const id = conv.data.id || conv.data.conversationId;
         setActiveConversationId(id);
-        setMessages([]);
+        const msgs = await apiClient.getMessages(id, { limit: 50 });
+        setMessages(msgs.data || []);
+        const status = await apiClient.getUserStatus(presetUsername);
+        setPeerStatus(status.data || null);
         const stream = apiClient.subscribeConversation(id, {
           onMessages: (msgs) => {
             if (!mounted) return;
@@ -89,8 +92,7 @@ export default function MessagesPage({
 
   const handleOpenConversation = async (id: string) => {
     setActiveConversationId(id);
-    setIsNewConversation(false);
-    const msgs = await apiClient.getMessages(id);
+    const msgs = await apiClient.getMessages(id, { limit: 50 });
     setMessages(msgs.data || []);
     const stream = apiClient.subscribeConversation(id, {
       onMessages: (newMsgs) => {
@@ -100,6 +102,18 @@ export default function MessagesPage({
     });
     es?.close();
     setEs(stream);
+  };
+  
+  const loadOlder = async () => {
+    if (!activeConversationId || messages.length === 0) return;
+    const oldest = messages[0]?.created_at;
+    const res = await apiClient.getMessages(activeConversationId, { before: oldest, limit: 50 });
+    const older = res.data || [];
+    if (older.length === 0) {
+      setHasMore(false);
+    } else {
+      setMessages(prev => [...older, ...prev]);
+    }
   };
 
   const handleSend = async () => {
@@ -181,6 +195,11 @@ export default function MessagesPage({
           {activeConversationId ? (
             <>
               <div className="space-y-3 mb-4">
+                {hasMore && (
+                  <button onClick={loadOlder} className="text-xs text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)]">
+                    {t('loadOlder') || 'Carregar mais'}
+                  </button>
+                )}
                 {messages.map(msg => (
                   <div key={msg.id} className="p-2 rounded border border-[var(--theme-border-primary)]">
                     <div className="text-xs text-[var(--theme-text-secondary)] mb-1">
@@ -194,8 +213,10 @@ export default function MessagesPage({
                   </div>
                 ))}
               </div>
-              {isNewConversation && (
-                <div className="mb-2 text-xs text-[var(--theme-primary)] font-bold">{t('newConversation') || 'Nova conversa'}</div>
+              {peerStatus && (
+                <div className="mb-2 text-xs text-[var(--theme-text-secondary)]">
+                  @{peerStatus.username} — {peerStatus.online ? (t('online') || 'Online') : (t('offline') || 'Offline')} {peerStatus.lastSeen ? `• ${new Date(peerStatus.lastSeen).toLocaleString()}` : ''}
+                </div>
               )}
               {typingUsers.length > 0 && (
                 <div className="mb-2 text-xs text-[var(--theme-text-secondary)]">{t('typing') || 'Digitando...'} {typingUsers.join(', ')}</div>
@@ -209,7 +230,8 @@ export default function MessagesPage({
                 />
                 <button 
                   onClick={handleSend}
-                  className="px-4 py-2 bg-[var(--theme-primary)] text-black rounded hover:opacity-80"
+                   className="px-4 py-2 bg-[var(--theme-primary)] text-black rounded hover:opacity-80"
+                  disabled={!input.trim() || !activeConversationId}
                 >
                   {t('send') || 'Send'}
                 </button>

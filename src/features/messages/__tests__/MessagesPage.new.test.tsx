@@ -17,7 +17,9 @@ const mockSubscribe = vi.fn(() => ({ close: vi.fn() }));
 vi.mock('../../../api', () => ({
   apiClient: {
     getConversations: vi.fn().mockResolvedValue({ data: [] }),
-    createConversation: vi.fn().mockResolvedValue({ data: { id: 'newConv' } }),
+    getOrCreateConversation: vi.fn().mockResolvedValue({ data: { id: 'convA' } }),
+    getMessages: vi.fn().mockResolvedValue({ data: [{ id: 'm1', sender_id: 'other', text: 'Olá', created_at: new Date().toISOString() }] }),
+    getUserStatus: vi.fn().mockResolvedValue({ data: { username: 'other', online: true, lastSeen: new Date().toISOString() } }),
     subscribeConversation: vi.fn((id: string, handlers: any) => {
       mockSubscribe(id, handlers);
       return { close: vi.fn() } as any;
@@ -41,7 +43,7 @@ describe('MessagesPage new conversation context', () => {
     vi.clearAllMocks();
   });
 
-  it('starts a new conversation with empty history when preset username provided', async () => {
+  it('abre conversa existente ou cria e carrega histórico inicial', async () => {
     render(
       <MemoryRouter initialEntries={['/messages/other']}>
         <Routes>
@@ -52,11 +54,8 @@ describe('MessagesPage new conversation context', () => {
     await waitFor(() => {
       expect(screen.getByTestId('header')).toBeInTheDocument();
     });
-    // No messages rendered initially
-    expect(screen.queryByText(/Digitando/i)).toBeNull();
-    // Shows new conversation indicator when active
     await waitFor(() => {
-      expect(screen.getByText(/newConversation/i)).toBeInTheDocument();
+      expect(screen.getByText('Olá')).toBeInTheDocument();
     });
   });
 });

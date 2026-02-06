@@ -287,8 +287,12 @@ class ApiClient {
     return this.request<any[]>('/conversations');
   }
 
-  async getMessages(conversationId: string) {
-    return this.request<any[]>(`/conversations/${conversationId}/messages`);
+  async getMessages(conversationId: string, opts?: { before?: string, limit?: number }) {
+    const params = new URLSearchParams();
+    if (opts?.before) params.set('before', opts.before);
+    if (opts?.limit) params.set('limit', String(opts.limit));
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return this.request<any[]>(`/conversations/${conversationId}/messages${qs}`);
   }
 
   subscribeConversation(conversationId: string, handlers: { onMessages?: (msgs: any[]) => void; onTyping?: (data: { users: string[] }) => void }) {
@@ -343,6 +347,10 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify({ username, ...options }),
     });
+  }
+
+  async getUserStatus(username: string) {
+    return this.request<any>(`/users/${username}/status`);
   }
 
   async markConversationAsRead(conversationId: string) {

@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿import express, { Response } from 'express';
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿import express, { Response } from 'express';
 import { UserService } from '../services/userService.js';
 import { FollowService } from '../services/followService.js';
 import { NotificationService } from '../services/notificationService.js';
@@ -262,6 +262,26 @@ router.post('/:username/unfollow', authenticateToken, async (req: AuthRequest, r
   } catch (error: any) {
     console.error('Unfollow error:', error);
     res.status(500).json({ error: error.message || 'Failed to unfollow' });
+  }
+});
+
+// Get user online/offline status
+router.get('/:username/status', optionalAuthenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const { username } = req.params;
+    const result = await pool.query(
+      `SELECT id, username, last_seen FROM users WHERE username = $1 LIMIT 1`,
+      [username]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    const row = result.rows[0];
+    const lastSeen = row.last_seen;
+    const online = lastSeen ? (new Date().getTime() - new Date(lastSeen).getTime() < 2 * 60 * 1000) : false;
+    res.json({ username: row.username, lastSeen, online });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
 });
 

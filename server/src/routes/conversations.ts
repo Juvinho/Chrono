@@ -254,6 +254,7 @@ router.get('/:id/stream', authenticateToken, async (req: AuthRequest, res: Respo
     let lastCheck = new Date();
     const interval = setInterval(async () => {
       try {
+        await pool.query(`UPDATE users SET last_seen = CURRENT_TIMESTAMP WHERE id = $1`, [userId]);
         const messages = await pool.query(
           `SELECT id, sender_id, text, image_url, video_url, metadata, created_at
            FROM messages
