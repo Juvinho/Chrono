@@ -68,12 +68,22 @@ export default function MessagesPage({
         setActiveConversationId(id);
         const msgs = await apiClient.getMessages(id, { limit: 50 });
         setMessages(msgs.data || []);
+        try {
+          await apiClient.markConversationAsRead(id);
+        } catch {}
         const status = await apiClient.getUserStatus(presetUsername);
         setPeerStatus(status.data || null);
         const stream = apiClient.subscribeConversation(id, {
           onMessages: (msgs) => {
             if (!mounted) return;
             setMessages(prev => [...prev, ...msgs]);
+            try {
+              const last = msgs[msgs.length - 1];
+              if (last?.id) {
+                apiClient.updateMessageStatus(id, last.id, 'delivered').catch(() => {});
+                apiClient.updateMessageStatus(id, last.id, 'read').catch(() => {});
+              }
+            } catch {}
           },
           onTyping: (data) => {
             if (!mounted) return;
@@ -94,9 +104,19 @@ export default function MessagesPage({
     setActiveConversationId(id);
     const msgs = await apiClient.getMessages(id, { limit: 50 });
     setMessages(msgs.data || []);
+    try {
+      await apiClient.markConversationAsRead(id);
+    } catch {}
     const stream = apiClient.subscribeConversation(id, {
       onMessages: (newMsgs) => {
         setMessages(prev => [...prev, ...newMsgs]);
+        try {
+          const last = newMsgs[newMsgs.length - 1];
+          if (last?.id) {
+            apiClient.updateMessageStatus(id, last.id, 'delivered').catch(() => {});
+            apiClient.updateMessageStatus(id, last.id, 'read').catch(() => {});
+          }
+        } catch {}
       },
       onTyping: (data) => setTypingUsers(data.users || [])
     });
