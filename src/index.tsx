@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { SoundProvider } from './contexts/SoundContext';
 import { ToastProvider } from './contexts/ToastContext';
+import { FloatingChatProvider } from './contexts/FloatingChatContext';
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
   state = { hasError: false, error: null as Error | null };
@@ -88,13 +89,15 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <ErrorBoundary>
-      <SoundProvider>
-        <ToastProvider>
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
-        </ToastProvider>
-      </SoundProvider>
+      <FloatingChatProvider>
+        <SoundProvider>
+          <ToastProvider>
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
+          </ToastProvider>
+        </SoundProvider>
+      </FloatingChatProvider>
     </ErrorBoundary>
   </React.StrictMode>
 );

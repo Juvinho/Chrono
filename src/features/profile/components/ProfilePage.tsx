@@ -8,6 +8,7 @@ import { PostComposer } from '../../timeline/components/PostComposer';
 import { isSameDay } from '../../../utils/date';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useSound } from '../../../contexts/SoundContext';
+import { useFloatingChat } from '../../../contexts/FloatingChatContext';
 import UserListModal from '../../../components/ui/UserListModal';
 import { VerifiedIcon, MessageIcon, PaperPlaneIcon } from '../../../components/ui/icons';
 import FramePreview, { getFrameShape } from './FramePreview';
@@ -49,6 +50,7 @@ export default function ProfilePage({
 }: ProfilePageProps & { onUpdateUser?: (user: User) => Promise<{ success: boolean; error?: string }> }) {
   const { t } = useTranslation();
   const { playSound } = useSound();
+  const { openChat } = useFloatingChat();
   const { username: routeUsername } = useParams<{ username: string }>();
   
   // Determine the profile username to display:
@@ -557,7 +559,7 @@ export default function ProfilePage({
                   ) : (
                     <>
                       <button 
-                        onClick={() => onNavigate(Page.Messages, profileUser.username)} 
+                        onClick={() => profileUser && openChat(profileUser.id, profileUser.username, profileUser.profileSettings?.profileImage)}
                         className="follow-btn px-4 py-1 rounded-sm transition-colors flex items-center gap-2" 
                         title={t('messageButton') || 'Enviar Mensagem'}
                       >
