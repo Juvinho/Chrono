@@ -67,7 +67,7 @@ export const ChatWindow: React.FC = () => {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((msg) => {
+        {(messages || []).map((msg) => {
           const isMe = msg.sender_id === currentUser?.id;
           return (
             <div 
