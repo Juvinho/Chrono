@@ -40,7 +40,7 @@ function ensureDir(dir: string) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
-async function main() {
+export async function main() {
   const ts = new Date().toISOString().replace(/[:.]/g, '-');
   const logsDir = path.join(process.cwd(), 'migration-logs');
   ensureDir(logsDir);
@@ -100,18 +100,21 @@ async function main() {
         try {
           const srcRows = await sourcePool.query(`SELECT * FROM ${table}`);
           const before = await targetPool.query(`SELECT COUNT(*) AS c FROM ${table}`);
-          for (const row of srcRows.rows) {
-            const keys = Object.keys(row);
-            const values = Object.values(row);
-            const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
-            const columns = keys.join(', ');
-            const upsertAction = keys.filter(k => k !== 'id').map(k => `${k} = EXCLUDED.${k}`).join(', ');
-            const q = `INSERT INTO ${table} (${columns}) VALUES (${placeholders}) ON CONFLICT (id) DO UPDATE SET ${upsertAction}`;
-            try {
+          await targetPool.query('BEGIN');
+          try {
+            for (const row of srcRows.rows) {
+              const keys = Object.keys(row);
+              const values = Object.values(row);
+              const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
+              const columns = keys.join(', ');
+              const upsertAction = keys.filter(k => k !== 'id').map(k => `${k} = EXCLUDED.${k}`).join(', ');
+              const q = `INSERT INTO ${table} (${columns}) VALUES (${placeholders}) ON CONFLICT (id) DO UPDATE SET ${upsertAction}`;
               await targetPool.query(q, values);
-            } catch (e: any) {
-              log(`❌ Falha ao inserir em ${table}: ${e.message}`);
             }
+            await targetPool.query('COMMIT');
+          } catch (e: any) {
+            await targetPool.query('ROLLBACK');
+            log(`❌ Falha ao migrar tabela ${table}: ${e.message}`);
           }
           const after = await targetPool.query(`SELECT COUNT(*) AS c FROM ${table}`);
           log(`✅ ${table}: origem=${srcRows.rows.length} | destino antes=${parseInt(before.rows[0].c || '0')} → depois=${parseInt(after.rows[0].c || '0')}`);
