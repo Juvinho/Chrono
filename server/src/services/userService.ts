@@ -6,7 +6,7 @@ import { FollowService } from './followService.js';
 
 const FULL_USER_SELECT = `
   SELECT 
-    u.id, u.username, u.email, u.password_hash, u.avatar, 
+    u.id, u.username, u.display_name, u.email, u.password_hash, u.avatar, 
     u.followers_count, u.following_count, u.is_verified, u.verification_badge_label, u.verification_badge_color, u.blocked_users, u.created_at, u.updated_at, u.last_seen,
     u.profile_type, u.headline, u.connections_count, u.skills, u.work_experience, u.education,
     p.bio, p.birthday, p.location, p.website, p.cover_image, p.pronouns,
