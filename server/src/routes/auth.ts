@@ -73,15 +73,16 @@ const checkSmtp = async (domain: string, email: string): Promise<boolean> => {
                     socket.end();
                     resolve(true);
                 } else if (step === 3 && (response.startsWith('550') || response.startsWith('551') || response.startsWith('552') || response.startsWith('553'))) {
-                    // Recipient rejected
+                    // Recipient rejected (5xx = permanent failure)
                     socket.write('QUIT\r\n');
                     socket.end();
                     resolve(false);
-                } else if (response.startsWith('4')) {
-                     // Temporary failure, treat as valid to avoid blocking legit users on graylisting
+                } else if (step === 3 && response.startsWith('4')) {
+                     // Temporary failure (4xx = graylisting/temporary)
+                     // Reject to be safe - user can retry if legitimate
                      socket.write('QUIT\r\n');
                      socket.end();
-                     resolve(true);
+                     resolve(false);
                 }
             });
 
@@ -133,12 +134,10 @@ const validateEmail = async (email: string) => {
         // Use expanded checkSmtp
         const smtpValid = await checkSmtp(domain, email);
         if (!smtpValid) {
-             console.warn(`[SMTP] Validation failed for ${email}, but allowing anyway for Alpha.`);
-             // return { valid: false, error: 'Invalid email (address rejected by server or unreachable)' };
+             return { valid: false, error: 'Email address does not exist or is invalid' };
         }
     } catch (err) {
-        console.warn(`[DNS] MX lookup failed for ${domain}, allowing anyway for Alpha.`);
-        // return { valid: false, error: 'Invalid email domain (DNS lookup failed)' };
+        return { valid: false, error: 'Email validation failed - cannot verify domain' };
     }
 
     return { valid: true };
