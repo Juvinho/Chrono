@@ -183,6 +183,7 @@ export class ChatService {
           m.sender_id,
           u.id as user_id,
           u.username,
+          COALESCE(u.display_name, u.username) as display_name,
           u.avatar as avatar_url,
           m.content,
           m.created_at,
@@ -201,7 +202,7 @@ export class ChatService {
         sender: {
           id: row.user_id,
           username: row.username,
-          displayName: row.username,
+          displayName: row.display_name || row.username,
           avatarUrl: row.avatar_url || null,
         },
         content: row.content,
@@ -259,7 +260,7 @@ export class ChatService {
 
       // Get sender info
       const senderResult = await pool.query(
-        `SELECT id, username, avatar FROM users WHERE id = $1`,
+        `SELECT id, username, display_name, avatar FROM users WHERE id = $1`,
         [senderId]
       );
 
@@ -276,7 +277,7 @@ export class ChatService {
         sender: {
           id: sender.id,
           username: sender.username,
-          displayName: sender.username,
+          displayName: sender.display_name || sender.username,
           avatarUrl: sender.avatar || null,
         },
         content: row.content,
