@@ -96,8 +96,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Load conversations
   const loadConversations = async () => {
     try {
-      const res = await apiClient.get('/chat/conversations');
-      setConversations(res.data);
+      const res = await apiClient.get('/chat');
+      const list = Array.isArray(res.data) ? res.data : [];
+      setConversations(list);
     } catch (error) {
       console.error('Failed to load conversations', error);
     }

@@ -2,7 +2,7 @@ import { baseClient, API_BASE_URL } from './client';
 
 export const conversationService = {
   async getConversations() {
-    return baseClient.request<any[]>('/conversations');
+    return baseClient.request<any[]>('/chat');
   },
 
   async getMessages(conversationId: string, opts?: { before?: string; limit?: number }) {
@@ -13,17 +13,17 @@ export const conversationService = {
     return baseClient.request<any[]>(`/conversations/${conversationId}/messages${qs}`);
   },
 
-  async createConversation(username: string, options: any = {}) {
-    return baseClient.request<any>('/conversations', {
+  async createConversation(targetUserId: string) {
+    return baseClient.request<any>('/chat/init', {
       method: 'POST',
-      body: JSON.stringify({ username, ...options }),
+      body: JSON.stringify({ targetUserId }),
     });
   },
 
-  async getOrCreateConversation(username: string, options: any = {}) {
-    return baseClient.request<any>('/conversations', {
+  async getOrCreateConversation(targetUserId: string) {
+    return baseClient.request<any>('/chat/init', {
       method: 'POST',
-      body: JSON.stringify({ username, ...options }),
+      body: JSON.stringify({ targetUserId }),
     });
   },
 
@@ -34,24 +34,19 @@ export const conversationService = {
     });
   },
 
-  async sendTyping(conversationId: string) {
-    return baseClient.request<any>(`/conversations/${conversationId}/typing`, {
-      method: 'POST',
-      body: JSON.stringify({}),
-    });
+  // typing endpoint não está implementado no backend atual
+  async sendTyping(_conversationId: string) {
+    return { data: { ok: true } };
   },
 
-  async markConversationAsRead(conversationId: string) {
-    return baseClient.request<any>(`/conversations/${conversationId}/read`, {
-      method: 'POST',
-    });
+  // mark as read endpoint não está implementado no backend atual
+  async markConversationAsRead(_conversationId: string) {
+    return { data: { ok: true } };
   },
 
-  async updateMessageStatus(conversationId: string, messageId: string, status: 'delivered' | 'read') {
-    return baseClient.request<any>(`/conversations/${conversationId}/messages/${messageId}/status`, {
-      method: 'POST',
-      body: JSON.stringify({ status }),
-    });
+  // update status endpoint não está implementado no backend atual
+  async updateMessageStatus(_conversationId: string, _messageId: string, _status: 'delivered' | 'read') {
+    return { data: { ok: true } };
   },
 
   subscribe(conversationId: string, handlers: { onMessages?: (msgs: any[]) => void; onTyping?: (data: { users: string[] }) => void }) {
