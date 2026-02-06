@@ -14,7 +14,7 @@ const Verify = React.lazy(() => import('../features/auth/components/Verify'));
 const ForgotPassword = React.lazy(() => import('../features/auth/components/ForgotPassword'));
 const ResetPassword = React.lazy(() => import('../features/auth/components/ResetPassword'));
 const DataSlicerPage = React.lazy(() => import('../features/analysis/components/DataSlicerPage'));
-const MessagesPage = React.lazy(() => import('../features/messages/components/MessagesPage'));
+const MessagesPage = React.lazy(() => import('../features/chat/components/ChatLayout').then(m => ({ default: m.ChatLayout })));
 const Marketplace = React.lazy(() => import('../features/marketplace/components/Marketplace'));
 const EchoDetailModal = React.lazy(() => import('../features/timeline/components/EchoDetailModal'));
 

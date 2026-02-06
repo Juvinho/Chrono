@@ -205,6 +205,14 @@ export function TrashIcon({ className }: { className?: string }) {
     );
 }
 
+export function PaperPlaneIcon({ className }: { className?: string }) {
+    return (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+    </svg>
+    );
+}
+
 export function PollIcon({ className }: { className?: string }) {
     return (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -250,7 +258,7 @@ export function VerifiedIcon({ className, title, style }: { className?: string, 
 export function SparklesIcon({ className }: { className?: string }) {
     return (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M16 17v4m-2 2h4m-6-15l1.293-1.293a1 1 0 011.414 0l.293.293a1 1 0 010 1.414L15 6m-5 3l.293-.293a1 1 0 011.414 0l.293.293a1 1 0 010 1.414L11 10m6 6l-1.293 1.293a1 1 0 01-1.414 0l-.293-.293a1 1 0 010-1.414L17 16m-5-3l-.293.293a1 1 0 01-1.414 0l-.293-.293a1 1 0 010-1.414L11 10" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-7.714 2.143L11 21l-2.286-6.857L1 12l7.714-2.143L11 3z" />
     </svg>
     );
 }
@@ -319,10 +327,4 @@ export function ChevronRightIcon({ className }: { className?: string }) {
     );
 }
 
-export function PaperPlaneIcon({ className }: { className?: string }) {
-    return (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-    </svg>
-    );
-}
+

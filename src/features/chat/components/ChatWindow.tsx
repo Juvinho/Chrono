@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useChat } from '../ChatContext';
-import { useAuth } from '../../../context/AuthContext';
-import { PaperPlaneIcon, ImageIcon } from '@radix-ui/react-icons';
+import { useAuth } from '../../../contexts/AuthContext';
+import { PaperPlaneIcon, ImageIcon } from '../../../components/ui/icons';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
