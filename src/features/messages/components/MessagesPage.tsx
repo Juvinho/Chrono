@@ -131,7 +131,7 @@ export default function MessagesPage({
                     className={`w-full text-left px-3 py-2 rounded hover:bg-[var(--theme-bg-tertiary)] ${activeConversationId === item.id ? 'bg-[var(--theme-bg-tertiary)]' : ''}`}
                   >
                     <div className="text-sm">
-                      <span className="text-[var(--theme-text-light)]">#{item.id.substring(0, 6)}</span>
+                      <span className="text-[var(--theme-text-light)]">{item.other_username ? `@${item.other_username}` : `#${item.id.substring(0, 6)}`}</span>
                       <span className="ml-2 text-[var(--theme-text-secondary)]">{new Date(item.updated_at || item.last_message_at || item.created_at).toLocaleString()}</span>
                     </div>
                   </button>
