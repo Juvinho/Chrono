@@ -128,10 +128,12 @@ export const useAppSession = ({
             // Reload conversations
             const conversationsResult = await apiClient.getConversations();
             if (conversationsResult.data) {
-                const mappedConversations = conversationsResult.data.map((conv: any) => ({
-                    id: conv.id,
-                    participants: conv.participants.map((p: any) => typeof p === 'string' ? p : (p.username || p)),
-                    messages: (conv.messages || []).map((msg: any) => ({
+                const mappedConversations = conversationsResult.data.map((conv: any) => {
+                    const participantsList = Array.isArray(conv.participants)
+                        ? conv.participants.map((p: any) => typeof p === 'string' ? p : (p.username || p))
+                        : (conv.other_username ? [currentUser?.username, conv.other_username] : []);
+                    const msgs = Array.isArray(conv.messages) ? conv.messages : [];
+                    const mappedMsgs = msgs.map((msg: any) => ({
                         id: msg.id,
                         senderUsername: msg.senderUsername || 'unknown',
                         text: msg.text,
@@ -140,12 +142,17 @@ export const useAppSession = ({
                         status: msg.status,
                         isEncrypted: msg.isEncrypted,
                         timestamp: new Date(msg.createdAt || msg.created_at || Date.now()),
-                    })).sort((a: any, b: any) => a.timestamp.getTime() - b.timestamp.getTime()),
-                    lastMessageTimestamp: new Date(conv.lastMessageTimestamp || conv.updated_at || Date.now()),
-                    unreadCount: conv.unreadCount || {},
-                    isEncrypted: conv.isEncrypted,
-                    selfDestructTimer: conv.selfDestructTimer
-                }));
+                    })).sort((a: any, b: any) => a.timestamp.getTime() - b.timestamp.getTime());
+                    return {
+                        id: conv.id,
+                        participants: participantsList,
+                        messages: mappedMsgs,
+                        lastMessageTimestamp: new Date(conv.lastMessageTimestamp || conv.last_message_at || conv.updated_at || Date.now()),
+                        unreadCount: conv.unreadCount || {},
+                        isEncrypted: conv.isEncrypted,
+                        selfDestructTimer: conv.selfDestructTimer
+                    };
+                });
                 setConversations(mappedConversations);
             }
             
