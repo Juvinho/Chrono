@@ -10,5 +10,5 @@ router.get('/', chatController.getConversations);
 router.post('/init', chatController.initConversation);
 router.get('/:conversationId/messages', chatController.getMessages);
 router.post('/:conversationId/messages', chatController.sendMessage);
-
+router.post('/:conversationId/read', chatController.markAsRead);
 export default router;

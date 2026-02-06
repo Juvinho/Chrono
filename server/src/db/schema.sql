@@ -86,43 +86,25 @@ CREATE TABLE IF NOT EXISTS messages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
     sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    text TEXT,
-    image_url TEXT,
-    video_url TEXT,
-    metadata JSONB,
+    content TEXT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    is_encrypted BOOLEAN DEFAULT FALSE
+    CONSTRAINT messages_content_len_chk CHECK (char_length(content) BETWEEN 1 AND 1000)
 );
 CREATE INDEX IF NOT EXISTS idx_messages_conversation_created ON messages(conversation_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_messages_sender_created ON messages(sender_id, created_at);
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='text') THEN
-        ALTER TABLE messages
-            DROP CONSTRAINT IF EXISTS messages_text_len_chk,
-            ADD CONSTRAINT messages_text_len_chk CHECK (text IS NULL OR char_length(text) <= 1000);
-    END IF;
-END $$;
 
--- Align legacy messages table with new chat schema (idempotent)
+-- Add missing columns if they don't exist (for legacy setup)
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='content') THEN
-        ALTER TABLE messages ADD COLUMN content TEXT;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='type') THEN
-        ALTER TABLE messages ADD COLUMN type VARCHAR(20) DEFAULT 'text';
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='media_url') THEN
-        ALTER TABLE messages ADD COLUMN media_url TEXT;
-    END IF;
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='is_read') THEN
         ALTER TABLE messages ADD COLUMN is_read BOOLEAN DEFAULT FALSE;
     END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.constraint_column_usage WHERE table_name='messages' AND column_name='content') THEN
-        ALTER TABLE messages
-            DROP CONSTRAINT IF EXISTS messages_content_len_chk,
-            ADD CONSTRAINT messages_content_len_chk CHECK (content IS NULL OR char_length(content) <= 1000);
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='content') THEN
+        ALTER TABLE messages ADD COLUMN content TEXT DEFAULT '';
+    THEN
+        UPDATE messages SET content = '' WHERE content IS NULL;
+        ALTER TABLE messages ALTER COLUMN content SET NOT NULL;
     END IF;
 END $$;
 

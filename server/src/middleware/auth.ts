@@ -1,6 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
+// Validate JWT_SECRET at module load time
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('CRITICAL: JWT_SECRET environment variable is not set. Cannot start server.');
+}
+
 export interface AuthRequest extends Request {
   userId?: string;
   username?: string;
@@ -14,7 +20,7 @@ export const authenticateToken = (req: AuthRequest, res: Response, next: NextFun
     return res.status(401).json({ error: 'Access token required' });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret', (err: any, user: any) => {
+  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
     if (err) {
       return res.status(403).json({ error: 'Invalid or expired token' });
     }
@@ -32,7 +38,7 @@ export const optionalAuthenticateToken = (req: AuthRequest, res: Response, next:
     return next();
   }
 
-  jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret', (err: any, user: any) => {
+  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
     if (!err) {
       req.userId = user.id;
       req.username = user.username;

@@ -51,19 +51,45 @@ export const FloatingChatContainer: React.FC<FloatingChatContainerProps> = ({ cu
       for (const chat of openChats) {
         const key = String(chat.userId);
         if (!conversations[key]) {
-          try {
-            console.log('📱 Iniciando conversa com userId:', chat.userId);
-            const conversation = await initConversation(chat.userId);
-            console.log('✅ Conversa inicializada:', conversation);
-            if (conversation?.id) {
-              newConversations[key] = conversation as ConversationData;
-            } else {
-              console.error('❌ Resposta não tem ID:', conversation);
+          let retries = 3;
+          let success = false;
+          let lastError: any;
+
+          while (retries > 0 && !success) {
+            try {
+              console.log(`📱 Tentando iniciar conversa com userId: ${chat.userId} (tentativa ${4 - retries}/3)`);
+              const conversation = await initConversation(chat.userId);
+              console.log('✅ Conversa inicializada:', conversation);
+              if (conversation?.id) {
+                newConversations[key] = conversation as ConversationData;
+                success = true;
+              } else {
+                throw new Error('Resposta sem ID');
+              }
+            } catch (err: any) {
+              lastError = err;
+              retries--;
+              if (retries > 0) {
+                // Exponential backoff: 500ms, 1s, 2s
+                const delay = Math.pow(2, 3 - retries) * 500;
+                console.warn(`⚠️  Falha ao inicializar conversa, retry em ${delay}ms...`);
+                await new Promise(r => setTimeout(r, delay));
+              }
             }
-          } catch (err: any) {
-            console.error('❌ Erro ao inicializar conversa:', err);
-            console.error('Status:', err?.status);
-            console.error('Mensagem:', err?.message);
+          }
+
+          if (!success && lastError) {
+            console.error(`❌ Erro final ao inicializar conversa com ${chat.userId}:`, lastError.message);
+            // Show error message in chat window
+            newConversations[key] = {
+              id: chat.userId,
+              otherUser: {
+                id: String(chat.userId),
+                username: chat.username || 'Unknown',
+                displayName: chat.displayName || 'Unknown User',
+                avatarUrl: null,
+              },
+            };
           }
         }
       }

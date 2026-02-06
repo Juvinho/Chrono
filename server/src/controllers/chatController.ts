@@ -1,8 +1,11 @@
 import { Response } from 'express';
 import { ChatService } from '../services/chatService.js';
+import { UserService } from '../services/userService.js';
 import { AuthRequest } from '../middleware/auth.js';
+import { pool } from '../db/connection.js';
 
 const chatService = new ChatService();
+const userService = new UserService();
 
 export const initConversation = async (req: AuthRequest, res: Response) => {
   try {
@@ -10,6 +13,24 @@ export const initConversation = async (req: AuthRequest, res: Response) => {
     const { targetUserId } = req.body;
     
     if (!targetUserId) return res.status(400).json({ error: 'Target user required' });
+    
+    // Prevent self-messaging
+    if (userId === targetUserId) {
+      return res.status(400).json({ error: 'Cannot message yourself' });
+    }
+    
+    // Verify target user exists
+    const targetUserResult = await pool.query(
+      `SELECT id FROM users WHERE id = $1`,
+      [targetUserId]
+    );
+    if (targetUserResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Target user not found' });
+    }
+    
+    // TODO: Check if users have blocked each other
+    // const isBlocked = await blockService.isBlocked(userId, targetUserId);
+    // if (isBlocked) return res.status(403).json({ error: 'Cannot message this user' });
     
     let conversation = await chatService.getConversation(userId, targetUserId);
     if (!conversation) {
@@ -30,7 +51,10 @@ export const initConversation = async (req: AuthRequest, res: Response) => {
 export const getConversations = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const conversations = await chatService.getUserConversations(userId);
+    const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 50, 1), 100); // 1-100, default 50
+    const offset = Math.max(parseInt(req.query.offset as string) || 0, 0); // 0+
+    
+    const conversations = await chatService.getUserConversations(userId, limit, offset);
     res.json(conversations);
   } catch (error: any) {
     console.error('Error getting conversations:', error);
@@ -41,7 +65,19 @@ export const getConversations = async (req: AuthRequest, res: Response) => {
 export const getMessages = async (req: AuthRequest, res: Response) => {
   try {
     const { conversationId } = req.params;
-    const userId = req.userId;
+    const userId = req.userId!;
+    
+    // Verify user is a participant in this conversation
+    const conversation = await chatService.getConversationById(conversationId);
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+    
+    const isParticipant = conversation.user1_id === userId || conversation.user2_id === userId;
+    if (!isParticipant) {
+      return res.status(403).json({ error: 'Not authorized to view this conversation' });
+    }
+    
     const messages = await chatService.getMessages(conversationId, userId);
     res.json(messages);
   } catch (error: any) {
@@ -67,6 +103,31 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
     res.json(message);
   } catch (error: any) {
     console.error('Error sending message:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+export const markAsRead = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const { conversationId } = req.params;
+    
+    // Verify user is a participant
+    const conversation = await chatService.getConversationById(conversationId);
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+    
+    const isParticipant = conversation.user1_id === userId || conversation.user2_id === userId;
+    if (!isParticipant) {
+      return res.status(403).json({ error: 'Not a participant in this conversation' });
+    }
+    
+    // Mark all messages from other user as read
+    await chatService.markAsRead(conversationId, userId);
+    
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Error marking as read:', error);
     res.status(500).json({ error: error.message });
   }
 };

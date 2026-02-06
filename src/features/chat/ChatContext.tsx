@@ -52,18 +52,33 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (!user) return;
 
+    // Get token from localStorage or AuthContext
+    const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    
+    if (!token) {
+      console.error('❌ No auth token available for Socket.io connection');
+      return;
+    }
+
     const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:3001', {
       withCredentials: true,
+      auth: {
+        token: token,
+      },
     });
 
     newSocket.on('connect', () => {
-      console.log('Socket connected');
+      console.log('✅ Socket connected with authentication');
       setIsConnected(true);
     });
 
     newSocket.on('disconnect', () => {
       console.log('Socket disconnected');
       setIsConnected(false);
+    });
+
+    newSocket.on('error', (error: any) => {
+      console.error('❌ Socket error:', error);
     });
 
     newSocket.on('new_message', (message: Message) => {
