@@ -260,7 +260,7 @@ export class ChatService {
 
       // Get sender info
       const senderResult = await pool.query(
-        `SELECT id, username, display_name, avatar FROM users WHERE id = $1`,
+        `SELECT id, username, COALESCE(display_name, '') as display_name, avatar FROM users WHERE id = $1`,
         [senderId]
       );
 
