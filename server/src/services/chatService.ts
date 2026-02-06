@@ -21,178 +21,222 @@ interface ConversationDTO {
 interface MessageDTO {
   id: string;
   conversationId: string;
-  sender: {
-    id: string;
-    username: string;
-    displayName: string;
-    avatarUrl: string | null;
-  };
+  senderId: string;
+  senderUsername: string;
   content: string;
-  sentAt: string;
+  createdAt: string;
   isRead: boolean;
 }
 
+/**
+ * Chat Service - Simplified implementation without conversation_participants table
+ * Stores participants directly in conversations table as array
+ */
 export class ChatService {
+  /**
+   * Find existing conversation between two users
+   */
   async getConversation(user1Id: string, user2Id: string) {
-    // Find a conversation where both users are participants
-    const result = await pool.query(
-      `SELECT c.id FROM conversations c
-       WHERE EXISTS (
-         SELECT 1 FROM conversation_participants cp1 
-         WHERE cp1.conversation_id = c.id AND cp1.user_id = $1
-       ) AND EXISTS (
-         SELECT 1 FROM conversation_participants cp2 
-         WHERE cp2.conversation_id = c.id AND cp2.user_id = $2
-       )
-       ORDER BY c.updated_at DESC LIMIT 1`,
-      [user1Id, user2Id]
-    );
-    return result.rows[0];
-  }
-
-  async createConversation(user1Id: string, user2Id: string) {
-    const client = await pool.connect();
     try {
-      await client.query('BEGIN');
-      
-      // Create conversation
-      const convRes = await client.query(
-        'INSERT INTO conversations (created_by, updated_at) VALUES ($1, CURRENT_TIMESTAMP) RETURNING id',
-        [user1Id]
+      // Find conversation where both users are in participant_ids
+      const result = await pool.query(
+        `SELECT id FROM conversations 
+         WHERE participant_ids @> ARRAY[$1::UUID, $2::UUID]::UUID[]
+         ORDER BY updated_at DESC LIMIT 1`,
+        [user1Id, user2Id]
       );
-      const conversationId = convRes.rows[0].id;
-      
-      // Add both users as participants
-      await client.query(
-        'INSERT INTO conversation_participants (conversation_id, user_id) VALUES ($1, $2), ($1, $3)',
-        [conversationId, user1Id, user2Id]
-      );
-      
-      await client.query('COMMIT');
-      return { id: conversationId };
-    } catch (e) {
-      await client.query('ROLLBACK');
-      throw e;
-    } finally {
-      client.release();
+      return result.rows[0] || null;
+    } catch (error: any) {
+      console.error('getConversation error:', error.message);
+      return null;
     }
   }
 
-  async getUserConversations(userId: string): Promise<ConversationDTO[]> {
-    const result = await pool.query(
-      `SELECT c.id, c.updated_at,
-        u.id as other_user_id, u.username as other_username, u.display_name as other_display_name, u.avatar as other_avatar,
-        m.id as last_msg_id, m.content as last_message_content, m.created_at as last_message_time,
-        CASE WHEN ms.status = 'read' THEN true ELSE false END as last_msg_is_read
-       FROM conversations c
-       JOIN conversation_participants cp ON c.id = cp.conversation_id
-       JOIN users u ON (
-         SELECT user_id FROM conversation_participants cp2 
-         WHERE cp2.conversation_id = c.id AND cp2.user_id != $1 LIMIT 1
-       ) = u.id
-       LEFT JOIN messages m ON c.id = m.conversation_id
-       LEFT JOIN message_status ms ON m.id = ms.message_id AND ms.user_id = $1 AND ms.status = 'read'
-       WHERE cp.user_id = $1
-       GROUP BY c.id, c.updated_at, u.id, u.username, u.display_name, u.avatar, m.id, m.content, m.created_at, ms.status
-       ORDER BY c.updated_at DESC`,
-      [userId]
-    );
-    
-    return result.rows.map((row: any) => ({
-      id: row.id,
-      otherUser: {
-        id: row.other_user_id,
-        username: row.other_username,
-        displayName: row.other_display_name || row.other_username,
-        avatarUrl: row.other_avatar || null,
-        isOnline: false, // TODO: implementar status online
-      },
-      lastMessage: row.last_message_content ? {
-        content: row.last_message_content,
-        sentAt: new Date(row.last_message_time).toISOString(),
-        isRead: row.last_msg_is_read || false,
-      } : null,
-      unreadCount: 0, // TODO: contar mensagens não lidas
-      updatedAt: new Date(row.updated_at).toISOString(),
-    }));
-  }
-
-  async getMessages(conversationId: string, currentUserId?: string): Promise<MessageDTO[]> {
-    const result = await pool.query(
-      `SELECT m.id, m.conversation_id, m.sender_id, m.content, m.created_at, u.username, u.display_name, u.avatar,
-        CASE WHEN ms.status = 'read' THEN true ELSE false END as is_read
-       FROM messages m
-       JOIN users u ON m.sender_id = u.id
-       LEFT JOIN message_status ms ON m.id = ms.message_id AND ms.user_id = $2 AND ms.status = 'read'
-       WHERE m.conversation_id = $1
-       ORDER BY m.created_at ASC`,
-      [conversationId, currentUserId]
-    );
-    
-    return result.rows.map((row: any) => ({
-      id: row.id,
-      conversationId: row.conversation_id,
-      sender: {
-        id: row.sender_id,
-        username: row.username,
-        displayName: row.display_name || row.username,
-        avatarUrl: row.avatar || null,
-      },
-      content: row.content,
-      sentAt: new Date(row.created_at).toISOString(),
-      isRead: row.is_read || false,
-    }));
-  }
-
-  async sendMessage(conversationId: string, senderId: string, content: string, type = 'text'): Promise<MessageDTO> {
-    const client = await pool.connect();
+  /**
+   * Create new conversation between two users
+   */
+  async createConversation(user1Id: string, user2Id: string) {
     try {
-      await client.query('BEGIN');
-      
-      // Insert message
-      const messageRes = await client.query(
-        `INSERT INTO messages (conversation_id, sender_id, content, type) 
-         VALUES ($1, $2, $3, $4) 
-         RETURNING id, created_at`,
-        [conversationId, senderId, content, type]
+      const result = await pool.query(
+        `INSERT INTO conversations (created_by, participant_ids, updated_at) 
+         VALUES ($1, ARRAY[$1::UUID, $2::UUID]::UUID[], CURRENT_TIMESTAMP) 
+         RETURNING id`,
+        [user1Id, user2Id]
       );
-      const messageId = messageRes.rows[0].id;
-      const createdAt = messageRes.rows[0].created_at;
-      
-      // Update conversation timestamp
-      await client.query(
-        'UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+      return { id: result.rows[0].id };
+    } catch (error: any) {
+      console.error('createConversation error:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all conversations for a user
+   */
+  async getUserConversations(userId: string): Promise<ConversationDTO[]> {
+    try {
+      const result = await pool.query(
+        `WITH all_conversations AS (
+          SELECT id, participant_ids, updated_at
+          FROM conversations 
+          WHERE $1 = ANY(participant_ids)
+        ),
+        other_users AS (
+          SELECT ac.id as conv_id, u.id, u.username, u.display_name, u.avatar
+          FROM all_conversations ac
+          JOIN users u ON u.id = ANY(ac.participant_ids) AND u.id != $1
+        ),
+        last_messages AS (
+          SELECT 
+            conversation_id,
+            id,
+            content,
+            created_at,
+            is_read,
+            ROW_NUMBER() OVER (PARTITION BY conversation_id ORDER BY created_at DESC) as rn
+          FROM messages
+          WHERE conversation_id IN (SELECT id FROM all_conversations)
+        )
+        SELECT 
+          ac.id,
+          ac.updated_at,
+          ou.id as other_user_id,
+          ou.username,
+          ou.display_name,
+          ou.avatar,
+          lm.content as last_message_content,
+          lm.created_at as last_message_time,
+          COALESCE((SELECT COUNT(*) FROM messages m 
+            WHERE m.conversation_id = ac.id AND m.is_read = false AND m.sender_id != $1), 0) as unread_count
+        FROM all_conversations ac
+        JOIN other_users ou ON ou.conv_id = ac.id
+        LEFT JOIN last_messages lm ON ac.id = lm.conversation_id AND lm.rn = 1
+        ORDER BY ac.updated_at DESC`,
+        [userId]
+      );
+
+      return result.rows.map(row => ({
+        id: row.id,
+        otherUser: {
+          id: row.other_user_id,
+          username: row.username,
+          displayName: row.display_name || row.username,
+          avatarUrl: row.avatar || null,
+        },
+        lastMessage: row.last_message_content ? {
+          content: row.last_message_content,
+          sentAt: row.last_message_time,
+          isRead: row.last_message_is_read || false,
+        } : null,
+        unreadCount: row.unread_count || 0,
+        updatedAt: row.updated_at,
+      }));
+    } catch (error: any) {
+      console.error('getUserConversations error:', error.message);
+      return [];
+    }
+  }
+
+  /**
+   * Get messages from a conversation
+   */
+  async getMessages(conversationId: string, userId?: string): Promise<MessageDTO[]> {
+    try {
+      const result = await pool.query(
+        `SELECT 
+          m.id,
+          m.conversation_id,
+          m.sender_id,
+          u.username,
+          m.content,
+          m.created_at,
+          m.is_read
+        FROM messages m
+        JOIN users u ON m.sender_id = u.id
+        WHERE m.conversation_id = $1
+        ORDER BY m.created_at ASC
+        LIMIT 100`,
         [conversationId]
       );
-      
-      // Get sender details
-      const senderRes = await client.query(
-        'SELECT id, username, display_name, avatar FROM users WHERE id = $1',
+
+      return result.rows.map(row => ({
+        id: row.id,
+        conversationId: row.conversation_id,
+        senderId: row.sender_id,
+        senderUsername: row.username,
+        content: row.content,
+        createdAt: row.created_at,
+        isRead: row.is_read || false,
+      }));
+    } catch (error: any) {
+      console.error('getMessages error:', error.message);
+      return [];
+    }
+  }
+
+  /**
+   * Send a message
+   */
+  async sendMessage(conversationId: string, senderId: string, content: string): Promise<MessageDTO> {
+    try {
+      // Verify sender is participant
+      const convCheck = await pool.query(
+        `SELECT id FROM conversations WHERE id = $1 AND $2 = ANY(participant_ids)`,
+        [conversationId, senderId]
+      );
+
+      if (convCheck.rows.length === 0) {
+        throw new Error('User is not a participant in this conversation');
+      }
+
+      const result = await pool.query(
+        `INSERT INTO messages (conversation_id, sender_id, content, is_read, created_at)
+         VALUES ($1, $2, $3, false, CURRENT_TIMESTAMP)
+         RETURNING id, sender_id, content, created_at, is_read`,
+        [conversationId, senderId, content]
+      );
+
+      // Update conversation updated_at
+      await pool.query(
+        `UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+        [conversationId]
+      );
+
+      // Get sender info
+      const senderResult = await pool.query(
+        `SELECT username FROM users WHERE id = $1`,
         [senderId]
       );
-      const sender = senderRes.rows[0];
-      
-      const message: MessageDTO = {
-        id: messageId,
-        conversationId: conversationId,
-        sender: {
-          id: sender.id,
-          username: sender.username,
-          displayName: sender.display_name || sender.username,
-          avatarUrl: sender.avatar || null,
-        },
-        content: content,
-        sentAt: new Date(createdAt).toISOString(),
-        isRead: false,
-      };
 
-      await client.query('COMMIT');
-      return message;
-    } catch (e) {
-      await client.query('ROLLBACK');
-      throw e;
-    } finally {
-      client.release();
+      const row = result.rows[0];
+      return {
+        id: row.id,
+        conversationId: conversationId,
+        senderId: row.sender_id,
+        senderUsername: senderResult.rows[0]?.username || 'Unknown',
+        content: row.content,
+        createdAt: row.created_at,
+        isRead: row.is_read,
+      };
+    } catch (error: any) {
+      console.error('sendMessage error:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Mark messages as read
+   */
+  async markAsRead(conversationId: string, userId: string): Promise<void> {
+    try {
+      await pool.query(
+        `UPDATE messages 
+         SET is_read = true 
+         WHERE conversation_id = $1 AND sender_id != $2`,
+        [conversationId, userId]
+      );
+    } catch (error: any) {
+      console.error('markAsRead error:', error.message);
     }
   }
 }

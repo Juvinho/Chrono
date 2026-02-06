@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url';
 import rateLimit from 'express-rate-limit';
 import { migrate } from './db/migrate.js';
 import { initializeDatabase } from './db/initializeDatabase.js';
+import { addParticipantIds } from './db/addParticipantIds.js';
 import { pool } from './db/connection.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
@@ -325,6 +326,10 @@ const startServer = async () => {
     try {
       await initializeDatabase();
       console.log('✅ Schema inicializado com sucesso.');
+      
+      // Add participant_ids column migration
+      await addParticipantIds();
+      console.log('✅ Migração de participant_ids concluída.');
     } catch (err: any) {
       console.error('⚠️  Erro ao inicializar schema:', err.message);
       // Don't stop server, migration might still work
