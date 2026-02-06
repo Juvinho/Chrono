@@ -101,9 +101,14 @@ CREATE TABLE IF NOT EXISTS messages (
 );
 CREATE INDEX IF NOT EXISTS idx_messages_conversation_created ON messages(conversation_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_messages_sender_created ON messages(sender_id, created_at);
-ALTER TABLE messages
-    DROP CONSTRAINT IF EXISTS messages_text_len_chk,
-    ADD CONSTRAINT messages_text_len_chk CHECK (text IS NULL OR char_length(text) <= 1000);
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='text') THEN
+        ALTER TABLE messages
+            DROP CONSTRAINT IF EXISTS messages_text_len_chk,
+            ADD CONSTRAINT messages_text_len_chk CHECK (text IS NULL OR char_length(text) <= 1000);
+    END IF;
+END $$;
 
 -- Align legacy messages table with new chat schema (idempotent)
 DO $$
