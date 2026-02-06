@@ -4,17 +4,24 @@ import { sendMessage, markAsRead } from '../features/messaging/api/messagingApi'
 import { Message } from '../features/messaging/types';
 import '../features/messaging/styles/floating-chat.css';
 
+interface OtherUser {
+  id: string;
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
+}
+
 interface FloatingChatWindowProps {
   conversationId: number | string;
-  username: string;
-  avatar?: string;
+  otherUser: OtherUser;
+  currentUserId?: string;
   onClose: () => void;
 }
 
 export const FloatingChatWindow: React.FC<FloatingChatWindowProps> = ({
   conversationId,
-  username,
-  avatar,
+  otherUser,
+  currentUserId,
   onClose,
 }) => {
   const { messages, isLoading, error, refetch } = useMessages(conversationId);
@@ -69,13 +76,13 @@ export const FloatingChatWindow: React.FC<FloatingChatWindowProps> = ({
       <div className="floating-chat-header">
         <div className="floating-chat-header-info">
           <div className="floating-chat-avatar">
-            {avatar ? (
-              <img src={avatar} alt={username} />
+            {otherUser.avatarUrl ? (
+              <img src={otherUser.avatarUrl} alt={otherUser.displayName} />
             ) : (
-              <div className="avatar-placeholder">{getInitials(username)}</div>
+              <div className="avatar-placeholder">{getInitials(otherUser.displayName)}</div>
             )}
           </div>
-          <div className="floating-chat-name">{username}</div>
+          <div className="floating-chat-name">{otherUser.displayName}</div>
         </div>
         <div className="floating-chat-actions">
           <button
@@ -101,20 +108,23 @@ export const FloatingChatWindow: React.FC<FloatingChatWindowProps> = ({
             {!isLoading && messages.length === 0 && (
               <div className="floating-chat-empty">Nenhuma mensagem ainda. Comece a conversa!</div>
             )}
-            {messages.map((msg: Message) => (
-              <div
-                key={msg.id}
-                className={`floating-chat-message ${msg.senderId === -1 ? 'mine' : 'theirs'}`}
-              >
-                <div className="floating-message-content">{msg.content}</div>
-                <div className="floating-message-time">
-                  {new Date(msg.createdAt).toLocaleTimeString('pt-BR', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
+            {messages.map((msg: Message) => {
+              const isMine = msg.senderId === currentUserId;
+              return (
+                <div
+                  key={msg.id}
+                  className={`floating-chat-message ${isMine ? 'mine' : 'theirs'}`}
+                >
+                  <div className="floating-message-content">{msg.content}</div>
+                  <div className="floating-message-time">
+                    {new Date(msg.createdAt).toLocaleTimeString('pt-BR', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Input */}

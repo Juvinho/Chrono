@@ -4,10 +4,25 @@ import { FloatingChatWindow } from './FloatingChatWindow';
 import { initConversation } from '../features/messaging/api/messagingApi';
 import { baseClient } from '../api/client';
 import { useState, useEffect } from 'react';
+import { User } from '../types';
 
-export const FloatingChatContainer: React.FC = () => {
+interface ConversationData {
+  id: number | string;
+  otherUser: {
+    id: string;
+    username: string;
+    displayName: string;
+    avatarUrl: string | null;
+  };
+}
+
+interface FloatingChatContainerProps {
+  currentUser: User | null;
+}
+
+export const FloatingChatContainer: React.FC<FloatingChatContainerProps> = ({ currentUser }) => {
   const { openChats, closeChat } = useFloatingChat();
-  const [conversations, setConversations] = useState<{ [key: string]: number | string }>({});
+  const [conversations, setConversations] = useState<{ [key: string]: ConversationData }>({});
   const [isAuthenticated, setIsAuthenticated] = useState(!!baseClient.getToken());
 
   // Verificar se está autenticado
@@ -32,7 +47,7 @@ export const FloatingChatContainer: React.FC = () => {
         return;
       }
 
-      const newConversations: { [key: string]: number | string } = { ...conversations };
+      const newConversations: { [key: string]: ConversationData } = { ...conversations };
       for (const chat of openChats) {
         const key = String(chat.userId);
         if (!conversations[key]) {
@@ -41,7 +56,7 @@ export const FloatingChatContainer: React.FC = () => {
             const conversation = await initConversation(chat.userId);
             console.log('✅ Conversa inicializada:', conversation);
             if (conversation?.id) {
-              newConversations[key] = conversation.id;
+              newConversations[key] = conversation as ConversationData;
             } else {
               console.error('❌ Resposta não tem ID:', conversation);
             }
@@ -63,15 +78,15 @@ export const FloatingChatContainer: React.FC = () => {
   return (
     <div className="floating-chats-container">
       {openChats.map((chat) => {
-        const conversationId = conversations[String(chat.userId)];
-        if (!conversationId) return null;
+        const conversationData = conversations[String(chat.userId)];
+        if (!conversationData) return null;
 
         return (
           <FloatingChatWindow
             key={chat.userId}
-            conversationId={conversationId}
-            username={chat.username}
-            avatar={chat.avatar}
+            conversationId={conversationData.id}
+            otherUser={conversationData.otherUser}
+            currentUserId={currentUser?.id}
             onClose={() => closeChat(chat.userId)}
           />
         );

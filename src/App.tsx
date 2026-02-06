@@ -610,7 +610,7 @@ export default function App() {
                                 />
                             )}
 
-                            <FloatingChatContainer />
+                            <FloatingChatContainer currentUser={currentUser} />
                         </div>
                     </Suspense>
                 </div>
