@@ -13,6 +13,10 @@ export const conversationService = {
     return baseClient.request<any[]>(`/conversations/${conversationId}/messages${qs}`);
   },
 
+  async getConversation(conversationId: string) {
+    return baseClient.request<any>(`/conversations/${conversationId}`);
+  },
+
   async sendMessage(conversationId: string, text: string, media?: { imageUrl?: string, videoUrl?: string, metadata?: any }) {
     return baseClient.request<any>(`/conversations/${conversationId}/messages`, {
       method: 'POST',
@@ -24,6 +28,13 @@ export const conversationService = {
     return baseClient.request<any>('/conversations', {
       method: 'POST',
       body: JSON.stringify({ username, ...options }),
+    });
+  },
+
+  async initConversationByUserId(targetUserId: string) {
+    return baseClient.request<any>('/conversations/init', {
+      method: 'POST',
+      body: JSON.stringify({ targetUserId }),
     });
   },
 
