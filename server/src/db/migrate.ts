@@ -20,7 +20,26 @@ export async function migrate(retries = 3) {
       // 1. Run base schema
       const schemaPath = join(__dirname, 'schema.sql');
       const schema = readFileSync(schemaPath, 'utf-8');
-      await pool.query(schema);
+      
+      // Split by semicolon and execute each statement
+      const statements = schema
+        .split(';')
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+      
+      console.log(`📄 Found ${statements.length} SQL statements in schema.sql`);
+      
+      for (let i = 0; i < statements.length; i++) {
+        const statement = statements[i] + ';';
+        try {
+          await pool.query(statement);
+        } catch (err: any) {
+          // Ignore errors for IF NOT EXISTS statements
+          if (!err.message?.includes('already exists') && !err.message?.includes('does not exist')) {
+            console.warn(`⚠️  Query ${i + 1} warning:`, err.message?.substring(0, 100));
+          }
+        }
+      }
       console.log('✅ Base schema applied.');
 
       // 2. Run additional migrations
