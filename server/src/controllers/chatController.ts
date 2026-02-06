@@ -16,7 +16,11 @@ export const initConversation = async (req: AuthRequest, res: Response) => {
       conversation = await chatService.createConversation(userId, targetUserId);
     }
     
-    res.json(conversation);
+    // Get conversations in DTO format
+    const conversations = await chatService.getUserConversations(userId);
+    const result = conversations.find(c => c.id === conversation.id);
+    
+    res.json(result || conversation);
   } catch (error: any) {
     console.error('Error init conversation:', error);
     res.status(500).json({ error: error.message });
@@ -37,7 +41,8 @@ export const getConversations = async (req: AuthRequest, res: Response) => {
 export const getMessages = async (req: AuthRequest, res: Response) => {
   try {
     const { conversationId } = req.params;
-    const messages = await chatService.getMessages(conversationId);
+    const userId = req.userId;
+    const messages = await chatService.getMessages(conversationId, userId);
     res.json(messages);
   } catch (error: any) {
     console.error('Error getting messages:', error);
