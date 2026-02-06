@@ -1,7 +1,7 @@
 import { Conversation, Message, SendMessageRequest } from '../types';
 import { baseClient } from '../../../api/client';
 
-const API_BASE = '/api';
+const API_BASE = '/api/chat';
 
 /**
  * CONVERSAS
@@ -9,14 +9,14 @@ const API_BASE = '/api';
 
 // Lista todas as conversas do usuário
 export async function getConversations(): Promise<Conversation[]> {
-  const response = await baseClient.get<Conversation[]>(`${API_BASE}/conversations`);
+  const response = await baseClient.get<Conversation[]>(`${API_BASE}`);
   if (response.error) throw new Error(response.error);
   return response.data || [];
 }
 
 // Inicializa conversa com outro usuário (Find or Create)
 export async function initConversation(targetUserId: number | string): Promise<Conversation> {
-  const response = await baseClient.post<Conversation>(`${API_BASE}/conversations/init`, {
+  const response = await baseClient.post<Conversation>(`${API_BASE}/init`, {
     targetUserId,
   });
   if (response.error) throw new Error(response.error);
@@ -30,7 +30,7 @@ export async function initConversation(targetUserId: number | string): Promise<C
 
 // Lista mensagens de uma conversa
 export async function getMessages(conversationId: number | string): Promise<Message[]> {
-  const response = await baseClient.get<Message[]>(`${API_BASE}/conversations/${conversationId}/messages`);
+  const response = await baseClient.get<Message[]>(`${API_BASE}/${conversationId}/messages`);
   if (response.error) throw new Error(response.error);
   return response.data || [];
 }
@@ -38,7 +38,7 @@ export async function getMessages(conversationId: number | string): Promise<Mess
 // Envia nova mensagem
 export async function sendMessage(request: SendMessageRequest): Promise<Message> {
   const response = await baseClient.post<Message>(
-    `${API_BASE}/conversations/${request.conversationId}/messages`,
+    `${API_BASE}/${request.conversationId}/messages`,
     {
       content: request.content,
     }
@@ -54,6 +54,6 @@ export async function sendMessage(request: SendMessageRequest): Promise<Message>
 
 export async function markAsRead(conversationId: number | string): Promise<void> {
   // TODO: Implementar endpoint no backend
-  const response = await baseClient.post(`${API_BASE}/conversations/${conversationId}/read`, {});
+  const response = await baseClient.post(`${API_BASE}/${conversationId}/read`, {});
   if (response.error) throw new Error(response.error);
 }
