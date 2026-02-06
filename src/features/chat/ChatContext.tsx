@@ -101,6 +101,23 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     });
 
+    // Handle real-time conversation updates (lastMessage, updatedAt)
+    newSocket.on('conversation_updated', (conversationUpdate: any) => {
+      setConversations((prev) => {
+        return prev.map((conv) => {
+          if (conv.id === conversationUpdate.id) {
+            return {
+              ...conv,
+              last_message_content: conversationUpdate.lastMessage?.content,
+              last_message_time: conversationUpdate.lastMessage?.sentAt,
+              updated_at: conversationUpdate.updatedAt,
+            };
+          }
+          return conv;
+        }).sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+      });
+    });
+
     setSocket(newSocket);
 
     return () => {

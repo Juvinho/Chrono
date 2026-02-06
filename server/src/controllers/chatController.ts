@@ -94,10 +94,31 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
     
     const message = await chatService.sendMessage(conversationId, userId, content);
     
-    // Emit socket event if io is available on app
+    // Emit socket events if io is available on app
     const io = req.app.get('io');
     if (io) {
+      // Emit new message to conversation room
       io.to(conversationId).emit('new_message', message);
+      
+      // Emit conversation update (lastMessage, updatedAt) to both users
+      const conversation = await chatService.getConversationById(conversationId);
+      if (conversation) {
+        const otherUserId = conversation.user1_id === userId ? conversation.user2_id : conversation.user1_id;
+        
+        const conversationUpdate = {
+          id: conversationId,
+          lastMessage: {
+            content: message.content,
+            sentAt: message.sentAt,
+            isRead: false,
+          },
+          updatedAt: message.sentAt,
+        };
+        
+        // Emit to both participants
+        io.to(userId).emit('conversation_updated', conversationUpdate);
+        io.to(otherUserId).emit('conversation_updated', conversationUpdate);
+      }
     }
 
     res.json(message);

@@ -1,3 +1,8 @@
+/**
+ * @deprecated Use messagingApi from features/messaging/api/messagingApi.ts instead
+ * This service has duplicate functionality and should be consolidated
+ * All chat operations should go through the messagingApi module
+ */
 import { baseClient, API_BASE_URL } from './client';
 
 export const conversationService = {
