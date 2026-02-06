@@ -8,6 +8,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import rateLimit from 'express-rate-limit';
 import { migrate } from './db/migrate.js';
+import { initializeDatabase } from './db/initializeDatabase.js';
 import { pool } from './db/connection.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
@@ -319,6 +320,16 @@ const startServer = async () => {
       console.log(`Allowed Origins: ${allowedOrigins.join(', ')}`);
     });
 
+    // Initialize database schema with proper error handling
+    console.log('📦 Inicializando schema do banco de dados...');
+    try {
+      await initializeDatabase();
+      console.log('✅ Schema inicializado com sucesso.');
+    } catch (err: any) {
+      console.error('⚠️  Erro ao inicializar schema:', err.message);
+      // Don't stop server, migration might still work
+    }
+
     // Run migrations (idempotent)
     console.log('📦 Iniciando migrações do banco de dados...');
     migrate().then(() => {
@@ -326,7 +337,7 @@ const startServer = async () => {
         const notifSvc = new NotificationService();
         notifSvc.startQueueWorker();
     }).catch(err => {
-        console.error('❌ Erro fatal nas migrações:', err);
+        console.error('❌ Erro nas migrações:', err);
         // We still keep server running, but it might be unstable
     });
 
