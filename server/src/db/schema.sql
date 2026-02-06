@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS users (
     location VARCHAR(100),
     website VARCHAR(255),
     cover_image TEXT,
+    public_key TEXT,
     followers_count INTEGER DEFAULT 0,
     following_count INTEGER DEFAULT 0,
     is_private BOOLEAN DEFAULT FALSE,
@@ -84,6 +85,7 @@ CREATE TABLE IF NOT EXISTS conversation_participants (
     PRIMARY KEY (conversation_id, user_id)
 );
 CREATE INDEX IF NOT EXISTS idx_conversation_participants_user ON conversation_participants(user_id);
+CREATE INDEX IF NOT EXISTS idx_conversation_participants_conversation ON conversation_participants(conversation_id);
 
 -- Messages in conversations
 CREATE TABLE IF NOT EXISTS messages (
@@ -94,9 +96,14 @@ CREATE TABLE IF NOT EXISTS messages (
     image_url TEXT,
     video_url TEXT,
     metadata JSONB,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    is_encrypted BOOLEAN DEFAULT FALSE
 );
 CREATE INDEX IF NOT EXISTS idx_messages_conversation_created ON messages(conversation_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_messages_sender_created ON messages(sender_id, created_at);
+ALTER TABLE messages
+    DROP CONSTRAINT IF EXISTS messages_text_len_chk,
+    ADD CONSTRAINT messages_text_len_chk CHECK (text IS NULL OR char_length(text) <= 1000);
 
 -- Message status per user (delivered/read)
 CREATE TABLE IF NOT EXISTS message_status (

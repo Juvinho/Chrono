@@ -13,7 +13,8 @@
     "db:migrate-data": "tsx src/scripts/migrate-data.ts",
     "db:sync-follows": "tsx src/sync_follows.ts",
     "db:seed": "tsx src/db/seed.ts",
-    "db:clear": "tsx src/db/clear.ts"
+    "db:clear": "tsx src/db/clear.ts",
+    "db:backup": "tsx src/scripts/backup.ts"
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",
