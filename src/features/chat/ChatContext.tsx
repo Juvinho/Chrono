@@ -118,9 +118,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const fetchMessages = async () => {
         try {
           const res = await apiClient.get(`/chat/${activeConversation.id}/messages`);
-          setMessages(res.data);
+          setMessages(Array.isArray(res.data) ? res.data : []);
         } catch (error) {
           console.error('Failed to load messages', error);
+          setMessages([]);
         }
       };
       
