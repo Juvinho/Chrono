@@ -89,8 +89,16 @@ export default function App() {
                 navigate('/settings');
                 break;
             case Page.Messages:
-                if (data) navigate(`/messages/${data}`);
-                else navigate('/messages');
+                if (data) {
+                    const targetUser = users.find(u => u.username === data);
+                    if (targetUser) {
+                         navigate('/messages', { state: { targetUserId: targetUser.id } });
+                    } else {
+                         navigate('/messages');
+                    }
+                } else {
+                    navigate('/messages');
+                }
                 break;
             case Page.VideoAnalysis:
                 navigate('/data-slicer');
@@ -159,65 +167,6 @@ export default function App() {
         });
         setPendingPosts([]);
     };
-
-    const handleMessageSent = useCallback((conversationId: string, message: Message) => {
-        setConversations(prev => prev.map(conv => {
-            if (conv.id !== conversationId) return conv;
-            const incomingId = (message as any)._replaceId || message.id;
-            const replaceId = (message as any)._replaceId;
-            const msgTs = (message as any).createdAt
-                ? new Date((message as any).createdAt)
-                : ((message as any).timestamp ? new Date((message as any).timestamp as any) : new Date());
-            const idx = conv.messages.findIndex(m => (m as any).id === incomingId || (replaceId && (m as any).id === replaceId));
-            let nextMessages: any[] = [];
-            if (idx >= 0) {
-                nextMessages = conv.messages.slice();
-                const base = nextMessages[idx];
-                nextMessages[idx] = { ...base, ...message, createdAt: msgTs || (base as any).createdAt || new Date() };
-                // Se veio ID do servidor, substitui
-                if (replaceId) {
-                    nextMessages[idx].id = (message as any).id || (base as any).id;
-                }
-            } else {
-                const created = msgTs || new Date();
-                nextMessages = [...conv.messages, { ...message, createdAt: created }];
-            }
-            // Ordena por createdAt asc, com tie-breaker clientSeq e id
-            nextMessages.sort((a: any, b: any) => {
-                const at = new Date(a.createdAt || a.timestamp || 0).getTime();
-                const bt = new Date(b.createdAt || b.timestamp || 0).getTime();
-                if (at !== bt) return at - bt;
-                const ac = a.clientSeq || 0;
-                const bc = b.clientSeq || 0;
-                if (ac !== bc) return ac - bc;
-                return (a.id > b.id ? 1 : -1);
-            });
-            const latestTs = (nextMessages[nextMessages.length - 1] as any)?.createdAt || conv.lastMessageTimestamp || new Date();
-            return {
-                ...conv,
-                messages: nextMessages,
-                lastMessageTimestamp: latestTs,
-            };
-        }));
-    }, []);
-
-    const handleAppendMessages = useCallback((conversationId: string, messages: any[]) => {
-        setConversations(prev => prev.map(conv => {
-            if (conv.id === conversationId) {
-                const merged = [...conv.messages, ...messages].sort((a: any, b: any) => {
-                    const at = new Date(a.createdAt || a.timestamp || 0).getTime();
-                    const bt = new Date(b.createdAt || b.timestamp || 0).getTime();
-                    if (at !== bt) return at - bt;
-                    const ac = (a as any).clientSeq || 0;
-                    const bc = (b as any).clientSeq || 0;
-                    if (ac !== bc) return ac - bc;
-                    return ((a as any).id > (b as any).id ? 1 : -1);
-                });
-                return { ...conv, messages: merged, lastMessageTimestamp: (merged[merged.length - 1] as any)?.createdAt || conv.lastMessageTimestamp };
-            }
-            return conv;
-        }));
-    }, []);
 
     // User Interaction Tracking
     useEffect(() => {
