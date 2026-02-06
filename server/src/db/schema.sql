@@ -105,6 +105,28 @@ ALTER TABLE messages
     DROP CONSTRAINT IF EXISTS messages_text_len_chk,
     ADD CONSTRAINT messages_text_len_chk CHECK (text IS NULL OR char_length(text) <= 1000);
 
+-- Align legacy messages table with new chat schema (idempotent)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='content') THEN
+        ALTER TABLE messages ADD COLUMN content TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='type') THEN
+        ALTER TABLE messages ADD COLUMN type VARCHAR(20) DEFAULT 'text';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='media_url') THEN
+        ALTER TABLE messages ADD COLUMN media_url TEXT;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='messages' AND column_name='is_read') THEN
+        ALTER TABLE messages ADD COLUMN is_read BOOLEAN DEFAULT FALSE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.constraint_column_usage WHERE table_name='messages' AND column_name='content') THEN
+        ALTER TABLE messages
+            DROP CONSTRAINT IF EXISTS messages_content_len_chk,
+            ADD CONSTRAINT messages_content_len_chk CHECK (content IS NULL OR char_length(content) <= 1000);
+    END IF;
+END $$;
+
 -- Message status per user (delivered/read)
 CREATE TABLE IF NOT EXISTS message_status (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
