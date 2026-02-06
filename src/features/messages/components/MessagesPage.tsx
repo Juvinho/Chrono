@@ -34,6 +34,9 @@ export default function MessagesPage({
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
+  const [isNewConversation, setIsNewConversation] = useState(false);
+  const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const [es, setEs] = useState<EventSource | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -58,23 +61,45 @@ export default function MessagesPage({
     let mounted = true;
     const initByUsername = async () => {
       if (!presetUsername) return;
-      const conv = await apiClient.getOrCreateConversation(presetUsername);
+      setIsNewConversation(true);
+      const conv = await apiClient.createConversation(presetUsername);
       if (conv.data?.id || conv.data?.conversationId) {
         const id = conv.data.id || conv.data.conversationId;
         setActiveConversationId(id);
-        const msgs = await apiClient.getMessages(id);
-        if (!mounted) return;
-        setMessages(msgs.data || []);
+        setMessages([]);
+        const stream = apiClient.subscribeConversation(id, {
+          onMessages: (msgs) => {
+            if (!mounted) return;
+            setMessages(prev => [...prev, ...msgs]);
+          },
+          onTyping: (data) => {
+            if (!mounted) return;
+            setTypingUsers(data.users || []);
+          }
+        });
+        setEs(stream);
       }
     };
     initByUsername();
-    return () => { mounted = false; };
+    return () => { 
+      mounted = false; 
+      es?.close();
+    };
   }, [presetUsername]);
 
   const handleOpenConversation = async (id: string) => {
     setActiveConversationId(id);
+    setIsNewConversation(false);
     const msgs = await apiClient.getMessages(id);
     setMessages(msgs.data || []);
+    const stream = apiClient.subscribeConversation(id, {
+      onMessages: (newMsgs) => {
+        setMessages(prev => [...prev, ...newMsgs]);
+      },
+      onTyping: (data) => setTypingUsers(data.users || [])
+    });
+    es?.close();
+    setEs(stream);
   };
 
   const handleSend = async () => {
@@ -96,6 +121,17 @@ export default function MessagesPage({
     }
     const real = res.data!;
     setMessages(prev => prev.map(m => m.id === optimistic.id ? real : m));
+    try {
+      await apiClient.updateMessageStatus(activeConversationId, real.id, 'delivered');
+      await apiClient.updateMessageStatus(activeConversationId, real.id, 'read');
+    } catch {}
+  };
+  
+  const handleTyping = async (value: string) => {
+    setInput(value);
+    if (activeConversationId) {
+      apiClient.sendTyping(activeConversationId);
+    }
   };
 
   return (
@@ -158,10 +194,16 @@ export default function MessagesPage({
                   </div>
                 ))}
               </div>
+              {isNewConversation && (
+                <div className="mb-2 text-xs text-[var(--theme-primary)] font-bold">{t('newConversation') || 'Nova conversa'}</div>
+              )}
+              {typingUsers.length > 0 && (
+                <div className="mb-2 text-xs text-[var(--theme-text-secondary)]">{t('typing') || 'Digitando...'} {typingUsers.join(', ')}</div>
+              )}
               <div className="flex gap-2">
                 <input 
                   value={input} 
-                  onChange={e => setInput(e.target.value)} 
+                  onChange={e => handleTyping(e.target.value)} 
                   placeholder={t('typeMessage') || 'Type a message...'} 
                   className="flex-1 px-3 py-2 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] rounded"
                 />

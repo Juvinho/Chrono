@@ -557,7 +557,7 @@ export default function ProfilePage({
                   ) : (
                     <>
                       <button 
-                        onClick={() => window.open('https://chrono-production-3214.up.railway.app/messages', '_self')} 
+                        onClick={() => onNavigate(Page.Messages, profileUser.username)} 
                         className="follow-btn px-4 py-1 rounded-sm transition-colors flex items-center gap-2" 
                         title={t('messageButton') || 'Enviar Mensagem'}
                       >

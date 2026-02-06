@@ -84,6 +84,14 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 router.get('/:id/messages', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const conversationId = req.params.id;
+    const userId = req.userId!;
+    const isParticipant = await pool.query(
+      `SELECT 1 FROM conversation_participants WHERE conversation_id = $1 AND user_id = $2 LIMIT 1`,
+      [conversationId, userId]
+    );
+    if (isParticipant.rows.length === 0) {
+      return res.status(403).json({ error: 'Not a participant of this conversation' });
+    }
     const { before, limit } = req.query as { before?: string; limit?: string };
     const lim = Math.min(parseInt(limit || '50'), 100);
 
@@ -110,6 +118,13 @@ router.post('/:id/messages', authenticateToken, async (req: AuthRequest, res: Re
   try {
     const conversationId = req.params.id;
     const userId = req.userId!;
+    const participantCheck = await client.query(
+      `SELECT COUNT(*) AS cnt FROM conversation_participants WHERE conversation_id = $1 AND user_id = $2`,
+      [conversationId, userId]
+    );
+    if (parseInt(participantCheck.rows[0].cnt) === 0) {
+      return res.status(403).json({ error: 'Not a participant of this conversation' });
+    }
     const { text, media } = req.body || {};
 
     if ((!text || text.trim().length === 0) && !media?.imageUrl && !media?.videoUrl) {
@@ -184,6 +199,84 @@ router.post('/:id/messages/:messageId/status', authenticateToken, async (req: Au
       [messageId, userId, status]
     );
     res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Simple typing status (in-memory)
+const typingState: Map<string, Set<string>> = new Map();
+
+router.post('/:id/typing', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const conversationId = req.params.id;
+    const userId = req.userId!;
+    const isParticipant = await pool.query(
+      `SELECT 1 FROM conversation_participants WHERE conversation_id = $1 AND user_id = $2 LIMIT 1`,
+      [conversationId, userId]
+    );
+    if (isParticipant.rows.length === 0) {
+      return res.status(403).json({ error: 'Not a participant of this conversation' });
+    }
+    const set = typingState.get(conversationId) || new Set<string>();
+    set.add(userId);
+    typingState.set(conversationId, set);
+    setTimeout(() => {
+      const s = typingState.get(conversationId);
+      if (s) {
+        s.delete(userId);
+        typingState.set(conversationId, s);
+      }
+    }, 2500);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// SSE stream for new messages and typing indicators
+router.get('/:id/stream', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const conversationId = req.params.id;
+    const userId = req.userId!;
+    const isParticipant = await pool.query(
+      `SELECT 1 FROM conversation_participants WHERE conversation_id = $1 AND user_id = $2 LIMIT 1`,
+      [conversationId, userId]
+    );
+    if (isParticipant.rows.length === 0) {
+      return res.status(403).json({ error: 'Not a participant of this conversation' });
+    }
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    let lastCheck = new Date();
+    const interval = setInterval(async () => {
+      try {
+        const messages = await pool.query(
+          `SELECT id, sender_id, text, image_url, video_url, metadata, created_at
+           FROM messages
+           WHERE conversation_id = $1 AND created_at > $2
+           ORDER BY created_at ASC`,
+          [conversationId, lastCheck]
+        );
+        lastCheck = new Date();
+        if (messages.rows.length > 0) {
+          res.write(`event: messages\n`);
+          res.write(`data: ${JSON.stringify(messages.rows)}\n\n`);
+        }
+        const typingUsers = Array.from(typingState.get(conversationId) || new Set<string>()).filter(id => id !== userId);
+        res.write(`event: typing\n`);
+        res.write(`data: ${JSON.stringify({ users: typingUsers })}\n\n`);
+      } catch (e) {
+        // no-op
+      }
+    }, 1500);
+
+    req.on('close', () => {
+      clearInterval(interval);
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
