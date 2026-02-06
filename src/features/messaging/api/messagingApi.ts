@@ -16,9 +16,13 @@ export async function getConversations(): Promise<Conversation[]> {
 
 // Inicializa conversa com outro usuário (Find or Create)
 export async function initConversation(targetUserId: number | string): Promise<Conversation> {
+  const token = baseClient.getToken();
+  if (!token) {
+    throw new Error('Não autenticado: token não encontrado');
+  }
+
   console.log('🔗 initConversation API call with targetUserId:', targetUserId);
   console.log('🔗 Using endpoint:', `${API_BASE}/init`);
-  const token = baseClient.getToken();
   console.log('🔗 Token available:', !!token, token?.substring(0, 20) + '...');
   
   const response = await baseClient.post<Conversation>(`${API_BASE}/init`, {
@@ -26,8 +30,13 @@ export async function initConversation(targetUserId: number | string): Promise<C
   });
   
   console.log('🔗 Response:', response);
-  if (response.error) throw new Error(response.error);
-  if (!response.data) throw new Error('No conversation data returned');
+  if (response.error) {
+    console.error('🔗 Error response:', response.error);
+    throw new Error(response.error);
+  }
+  if (!response.data) {
+    throw new Error('No conversation data returned');
+  }
   return response.data;
 }
 

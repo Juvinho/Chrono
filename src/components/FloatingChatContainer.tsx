@@ -2,20 +2,36 @@ import React from 'react';
 import { useFloatingChat } from '../contexts/FloatingChatContext';
 import { FloatingChatWindow } from './FloatingChatWindow';
 import { initConversation } from '../features/messaging/api/messagingApi';
+import { baseClient } from '../api/client';
 import { useState, useEffect } from 'react';
 
 export const FloatingChatContainer: React.FC = () => {
   const { openChats, closeChat } = useFloatingChat();
   const [conversations, setConversations] = useState<{ [key: string]: number | string }>({});
+  const [isAuthenticated, setIsAuthenticated] = useState(!!baseClient.getToken());
+
+  // Verificar se está autenticado
+  useEffect(() => {
+    const token = baseClient.getToken();
+    setIsAuthenticated(!!token);
+  }, [openChats]);
 
   // Debug: Log quando chats abrem
   useEffect(() => {
-    console.log('📱 FloatingChatContainer - openChats:', openChats);
+    if (openChats.length > 0) {
+      console.log('📱 FloatingChatContainer - openChats:', openChats);
+      console.log('📱 Token present:', !!baseClient.getToken());
+    }
   }, [openChats]);
 
   // Ao abrir um chat, busca ou cria a conversa
   useEffect(() => {
     const loadConversations = async () => {
+      if (!isAuthenticated) {
+        console.warn('⚠️  Não autenticado, ignorando abertura de chat');
+        return;
+      }
+
       const newConversations: { [key: string]: number | string } = { ...conversations };
       for (const chat of openChats) {
         const key = String(chat.userId);
@@ -39,10 +55,10 @@ export const FloatingChatContainer: React.FC = () => {
       setConversations(newConversations);
     };
 
-    if (openChats.length > 0) {
+    if (openChats.length > 0 && isAuthenticated) {
       loadConversations();
     }
-  }, [openChats]);
+  }, [openChats, isAuthenticated]);
 
   return (
     <div className="floating-chats-container">
