@@ -13,7 +13,7 @@ export const ChatSidebar: React.FC = () => {
       </div>
       
       <div className="flex-1 overflow-y-auto">
-        {conversations.length === 0 ? (
+        {(!Array.isArray(conversations) || conversations.length === 0) ? (
           <div className="p-4 text-center text-[var(--theme-text-secondary)]">
             Nenhuma conversa iniciada
           </div>
