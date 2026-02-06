@@ -88,7 +88,10 @@ export default function App() {
             case Page.Settings:
                 navigate('/settings');
                 break;
-            // Messages page removed
+            case Page.Messages:
+                if (data) navigate(`/messages/${data}`);
+                else navigate('/messages');
+                break;
             case Page.VideoAnalysis:
                 navigate('/data-slicer');
                 break;

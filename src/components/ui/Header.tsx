@@ -81,7 +81,7 @@ export default function Header({ user, onLogout, onViewProfile, onNavigate, onNo
                  <button onClick={() => onNavigate(Page.VideoAnalysis)} title={t('dataSlicer')} className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-secondary)] p-2 rounded-full hover:bg-[var(--theme-bg-tertiary)] transition-colors hidden sm:block">
                     <FilmIcon className="w-5 h-5 md:w-6 md:h-6" />
                  </button>
-                 <button onClick={() => window.open('https://chrono-production-3214.up.railway.app/messages', '_self')} title={t('send') || 'Enviar'} className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)] p-2 rounded-full hover:bg-[var(--theme-bg-tertiary)] transition-colors">
+                 <button onClick={() => onNavigate(Page.Messages)} title={t('send') || 'Enviar'} className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)] p-2 rounded-full hover:bg-[var(--theme-bg-tertiary)] transition-colors">
                     <PaperPlaneIcon className="w-5 h-5 md:w-6 md:h-6" />
                  </button>
 

@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
 import Header from '../Header';
+import { Page } from '../../../types';
 
 vi.mock('../../../hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
@@ -19,13 +20,13 @@ vi.mock('../icons', () => ({
 }));
 
 describe('Header chat button redirect', () => {
-  it('redirects to external messages URL when clicked', () => {
-    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null as any);
+  it('navigates to internal messages route when clicked', () => {
+    const onNavigate = vi.fn();
     render(<Header 
       user={{ username: 'me', notifications: [] } as any}
       onLogout={() => {}}
       onViewProfile={() => {}}
-      onNavigate={() => {}}
+      onNavigate={onNavigate}
       onNotificationClick={() => {}}
       onViewNotifications={() => {}}
       onSearch={() => {}}
@@ -34,8 +35,6 @@ describe('Header chat button redirect', () => {
     />);
     const btn = screen.getByTitle(/send/i);
     fireEvent.click(btn);
-    expect(openSpy).toHaveBeenCalledWith('https://chrono-production-3214.up.railway.app/messages', '_self');
-    openSpy.mockRestore();
+    expect(onNavigate).toHaveBeenCalledWith(Page.Messages);
   });
-}
-)
+});
