@@ -99,7 +99,7 @@ export class ApiClient {
       }
 
       const text = await response.text();
-      const data = text ? JSON.parse(text) : {};
+      const data: T = text ? JSON.parse(text) : ({} as T);
       return { data };
     } catch (error: any) {
       if (error.name === 'AbortError') {

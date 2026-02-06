@@ -97,8 +97,13 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
     // Emit socket events if io is available on app
     const io = req.app.get('io');
     if (io) {
-      // Emit new message to conversation room
-      io.to(conversationId).emit('new_message', message);
+      // Emit new message to conversation room with acknowledgment
+      const room = io.to(conversationId);
+      
+      // Use acknowledgments for message delivery confirmation
+      room.emit('new_message', message, (ack?: any) => {
+        console.log(`Message ${message.id} acknowledged`);
+      });
       
       // Emit conversation update (lastMessage, updatedAt) to both users
       const conversation = await chatService.getConversationById(conversationId);
