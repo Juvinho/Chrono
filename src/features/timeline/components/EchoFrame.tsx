@@ -35,13 +35,14 @@ interface EchoFrameProps {
     allKnownPosts?: Post[];
     nextAutoRefresh?: Date | null;
     isAutoRefreshPaused?: boolean;
+    onPostClick?: (postId: string) => void;
 }
 
 export default function EchoFrame({ 
     selectedDate, currentUser, posts: allPosts, onViewProfile, onTagClick, 
     onNewPost, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost, onPollVote, searchQuery, focusPostId, isGenerating,
     typingParentIds, activeCordTag, setActiveCordTag, composerDate, setComposerDate, allKnownPosts,
-    nextAutoRefresh, isAutoRefreshPaused
+    nextAutoRefresh, isAutoRefreshPaused, onPostClick
 }: EchoFrameProps) {
     const { t } = useTranslation();
     const [isComposerOpen, setIsComposerOpen] = useState(false);
@@ -462,6 +463,7 @@ export default function EchoFrame({
                                 onPollVote={onPollVote}
                                 searchQuery={searchQuery}
                                 typingParentIds={typingParentIds}
+                                onPostClick={onPostClick}
                             />
                         </div>
                     ))

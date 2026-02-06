@@ -290,6 +290,10 @@ export default function App() {
         }
     };
 
+    const handleOpenThreadView = (postId: string) => {
+        navigate(`/thread/${postId}`);
+    };
+
     const simulateUserPostInteraction = (post: Post) => {
         if (!currentUser) return;
     

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { User, Page, Post, Conversation } from '../types';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
@@ -17,6 +17,7 @@ const DataSlicerPage = React.lazy(() => import('../features/analysis/components/
 const MessagesPage = React.lazy(() => import('../features/messaging/components/MessagingLayout').then(m => ({ default: m.MessagingLayout })));
 const Marketplace = React.lazy(() => import('../features/marketplace/components/Marketplace'));
 const EchoDetailModal = React.lazy(() => import('../features/timeline/components/EchoDetailModal'));
+const ThreadView = React.lazy(() => import('../features/timeline/components/ThreadView'));
 
 const RedirectToProfile = () => {
     const { username } = useParams<{ username: string }>();
@@ -80,6 +81,7 @@ interface AppRoutesProps {
     handleFollowToggle: (username: string, actor?: User) => void;
     handleSendGlitchi: (username: string) => void;
     handlePasswordReset: (email: string, pass: string) => void;
+    handleOpenThreadView: (postId: string) => void;
 }
 
 export default function AppRoutes(props: AppRoutesProps) {
@@ -91,7 +93,7 @@ export default function AppRoutes(props: AppRoutesProps) {
         handleNavigate, handleLogin, handleLogout, handleNotificationClick, onViewNotifications, handleNewPost,
         handleUpdateReaction, handleReply, handleEcho, handleDeletePost, handleEditPost,
         handlePollVote, handleShowNewPosts, handleUpdateUser,
-        setIsMarketplaceOpen, handleBack, handleFollowToggle, handleSendGlitchi, handlePasswordReset
+        setIsMarketplaceOpen, handleBack, handleFollowToggle, handleSendGlitchi, handlePasswordReset, handleOpenThreadView
     } = props;
 
     return (
@@ -136,6 +138,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     isAutoRefreshPaused={isAutoRefreshPaused}
                     onBack={handleBack}
                     lastViewedNotifications={lastViewedNotifications}
+                    onPostClick={handleOpenThreadView}
                 />
             ) : <Navigate to="/welcome" />} />
 
@@ -170,6 +173,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     isAutoRefreshPaused={isAutoRefreshPaused}
                     onBack={handleBack}
                     lastViewedNotifications={lastViewedNotifications}
+                    onPostClick={handleOpenThreadView}
                 />
             ) : <Navigate to="/welcome" />} />
 
@@ -270,10 +274,30 @@ export default function AppRoutes(props: AppRoutesProps) {
                     isAutoRefreshPaused={isAutoRefreshPaused}
                     onBack={handleBack}
                     lastViewedNotifications={lastViewedNotifications}
+                    onPostClick={handleOpenThreadView}
                 />
             ) : <Navigate to="/welcome" />} />
 
             <Route path="/messages" element={currentUser ? <MessagesPage /> : <Navigate to="/welcome" />} />
+
+            <Route path="/thread/:postId" element={currentUser ? (
+                <Suspense fallback={<LoadingSpinner />}>
+                    <ThreadView 
+                        currentUser={currentUser}
+                        allUsers={combinedUsers}
+                        allPosts={memoizedPosts}
+                        onReply={handleReply}
+                        onUpdateReaction={handleUpdateReaction}
+                        onEcho={handleEcho}
+                        onDeletePost={handleDeletePost}
+                        onEditPost={handleEditPost}
+                        onPollVote={handlePollVote}
+                        onViewProfile={(...args: any[]) => handleNavigate(Page.Profile, args[0])}
+                        onBack={handleBack}
+                        typingParentIds={typingParentIds}
+                    />
+                </Suspense>
+            ) : <Navigate to="/welcome" />} />
 
             {/* Redirect root */}
             <Route path="/" element={<Navigate to={currentUser ? "/echoframe" : "/welcome"} replace />} />

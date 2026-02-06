@@ -22,7 +22,8 @@ interface PostCardProps {
     compact?: boolean;
     nestingLevel?: number;
     isThreadedReply?: boolean;
-    isContextualView?: boolean; // New prop to prevent actions in certain contexts (like inside a repost)
+    isContextualView?: boolean;
+    onPostClick?: (postId: string) => void;
 }
 
 const reactionIcons: { [key in CyberpunkReaction]: ReactNode } = {
@@ -403,7 +404,12 @@ const PostCard: React.FC<PostCardProps> = React.memo(({ post, currentUser, onVie
                 </div>
             ) : (
                 <>
-                    <p className={`whitespace-pre-wrap ${compact ? 'text-sm mb-2' : 'mb-4'}`}>{renderContentWithTags(post.content)}</p>
+                    <p 
+                        className={`whitespace-pre-wrap ${compact ? 'text-sm mb-2' : 'mb-4'} ${!isThreadedReply ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+                        onClick={() => !isThreadedReply && onPostClick?.(post.id)}
+                    >
+                        {renderContentWithTags(post.content)}
+                    </p>
                     {post.imageUrl && (
                         <img src={post.imageUrl} alt={t('postImageAlt', { username: post.author.username }) || `Image posted by @${post.author.username}`} className="w-full object-cover rounded-sm mt-2" loading="lazy" />
                     )}
