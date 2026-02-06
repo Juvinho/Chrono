@@ -21,17 +21,27 @@ export const FloatingChatContainer: React.FC = () => {
         const key = String(chat.userId);
         if (!conversations[key]) {
           try {
+            console.log('📱 Iniciando conversa com userId:', chat.userId);
             const conversation = await initConversation(chat.userId);
-            newConversations[key] = conversation.id;
-          } catch (err) {
-            console.error('Erro ao inicializar conversa:', err);
+            console.log('✅ Conversa inicializada:', conversation);
+            if (conversation?.id) {
+              newConversations[key] = conversation.id;
+            } else {
+              console.error('❌ Resposta não tem ID:', conversation);
+            }
+          } catch (err: any) {
+            console.error('❌ Erro ao inicializar conversa:', err);
+            console.error('Status:', err?.status);
+            console.error('Mensagem:', err?.message);
           }
         }
       }
       setConversations(newConversations);
     };
 
-    loadConversations();
+    if (openChats.length > 0) {
+      loadConversations();
+    }
   }, [openChats]);
 
   return (
