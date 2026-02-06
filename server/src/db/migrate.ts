@@ -9,6 +9,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 export async function migrate(retries = 3) {
+  if (!process.env.DATABASE_URL) {
+    console.warn('⚠️ DATABASE_URL não definido. Migrações de banco foram puladas no pre-deploy.');
+    return;
+  }
   while (retries > 0) {
     try {
       console.log(`Running database migrations (Attempts left: ${retries})...`);
