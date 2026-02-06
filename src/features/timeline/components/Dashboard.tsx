@@ -36,13 +36,14 @@ interface DashboardProps {
     isAutoRefreshPaused?: boolean;
     onBack?: () => void;
     lastViewedNotifications?: Date | null;
+    onPostClick?: (postId: string) => void;
 }
 
 export default function Dashboard({ 
     user, onLogout, onNavigate, onNotificationClick, onViewNotifications, selectedDate, setSelectedDate, allUsers, allPosts,
     onNewPost, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost, onPollVote, isGenerating, typingParentIds,
     conversations, newPostsCount = 0, onShowNewPosts, allKnownPosts, onUpdateUser = () => {}, onOpenMarketplace,
-    nextAutoRefresh, isAutoRefreshPaused, onBack, lastViewedNotifications
+    nextAutoRefresh, isAutoRefreshPaused, onBack, lastViewedNotifications, onPostClick
 }: DashboardProps) {
     const { t } = useTranslation();
     const { tag } = useParams<{ tag: string }>();
@@ -203,6 +204,7 @@ export default function Dashboard({
                     setComposerDate={setComposerDate}
                     nextAutoRefresh={nextAutoRefresh}
                     isAutoRefreshPaused={isAutoRefreshPaused}
+                    onPostClick={onPostClick}
                 />
             </div>
             <Timeline 
