@@ -60,6 +60,22 @@ export class ChatService {
   }
 
   /**
+   * Get conversation by ID
+   */
+  async getConversationById(conversationId: string) {
+    try {
+      const result = await pool.query(
+        `SELECT id, user1_id, user2_id, created_at, updated_at FROM conversations WHERE id = $1`,
+        [conversationId]
+      );
+      return result.rows[0] || null;
+    } catch (error: any) {
+      console.error('getConversationById error:', error.message);
+      return null;
+    }
+  }
+
+  /**
    * Create new conversation between two users
    */
   async createConversation(user1Id: string, user2Id: string) {
@@ -271,22 +287,6 @@ export class ChatService {
     } catch (error: any) {
       console.error('sendMessage error:', error.message);
       throw error;
-    }
-  }
-
-  /**
-   * Get conversation details by ID
-   */
-  async getConversationById(conversationId: string) {
-    try {
-      const result = await pool.query(
-        `SELECT id, user1_id, user2_id, created_at, updated_at FROM conversations WHERE id = $1`,
-        [conversationId]
-      );
-      return result.rows[0] || null;
-    } catch (error: any) {
-      console.error('getConversationById error:', error.message);
-      return null;
     }
   }
 
