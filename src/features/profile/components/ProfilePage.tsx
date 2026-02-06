@@ -43,7 +43,7 @@ interface ProfilePageProps {
 
 export default function ProfilePage({ 
   currentUser, profileUsername: propProfileUsername, onLogout, onNavigate, onNotificationClick, onViewNotifications, users, onFollowToggle, 
-  allPosts, allUsers, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost,
+  allPosts, allUsers, conversations, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost,
   onPollVote, selectedDate, setSelectedDate, typingParentIds, onOpenMarketplace, 
   onUpdateUser, onBack, lastViewedNotifications
 }: ProfilePageProps & { onUpdateUser?: (user: User) => Promise<{ success: boolean; error?: string }> }) {

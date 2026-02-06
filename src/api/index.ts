@@ -4,6 +4,7 @@ import { userService } from './user.service';
 import { notificationService } from './notification.service';
 import { marketplaceService } from './marketplace.service';
 import { companionService } from './companion.service';
+import { conversationService } from './conversation.service';
 import { baseClient } from './client';
 
 export const api = {
@@ -13,6 +14,7 @@ export const api = {
   notifications: notificationService,
   marketplace: marketplaceService,
   companion: companionService,
+  conversations: conversationService,
   client: baseClient,
 };
 
@@ -24,6 +26,7 @@ export const apiClient = {
   ...notificationService,
   ...marketplaceService,
   ...companionService,
+  ...conversationService,
   setToken: (token: string | null) => baseClient.setToken(token),
   getToken: () => baseClient.getToken(),
 };
