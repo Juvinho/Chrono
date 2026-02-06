@@ -13,7 +13,7 @@ vi.mock('../../../components/ui/Header', () => ({
 
 vi.mock('../../../api', () => ({
   apiClient: {
-    getConversations: vi.fn().mockResolvedValue({ data: [{ id: 'conv1', updated_at: new Date().toISOString() }] }),
+    getConversations: vi.fn().mockResolvedValue({ data: [{ id: 'conv1', updated_at: new Date().toISOString(), other_username: 'other' }] }),
     getMessages: vi.fn().mockResolvedValue({ data: [{ id: 'm1', sender_id: 'other', text: 'hi', created_at: new Date().toISOString() }] }),
     getOrCreateConversation: vi.fn().mockResolvedValue({ data: { id: 'conv1' } }),
   }
@@ -43,7 +43,7 @@ describe('MessagesPage redirect behavior', () => {
       expect(screen.getByTestId('header')).toBeInTheDocument();
     });
     // Click inbox item
-    const inboxButton = await screen.findByRole('button', { name: /#/i });
+    const inboxButton = await screen.findByRole('button', { name: /@other/i });
     fireEvent.click(inboxButton);
     await waitFor(() => {
       expect(mockOnNavigate).not.toHaveBeenCalledWith(1); // Page.Dashboard == 1 typically

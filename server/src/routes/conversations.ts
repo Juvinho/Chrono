@@ -11,10 +11,18 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
     const result = await pool.query(
-      `SELECT c.id, c.updated_at, c.last_message_at
+      `SELECT 
+         c.id, 
+         c.updated_at, 
+         c.last_message_at,
+         u.username AS other_username
        FROM conversations c
-       JOIN conversation_participants cp ON cp.conversation_id = c.id
-       WHERE cp.user_id = $1
+       JOIN conversation_participants cp_me 
+         ON cp_me.conversation_id = c.id AND cp_me.user_id = $1
+       JOIN conversation_participants cp_other 
+         ON cp_other.conversation_id = c.id AND cp_other.user_id <> $1
+       JOIN users u 
+         ON u.id = cp_other.user_id
        ORDER BY c.updated_at DESC
        LIMIT 100`,
       [userId]
