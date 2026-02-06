@@ -69,25 +69,17 @@ END $$;
 -- Direct Messages: Conversations
 CREATE TABLE IF NOT EXISTS conversations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
-    participant_ids UUID[] DEFAULT '{}'::UUID[],
+    user1_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user2_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_message_at TIMESTAMP
+    last_message_at TIMESTAMP,
+    CONSTRAINT uk_conv_participants UNIQUE (user1_id, user2_id),
+    CONSTRAINT chk_conv_order CHECK (user1_id < user2_id)
 );
 CREATE INDEX IF NOT EXISTS idx_conversations_updated_at ON conversations(updated_at DESC);
-CREATE INDEX IF NOT EXISTS idx_conversations_participant_ids ON conversations USING GIN(participant_ids);
-
--- Participants in conversations
-CREATE TABLE IF NOT EXISTS conversation_participants (
-    conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_read_at TIMESTAMP,
-    PRIMARY KEY (conversation_id, user_id)
-);
-CREATE INDEX IF NOT EXISTS idx_conversation_participants_user ON conversation_participants(user_id);
-CREATE INDEX IF NOT EXISTS idx_conversation_participants_conversation ON conversation_participants(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_user1 ON conversations(user1_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_user2 ON conversations(user2_id);
 
 -- Messages in conversations
 CREATE TABLE IF NOT EXISTS messages (

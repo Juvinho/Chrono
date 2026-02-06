@@ -29,21 +29,24 @@ interface MessageDTO {
 }
 
 /**
- * Chat Service - Simplified implementation without conversation_participants table
- * Stores participants directly in conversations table as array
+ * Chat Service - Uses user1_id and user2_id columns
+ * Works with existing Railway schema
  */
 export class ChatService {
   /**
    * Find existing conversation between two users
+   * Always stores smaller ID as user1_id
    */
   async getConversation(user1Id: string, user2Id: string) {
     try {
-      // Find conversation where both users are in participant_ids
+      // Normalize IDs so user1_id is always smaller
+      const [min_id, max_id] = [user1Id, user2Id].sort();
+
       const result = await pool.query(
         `SELECT id FROM conversations 
-         WHERE participant_ids @> ARRAY[$1::UUID, $2::UUID]::UUID[]
-         ORDER BY updated_at DESC LIMIT 1`,
-        [user1Id, user2Id]
+         WHERE user1_id = $1 AND user2_id = $2
+         LIMIT 1`,
+        [min_id, max_id]
       );
       return result.rows[0] || null;
     } catch (error: any) {
@@ -57,11 +60,14 @@ export class ChatService {
    */
   async createConversation(user1Id: string, user2Id: string) {
     try {
+      // Normalize IDs so user1_id is always smaller
+      const [min_id, max_id] = [user1Id, user2Id].sort();
+
       const result = await pool.query(
-        `INSERT INTO conversations (participant_ids) 
-         VALUES (ARRAY[$1::UUID, $2::UUID]::UUID[]) 
+        `INSERT INTO conversations (user1_id, user2_id, created_at, updated_at) 
+         VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) 
          RETURNING id`,
-        [user1Id, user2Id]
+        [min_id, max_id]
       );
       return { id: result.rows[0].id };
     } catch (error: any) {
@@ -75,10 +81,10 @@ export class ChatService {
    */
   async getUserConversations(userId: string): Promise<ConversationDTO[]> {
     try {
-      // Simple approach: get conversations, then fetch other user info
       const result = await pool.query(
-        `SELECT id, updated_at FROM conversations 
-         WHERE $1 = ANY(participant_ids)
+        `SELECT id, user1_id, user2_id, updated_at
+         FROM conversations 
+         WHERE user1_id = $1 OR user2_id = $1
          ORDER BY updated_at DESC LIMIT 50`,
         [userId]
       );
@@ -87,15 +93,12 @@ export class ChatService {
 
       for (const row of result.rows) {
         try {
-          // Get other users in this conversation
+          // Get the other user
+          const otherUserId = row.user1_id === userId ? row.user2_id : row.user1_id;
+          
           const usersResult = await pool.query(
-            `SELECT u.id, u.username, u.avatar FROM users u
-             WHERE u.id = ANY(
-               SELECT unnest(participant_ids) FROM conversations 
-               WHERE id = $1 AND id != $2
-             )
-             LIMIT 1`,
-            [row.id, userId]
+            `SELECT id, username, avatar FROM users WHERE id = $1`,
+            [otherUserId]
           );
 
           if (usersResult.rows.length === 0) continue;
@@ -106,7 +109,7 @@ export class ChatService {
           let lastMessage = null;
           try {
             const msgResult = await pool.query(
-              `SELECT COALESCE(content, text, '') as msg_content, created_at FROM messages 
+              `SELECT COALESCE(content, '') as msg_content, created_at FROM messages 
                WHERE conversation_id = $1 
                ORDER BY created_at DESC LIMIT 1`,
               [row.id]
@@ -158,7 +161,7 @@ export class ChatService {
           m.conversation_id,
           m.sender_id,
           u.username,
-          COALESCE(m.content, m.text, '') as content,
+          COALESCE(m.content, '') as content,
           m.created_at,
           COALESCE(m.is_read, false) as is_read
         FROM messages m
@@ -189,17 +192,23 @@ export class ChatService {
    */
   async sendMessage(conversationId: string, senderId: string, content: string): Promise<MessageDTO> {
     try {
-      // Verify sender is participant
+      // Verify conversation exists and user is participant
       const convCheck = await pool.query(
-        `SELECT id FROM conversations WHERE id = $1 AND $2 = ANY(participant_ids)`,
-        [conversationId, senderId]
+        `SELECT user1_id, user2_id FROM conversations WHERE id = $1`,
+        [conversationId]
       );
 
       if (convCheck.rows.length === 0) {
+        throw new Error('Conversation not found');
+      }
+
+      const conv = convCheck.rows[0];
+      const isParticipant = conv.user1_id === senderId || conv.user2_id === senderId;
+      if (!isParticipant) {
         throw new Error('User is not a participant in this conversation');
       }
 
-      // Try to insert with content field, fallback to text if needed
+      // Insert message
       let result;
       try {
         result = await pool.query(
@@ -209,13 +218,13 @@ export class ChatService {
           [conversationId, senderId, content]
         );
       } catch (e: any) {
-        // If content field doesn't exist, try with text field
+        // If content field doesn't exist, try with just text insert
         if (e.message.includes('content')) {
           result = await pool.query(
-            `INSERT INTO messages (conversation_id, sender_id, text, created_at)
-             VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
-             RETURNING id, sender_id, text as content, created_at`,
-            [conversationId, senderId, content]
+            `INSERT INTO messages (conversation_id, sender_id, type, created_at)
+             VALUES ($1, $2, 'text', CURRENT_TIMESTAMP)
+             RETURNING id, sender_id, type as content, created_at`,
+            [conversationId, senderId]
           );
         } else {
           throw e;
