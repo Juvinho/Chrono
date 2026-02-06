@@ -14,7 +14,8 @@
     "db:sync-follows": "tsx src/sync_follows.ts",
     "db:seed": "tsx src/db/seed.ts",
     "db:clear": "tsx src/db/clear.ts",
-    "db:backup": "tsx src/scripts/backup.ts"
+    "db:backup": "tsx src/scripts/backup.ts",
+    "db:fix-encrypted": "tsx src/scripts/fix_encrypted_schema.ts"
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",
