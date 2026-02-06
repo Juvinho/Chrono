@@ -89,32 +89,7 @@ export async function initializeDatabase() {
       throw err;
     }
 
-    // 4. Create conversation_participants table
-    try {
-      await client.query(`
-        CREATE TABLE IF NOT EXISTS conversation_participants (
-          conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-          user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-          joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          last_read_at TIMESTAMP,
-          PRIMARY KEY (conversation_id, user_id)
-        )
-      `);
-      await client.query(`
-        CREATE INDEX IF NOT EXISTS idx_conversation_participants_user 
-        ON conversation_participants(user_id)
-      `);
-      await client.query(`
-        CREATE INDEX IF NOT EXISTS idx_conversation_participants_conversation 
-        ON conversation_participants(conversation_id)
-      `);
-      console.log('✅ Conversation participants table created');
-    } catch (err: any) {
-      console.error('❌ Conversation participants table error:', err.message);
-      throw err;
-    }
-
-    // 5. Create messages table
+    // 4. Create messages table
     try {
       await client.query(`
         CREATE TABLE IF NOT EXISTS messages (
@@ -146,7 +121,7 @@ export async function initializeDatabase() {
       throw err;
     }
 
-    // 6. Create message_read_status table for tracking reads
+    // 5. Create message_read_status table for tracking reads
     try {
       await client.query(`
         CREATE TABLE IF NOT EXISTS message_read_status (
