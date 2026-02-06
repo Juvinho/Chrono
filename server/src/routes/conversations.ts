@@ -38,8 +38,8 @@ router.post('/init', authenticateToken, async (req: AuthRequest, res: Response) 
   const client = await pool.connect();
   try {
     const userId = req.userId!;
-    const { targetUserId } = req.body || {};
-    if (!targetUserId || typeof targetUserId !== 'string') {
+    const { targetUserId } = req.body as { targetUserId?: string };
+    if (!targetUserId) {
       return res.status(400).json({ error: 'targetUserId required' });
     }
 
@@ -47,28 +47,21 @@ router.post('/init', authenticateToken, async (req: AuthRequest, res: Response) 
       return res.status(400).json({ error: 'Cannot create conversation with yourself' });
     }
 
-    const userRes = await client.query('SELECT id, username, display_name, avatar FROM users WHERE id = $1 LIMIT 1', [targetUserId]);
+    const userRes = await client.query('SELECT id FROM users WHERE id = $1 LIMIT 1', [targetUserId]);
     if (userRes.rows.length === 0) return res.status(404).json({ error: 'User not found' });
-    const otherUserId = userRes.rows[0].id;
+    const otherUserId: string = userRes.rows[0].id;
 
-    const existing = await client.query(
-      `SELECT c.id
-       FROM conversations c
-       WHERE EXISTS (
-         SELECT 1 FROM conversation_participants cp 
-         WHERE cp.conversation_id = c.id AND cp.user_id = $1
-       ) AND EXISTS (
-         SELECT 1 FROM conversation_participants cp 
-         WHERE cp.conversation_id = c.id AND cp.user_id = $2
-       )
-       ORDER BY c.updated_at DESC
-       LIMIT 1`,
-      [userId, otherUserId]
+    // Order participants to enforce uniqueness (min, max)
+    const p1 = userId < otherUserId ? userId : otherUserId;
+    const p2 = userId < otherUserId ? otherUserId : userId;
+
+    // Try direct lookup in private_conversation_pairs
+    const pair = await client.query(
+      `SELECT conversation_id FROM private_conversation_pairs WHERE participant1_id = $1 AND participant2_id = $2 LIMIT 1`,
+      [p1, p2]
     );
-
-    if (existing.rows.length > 0) {
-      const conversationId = existing.rows[0].id;
-      return res.status(200).json({ id: conversationId, isNew: false });
+    if (pair.rows.length > 0) {
+      return res.status(200).json({ id: pair.rows[0].conversation_id, isNew: false });
     }
 
     await client.query('BEGIN');
@@ -86,6 +79,28 @@ router.post('/init', authenticateToken, async (req: AuthRequest, res: Response) 
        ON CONFLICT (conversation_id, user_id) DO NOTHING`,
       [conversationId, userId, otherUserId]
     );
+    // Register ordered pair with unique constraint
+    try {
+      await client.query(
+        `INSERT INTO private_conversation_pairs (conversation_id, participant1_id, participant2_id)
+         VALUES ($1, $2, $3)`,
+        [conversationId, p1, p2]
+      );
+    } catch (e: any) {
+      // Unique violation: another request created the pair concurrently
+      const existingPair = await client.query(
+        `SELECT conversation_id FROM private_conversation_pairs WHERE participant1_id = $1 AND participant2_id = $2 LIMIT 1`,
+        [p1, p2]
+      );
+      await client.query('ROLLBACK');
+      const existingId = existingPair.rows[0]?.conversation_id;
+      if (existingId) {
+        return res.status(200).json({ id: existingId, isNew: false });
+      }
+      // Fallback to previous existence check
+      return res.status(200).json({ id: conversationId, isNew: false });
+    }
+
 
     await client.query('COMMIT');
     res.status(201).json({ id: conversationId, isNew: true });
@@ -106,29 +121,19 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     if (!username || typeof username !== 'string') {
       return res.status(400).json({ error: 'username required' });
     }
-
     const userRes = await client.query('SELECT id FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1', [username]);
-    if (userRes.rows.length === 0) return res.status(404).json({ error: 'User not found' });
-    const otherUserId = userRes.rows[0].id;
+    const otherUserId: string = userRes.rows[0].id;
     if (otherUserId === userId) return res.status(400).json({ error: 'Cannot create conversation with yourself' });
+    // Ordered pair
+    const p1 = userId < otherUserId ? userId : otherUserId;
+    const p2 = userId < otherUserId ? otherUserId : userId;
 
-    // Try to find an existing conversation between these two users
-    const existing = await client.query(
-      `SELECT c.id
-       FROM conversations c
-       WHERE EXISTS (
-         SELECT 1 FROM conversation_participants cp 
-         WHERE cp.conversation_id = c.id AND cp.user_id = $1
-       ) AND EXISTS (
-         SELECT 1 FROM conversation_participants cp 
-         WHERE cp.conversation_id = c.id AND cp.user_id = $2
-       )
-       ORDER BY c.updated_at DESC
-       LIMIT 1`,
-      [userId, otherUserId]
+    const pair = await client.query(
+      `SELECT conversation_id FROM private_conversation_pairs WHERE participant1_id = $1 AND participant2_id = $2 LIMIT 1`,
+      [p1, p2]
     );
-    if (existing.rows.length > 0) {
-      return res.json({ id: existing.rows[0].id, conversationId: existing.rows[0].id });
+    if (pair.rows.length > 0) {
+      return res.json({ id: pair.rows[0].conversation_id, conversationId: pair.rows[0].conversation_id });
     }
 
     await client.query('BEGIN');
@@ -146,6 +151,23 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
        ON CONFLICT (conversation_id, user_id) DO NOTHING`,
       [conversationId, userId, otherUserId]
     );
+    try {
+      await client.query(
+        `INSERT INTO private_conversation_pairs (conversation_id, participant1_id, participant2_id)
+         VALUES ($1, $2, $3)`,
+        [conversationId, p1, p2]
+      );
+    } catch (e: any) {
+      const existingPair = await client.query(
+        `SELECT conversation_id FROM private_conversation_pairs WHERE participant1_id = $1 AND participant2_id = $2 LIMIT 1`,
+        [p1, p2]
+      );
+      await client.query('ROLLBACK');
+      const existingId = existingPair.rows[0]?.conversation_id;
+      if (existingId) return res.json({ id: existingId, conversationId: existingId });
+      return res.json({ id: conversationId, conversationId });
+    }
+
 
     await client.query('COMMIT');
     res.status(201).json({ id: conversationId, conversationId });
@@ -156,37 +178,32 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     client.release();
   }
 });
-
 // List messages in a conversation (ascending)
 router.get('/:id/messages', authenticateToken, async (req: AuthRequest, res: Response) => {
-  try {
-    const conversationId = req.params.id;
-    const userId = req.userId!;
-    const isParticipant = await pool.query(
-      `SELECT 1 FROM conversation_participants WHERE conversation_id = $1 AND user_id = $2 LIMIT 1`,
-      [conversationId, userId]
-    );
-    if (isParticipant.rows.length === 0) {
-      return res.status(403).json({ error: 'Not a participant of this conversation' });
-    }
-    const { before, limit } = req.query as { before?: string; limit?: string };
-    const lim = Math.min(parseInt(limit || '50'), 100);
-
-    let sql = `SELECT id, sender_id, text, image_url, video_url, metadata, created_at
-               FROM messages
-               WHERE conversation_id = $1`;
-    const params: any[] = [conversationId];
-    if (before) {
-      sql += ` AND created_at < $2`;
-      params.push(new Date(before));
-    }
-    sql += ` ORDER BY created_at ASC LIMIT ${lim}`;
-
-    const result = await pool.query(sql, params);
-    res.json(result.rows);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
+  const conversationId = req.params.id;
+  const userId = req.userId!;
+  const isParticipant = await pool.query(
+    `SELECT 1 FROM conversation_participants WHERE conversation_id = $1 AND user_id = $2 LIMIT 1`,
+    [conversationId, userId]
+  );
+  if (isParticipant.rows.length === 0) {
+    return res.status(403).json({ error: 'Not a participant of this conversation' });
   }
+  const { before, limit } = req.query as { before?: string; limit?: string };
+  const lim = Math.min(parseInt(limit || '50'), 100);
+
+  let sql = `SELECT id, sender_id, text, image_url, video_url, metadata, created_at
+             FROM messages
+             WHERE conversation_id = $1`;
+  const params: any[] = [conversationId];
+  if (before) {
+    sql += ` AND created_at < $2`;
+    params.push(new Date(before));
+  }
+  sql += ` ORDER BY created_at ASC LIMIT ${lim}`;
+
+  const result = await pool.query(sql, params);
+  res.json(result.rows);
 });
 
 // Get conversation details (participants and timestamps)
