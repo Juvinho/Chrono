@@ -35,48 +35,61 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 
 // Get or create conversation with username
 router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
+  const client = await pool.connect();
   try {
     const userId = req.userId!;
-    const { username } = req.body;
-    if (!username) return res.status(400).json({ error: 'username required' });
+    const { username } = req.body || {};
+    if (!username || typeof username !== 'string') {
+      return res.status(400).json({ error: 'username required' });
+    }
 
-    const userRes = await pool.query('SELECT id FROM users WHERE username = $1', [username]);
+    const userRes = await client.query('SELECT id FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1', [username]);
     if (userRes.rows.length === 0) return res.status(404).json({ error: 'User not found' });
     const otherUserId = userRes.rows[0].id;
     if (otherUserId === userId) return res.status(400).json({ error: 'Cannot create conversation with yourself' });
 
-    // Find existing conversation with both participants
-    const existing = await pool.query(
+    // Try to find an existing conversation between these two users
+    const existing = await client.query(
       `SELECT c.id
        FROM conversations c
-       JOIN conversation_participants cp1 ON cp1.conversation_id = c.id AND cp1.user_id = $1
-       JOIN conversation_participants cp2 ON cp2.conversation_id = c.id AND cp2.user_id = $2
+       WHERE EXISTS (
+         SELECT 1 FROM conversation_participants cp 
+         WHERE cp.conversation_id = c.id AND cp.user_id = $1
+       ) AND EXISTS (
+         SELECT 1 FROM conversation_participants cp 
+         WHERE cp.conversation_id = c.id AND cp.user_id = $2
+       )
+       ORDER BY c.updated_at DESC
        LIMIT 1`,
       [userId, otherUserId]
     );
     if (existing.rows.length > 0) {
-      return res.json({ id: existing.rows[0].id });
+      return res.json({ id: existing.rows[0].id, conversationId: existing.rows[0].id });
     }
 
-    // Create new conversation and add participants
-    const conv = await pool.query(
-      `INSERT INTO conversations (created_by)
-       VALUES ($1)
+    await client.query('BEGIN');
+    const conv = await client.query(
+      `INSERT INTO conversations (created_by, updated_at)
+       VALUES ($1, CURRENT_TIMESTAMP)
        RETURNING id`,
       [userId]
     );
     const conversationId = conv.rows[0].id;
 
-    await pool.query(
+    await client.query(
       `INSERT INTO conversation_participants (conversation_id, user_id)
        VALUES ($1, $2), ($1, $3)
-       ON CONFLICT DO NOTHING`,
+       ON CONFLICT (conversation_id, user_id) DO NOTHING`,
       [conversationId, userId, otherUserId]
     );
 
-    res.status(201).json({ id: conversationId });
+    await client.query('COMMIT');
+    res.status(201).json({ id: conversationId, conversationId });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: error.message || 'Internal Server Error' });
+  } finally {
+    client.release();
   }
 });
 
