@@ -30,6 +30,8 @@ export interface ApiResponse<T> {
   retryAfter?: number;
 }
 
+let globalRateLimitUntil = 0;
+
 export class ApiClient {
   private token: string | null = null;
 
@@ -53,6 +55,10 @@ export class ApiClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
+    const now = Date.now();
+    if (now < globalRateLimitUntil) {
+      return { error: 'rateLimitError', retryAfter: globalRateLimitUntil - now };
+    }
     const token = this.getToken();
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
@@ -84,6 +90,7 @@ export class ApiClient {
           const retryAfter = response.headers.get('Retry-After');
           const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 5000;
           console.warn(`Rate limited (429). Server suggests waiting ${waitTime}ms`);
+          globalRateLimitUntil = Date.now() + waitTime;
           return { error: 'rateLimitError', retryAfter: waitTime };
         }
         const data = await response.json().catch(() => ({}));
