@@ -454,9 +454,13 @@ CREATE TABLE IF NOT EXISTS notifications (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Indexes for notifications
-CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
-CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='notifications') THEN
+        CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+        CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
+    END IF;
+END $$;
 
 -- Remove Stories feature: drop table if exists (idempotent)
 DROP TABLE IF EXISTS stories CASCADE;
@@ -472,7 +476,12 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, endpoint)
 );
-CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user_id ON push_subscriptions(user_id);
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='push_subscriptions') THEN
+        CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user_id ON push_subscriptions(user_id);
+    END IF;
+END $$;
 
 -- Migrations for existing databases
 DO $$
