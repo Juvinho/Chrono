@@ -272,7 +272,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                 />
             ) : <Navigate to="/welcome" />} />
 
-            <Route path="/messages" element={currentUser ? <ChatLayout /> : <Navigate to="/welcome" />} />
+            <Route path="/messages" element={currentUser ? <MessagesPage /> : <Navigate to="/welcome" />} />
 
             {/* Redirect root */}
             <Route path="/" element={<Navigate to={currentUser ? "/echoframe" : "/welcome"} replace />} />
