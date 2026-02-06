@@ -7,6 +7,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import rateLimit from 'express-rate-limit';
+import jwt from 'jsonwebtoken';
 import { migrate } from './db/migrate.js';
 import { initializeDatabase } from './db/initializeDatabase.js';
 import { pool } from './db/connection.js';
@@ -21,6 +22,12 @@ import companionRoutes from './routes/companionRoutes.js';
 import { NotificationService } from './services/notificationService.js';
 
 dotenv.config();
+
+// Get JWT_SECRET - must be defined
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('CRITICAL: JWT_SECRET environment variable is not set. Cannot start server.');
+}
 
 // Define __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -85,20 +92,65 @@ const io = new Server(httpServer, {
 
 app.set('io', io);
 
-io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
+// Socket.io authentication middleware
+io.use((socket, next) => {
+  try {
+    // Extract token from handshake auth
+    const token = socket.handshake.auth.token;
+    
+    if (!token) {
+      return next(new Error('Authentication error: token required'));
+    }
+    
+    // Verify JWT
+    jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+      if (err) {
+        return next(new Error('Authentication error: invalid token'));
+      }
+      
+      // Store user info on socket for later use
+      socket.data.userId = user.id;
+      socket.data.username = user.username;
+      
+      next();
+    });
+  } catch (error) {
+    return next(new Error('Authentication error: unexpected error'));
+  }
+});
 
-  socket.on('join_conversation', (conversationId) => {
-    socket.join(conversationId);
-    console.log(`User ${socket.id} joined conversation ${conversationId}`);
+io.on('connection', (socket) => {
+  console.log(`✅ Authenticated user ${socket.data.userId} connected (${socket.id})`);
+
+  socket.on('join_conversation', async (conversationId) => {
+    try {
+      // Verify user is a participant in this conversation
+      const result = await pool.query(
+        `SELECT id FROM conversations 
+         WHERE id = $1 AND (user1_id = $2 OR user2_id = $2)`,
+        [conversationId, socket.data.userId]
+      );
+
+      if (result.rows.length === 0) {
+        socket.emit('error', { code: 'ACCESS_DENIED', message: 'Not a participant in this conversation' });
+        return;
+      }
+
+      socket.join(conversationId);
+      console.log(`✅ User ${socket.data.userId} joined conversation ${conversationId}`);
+    } catch (error: any) {
+      console.error('Error in join_conversation:', error.message);
+      socket.emit('error', { code: 'ERROR', message: 'Failed to join conversation' });
+    }
   });
 
   socket.on('leave_conversation', (conversationId) => {
     socket.leave(conversationId);
+    console.log(`User ${socket.data.userId} left conversation ${conversationId}`);
   });
 
   socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
+    console.log(`User ${socket.data.userId} disconnected`);
   });
 });
 
@@ -135,6 +187,14 @@ const postLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const chatLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 60, // 60 messages per minute per user (generous for real conversations)
+  message: { error: 'Você está enviando mensagens muito rápido. Aguarde um momento.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 app.use('/api/', apiLimiter);
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
@@ -148,6 +208,13 @@ app.use('/api/users/:username', (req: express.Request, res: express.Response, ne
 app.use('/api/posts', (req: express.Request, res: express.Response, next: express.NextFunction) => {
   if (req.method === 'POST') {
     postLimiter(req, res, next);
+  } else {
+    next();
+  }
+});
+app.use('/api/chat', (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (req.method === 'POST') {
+    chatLimiter(req, res, next);
   } else {
     next();
   }

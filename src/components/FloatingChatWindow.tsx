@@ -31,24 +31,38 @@ export const FloatingChatWindow: React.FC<FloatingChatWindowProps> = ({
 
   // Marcar como lido ao abrir
   useEffect(() => {
-    markAsRead(conversationId).catch(() => {
-      // Falha silenciosa
-    });
+    if (conversationId) {
+      markAsRead(conversationId).catch((err) => {
+        console.warn('Failed to mark as read:', err);
+        // Não mostrar erro, é não-crítico
+      });
+    }
   }, [conversationId]);
 
   const handleSendMessage = async () => {
-    if (!messageText.trim()) return;
+    const trimmed = messageText.trim();
+    
+    if (!trimmed) {
+      alert('Por favor, escreva uma mensagem');
+      return;
+    }
+    
+    if (trimmed.length > 1000) {
+      alert('Mensagem não pode exceder 1000 caracteres');
+      return;
+    }
 
     setIsSending(true);
     try {
       await sendMessage({
         conversationId,
-        content: messageText.trim(),
+        content: trimmed,
       });
       setMessageText('');
       await refetch();
     } catch (err) {
       console.error('Erro ao enviar mensagem:', err);
+      alert(`Erro ao enviar: ${err instanceof Error ? err.message : 'Tente novamente'}`);
     } finally {
       setIsSending(false);
     }
@@ -109,7 +123,7 @@ export const FloatingChatWindow: React.FC<FloatingChatWindowProps> = ({
               <div className="floating-chat-empty">Nenhuma mensagem ainda. Comece a conversa!</div>
             )}
             {messages.map((msg: Message) => {
-              const isMine = msg.senderId === currentUserId;
+              const isMine = msg.sender.id === currentUserId;
               return (
                 <div
                   key={msg.id}
@@ -117,7 +131,7 @@ export const FloatingChatWindow: React.FC<FloatingChatWindowProps> = ({
                 >
                   <div className="floating-message-content">{msg.content}</div>
                   <div className="floating-message-time">
-                    {new Date(msg.createdAt).toLocaleTimeString('pt-BR', {
+                    {new Date(msg.sentAt).toLocaleTimeString('pt-BR', {
                       hour: '2-digit',
                       minute: '2-digit',
                     })}

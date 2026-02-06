@@ -53,10 +53,21 @@ export async function getMessages(conversationId: number | string): Promise<Mess
 
 // Envia nova mensagem
 export async function sendMessage(request: SendMessageRequest): Promise<Message> {
+  // Validate input
+  if (!request.content || request.content.trim().length === 0) {
+    throw new Error('Mensagem não pode estar vazia');
+  }
+  if (request.content.length > 1000) {
+    throw new Error('Mensagem não pode exceder 1000 caracteres');
+  }
+  if (!request.conversationId) {
+    throw new Error('ID da conversa é obrigatório');
+  }
+
   const response = await baseClient.post<Message>(
     `${API_BASE}/${request.conversationId}/messages`,
     {
-      content: request.content,
+      content: request.content.trim(),
     }
   );
   if (response.error) throw new Error(response.error);
@@ -65,11 +76,10 @@ export async function sendMessage(request: SendMessageRequest): Promise<Message>
 }
 
 /**
- * READ RECEIPTS (Opcional - implementar depois)
+ * READ RECEIPTS
  */
 
 export async function markAsRead(conversationId: number | string): Promise<void> {
-  // TODO: Implementar endpoint no backend
   const response = await baseClient.post(`${API_BASE}/${conversationId}/read`, {});
   if (response.error) throw new Error(response.error);
 }

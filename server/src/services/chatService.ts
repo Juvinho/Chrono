@@ -21,10 +21,14 @@ interface ConversationDTO {
 interface MessageDTO {
   id: string;
   conversationId: string;
-  senderId: string;
-  senderUsername: string;
+  sender: {
+    id: string;
+    username: string;
+    displayName: string;
+    avatarUrl: string | null;
+  };
   content: string;
-  createdAt: string;
+  sentAt: string;
   isRead: boolean;
 }
 
@@ -77,16 +81,17 @@ export class ChatService {
   }
 
   /**
-   * Get all conversations for a user
+   * Get all conversations for a user with pagination
    */
-  async getUserConversations(userId: string): Promise<ConversationDTO[]> {
+  async getUserConversations(userId: string, limit: number = 50, offset: number = 0): Promise<ConversationDTO[]> {
     try {
       const result = await pool.query(
         `SELECT id, user1_id, user2_id, updated_at
          FROM conversations 
          WHERE user1_id = $1 OR user2_id = $1
-         ORDER BY updated_at DESC LIMIT 50`,
-        [userId]
+         ORDER BY updated_at DESC 
+         LIMIT $2 OFFSET $3`,
+        [userId, limit, offset]
       );
 
       const conversations: ConversationDTO[] = [];
@@ -109,16 +114,16 @@ export class ChatService {
           let lastMessage = null;
           try {
             const msgResult = await pool.query(
-              `SELECT COALESCE(content, '') as msg_content, created_at FROM messages 
+              `SELECT content, created_at, is_read FROM messages 
                WHERE conversation_id = $1 
                ORDER BY created_at DESC LIMIT 1`,
               [row.id]
             );
             if (msgResult.rows.length > 0) {
               lastMessage = {
-                content: msgResult.rows[0].msg_content || '',
+                content: msgResult.rows[0].content,
                 sentAt: msgResult.rows[0].created_at,
-                isRead: true,
+                isRead: msgResult.rows[0].is_read,
               };
             }
           } catch (e) {
@@ -160,10 +165,13 @@ export class ChatService {
           m.id,
           m.conversation_id,
           m.sender_id,
+          u.id as user_id,
           u.username,
-          COALESCE(m.content, '') as content,
+          COALESCE(u.full_name, u.username) as full_name,
+          u.avatar as avatar_url,
+          m.content,
           m.created_at,
-          COALESCE(m.is_read, false) as is_read
+          m.is_read
         FROM messages m
         JOIN users u ON m.sender_id = u.id
         WHERE m.conversation_id = $1
@@ -175,10 +183,14 @@ export class ChatService {
       return result.rows.map(row => ({
         id: row.id,
         conversationId: row.conversation_id,
-        senderId: row.sender_id,
-        senderUsername: row.username,
+        sender: {
+          id: row.user_id,
+          username: row.username,
+          displayName: row.full_name || row.username,
+          avatarUrl: row.avatar_url || null,
+        },
         content: row.content,
-        createdAt: row.created_at,
+        sentAt: row.created_at,
         isRead: row.is_read || false,
       }));
     } catch (error: any) {
@@ -192,6 +204,14 @@ export class ChatService {
    */
   async sendMessage(conversationId: string, senderId: string, content: string): Promise<MessageDTO> {
     try {
+      // Validate content
+      if (!content || content.trim().length === 0) {
+        throw new Error('Message content cannot be empty');
+      }
+      if (content.length > 1000) {
+        throw new Error('Message cannot exceed 1000 characters');
+      }
+
       // Verify conversation exists and user is participant
       const convCheck = await pool.query(
         `SELECT user1_id, user2_id FROM conversations WHERE id = $1`,
@@ -209,27 +229,12 @@ export class ChatService {
       }
 
       // Insert message
-      let result;
-      try {
-        result = await pool.query(
-          `INSERT INTO messages (conversation_id, sender_id, content, is_read, created_at)
-           VALUES ($1, $2, $3, false, CURRENT_TIMESTAMP)
-           RETURNING id, sender_id, content, created_at, is_read`,
-          [conversationId, senderId, content]
-        );
-      } catch (e: any) {
-        // If content field doesn't exist, try with just text insert
-        if (e.message.includes('content')) {
-          result = await pool.query(
-            `INSERT INTO messages (conversation_id, sender_id, type, created_at)
-             VALUES ($1, $2, 'text', CURRENT_TIMESTAMP)
-             RETURNING id, sender_id, type as content, created_at`,
-            [conversationId, senderId]
-          );
-        } else {
-          throw e;
-        }
-      }
+      const result = await pool.query(
+        `INSERT INTO messages (conversation_id, sender_id, content, is_read, created_at)
+         VALUES ($1, $2, $3, false, CURRENT_TIMESTAMP)
+         RETURNING id, sender_id, content, created_at, is_read`,
+        [conversationId, senderId, content]
+      );
 
       // Update conversation updated_at
       await pool.query(
@@ -239,23 +244,49 @@ export class ChatService {
 
       // Get sender info
       const senderResult = await pool.query(
-        `SELECT username FROM users WHERE id = $1`,
+        `SELECT id, username, COALESCE(full_name, username) as full_name, avatar FROM users WHERE id = $1`,
         [senderId]
       );
 
+      if (senderResult.rows.length === 0) {
+        throw new Error('Sender not found');
+      }
+
+      const sender = senderResult.rows[0];
       const row = result.rows[0];
+      
       return {
         id: row.id,
         conversationId: conversationId,
-        senderId: row.sender_id,
-        senderUsername: senderResult.rows[0]?.username || 'Unknown',
+        sender: {
+          id: sender.id,
+          username: sender.username,
+          displayName: sender.full_name || sender.username,
+          avatarUrl: sender.avatar || null,
+        },
         content: row.content,
-        createdAt: row.created_at,
+        sentAt: row.created_at,
         isRead: row.is_read || false,
       };
     } catch (error: any) {
       console.error('sendMessage error:', error.message);
       throw error;
+    }
+  }
+
+  /**
+   * Get conversation details by ID
+   */
+  async getConversationById(conversationId: string) {
+    try {
+      const result = await pool.query(
+        `SELECT id, user1_id, user2_id, created_at, updated_at FROM conversations WHERE id = $1`,
+        [conversationId]
+      );
+      return result.rows[0] || null;
+    } catch (error: any) {
+      console.error('getConversationById error:', error.message);
+      return null;
     }
   }
 

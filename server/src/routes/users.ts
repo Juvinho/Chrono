@@ -106,7 +106,11 @@ router.get(['/search/:query', '/search/'], optionalAuthenticateToken, async (req
       [`%${query}%`, query, `${query}%`]
     );
 
-    console.log(`[Search] Found ${result.rows.length} results for "${query}"`);
+    // Log search statistics (no sensitive data)
+    const resultCount = result.rows.length;
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[Search] Found ${resultCount} results for search query`);
+    }
 
     const users = result.rows.map((row: any) => ({
       id: row.id,
@@ -132,7 +136,10 @@ router.get('/:username', optionalAuthenticateToken, async (req: AuthRequest, res
     const { username } = req.params;
     const requesterId = req.userId;
 
-    console.log(`[Profile Access] User ${requesterId || 'guest'} accessing ${username}`);
+    // Log profile access (development only, no sensitive data)
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[Profile Access] User accessing profile: ${username}`);
+    }
 
     const user = await userService.getUserByUsername(username);
 

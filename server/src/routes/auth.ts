@@ -11,6 +11,12 @@ import { promisify } from 'util';
 import { validateNoEmojis } from '../utils/validation.js';
 import { SecurityService } from '../services/securityService.js';
 
+// Validate JWT_SECRET - must match the one in middleware/auth.ts
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('CRITICAL: JWT_SECRET environment variable is not set. Cannot start server.');
+}
+
 const resolveMx = promisify(dns.resolveMx);
 const router = express.Router();
 const userService = new UserService();
@@ -315,7 +321,7 @@ router.post('/login', async (req, res) => {
 
     const token = jwt.sign(
       { id: user.id, username: user.username },
-      (process.env.JWT_SECRET || 'fallback-secret') as any,
+      JWT_SECRET,
       { expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as any }
     );
 
