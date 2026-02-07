@@ -156,8 +156,10 @@ export class SearchService {
    */
   static async fetchTrendingCordoes(): Promise<TrendingCordao[]> {
     try {
-      const response = await apiClient.get('/posts/trending/cordoes');
-      return Array.isArray(response.data) ? response.data : [];
+      // TODO: Implement trending endpoint on backend
+      // For now, return empty array as feature is not yet implemented
+      console.warn('Trending cordões feature not yet implemented');
+      return [];
     } catch (error) {
       console.error('Failed to load trending cordões:', error);
       return [];

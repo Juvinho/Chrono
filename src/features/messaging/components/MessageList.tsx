@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useAuth } from '../../../contexts/AuthContext';
 import { Message } from '../types';
 import { formatMessageTime } from '../utils/formatTimestamp';
 
@@ -7,8 +8,16 @@ interface MessageListProps {
 }
 
 export const MessageList: React.FC<MessageListProps> = ({ messages }) => {
-  // TODO: Pegar ID do usuário atual do contexto/auth
-  const currentUserId = localStorage.getItem('userId') || '1'; // TEMPORÁRIO
+  const { user: currentUser } = useAuth();
+  
+  // Guard against invalid state
+  if (!currentUser) {
+    return (
+      <div className="messages-empty">
+        <p>Erro: Usuário não autenticado</p>
+      </div>
+    );
+  }
 
   if (messages.length === 0) {
     return (
@@ -18,19 +27,23 @@ export const MessageList: React.FC<MessageListProps> = ({ messages }) => {
     );
   }
 
+  const messageElements = useMemo(() => {
+    return messages.map((message) => {
+      const isMine = String(message.sender.id) === String(currentUser.id);
+      
+      return (
+        <MessageBubble
+          key={message.id}
+          message={message}
+          isMine={isMine}
+        />
+      );
+    });
+  }, [messages, currentUser.id]);
+
   return (
     <div className="message-list">
-      {messages.map((message) => {
-        const isMine = String(message.sender.id) === String(currentUserId);
-        
-        return (
-          <MessageBubble
-            key={message.id}
-            message={message}
-            isMine={isMine}
-          />
-        );
-      })}
+      {messageElements}
     </div>
   );
 };
