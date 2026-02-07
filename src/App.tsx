@@ -11,7 +11,6 @@ import { useSound } from './contexts/SoundContext';
 import { useToast } from './contexts/ToastContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { MessagesSidebarProvider } from './contexts/MessagesSidebarContext';
-import LoadingSpinner from './components/ui/LoadingSpinner';
 import AppRoutes from './routes/AppRoutes';
 import { FloatingChatContainer } from './components/FloatingChatContainer';
 import { FloatingChatManager } from './features/messaging/components/FloatingChatManager';
@@ -580,7 +579,7 @@ function App() {
         <LanguageProvider>
             <AuthProvider user={currentUser}>
                 <div key={animationKey} className="page-transition">
-                    <Suspense fallback={<LoadingSpinner />}>
+                    <Suspense fallback={null}>
                         <div className={`app-container ${currentUser?.profileSettings?.theme || 'theme-cyberpunk'}`}>
                             <AppRoutes
                                 currentUser={currentUser}

@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Post, User, CyberpunkReaction } from '../../../types/index';
 import { apiClient } from '../../../api';
 import { mapApiPostToPost } from '../../../api/mappers';
-import LoadingSpinner from '../../../components/ui/LoadingSpinner';
 import PostCard from './PostCard';
 import { ChevronLeftIcon } from '../../../components/ui/icons';
 import { useTranslation } from '../../../hooks/useTranslation';
@@ -76,7 +75,7 @@ export const ThreadView: React.FC<ThreadViewProps> = ({
     }, [postId]);
 
     if (loading) {
-        return <LoadingSpinner />;
+        return null;
     }
 
     if (error || !rootPost) {
