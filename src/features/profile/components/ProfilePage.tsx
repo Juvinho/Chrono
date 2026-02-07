@@ -81,6 +81,7 @@ export default function ProfilePage({
   const [visiblePostsCount, setVisiblePostsCount] = useState(10);
   
   const followButtonRef = useRef<HTMLButtonElement>(null);
+  const [imageCacheBuster, setImageCacheBuster] = useState(Date.now());
   
   // Memoize foundUser to avoid unnecessary recalculations
   const foundUser = useMemo(() => {
@@ -151,6 +152,11 @@ export default function ProfilePage({
             });
     }
   }, [profileUsername, isOwnProfile, effectiveFetchedUser]);
+
+  // Force image reload when avatar or cover changes (cache buster)
+  useEffect(() => {
+    setImageCacheBuster(Date.now());
+  }, [profileUser?.avatar, profileUser?.coverImage, profileUser?.profileSettings?.coverImage]);
 
   useEffect(() => {
       if (typeof window === 'undefined' || !profileUser) return;
@@ -503,18 +509,20 @@ export default function ProfilePage({
           <div className={`relative ${getRadiusClass('container')} shadow-lg`}>
             <div className={`relative h-48 md:h-64 w-full overflow-hidden ${getRadiusClass('container')}`}>
                 <Avatar 
-                  src={profileUser.coverImage || profileUser.profileSettings?.coverImage || 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&h=400&fit=crop&q=80'} 
+                  src={profileUser.coverImage ? `${profileUser.coverImage}${profileUser.coverImage.includes('data:') ? '' : `?t=${imageCacheBuster}`}` : (profileUser.profileSettings?.coverImage ? `${profileUser.profileSettings.coverImage}${profileUser.profileSettings.coverImage.includes('data:') ? '' : `?t=${imageCacheBuster}`}` : 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&h=400&fit=crop&q=80')} 
                   username={profileUser.username}
                   className="w-full h-full object-cover"
+                  key={`cover-${imageCacheBuster}`}
                 />
             </div>
             <div className="absolute -bottom-16 left-4 md:left-8 flex items-end z-10">
                 <div className="relative w-24 h-24">
                     <img 
-                        src={profileUser.avatar || 'https://via.placeholder.com/150'}
+                        src={profileUser.avatar ? (profileUser.avatar.includes('data:') ? profileUser.avatar : `${profileUser.avatar}?t=${imageCacheBuster}`) : 'https://via.placeholder.com/150'}
                         alt={profileUser.username}
                         className={`w-full h-full ${avatarShape} object-cover`}
                         onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://via.placeholder.com/150'; }}
+                        key={`avatar-${imageCacheBuster}`}
                     />
                     {profileUser.equippedFrame && (
                         <div className="absolute -inset-1 z-20 pointer-events-none">

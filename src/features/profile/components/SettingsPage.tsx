@@ -63,9 +63,29 @@ export default function SettingsPage({
     }
   }));
 
-  // Update draftUser when user prop changes, preserving local edits if needed? 
-  // For now, let's reset to user prop to keep in sync
+  // Track when we're saving to avoid useEffect from resetting during save
+  const isSavingRef = useRef(false);
+  const lastProcessedUserIdRef = useRef(user.id);
+
+  // Update draftUser when user prop changes, but preserve local changes while saving
   useEffect(() => {
+    // Don't reset if we're in the middle of saving or if the user ID hasn't changed
+    if (isSavingRef.current || lastProcessedUserIdRef.current === user.id) {
+      // Update avatar/coverImage from backend if they changed (successful save)
+      setDraftUser(prev => ({
+        ...prev,
+        avatar: user.avatar,
+        coverImage: user.coverImage,
+        profileSettings: {
+          ...prev.profileSettings,
+          coverImage: user.profileSettings?.coverImage || user.coverImage || prev.coverImage || ''
+        }
+      }));
+      return;
+    }
+    
+    // Full reset only if navigating to a different user
+    lastProcessedUserIdRef.current = user.id;
     setDraftUser({
         ...user,
         birthday: user.birthday ? (user.birthday.includes('T') ? user.birthday.split('T')[0] : user.birthday) : '',
@@ -97,6 +117,9 @@ export default function SettingsPage({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
+  
+  // Cache buster to force image reload after upload
+  const [imageCacheBuster, setImageCacheBuster] = useState(Date.now());
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -155,6 +178,7 @@ export default function SettingsPage({
         } else {
           handleProfileSettingChange('coverImage', croppedImage);
         }
+        setImageCacheBuster(Date.now()); // Force image reload
         setShowCropper(false);
         setPendingImage(null);
     } catch (error) {
@@ -164,6 +188,7 @@ export default function SettingsPage({
   };
 
   const handleSave = async () => {
+    isSavingRef.current = true;
     setIsSaving(true);
     setSaveStatus('idle');
     setSaveMessage('');
@@ -246,6 +271,7 @@ export default function SettingsPage({
              window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
         }, 100);
     } finally {
+      isSavingRef.current = false;
       setIsSaving(false);
     }
   };
@@ -479,7 +505,7 @@ export default function SettingsPage({
                     <div className="space-y-4">
                         <div className="relative h-48 w-full rounded-lg overflow-hidden border border-[var(--theme-border)] group">
                             {draftUser.profileSettings?.coverImage ? (
-                                <img src={draftUser.profileSettings.coverImage} alt="Cover" className="w-full h-full object-cover" />
+                                <img src={draftUser.profileSettings.coverImage.includes('data:') ? draftUser.profileSettings.coverImage : `${draftUser.profileSettings.coverImage}?t=${imageCacheBuster}`} alt="Cover" className="w-full h-full object-cover" key={`cover-${imageCacheBuster}`} />
                             ) : (
                                 <div className="w-full h-full bg-gradient-to-r from-purple-900 to-blue-900" />
                             )}
@@ -496,7 +522,7 @@ export default function SettingsPage({
                         <div className="flex items-end gap-4 -mt-12 px-4 relative z-10">
                             <div className="relative group">
                                 <div className="w-24 h-24 rounded-full border-4 border-[var(--theme-bg-primary)] overflow-hidden bg-black">
-                                    <img src={draftUser.avatar || 'https://via.placeholder.com/150'} alt={draftUser.username} className="w-full h-full object-cover" />
+                                    <img src={draftUser.avatar && !draftUser.avatar.includes('data:') ? `${draftUser.avatar}?t=${imageCacheBuster}` : (draftUser.avatar || 'https://via.placeholder.com/150')} alt={draftUser.username} className="w-full h-full object-cover" key={`avatar-${imageCacheBuster}`} />
                                 </div>
                                 <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
                                      onClick={() => fileInputRef.current?.click()}>
@@ -516,7 +542,10 @@ export default function SettingsPage({
                                 {COVER_PRESETS.map((url, i) => (
                                     <button 
                                         key={i}
-                                        onClick={() => handleProfileSettingChange('coverImage', url)}
+                                        onClick={() => {
+                                            handleProfileSettingChange('coverImage', url);
+                                            setImageCacheBuster(Date.now());
+                                        }}
                                         className="w-20 h-12 rounded overflow-hidden border border-[var(--theme-border)] hover:border-[var(--theme-primary)] flex-shrink-0 transition-all"
                                     >
                                         <img src={url} alt={`${t('presetCovers')} ${i+1}`} className="w-full h-full object-cover" />
