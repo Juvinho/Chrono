@@ -60,6 +60,7 @@ export default function ProfilePage({
   // 2. From prop (legacy or direct usage)
   // 3. Fallback to current user if nothing else
   const profileUsername = routeUsername || propProfileUsername || currentUser.username;
+  const isOwnProfile = profileUsername === currentUser.username;
 
   const [fetchedUser, setFetchedUser] = useState<User | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(false);
@@ -76,7 +77,21 @@ export default function ProfilePage({
   
   const followButtonRef = useRef<HTMLButtonElement>(null);
   
-  // Load user tags
+  // Memoize foundUser to avoid unnecessary recalculations
+  const foundUser = useMemo(() => {
+      if (isOwnProfile) return currentUser;
+      return allUsers.find(u => u.username.toLowerCase() === profileUsername.toLowerCase()) 
+          || users.find(u => u.username.toLowerCase() === profileUsername.toLowerCase());
+  }, [isOwnProfile, currentUser, allUsers, users, profileUsername]);
+  
+  // Ensure fetchedUser matches the requested profileUsername
+  const effectiveFetchedUser = fetchedUser && fetchedUser.username.toLowerCase() === profileUsername.toLowerCase() ? fetchedUser : null;
+  
+  // Prioritize API data (effectiveFetchedUser) over local state (foundUser) for other users
+  // This ensures we display the most up-to-date profile data
+  const profileUser = isOwnProfile ? currentUser : (effectiveFetchedUser || foundUser);
+
+  // Load user tags - NOW it's safe to use profileUser
   const { tags: userTags } = useUserTags(profileUser?.id || null);
 
   // Lazy load EditProfileModal
@@ -98,20 +113,6 @@ export default function ProfilePage({
       }
     }
   }, [profileUser, effectiveFetchedUser, isOwnProfile, foundUser]);
-  
-  // Memoize foundUser to avoid unnecessary recalculations
-  const foundUser = useMemo(() => {
-      if (isOwnProfile) return currentUser;
-      return allUsers.find(u => u.username.toLowerCase() === profileUsername.toLowerCase()) 
-          || users.find(u => u.username.toLowerCase() === profileUsername.toLowerCase());
-  }, [isOwnProfile, currentUser, allUsers, users, profileUsername]);
-  
-  // Ensure fetchedUser matches the requested profileUsername
-  const effectiveFetchedUser = fetchedUser && fetchedUser.username.toLowerCase() === profileUsername.toLowerCase() ? fetchedUser : null;
-  
-  // Prioritize API data (effectiveFetchedUser) over local state (foundUser) for other users
-  // This ensures we display the most up-to-date profile data
-  const profileUser = isOwnProfile ? currentUser : (effectiveFetchedUser || foundUser);
 
   useEffect(() => {
     // Reset fetched user when profile username changes
