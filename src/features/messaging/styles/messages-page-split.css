@@ -1,0 +1,106 @@
+/* Página de Mensagens no Split Layout */
+.messages-page-split {
+  display: flex;
+  height: 100%;
+  background: var(--theme-bg-primary);
+  flex-direction: column;
+}
+
+/* Sidebar de Conversas (mais estreita no split) */
+.messages-sidebar-split {
+  width: 100%;
+  border-bottom: 1px solid var(--theme-border-primary);
+  display: flex;
+  flex-direction: column;
+  background: var(--theme-bg-primary);
+  max-height: 40%;
+  overflow-y: auto;
+}
+
+.sidebar-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--theme-border-primary);
+  flex-shrink: 0;
+}
+
+.sidebar-header h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--theme-text-primary);
+}
+
+/* Área Principal */
+.messages-main-split {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--theme-bg-primary);
+  overflow: hidden;
+}
+
+/* Empty State */
+.messages-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--theme-text-secondary);
+  text-align: center;
+  padding: 20px;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.7;
+}
+
+.messages-empty-state h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 6px 0;
+  color: var(--theme-text-primary);
+}
+
+.messages-empty-state p {
+  font-size: 14px;
+  margin: 0;
+  color: var(--theme-text-secondary);
+}
+
+/* Responsive - Layout vertical em mobile */
+@media (max-width: 1024px) {
+  .messages-page-split {
+    flex-direction: column;
+  }
+
+  .messages-sidebar-split {
+    width: 100%;
+    max-height: none;
+    border-bottom: 1px solid var(--theme-border-primary);
+  }
+
+  .messages-main-split {
+    width: 100%;
+  }
+}
+
+/* Scrollbar */
+.messages-sidebar-split::-webkit-scrollbar {
+  width: 6px;
+}
+
+.messages-sidebar-split::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.messages-sidebar-split::-webkit-scrollbar-thumb {
+  background: var(--theme-border-primary);
+  border-radius: 3px;
+}
+
+.messages-sidebar-split::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-text-secondary);
+}
