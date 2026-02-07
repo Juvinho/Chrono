@@ -39,18 +39,35 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }, []);
 
     const playSound = (type: SoundType) => {
-        if (!audioContextRef.current) return;
+        try {
+            if (!audioContextRef.current) {
+                console.warn('⚠️ AudioContext not initialized, attempting to initialize...');
+                // Try to initialize
+                const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+                if (AudioContext) {
+                    audioContextRef.current = new AudioContext();
+                    isAudioInitialized.current = true;
+                }
+            }
 
-        // Resume context if suspended (browser policy)
-        if (audioContextRef.current.state === 'suspended') {
-            audioContextRef.current.resume();
-        }
+            if (!audioContextRef.current) {
+                console.error('❌ AudioContext failed to initialize');
+                return;
+            }
 
-        const context = audioContextRef.current;
-        const now = context.currentTime;
-        
-        const oscillator = context.createOscillator();
-        const gain = context.createGain();
+            // Resume context if suspended (browser policy)
+            if (audioContextRef.current.state === 'suspended') {
+                console.log('⏸️ AudioContext suspended, resuming...');
+                audioContextRef.current.resume();
+            }
+
+            const context = audioContextRef.current;
+            const now = context.currentTime;
+            
+            console.log(`🔊 Playing sound: ${type} at ${new Date().toISOString()}`);
+            
+            const oscillator = context.createOscillator();
+            const gain = context.createGain();
 
         oscillator.connect(gain);
         gain.connect(context.destination);
@@ -178,6 +195,9 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 oscillator.start(now);
                 oscillator.stop(now + 0.2);
                 break;
+        }
+        } catch (error) {
+            console.error(`❌ Error playing sound (${type}):`, error);
         }
     };
 
