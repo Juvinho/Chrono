@@ -292,4 +292,41 @@ router.get('/:username/status', optionalAuthenticateToken, async (req: AuthReque
   }
 });
 
+// Get user posts count
+router.get('/:username/posts/count', optionalAuthenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const { username } = req.params;
+    const requesterId = req.userId;
+    
+    // Get user
+    const user = await userService.getUserByUsername(username);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Check if requester can view user's posts
+    let isFollowing = false;
+    if (requesterId && requesterId !== user.id) {
+       isFollowing = await followService.isFollowing(requesterId, user.id);
+    }
+    const isOwnProfile = requesterId === user.id;
+    const canViewDetails = !user.isPrivate || isFollowing || isOwnProfile;
+
+    // Count posts
+    let postsCount = 0;
+    if (canViewDetails) {
+      const result = await pool.query(
+        `SELECT COUNT(*) FROM posts WHERE author_id = $1 AND is_deleted = FALSE`,
+        [user.id]
+      );
+      postsCount = parseInt(result.rows[0]?.count || '0');
+    }
+
+    res.json({ username, postsCount });
+  } catch (error: any) {
+    console.error('Get posts count error:', error);
+    res.status(500).json({ error: error.message || 'Failed to get posts count' });
+  }
+});
+
 export default router;
