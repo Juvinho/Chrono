@@ -151,6 +151,42 @@ export default function AppRoutes(props: AppRoutesProps) {
                 />
             ) : <Navigate to="/welcome" />} />
 
+            <Route path="/echoframe/:dateSegment" element={currentUser ? (
+                <Dashboard 
+                    user={currentUser}
+                    onLogout={handleLogout}
+                    onNavigate={handleNavigate}
+                    onNotificationClick={handleNotificationClick}
+                    onViewNotifications={onViewNotifications}
+                    selectedDate={selectedDate}
+                    setSelectedDate={setSelectedDate}
+                    allUsers={combinedUsers}
+                    allPosts={memoizedPosts}
+                    allKnownPosts={memoizedAllPosts}
+                    onNewPost={handleNewPost}
+                    onUpdateReaction={handleUpdateReaction}
+                    onReply={handleReply}
+                    onEcho={handleEcho}
+                    onDeletePost={handleDeletePost}
+                    onEditPost={handleEditPost}
+                    onPollVote={handlePollVote}
+                    isGenerating={isGenerating}
+                    typingParentIds={typingParentIds}
+                    conversations={conversations}
+                    newPostsCount={pendingPosts.length}
+                    onShowNewPosts={handleShowNewPosts}
+                    
+                    onUpdateUser={handleUpdateUser}
+                    onOpenMarketplace={() => setIsMarketplaceOpen(true)}
+                    nextAutoRefresh={nextAutoRefresh}
+                    isAutoRefreshPaused={isAutoRefreshPaused}
+                    onBack={handleBack}
+                    lastViewedNotifications={lastViewedNotifications}
+                    onPostClick={handleOpenThreadView}
+                    onOpenChat={handleOpenChat}
+                />
+            ) : <Navigate to="/welcome" />} />
+
             <Route path="/echo/:dateSegment" element={currentUser ? (
                 <Dashboard 
                     user={currentUser}

@@ -24,3 +24,36 @@ export const formatRelativeDate = (date: Date): string => {
   
   return formatDate(date);
 };
+
+// Convert Date to URL format (mmm-DD-AAAA, e.g. feb-04-2026)
+export const dateToUrlSegment = (date: Date): string => {
+  const month = date.toLocaleString('en-US', { month: 'short' }).toLowerCase();
+  const day = String(date.getDate()).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${month}-${day}-${year}`;
+};
+
+// Convert URL segment (mmm-DD-AAAA) back to Date
+export const urlSegmentToDate = (segment: string): Date | null => {
+  try {
+    const parts = segment.toLowerCase().split('-');
+    if (parts.length !== 3) return null;
+    
+    const monthStr = parts[0];
+    const day = parseInt(parts[1], 10);
+    const year = parseInt(parts[2], 10);
+    
+    const monthMap: { [key: string]: number } = {
+      'jan': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'may': 4, 'jun': 5,
+      'jul': 6, 'aug': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dec': 11
+    };
+    
+    const month = monthMap[monthStr];
+    if (month === undefined) return null;
+    
+    const date = new Date(year, month, day);
+    return date;
+  } catch {
+    return null;
+  }
+};

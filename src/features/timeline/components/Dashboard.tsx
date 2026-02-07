@@ -6,6 +6,7 @@ import Header from '../../../components/ui/Header';
 import EchoFrame from './EchoFrame';
 import Timeline from './Timeline';
 import { SparklesIcon } from '../../../components/ui/icons';
+import { isSameDay, dateToUrlSegment, urlSegmentToDate } from '../../../utils/date';
 
 interface DashboardProps {
     user: User;
@@ -47,12 +48,39 @@ export default function Dashboard({
     nextAutoRefresh, isAutoRefreshPaused, onBack, lastViewedNotifications, onPostClick
 }: DashboardProps) {
     const { t } = useTranslation();
-    const { tag } = useParams<{ tag: string }>();
+    const { tag, dateSegment } = useParams<{ tag: string; dateSegment: string }>();
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
     const [focusPostId, setFocusPostId] = useState<string | null>(null);
     const [activeCordTag, setActiveCordTag] = useState<string | null>(null);
     const [composerDate, setComposerDate] = useState<Date | null>(null);
+
+    // Sync URL date parameter with selectedDate
+    useEffect(() => {
+        if (dateSegment) {
+            const dateFromUrl = urlSegmentToDate(dateSegment);
+            if (dateFromUrl && !isSameDay(dateFromUrl, selectedDate)) {
+                setSelectedDate(dateFromUrl);
+            }
+        }
+    }, [dateSegment, selectedDate, setSelectedDate]);
+
+    // Sync selectedDate to URL when it changes
+    useEffect(() => {
+        const today = new Date();
+        if (isSameDay(selectedDate, today)) {
+            // If today, URL should be /echoframe (no date segment)
+            if (dateSegment) {
+                navigate('/echoframe', { replace: true });
+            }
+        } else {
+            // If other date, URL should include date
+            const urlDate = dateToUrlSegment(selectedDate);
+            if (dateSegment !== urlDate) {
+                navigate(`/echoframe/${urlDate}`, { replace: true });
+            }
+        }
+    }, [selectedDate, dateSegment, navigate]);
 
     useEffect(() => {
         if (tag) {
