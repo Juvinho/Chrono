@@ -47,10 +47,11 @@ export default function SearchOverlay({
     // Pesquisa com debounce
     useEffect(() => {
         const timer = setTimeout(async () => {
-            if (searchTerm.trim().length >= 2) {
+            if (searchTerm.trim().length >= 1) {
                 setIsLoading(true);
                 try {
                     const results = await SearchService.performSearch(searchTerm, allPosts, allUsers);
+                    console.log('Search results for "' + searchTerm + '":', results);
                     setSearchResults(results);
                 } catch (error) {
                     console.error('Search error:', error);
