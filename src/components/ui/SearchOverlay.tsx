@@ -142,15 +142,28 @@ export default function SearchOverlay({ onClose, onSearch, onViewProfile, allUse
             // Use API results for users
             foundUsers = searchResults;
             
-            // Keep client-side filtering for posts (or implement API search for posts later)
+            // Client-side filtering for posts and cordões
             const lowerQuery = searchTerm.toLowerCase();
-            const matchingPosts = allPosts.filter(p => 
-                p.content.toLowerCase().includes(lowerQuery) || 
-                p.author.username.toLowerCase().includes(lowerQuery)
-            );
+            
+            // Check if search is for a specific cordao (starts with $)
+            if (lowerQuery.startsWith('$')) {
+                // Exact cordao search - find posts with this specific cordao
+                const cordaoPattern = new RegExp(`\\${lowerQuery.substring(1)}\\b`, 'i');
+                const cordaoPosts = allPosts.filter(p => cordaoPattern.test(p.content));
+                
+                // Separate into threads and regular posts
+                foundCords = cordaoPosts.filter(p => p.isThread);
+                foundPosts = cordaoPosts.filter(p => !p.isThread);
+            } else {
+                // General search - look for keyword in posts
+                const matchingPosts = allPosts.filter(p => 
+                    p.content.toLowerCase().includes(lowerQuery) || 
+                    p.author.username.toLowerCase().includes(lowerQuery)
+                );
 
-            foundCords = matchingPosts.filter(p => p.isThread || hasCordTag(p));
-            foundPosts = matchingPosts.filter(p => !p.isThread && !hasCordTag(p));
+                foundCords = matchingPosts.filter(p => p.isThread || hasCordTag(p));
+                foundPosts = matchingPosts.filter(p => !p.isThread && !hasCordTag(p));
+            }
             
             hasResults = foundUsers.length > 0 || foundCords.length > 0 || foundPosts.length > 0;
         }
