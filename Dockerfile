@@ -4,9 +4,10 @@ WORKDIR /app
 
 # Copy package files first for better caching
 COPY package*.json ./
+COPY server/package*.json ./server/
 
-# Install dependencies
-RUN npm install
+# Install dependencies - root and server folder
+RUN npm install && cd server && npm install
 
 # Copy the rest of the application code
 COPY . .
