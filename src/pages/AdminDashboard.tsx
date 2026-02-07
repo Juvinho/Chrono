@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAdminAuth } from '../contexts/AdminContext';
+import { AdminUsers } from './AdminUsers';
 import './admin-dashboard.css';
 
 const LogOutIcon = () => (
@@ -127,7 +128,7 @@ export function AdminDashboard() {
             onClick={() => setActiveTab('users')}
           >
             <UsersIcon />
-            <span>Usuários (em breve...)</span>
+            <span>Usuários</span>
           </button>
 
           <button
@@ -229,11 +230,7 @@ export function AdminDashboard() {
           )}
 
           {/* Users Tab */}
-          {activeTab === 'users' && (
-            <div className="placeholder-content">
-              <p>👥 Gerenciamento de usuários em desenvolvimento...</p>
-            </div>
-          )}
+          {activeTab === 'users' && <AdminUsers token={token} />}
 
           {/* Settings Tab */}
           {activeTab === 'settings' && (

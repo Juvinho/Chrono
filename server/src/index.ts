@@ -36,6 +36,7 @@ import companionRoutes from './routes/companionRoutes.js';
 import tagsRoutes from './routes/tags.js';
 import adminAuthRoutes from './routes/admin/auth.js';
 import adminTagsRoutes from './routes/admin/tags.js';
+import adminUsersRoutes from './routes/admin/users.js';
 import { NotificationService } from './services/notificationService.js';
 import { scheduleTagUpdates } from './services/tagService.js';
 
@@ -285,6 +286,7 @@ app.use('/api/tags', tagsRoutes);
 // 🔐 ADMIN ROUTES (com autenticação especial)
 app.use('/api/admin/auth', adminAuthRoutes);
 app.use('/api/admin/tags', adminTagsRoutes);
+app.use('/api/admin/users', adminUsersRoutes);
 
 // Health check
 app.get('/health', async (_req: express.Request, res: express.Response) => {
