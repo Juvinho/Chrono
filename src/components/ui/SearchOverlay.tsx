@@ -109,6 +109,7 @@ export default function SearchOverlay({
                             <RecommendationsSection 
                                 recommendations={recommendations}
                                 trendingCordoes={trendingCordoes}
+                                allPosts={allPosts}
                                 onSearch={onSearch}
                                 onViewProfile={onViewProfile}
                             />
@@ -234,12 +235,14 @@ function SearchResultsSection({
 // Seção de recomendações
 function RecommendationsSection({ 
     recommendations, 
-    trendingCordoes, 
+    trendingCordoes,
+    allPosts,
     onSearch, 
     onViewProfile 
 }: {
     recommendations: ReturnType<typeof SearchService.getRecommendations>;
     trendingCordoes: TrendingCordao[];
+    allPosts: Post[];
     onSearch: (query: string) => void;
     onViewProfile: (username: string) => void;
 }) {
