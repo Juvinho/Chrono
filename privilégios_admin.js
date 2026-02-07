@@ -11,10 +11,14 @@
  * - Abre navegador em http://localhost:5173
  */
 
-const { spawn } = require('child_process');
-const path = require('path');
-const os = require('os');
-const fs = require('fs');
+import { spawn, exec } from 'child_process';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import os from 'os';
+import fs from 'fs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Cores para terminal
 const colors = {
@@ -102,11 +106,11 @@ setTimeout(() => {
 
     // Abrir no navegador
     if (isWindows) {
-      require('child_process').exec('start http://localhost:5173');
+      exec('start http://localhost:5173');
     } else if (process.platform === 'darwin') {
-      require('child_process').exec('open http://localhost:5173');
+      exec('open http://localhost:5173');
     } else {
-      require('child_process').exec('xdg-open http://localhost:5173');
+      exec('xdg-open http://localhost:5173');
     }
 
     log('🌐 Navegador abrindo em http://localhost:5173...', 'cyan');
