@@ -285,40 +285,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                 />
             ) : <Navigate to="/welcome" />} />
 
-            <Route path="/messages" element={currentUser ? (
-                <MessagesSplitView
-                    currentUser={currentUser}
-                    onLogout={handleLogout}
-                    onNavigate={handleNavigate}
-                    onNotificationClick={handleNotificationClick}
-                    onViewNotifications={onViewNotifications}
-                    selectedDate={selectedDate}
-                    setSelectedDate={setSelectedDate}
-                    allUsers={combinedUsers}
-                    allPosts={memoizedPosts}
-                    allKnownPosts={memoizedAllPosts}
-                    onNewPost={handleNewPost}
-                    onUpdateReaction={handleUpdateReaction}
-                    onReply={handleReply}
-                    onEcho={handleEcho}
-                    onDeletePost={handleDeletePost}
-                    onEditPost={handleEditPost}
-                    onPollVote={handlePollVote}
-                    isGenerating={isGenerating}
-                    typingParentIds={typingParentIds}
-                    conversations={conversations}
-                    newPostsCount={pendingPosts.length}
-                    onShowNewPosts={handleShowNewPosts}
-                    onUpdateUser={handleUpdateUser}
-                    onOpenMarketplace={() => setIsMarketplaceOpen(true)}
-                    onOpenChat={handleOpenChat}
-                    nextAutoRefresh={nextAutoRefresh}
-                    isAutoRefreshPaused={isAutoRefreshPaused}
-                    onBack={handleBack}
-                    lastViewedNotifications={lastViewedNotifications}
-                    onPostClick={handleOpenThreadView}
-                />
-            ) : <Navigate to="/welcome" />} />
+            <Route path="/messages" element={currentUser ? <MessagesSplitView /> : <Navigate to="/welcome" />} />
 
             <Route path="/thread/:postId" element={currentUser ? (
                 <Suspense fallback={<LoadingSpinner />}>
