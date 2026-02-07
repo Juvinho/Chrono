@@ -580,22 +580,17 @@ export default function EchoFrame({
                                          <p className="text-xs text-red-400 mt-0.5">📊 {cord.mentions.toLocaleString()} mentions</p>
                                      </div>
                                  ))
+                             ) : cordTopics.length > 0 ? (
+                                 cordTopics.map(([tag, count]) => (
+                                     <button key={tag} onClick={() => onTagClick(tag)} className="cord-topic-btn w-full text-left">
+                                         <span className="font-bold text-[var(--theme-text-primary)]">{tag}</span>
+                                         <span className="cord-topic-count">[{count}]</span>
+                                     </button>
+                                 ))
                              ) : (
                                  <p className="text-[var(--theme-text-secondary)] text-xs italic">Nenhum cordão</p>
                              )}
                          </div>
-                     </div>
-                     
-                     <h3 className="text-sm font-bold text-[var(--theme-text-light)] mb-2 border-b border-[var(--theme-border-primary)] pb-2">
-                         {t('allCords') || 'Todos os Cordões'}
-                     </h3>
-                     <div className="space-y-2">
-                         {cordTopics.map(([tag, count]) => (
-                             <button key={tag} onClick={() => onTagClick(tag)} className="cord-topic-btn">
-                                 <span className="font-bold text-[var(--theme-text-primary)]">{tag}</span>
-                                 <span className="cord-topic-count">[{count}]</span>
-                             </button>
-                         ))}
                      </div>
                 </aside>
             </div>
