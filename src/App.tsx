@@ -278,9 +278,7 @@ export default function App() {
                 showToast('Resposta enviada!', 'success');
             }
 
-            await reloadBackendData();
-            
-            // Also load the parent post with updated replies
+            // Load the parent post with updated replies
             const parentPostResult = await apiClient.getPost(parentPostId);
             if (parentPostResult.data) {
                 const mappedParentPost = mapApiPostToPost(parentPostResult.data);
