@@ -469,7 +469,7 @@ export default function ProfilePage({
             />
             <div className="flex-grow flex flex-col items-center justify-center">
                 <div className="text-center space-y-4">
-                    <h2 className="text-2xl font-bold text-red-500 glitch-effect" data-text="USER NOT FOUND">USER NOT FOUND</h2>
+                    <h2 className="text-2xl font-bold text-red-500 glitch-effect" data-text="NÃO FOI POSSÍVEL ACHAR ESSE USUÁRIO, SERÁ QUE ELE ESTÁ VOANDO POR AI?">NÃO FOI POSSÍVEL ACHAR ESSE USUÁRIO, SERÁ QUE ELE ESTÁ VOANDO POR AI?</h2>
                     <p className="text-[var(--theme-text-secondary)]">{fetchError || "The requested timeline could not be found."}</p>
                     <button onClick={() => onNavigate(Page.Dashboard)} className="px-4 py-2 bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] hover:border-[var(--theme-primary)] rounded transition-colors">
                         RETURN TO DASHBOARD

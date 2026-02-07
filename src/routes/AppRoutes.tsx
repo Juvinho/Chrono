@@ -4,6 +4,8 @@ import { User, Page, Post, Conversation } from '../types';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { SplitLayout } from '../layouts/SplitLayout';
 import { FeedContent } from '../components/FeedContent';
+import { Error404, Error500, Error403, Error429, Error503, ErrorTimeout } from '../components/ErrorPages';
+import { ErrorTestPage } from '../components/ErrorTestPage';
 
 // Lazy load components
 const LoginScreen = React.lazy(() => import('../features/auth/components/LoginScreen'));
@@ -29,7 +31,7 @@ const RedirectToProfile = () => {
 const NotFound = ({ onNavigate }: { onNavigate: (page: Page) => void }) => (
     <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--theme-bg-primary)] text-[var(--theme-text-primary)]">
         <h1 className="text-6xl font-bold text-[var(--theme-primary)] mb-4">404</h1>
-        <p className="text-xl mb-8">TIMELINE NOT FOUND</p>
+        <p className="text-xl mb-8">AONDE MESMO VOCÊ ESTÁ QUERENDO CHEGAR?</p>
         <button 
             onClick={() => onNavigate(Page.Dashboard)}
             className="px-6 py-3 bg-[var(--theme-bg-secondary)] border border-[var(--theme-primary)] rounded hover:bg-[var(--theme-bg-tertiary)] transition-colors"
@@ -344,6 +346,15 @@ export default function AppRoutes(props: AppRoutesProps) {
                     />
                 </Suspense>
             ) : <Navigate to="/welcome" />} />
+
+            {/* Error Test Pages */}
+            <Route path="/error/test" element={<ErrorTestPage />} />
+            <Route path="/error/404" element={<Error404 onNavigate={() => handleNavigate(Page.Dashboard)} />} />
+            <Route path="/error/500" element={<Error500 onNavigate={() => handleNavigate(Page.Dashboard)} />} />
+            <Route path="/error/403" element={<Error403 onNavigate={() => handleNavigate(Page.Dashboard)} />} />
+            <Route path="/error/429" element={<Error429 onNavigate={() => handleNavigate(Page.Dashboard)} />} />
+            <Route path="/error/503" element={<Error503 onNavigate={() => handleNavigate(Page.Dashboard)} />} />
+            <Route path="/error/timeout" element={<ErrorTimeout onNavigate={() => handleNavigate(Page.Dashboard)} />} />
 
             {/* Redirect root */}
             <Route path="/" element={<Navigate to={currentUser ? "/echoframe" : "/welcome"} replace />} />

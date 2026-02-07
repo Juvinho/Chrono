@@ -56,11 +56,11 @@ export class ErrorBoundary extends React.Component<Props, State> {
           <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--theme-bg-primary)] text-[var(--theme-text-primary)]">
             <div className="text-center space-y-6 p-8 max-w-md">
               <h1 className="text-4xl font-bold glitch-effect text-[var(--theme-primary)]" data-text="ERROR">
-                ERROR
+                ERRO CRITÍCO!
               </h1>
               
               <p className="text-[var(--theme-text-secondary)]">
-                Something went wrong. The space-time continuum is fractured.
+                Algo de errado acabou de acontecer, O espaço tempo foi corrompido e a aplicação não pode continuar. Por favor, tente novamente ou retorne para a página inicial.
               </p>
 
               {process.env.NODE_ENV === 'development' && error && (
