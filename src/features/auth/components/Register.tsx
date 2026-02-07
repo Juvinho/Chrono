@@ -106,7 +106,8 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
                 return;
             }
             // Basic regex for quick check before API to reduce load
-            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            // RFC 5322 simplified for common emails
+            if (!/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(email)) {
                 setEmailError(t('errorInvalidEmail') || 'Invalid email format.');
                 return;
             }
@@ -210,7 +211,7 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
                         <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className={`w-full px-3 py-2 mt-1 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border ${emailError ? 'border-red-500' : 'border-[var(--theme-border-primary)]'} focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)]`} />
                         {isCheckingEmail && <p className="text-xs text-[var(--theme-text-secondary)] mt-1 animate-pulse">{t('verifyingAvailability')}</p>}
                         {emailError && <p className="text-xs text-red-500 mt-1">{emailError}</p>}
-                        {!emailError && !isCheckingEmail && email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && <p className="text-xs text-green-500 mt-1">{t('emailValid')}</p>}
+                        {!emailError && !isCheckingEmail && email && /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(email) && <p className="text-xs text-green-500 mt-1">{t('emailValid')}</p>}
                     </div>
                     <div>
                         <label className="text-sm font-bold text-[var(--theme-text-secondary)] block">{t('registerUsername')}</label>

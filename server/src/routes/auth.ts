@@ -131,11 +131,12 @@ const validateEmail = async (email: string) => {
              return { valid: false, error: 'Invalid email domain (no MX records)' };
         }
         
-        // Use expanded checkSmtp
-        const smtpValid = await checkSmtp(domain, email);
-        if (!smtpValid) {
-             return { valid: false, error: 'Email address does not exist or is invalid' };
-        }
+        // Skip SMTP check - too restrictive and often fails
+        // Focus on DNS MX record validation instead
+        // const smtpValid = await checkSmtp(domain, email);
+        // if (!smtpValid) {
+        //      return { valid: false, error: 'Email address does not exist or is invalid' };
+        // }
     } catch (err) {
         return { valid: false, error: 'Email validation failed - cannot verify domain' };
     }
