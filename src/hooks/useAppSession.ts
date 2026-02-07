@@ -31,6 +31,7 @@ export const useAppSession = ({
     const lastReloadTime = useRef<number>(0);
     const reloadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const isReloading = useRef<boolean>(false);
+    const abortControllerRef = useRef<AbortController | null>(null);
 
     // Helper function to reload data from backend with debounce and rate limiting
     const reloadBackendData = useCallback(async (force = false) => {
@@ -57,6 +58,14 @@ export const useAppSession = ({
         if (isReloading.current && !force) {
             return;
         }
+        
+        // Cancel previous request if one was in flight
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+        
+        // Create new abort controller for this request
+        abortControllerRef.current = new AbortController();
         
         isReloading.current = true;
         lastReloadTime.current = now;
@@ -238,6 +247,16 @@ export const useAppSession = ({
         };
         
         validateSession();
+        
+        // Cleanup: Cancel any in-flight requests and timeouts
+        return () => {
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
+            if (reloadTimeoutRef.current) {
+                clearTimeout(reloadTimeoutRef.current);
+            }
+        };
     }, [setCurrentUser, setUsers]);
 
     const handleLogin = (user: User) => { 
