@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Post, User, CyberpunkReaction } from '../../../types/index';
 import PostCard from './PostCard';
 import PostSkeleton from './PostSkeleton';
@@ -36,13 +37,14 @@ interface EchoFrameProps {
     nextAutoRefresh?: Date | null;
     isAutoRefreshPaused?: boolean;
     onPostClick?: (postId: string) => void;
+    navigate?: ReturnType<typeof useNavigate>;
 }
 
 export default function EchoFrame({ 
     selectedDate, currentUser, posts: allPosts, onViewProfile, onTagClick, 
     onNewPost, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost, onPollVote, searchQuery, focusPostId, isGenerating,
     typingParentIds, activeCordTag, setActiveCordTag, composerDate, setComposerDate, allKnownPosts,
-    nextAutoRefresh, isAutoRefreshPaused, onPostClick
+    nextAutoRefresh, isAutoRefreshPaused, onPostClick, navigate
 }: EchoFrameProps) {
     const { t } = useTranslation();
     const [isComposerOpen, setIsComposerOpen] = useState(false);
@@ -310,7 +312,17 @@ export default function EchoFrame({
                 )}
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-2xl font-bold text-[var(--theme-secondary)]">:: CORD :: {activeCordTag}</h2>
-                    <button onClick={() => setActiveCordTag(null)} className="back-to-echo-btn">&lt; {t('backToEchoFrame') || 'Voltar'}</button>
+                    <button 
+                        onClick={() => {
+                            setActiveCordTag(null);
+                            if (navigate) {
+                                navigate('/echoframe');
+                            }
+                        }} 
+                        className="back-to-echo-btn"
+                    >
+                        &lt; {t('backToEchoFrame') || 'Voltar'}
+                    </button>
                 </div>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <div>
@@ -363,7 +375,13 @@ export default function EchoFrame({
                                     trendingCordoes.map(cord => (
                                         <div 
                                             key={cord.tag}
-                                            onClick={() => setActiveCordTag(cord.displayName)}
+                                            onClick={() => {
+                                                const cleanTag = cord.displayName.startsWith('$') ? cord.displayName.substring(1) : cord.displayName;
+                                                setActiveCordTag(cord.displayName);
+                                                if (navigate) {
+                                                    navigate(`/cordao/${encodeURIComponent(cleanTag)}`);
+                                                }
+                                            }}
                                             className="cursor-pointer p-3 hover:bg-red-900/20 rounded-sm transition-colors border-l-2 border-red-500 bg-black/30"
                                         >
                                             <p className="font-bold text-red-500 text-sm">{cord.displayName}</p>
