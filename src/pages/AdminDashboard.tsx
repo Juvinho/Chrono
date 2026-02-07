@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAdminAuth } from '../contexts/AdminContext';
 import { AdminUsers } from './AdminUsers';
+import { AdminPosts } from './AdminPosts';
+import { AdminVerification } from './AdminVerification';
 import './admin-dashboard.css';
 
 const LogOutIcon = () => (
@@ -32,6 +34,19 @@ const BarChartIcon = () => (
     <line x1="12" y1="20" x2="12" y2="10"></line>
     <line x1="18" y1="20" x2="18" y2="4"></line>
     <line x1="6" y1="20" x2="6" y2="16"></line>
+  </svg>
+);
+
+const PostsIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+  </svg>
+);
+
+const VerifyIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <polyline points="20 6 9 17 4 12"></polyline>
   </svg>
 );
 
@@ -132,6 +147,22 @@ export function AdminDashboard() {
           </button>
 
           <button
+            className={`admin-nav-item ${activeTab === 'posts' ? 'active' : ''}`}
+            onClick={() => setActiveTab('posts')}
+          >
+            <PostsIcon />
+            <span>Posts</span>
+          </button>
+
+          <button
+            className={`admin-nav-item ${activeTab === 'verification' ? 'active' : ''}`}
+            onClick={() => setActiveTab('verification')}
+          >
+            <VerifyIcon />
+            <span>Verificação</span>
+          </button>
+
+          <button
             className={`admin-nav-item ${activeTab === 'settings' ? 'active' : ''}`}
             onClick={() => setActiveTab('settings')}
           >
@@ -153,6 +184,8 @@ export function AdminDashboard() {
             {activeTab === 'dashboard' && '📊 Dashboard'}
             {activeTab === 'tags' && '🏷️ Gerenciar Tags'}
             {activeTab === 'users' && '👥 Gerenciar Usuários'}
+            {activeTab === 'posts' && '📝 Gerenciar Posts'}
+            {activeTab === 'verification' && '✅ Verificação de Usuários'}
             {activeTab === 'settings' && '⚙️ Configurações'}
           </h1>
         </div>
@@ -231,6 +264,12 @@ export function AdminDashboard() {
 
           {/* Users Tab */}
           {activeTab === 'users' && <AdminUsers token={token} />}
+
+          {/* Posts Tab */}
+          {activeTab === 'posts' && <AdminPosts token={token} />}
+
+          {/* Verification Tab */}
+          {activeTab === 'verification' && <AdminVerification token={token} />}
 
           {/* Settings Tab */}
           {activeTab === 'settings' && (
