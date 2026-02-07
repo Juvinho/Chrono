@@ -1,6 +1,7 @@
 import React, { create } from 'zustand';
 import { useLocation } from 'react-router-dom';
 import { FloatingChatBox } from './FloatingChatBox';
+import { useMessagesSidebar } from '../../../contexts/MessagesSidebarContext';
 import { Conversation } from '../types';
 
 // Store para gerenciar múltiplos chats abertos
@@ -35,9 +36,10 @@ export const useChatStore = create<ChatStore>((set) => ({
 export const FloatingChatManager: React.FC = () => {
   const { openChats, closeChat } = useChatStore();
   const location = useLocation();
+  const { isOpen: isSidebarOpen } = useMessagesSidebar();
 
-  // 🚫 Esconde mini-chats quando estiver na página /messages
-  if (location.pathname === '/messages') {
+  // 🚫 Esconde mini-chats quando estiver na página /messages ou quando sidebar está aberto
+  if (location.pathname === '/messages' || isSidebarOpen) {
     return null;
   }
 
