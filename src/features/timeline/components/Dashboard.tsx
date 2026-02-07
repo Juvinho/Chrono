@@ -58,6 +58,8 @@ export default function Dashboard({
         if (tag) {
             const formattedTag = tag.startsWith('$') ? tag : `$${tag}`;
             setActiveCordTag(formattedTag);
+        } else {
+            setActiveCordTag(null);
         }
     }, [tag]);
 
