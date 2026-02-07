@@ -269,16 +269,19 @@ export default function App() {
             const result = await apiClient.replyToPost(parentPostId, content, isPrivate, media);
             if (result.error) {
                 console.error("Failed to reply via API:", result.error);
+                showToast('Falha ao enviar resposta: ' + result.error, 'error');
                 return;
             }
             
             if (replier.username === currentUser.username) {
                 playSound('reply');
+                showToast('Resposta enviada!', 'success');
             }
 
             await reloadBackendData();
         } catch (error) {
             console.error("Failed to reply via API:", error);
+            showToast('Falha ao enviar resposta.', 'error');
         }
     };
 
