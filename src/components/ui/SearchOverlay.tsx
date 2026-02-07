@@ -95,14 +95,15 @@ export default function SearchOverlay({ onClose, onSearch, onViewProfile, allUse
 
     const { popularCords, popularPosts, relevantUsers, foundUsers, foundCords, foundPosts, hasResults } = useMemo(() => {
         const getPopularity = (post: Post) => post.reactions ? Object.values(post.reactions).reduce((a, c) => a + c, 0) : 0;
+        const hasCordTag = (post: Post) => /\$[A-Za-z0-9_]+/.test(post.content);
 
         const popularCords = [...allPosts]
-            .filter(p => p.isThread)
+            .filter(p => p.isThread || hasCordTag(p))
             .sort((a, b) => getPopularity(b) - getPopularity(a))
             .slice(0, 3);
         
         const popularPosts = [...allPosts]
-            .filter(p => !p.isThread)
+            .filter(p => !p.isThread && !hasCordTag(p))
             .sort((a, b) => getPopularity(b) - getPopularity(a))
             .slice(0, 5);
         
@@ -126,8 +127,8 @@ export default function SearchOverlay({ onClose, onSearch, onViewProfile, allUse
                 p.author.username.toLowerCase().includes(lowerQuery)
             );
 
-            foundCords = matchingPosts.filter(p => p.isThread);
-            foundPosts = matchingPosts.filter(p => !p.isThread);
+            foundCords = matchingPosts.filter(p => p.isThread || hasCordTag(p));
+            foundPosts = matchingPosts.filter(p => !p.isThread && !hasCordTag(p));
             
             hasResults = foundUsers.length > 0 || foundCords.length > 0 || foundPosts.length > 0;
         }

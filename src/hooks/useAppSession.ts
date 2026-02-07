@@ -101,7 +101,7 @@ export const useAppSession = ({
                 setUsers(prev => prev.map(u => u.username === mappedUser.username ? mappedUser : u));
             }
 
-            // Reload posts
+            // Reload posts with intelligent merge to preserve loaded replies
             const postsResult = await apiClient.getPosts();
             if (postsResult.data) {
                 // Deduplicate posts based on ID
@@ -122,7 +122,21 @@ export const useAppSession = ({
                     }
                     return mapped;
                 });
-                setPosts(mappedPosts);
+
+                // Merge with existing posts to preserve replies
+                // Use functional update to avoid race conditions
+                setPosts(prevPosts => {
+                    const merged = mappedPosts.map(newPost => {
+                        // Find the old version of this post
+                        const oldPost = prevPosts.find(p => p.id === newPost.id);
+                        // If old post has replies and new post doesn't, preserve them
+                        if (oldPost && oldPost.replies && oldPost.replies.length > 0 && (!newPost.replies || newPost.replies.length === 0)) {
+                            return { ...newPost, replies: oldPost.replies };
+                        }
+                        return newPost;
+                    });
+                    return merged;
+                });
             }
 
             // Reload conversations
