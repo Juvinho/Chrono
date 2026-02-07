@@ -170,11 +170,15 @@ const getClientIp = (req: any) => {
 
 const apiLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 100, // 100 requests per minute per IP
-  message: { error: 'rateLimitError' },
+  max: 300, // Increased to 300 to support polling (30 requests every 2 seconds is reasonable)
+  message: { error: 'Too many requests. Please try again later.' },
   keyGenerator: getClientIp,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    // Don't rate limit GET requests as heavily for polling
+    return false;
+  }
 });
 
 const authLimiter = rateLimit({
@@ -206,11 +210,15 @@ const postLimiter = rateLimit({
 
 const chatLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 60, // 60 messages per minute per user (generous for real conversations)
-  message: { error: 'Você está enviando mensagens muito rápido. Aguarde um momento.' },
+  max: 120, // 120 requests per minute (supports 2 polling intervals + active messaging)
+  message: { error: 'Você está enviando muitas mensagens. Aguarde um momento.' },
   keyGenerator: getClientIp,
   standardHeaders: true,
   legacyHeaders: false,
+  // Don't rate limit GET requests (polling for messages)
+  skip: (req) => {
+    return req.method === 'GET';
+  }
 });
 
 app.use('/api/', apiLimiter);

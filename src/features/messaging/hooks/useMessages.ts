@@ -68,10 +68,11 @@ export function useMessages(conversationId: number | string | null) {
     // Carrega mensagens ao iniciar
     fetchMessages();
 
-    // Inicia polling a cada 2 segundos
+    // Inicia polling a cada 3 segundos (aumentado de 2 para melhor com rate limiting)
+    // Com rate limiting geral de 300 req/min, 3s = 20 req/min por usuário é seguro
     pollingIntervalRef.current = setInterval(() => {
       fetchMessages();
-    }, 2000);
+    }, 3000);
 
     return () => {
       if (pollingIntervalRef.current) {
