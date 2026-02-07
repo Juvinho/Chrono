@@ -39,19 +39,27 @@ interface MessageDTO {
 export class ChatService {
   /**
    * Find existing conversation between two users
-   * Always stores smaller ID as user1_id
+   * Always stores smaller ID as user1_id (using UUID comparison)
    */
   async getConversation(user1Id: string, user2Id: string) {
     try {
-      // Normalize IDs so user1_id is always smaller
-      const [min_id, max_id] = [user1Id, user2Id].sort();
-
+      // Compare UUIDs correctly - let PostgreSQL handle the comparison
+      // Use LEAST and GREATEST functions which work with UUIDs
       const result = await pool.query(
         `SELECT id FROM conversations 
-         WHERE user1_id = $1 AND user2_id = $2
+         WHERE (user1_id = $1 AND user2_id = $2) 
+            OR (user1_id = $2 AND user2_id = $1)
          LIMIT 1`,
-        [min_id, max_id]
+        [user1Id, user2Id]
       );
+
+      console.log('🔍 getConversation query result:', {
+        user1Id,
+        user2Id,
+        found: result.rows.length > 0,
+        conversationId: result.rows[0]?.id
+      });
+
       return result.rows[0] || null;
     } catch (error: any) {
       console.error('getConversation error:', error.message);
@@ -77,18 +85,25 @@ export class ChatService {
 
   /**
    * Create new conversation between two users
+   * PostgreSQL automatically handles UUID comparison with CHECK constraint
    */
   async createConversation(user1Id: string, user2Id: string) {
     try {
-      // Normalize IDs so user1_id is always smaller
-      const [min_id, max_id] = [user1Id, user2Id].sort();
-
+      // PostgreSQL LEAST and GREATEST will correctly compare UUIDs
+      // This ensures user1_id < user2_id in UUID ordering, not string ordering
       const result = await pool.query(
         `INSERT INTO conversations (user1_id, user2_id, created_at, updated_at) 
-         VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) 
+         VALUES (LEAST($1, $2), GREATEST($1, $2), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) 
          RETURNING id`,
-        [min_id, max_id]
+        [user1Id, user2Id]
       );
+
+      console.log('✅ createConversation result:', {
+        conversationId: result.rows[0].id,
+        user1Id,
+        user2Id
+      });
+
       return { id: result.rows[0].id };
     } catch (error: any) {
       console.error('createConversation error:', error.message);
