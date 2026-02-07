@@ -6,7 +6,7 @@ import { NotificationService } from '../services/notificationService.js';
 import { UserService } from '../services/userService.js';
 import { ModerationService } from '../services/moderationService.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
-import { validateNoEmojis } from '../utils/validation.js';
+import { validateNoEmojis, extractMentions } from '../utils/validation.js';
 
 const router = express.Router();
 const postService = new PostService();
@@ -222,6 +222,18 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
       const originalPost = await postService.getPostById(repostOfId);
       if (originalPost && originalPost.authorId !== req.userId) {
         await notificationService.createNotification(originalPost.authorId, req.userId, 'repost', repostOfId);
+      }
+    }
+
+    // Create notifications for mentions
+    if (content) {
+      const mentionedUsernames = extractMentions(content);
+      for (const username of mentionedUsernames) {
+        const mentionedUser = await userService.getUserByUsername(username);
+        if (mentionedUser && mentionedUser.id !== req.userId) {
+          // Use 'mention' type for notifications
+          await notificationService.createNotification(mentionedUser.id, req.userId, 'mention' as any, post.id);
+        }
       }
     }
 

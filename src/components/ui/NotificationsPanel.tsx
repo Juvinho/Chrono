@@ -99,6 +99,7 @@ const NotificationItem: React.FC<{
             case 'repost': return <>{actorText} {t('notifEchoed')}</>;
             case 'follow': return <>{actorText} {t('notifFollowed')}</>;
             case 'reaction': return <>{actorText} {t('notifReacted')}</>;
+            case 'mention': return <>{actorText} {t('notifMentioned')}</>;
             default: return t('notifDefault');
         }
     }
