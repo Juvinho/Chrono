@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { User, Page, Post, CyberpunkReaction, Notification, Conversation } from '../../../types/index';
 import PostCard from '../../timeline/components/PostCard';
 import Header from '../../../components/ui/Header';
@@ -53,6 +53,7 @@ export default function ProfilePage({
 }: ProfilePageProps & { onUpdateUser?: (user: User) => Promise<{ success: boolean; error?: string }> }) {
   const { t } = useTranslation();
   const { playSound } = useSound();
+  const navigate = useNavigate();
   const { openChat } = useFloatingChat();
   const { username: routeUsername } = useParams<{ username: string }>();
   
@@ -291,7 +292,19 @@ export default function ProfilePage({
           followButtonRef.current.classList.add('pulse-click');
           setTimeout(() => followButtonRef.current?.classList.remove('pulse-click'), 400);
       }
-  }
+  };
+
+  const handleSendMessage = () => {
+    if (profileUser) {
+      console.log('📨 Navigating to messages with targetUserId:', profileUser.id);
+      navigate('/messages', {
+        state: {
+          targetUserId: profileUser.id,
+          targetUsername: profileUser.username
+        }
+      });
+    }
+  };
 
     const handlePostSubmit = (postData: Omit<Post, 'id' | 'author' | 'timestamp' | 'replies' | 'repostOf'>, existingPostId?: string) => {
         if (existingPostId) {
@@ -588,7 +601,7 @@ export default function ProfilePage({
                   ) : (
                     <>
                       <button 
-                        onClick={() => profileUser && openChat(profileUser.id, profileUser.username, profileUser.profileSettings?.profileImage)}
+                        onClick={handleSendMessage}
                         className="follow-btn px-4 py-1 rounded-sm transition-colors flex items-center gap-2" 
                         title={t('messageButton') || 'Enviar Mensagem'}
                       >
