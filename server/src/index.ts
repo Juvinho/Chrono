@@ -37,6 +37,11 @@ import tagsRoutes from './routes/tags.js';
 import adminAuthRoutes from './routes/admin/auth.js';
 import adminTagsRoutes from './routes/admin/tags.js';
 import adminUsersRoutes from './routes/admin/users.js';
+import adminPostsRoutes from './routes/admin/posts.js';
+import adminConversationsRoutes from './routes/admin/conversations.js';
+import adminVerificationRoutes from './routes/admin/verification.js';
+import adminTagsAdminRoutes from './routes/admin/tags-admin.js';
+import adminDashboardRoutes from './routes/admin/dashboard.js';
 import { NotificationService } from './services/notificationService.js';
 import { scheduleTagUpdates } from './services/tagService.js';
 
@@ -287,6 +292,11 @@ app.use('/api/tags', tagsRoutes);
 app.use('/api/admin/auth', adminAuthRoutes);
 app.use('/api/admin/tags', adminTagsRoutes);
 app.use('/api/admin/users', adminUsersRoutes);
+app.use('/api/admin/posts', adminPostsRoutes);
+app.use('/api/admin/conversations', adminConversationsRoutes);
+app.use('/api/admin/verification', adminVerificationRoutes);
+app.use('/api/admin/tags-admin', adminTagsAdminRoutes);
+app.use('/api/admin/dashboard', adminDashboardRoutes);
 
 // Health check
 app.get('/health', async (_req: express.Request, res: express.Response) => {
