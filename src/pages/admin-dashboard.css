@@ -366,7 +366,7 @@
 @media (max-width: 480px) {
   .admin-sidebar {
     flex-wrap: wrap;
-    gap = 8px;
+    gap: 8px;
   }
 
   .admin-nav {
