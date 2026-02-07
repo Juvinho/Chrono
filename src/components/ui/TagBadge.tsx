@@ -1,5 +1,5 @@
 import React from 'react';
-import { UserTag, TagDefinition } from '../../types/index';
+import type { UserTag, TagDefinition } from '../../types/index';
 
 interface TagBadgeProps {
   tag: UserTag | TagDefinition;
@@ -7,6 +7,36 @@ interface TagBadgeProps {
   showTitle?: boolean;
   className?: string;
 }
+
+// Helper function to calculate contrasting text color
+// Must be defined BEFORE component usage
+const getContrastColor = (hexColor?: string): string => {
+  if (!hexColor) return '#FFFFFF';
+  
+  try {
+    // Remove # if present
+    const hex = hexColor.replace('#', '');
+    
+    // Convert to RGB
+    const red = parseInt(hex.substring(0, 2), 16);
+    const green = parseInt(hex.substring(2, 4), 16);
+    const blue = parseInt(hex.substring(4, 6), 16);
+    
+    // Validate RGB values
+    if (isNaN(red) || isNaN(green) || isNaN(blue)) {
+      return '#FFFFFF';
+    }
+
+    // Calculate luminance using standard formula
+    const luminance = (0.299 * red + 0.587 * green + 0.114 * blue) / 255;
+
+    // Return white text for dark backgrounds, dark for light
+    return luminance > 0.5 ? '#000000' : '#FFFFFF';
+  } catch (e) {
+    console.warn('Failed to calculate contrast color:', e);
+    return '#FFFFFF';
+  }
+};
 
 /**
  * TagBadge Component
@@ -38,10 +68,14 @@ export const TagBadge: React.FC<TagBadgeProps> = ({
     lg: 'w-5 h-5'
   };
 
+  const backgroundColor = tagDef.cor_hex || '#9333ea';
+  const borderColor = tagDef.cor_border || '#a855f7';
+  const textColor = getContrastColor(backgroundColor);
+
   const dynamicStyle = {
-    backgroundColor: tagDef.cor_hex,
-    borderColor: tagDef.cor_border,
-    color: getContrastColor(tagDef.cor_hex)
+    backgroundColor,
+    borderColor,
+    color: textColor
   };
 
   return (
@@ -78,15 +112,15 @@ export const TagBadgeGroup: React.FC<TagBadgeGroupProps> = ({
   size = 'md',
   className = ''
 }) => {
-  if (tags.length === 0) return null;
+  if (!tags || tags.length === 0) return null;
 
   const visibleTags = tags.slice(0, maxVisible);
-  const hiddenCount = tags.length - maxVisible;
+  const hiddenCount = Math.max(0, tags.length - maxVisible);
 
   return (
     <div className={`flex flex-wrap items-center gap-2 ${className}`}>
       {visibleTags.map((tag, idx) => {
-        const tagId = 'adquirida_em' in tag ? tag.id : tag.id;
+        const tagId = 'adquirida_em' in tag ? tag.id : tag.id || idx;
         return <TagBadge key={`${tagId}-${idx}`} tag={tag} size={size} showTitle={true} />;
       })}
 
@@ -102,25 +136,5 @@ export const TagBadgeGroup: React.FC<TagBadgeGroupProps> = ({
     </div>
   );
 };
-
-/**
- * Helper function to calculate contrasting text color
- * Returns white for dark backgrounds, dark for light backgrounds
- */
-function getContrastColor(hexColor: string): string {
-  // Remove # if present
-  const hex = hexColor.replace('#', '');
-
-  // Convert to RGB
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
-
-  // Calculate luminance using standard formula
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-
-  // Return white text for dark backgrounds, dark for light
-  return luminance > 0.5 ? '#000000' : '#FFFFFF';
-}
 
 export default TagBadge;
