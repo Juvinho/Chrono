@@ -7,6 +7,7 @@ import { SoundProvider } from './contexts/SoundContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { FloatingChatProvider } from './contexts/FloatingChatContext';
 import { MessagesSidebarProvider } from './contexts/MessagesSidebarContext';
+import { MessageNotificationProvider } from './contexts/MessageNotificationContext';
 import { AdminProvider } from './contexts/AdminContext';
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
@@ -97,7 +98,9 @@ root.render(
             <SoundProvider>
               <ToastProvider>
                 <MessagesSidebarProvider>
-                  <App />
+                  <MessageNotificationProvider>
+                    <App />
+                  </MessageNotificationProvider>
                 </MessagesSidebarProvider>
               </ToastProvider>
             </SoundProvider>

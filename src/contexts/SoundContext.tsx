@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef } from 'react';
 
-type SoundType = 'notification' | 'post' | 'reply' | 'like' | 'follow' | 'blim';
+type SoundType = 'notification' | 'post' | 'reply' | 'like' | 'follow' | 'blim' | 'message_send' | 'message_receive' | 'message_background';
 
 interface SoundContextType {
     playSound: (type: SoundType) => void;
@@ -123,6 +123,46 @@ export const SoundProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 
                 oscillator.start(now);
                 oscillator.stop(now + 0.3);
+                break;
+
+            case 'message_send':
+                // Soft "whoosh" sound when sending (descending)
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(600, now);
+                oscillator.frequency.exponentialRampToValueAtTime(300, now + 0.15);
+                
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                
+                oscillator.start(now);
+                oscillator.stop(now + 0.15);
+                break;
+
+            case 'message_receive':
+                // Bright "ding" sound when receiving (ascending)
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(600, now);
+                oscillator.frequency.exponentialRampToValueAtTime(900, now + 0.12);
+                
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.1, now + 0.08);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+                
+                oscillator.start(now);
+                oscillator.stop(now + 0.12);
+                break;
+
+            case 'message_background':
+                // Subtle "ping" for background notifications (less intrusive)
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(750, now);
+                oscillator.frequency.exponentialRampToValueAtTime(600, now + 0.08);
+                
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+                
+                oscillator.start(now);
+                oscillator.stop(now + 0.08);
                 break;
 
             case 'notification':
