@@ -233,9 +233,9 @@
             100% { transform: translate(100vw, 100vh); }
         }
 
-        /* Page Transitions */
+        /* Page Transitions - Disabled to prevent flicker */
         .page-transition {
-            animation: page-enter 0.5s cubic-bezier(0.250, 0.460, 0.450, 0.940) both;
+            /* animation: page-enter 0.5s cubic-bezier(0.250, 0.460, 0.450, 0.940) both; */
         }
         @keyframes page-enter {
             0% { opacity: 0; transform: translateX(50px); }

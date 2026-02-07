@@ -41,8 +41,13 @@ export const PostDetail: React.FC<PostDetailProps> = ({
   const { t } = useTranslation();
   const { randomId } = useParams<{ randomId: string }>();
   const navigate = useNavigate();
-  const [rootPost, setRootPost] = useState<Post | null>(null);
-  const [loading, setLoading] = useState(true);
+  
+  // Resolve ID once to avoid recalculation
+  const realIdFromMapper = randomId ? postIdMapper.resolveId(randomId) : null;
+  const postFromAllPosts = realIdFromMapper ? allPosts.find(p => p.id === realIdFromMapper) : null;
+  
+  const [rootPost, setRootPost] = useState<Post | null>(postFromAllPosts || null);
+  const [loading, setLoading] = useState(!postFromAllPosts && !!randomId);
   const [error, setError] = useState<string | null>(null);
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Post | null>(null);
@@ -55,8 +60,13 @@ export const PostDetail: React.FC<PostDetailProps> = ({
         return;
       }
 
+      // If we already have the post, don't fetch again
+      if (rootPost) {
+        setLoading(false);
+        return;
+      }
+
       try {
-        setLoading(true);
         setError(null);
 
         // Resolve o ID real usando o mapper
@@ -64,7 +74,6 @@ export const PostDetail: React.FC<PostDetailProps> = ({
         
         if (!realId) {
           setError('Post não encontrado');
-          setLoading(false);
           return;
         }
 
@@ -93,7 +102,7 @@ export const PostDetail: React.FC<PostDetailProps> = ({
     };
 
     loadPost();
-  }, [randomId, allPosts]);
+  }, [randomId, rootPost]);
 
   const handleReplySubmit = (content: string, isPrivate: boolean, media?: any) => {
     if (rootPost) {
