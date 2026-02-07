@@ -5,7 +5,7 @@ import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { Conversation } from '../types';
-import '../styles/floating-chat.css';
+import '../styles/floating-chat-premium.css';
 
 interface FloatingChatBoxProps {
   conversation: Conversation;
