@@ -60,7 +60,7 @@ export class SearchService {
    * Pesquisa de users na API
    */
   static async searchUsers(term: string): Promise<User[]> {
-    if (term.length < 2) return [];
+    if (term.length < 1) return [];
     
     try {
       const response = await apiClient.searchUsers(term.trim());
@@ -102,7 +102,7 @@ export class SearchService {
   ): Promise<SearchResults> {
     const term = query.trim().toLowerCase();
 
-    if (term.length < 2) {
+    if (term.length < 1) {
       return {
         users: [],
         cordoes: [],
@@ -114,6 +114,7 @@ export class SearchService {
 
     // Pesquisa de users na API
     const users = await this.searchUsers(term);
+    console.log(`[Search] Users (${term}):`, users.length);
 
     // Se começa com $, busca específica de cordão
     let cordoes: Post[] = [];
@@ -130,6 +131,7 @@ export class SearchService {
     } else {
       // Busca genérica
       const resultados = this.searchPosts(term, allPosts);
+      console.log(`[Search] Post matches (${term}):`, resultados.length);
 
       cordoes = resultados
         .filter(p => p.isThread || this.hasCordaoTag(p))
