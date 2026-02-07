@@ -514,7 +514,7 @@ export default function EchoFrame({
                 {/* Left Column: Related/Recent Cords */}
                 <aside className="hidden lg:block">
                      <h2 className="text-lg font-bold text-[var(--theme-text-light)] mb-2 pb-2 border-b-2 border-[var(--theme-border-primary)]">
-                        :: {activePostId && relatedCords.length > 0 ? t('relatedCords') : t('popularCords')}
+                        :: {activePostId && relatedCords.length > 0 ? t('relatedCords') : t('popularPosts')}
                      </h2>
                      {activePostId && relatedCords.length > 0 ? (
                         <div className="space-y-4">
@@ -547,6 +547,33 @@ export default function EchoFrame({
                      <button onClick={() => setIsCordModalOpen(true)} className="create-cord-btn mb-4">
                          {t('createCord')}
                      </button>
+                     
+                     {/* Trending Cordões Section */}
+                     <div className="mb-6">
+                         <h3 className="text-sm font-bold text-[var(--theme-text-light)] mb-3 border-b border-[var(--theme-border-primary)] pb-2">
+                             {t('popularCords') || 'Cordões Populares'}
+                         </h3>
+                         <div className="space-y-2">
+                             {trendingCordoes.length > 0 ? (
+                                 trendingCordoes.map(cord => (
+                                     <div 
+                                         key={cord.tag}
+                                         onClick={() => onTagClick(cord.displayName)}
+                                         className="cursor-pointer p-2 hover:bg-red-900/20 rounded-sm transition-colors border-l-2 border-red-500 bg-black/30"
+                                     >
+                                         <p className="font-bold text-red-500 text-xs">{cord.displayName}</p>
+                                         <p className="text-xs text-red-400 mt-0.5">📊 {cord.mentions.toLocaleString()} mentions</p>
+                                     </div>
+                                 ))
+                             ) : (
+                                 <p className="text-[var(--theme-text-secondary)] text-xs italic">Nenhum cordão</p>
+                             )}
+                         </div>
+                     </div>
+                     
+                     <h3 className="text-sm font-bold text-[var(--theme-text-light)] mb-2 border-b border-[var(--theme-border-primary)] pb-2">
+                         {t('allCords') || 'Todos os Cordões'}
+                     </h3>
                      <div className="space-y-2">
                          {cordTopics.map(([tag, count]) => (
                              <button key={tag} onClick={() => onTagClick(tag)} className="cord-topic-btn">
