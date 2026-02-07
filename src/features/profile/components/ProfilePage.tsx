@@ -10,6 +10,7 @@ import { useTranslation } from '../../../hooks/useTranslation';
 import { useSound } from '../../../contexts/SoundContext';
 import { useToast } from '../../../contexts/ToastContext';
 import { useChatStore } from '../../messaging/components/FloatingChatManager';
+import { initConversation } from '../../messaging/api/messagingApi';
 import UserListModal from '../../../components/ui/UserListModal';
 import { VerifiedIcon, MessageIcon, PaperPlaneIcon } from '../../../components/ui/icons';
 import FramePreview, { getFrameShape } from './FramePreview';
@@ -309,37 +310,33 @@ export default function ProfilePage({
         currentUserId: currentUser.id
       });
       
-      // Call API to init/get conversation
-      console.log('🔄 Chamando /api/chat/init...');
-      const response = await apiClient.post('/api/chat/init', {
-        targetUserId: profileUser.id
+      // Call messagingApi to init/get conversation
+      console.log('🔄 Chamando initConversation...');
+      const conversation = await initConversation(profileUser.id);
+      
+      console.log('✅ Conversa obtida:', {
+        conversationId: conversation.id,
+        hasOtherUser: !!conversation.otherUser,
+        otherUserId: conversation.otherUser?.id
       });
       
-      console.log('📦 Resposta da API:', {
-        hasData: !!response.data,
-        dataKeys: response.data ? Object.keys(response.data) : [],
-        data: response.data
-      });
-      
-      if (!response.data) {
-        throw new Error('API retornou sem dados');
+      if (!conversation.id) {
+        throw new Error('Conversa não tem ID');
       }
-      
-      const apiConversation = response.data;
       
       // Convert to FloatingChatBox format
       const floatingConversation: any = {
-        id: apiConversation.id,
-        otherUser: apiConversation.otherUser || {
+        id: conversation.id,
+        otherUser: conversation.otherUser || {
           id: profileUser.id,
           username: profileUser.username,
           displayName: profileUser.displayName || profileUser.username,
           avatarUrl: profileUser.profilePicture || null,
           isOnline: profileUser.isOnline
         },
-        lastMessage: apiConversation.lastMessage || null,
-        unreadCount: apiConversation.unreadCount || 0,
-        updatedAt: apiConversation.updatedAt || new Date().toISOString()
+        lastMessage: conversation.lastMessage || null,
+        unreadCount: conversation.unreadCount || 0,
+        updatedAt: conversation.updatedAt || new Date().toISOString()
       };
       
       console.log('✅ Estrutura final do chat:', floatingConversation);
@@ -350,7 +347,7 @@ export default function ProfilePage({
       
     } catch (error) {
       console.error('❌ Erro ao abrir mini-chat:', error);
-      showToast('Erro ao abrir chat. Tente novamente.', 'error');
+      showToast('Erro ao abrir chat: ' + (error instanceof Error ? error.message : String(error)), 'error');
     }
   };
 
