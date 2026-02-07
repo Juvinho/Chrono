@@ -39,8 +39,16 @@ export function mapApiUserToUser(apiUser: any): any {
 
 export function mapApiPostToPost(apiPost: any): any {
   const pollOptions = apiPost.pollOptions || apiPost.poll_options;
-  const pollEndsAt = apiPost.pollEndsAt || apiPost.poll_ends_at;
+  let pollEndsAt = apiPost.pollEndsAt || apiPost.poll_ends_at;
   const voters = apiPost.voters || {};
+  
+  // Ensure pollEndsAt has a default value if polls exist but no end date
+  if (pollOptions && Array.isArray(pollOptions) && !pollEndsAt) {
+    // Default to 24 hours from now if not specified
+    const defaultEndDate = new Date();
+    defaultEndDate.setHours(defaultEndDate.getHours() + 24);
+    pollEndsAt = defaultEndDate;
+  }
   
   // Calculate total votes and current user's vote
   let totalVotes = 0;

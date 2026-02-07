@@ -222,9 +222,27 @@ const PostCard: React.FC<PostCardProps> = React.memo(({ post, currentUser, onVie
         if (!pollOptions || !Array.isArray(pollOptions) || pollOptions.length === 0) return null;
 
         const totalVotes = post.poll?.totalVotes || pollOptions.reduce((sum: number, option: any) => sum + (option.votes || 0), 0);
-        const pollEnded = (post.poll?.endsAt || post.pollEndsAt) ? new Date() > (post.poll?.endsAt || post.pollEndsAt) : false;
+        const endsAt = post.poll?.endsAt || post.pollEndsAt;
+        const pollEnded = endsAt ? new Date() > endsAt : false;
         const voters = post.poll?.voters || post.voters || {};
         const votedFor = voters?.[currentUser.username];
+
+        // Format time remaining
+        const getTimeRemaining = () => {
+            if (!endsAt) return 'indefinitely';
+            const now = new Date();
+            const end = new Date(endsAt);
+            const diffMs = end.getTime() - now.getTime();
+            
+            if (diffMs <= 0) return 'ended';
+            
+            const hours = Math.floor(diffMs / (1000 * 60 * 60));
+            const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+            
+            if (hours > 0) return `${hours}h`;
+            if (minutes > 0) return `${minutes}m`;
+            return 'soon';
+        };
 
         return (
             <div className="mt-4 space-y-2">
@@ -251,7 +269,7 @@ const PostCard: React.FC<PostCardProps> = React.memo(({ post, currentUser, onVie
                     );
                 })}
                 <div className="text-xs text-[var(--theme-text-secondary)] pt-1">
-                    {t('pollTotalVotes', { count: totalVotes })} • {pollEnded ? t('pollEnded') : t('pollEndsIn', { time: (post.poll?.endsAt || post.pollEndsAt)?.toLocaleDateString() || ''})}
+                    {t('pollTotalVotes', { count: totalVotes })} • {pollEnded ? t('pollEnded') : `Ends in ${getTimeRemaining()}`}
                 </div>
             </div>
         )
