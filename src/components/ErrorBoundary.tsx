@@ -47,9 +47,12 @@ export class ErrorBoundary extends React.Component<Props, State> {
   };
 
   render() {
-    if (this.state.hasError) {
+    const { hasError, error } = this.state;
+    const { children, fallback } = this.props;
+
+    if (hasError) {
       return (
-        this.props.fallback || (
+        fallback || (
           <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--theme-bg-primary)] text-[var(--theme-text-primary)]">
             <div className="text-center space-y-6 p-8 max-w-md">
               <h1 className="text-4xl font-bold glitch-effect text-[var(--theme-primary)]" data-text="ERROR">
@@ -60,13 +63,13 @@ export class ErrorBoundary extends React.Component<Props, State> {
                 Something went wrong. The space-time continuum is fractured.
               </p>
 
-              {process.env.NODE_ENV === 'development' && this.state.error && (
+              {process.env.NODE_ENV === 'development' && error && (
                 <details className="text-left text-sm text-[var(--theme-text-secondary)] bg-[var(--theme-bg-secondary)] p-4 rounded border border-[var(--theme-border-primary)] max-h-48 overflow-auto">
                   <summary className="cursor-pointer font-bold mb-2 text-[var(--theme-text-primary)]">
                     Error Details
                   </summary>
                   <pre className="whitespace-pre-wrap break-words">
-                    {this.state.error.toString()}
+                    {error.toString()}
                   </pre>
                 </details>
               )}
@@ -92,6 +95,6 @@ export class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    return this.props.children;
+    return children;
   }
 }
