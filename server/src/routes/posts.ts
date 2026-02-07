@@ -393,5 +393,67 @@ router.post('/:id/poll/vote', authenticateToken, async (req: AuthRequest, res: R
   }
 });
 
+// Admin: Clean up blank posts from a specific user
+router.post('/admin/cleanup-blank/:username', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    // Get user by username
+    const user = await userService.getUserByUsername(req.params.username);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Delete blank posts using raw query
+    const { Pool } = await import('pg');
+    const { pool } = await import('../db/connection.js');
+    
+    const deleteResult = await pool.query(
+      `DELETE FROM posts 
+       WHERE "authorId" = $1 
+       AND (content IS NULL OR content = '' OR content ~ '^\\s+$')`,
+      [user.id]
+    );
+
+    console.log(`🗑️ Deleted ${deleteResult.rowCount} blank post(s) from @${user.username}`);
+    res.json({ 
+      success: true, 
+      deletedCount: deleteResult.rowCount,
+      message: `${deleteResult.rowCount} blank post(s) deleted from @${user.username}`
+    });
+  } catch (error: any) {
+    console.error('Cleanup error:', error);
+    res.status(500).json({ error: error.message || 'Failed to cleanup posts' });
+  }
+});
+
+// Get trending cordões with mention counts (Twitter-style trending)
+router.get('/trending/cordoes', async (req: AuthRequest, res: Response) => {
+  try {
+    const { pool } = await import('../db/connection.js');
+    
+    // Extract all cordão tags ($tag pattern) from posts and count them
+    const result = await pool.query(`
+      SELECT 
+        (regexp_matches(content, '\\$([A-Za-z0-9_]+)', 'g'))[1] as tag,
+        COUNT(*) as mentions
+      FROM posts
+      WHERE content ~ '\\$[A-Za-z0-9_]+'
+      GROUP BY tag
+      ORDER BY mentions DESC
+      LIMIT 20
+    `);
+
+    const cordoes = result.rows.map(row => ({
+      tag: row.tag,
+      mentions: parseInt(row.mentions, 10),
+      displayName: `$${row.tag}`
+    }));
+
+    res.json(cordoes);
+  } catch (error: any) {
+    console.error('Trending cordões error:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch trending cordões' });
+  }
+});
+
 export default router;
 
