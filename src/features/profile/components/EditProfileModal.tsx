@@ -116,7 +116,7 @@ export default function EditProfileModal({ user, onClose, onSave }: EditProfileM
                 ...formData,
                 skills: formData.skills.split(',').map(s => s.trim()).filter(Boolean),
                 website: websiteToSave,
-                birthday: formData.birthday ? new Date(formData.birthday) : undefined
+                birthday: formData.birthday || undefined
             };
 
             await onSave(updatedUser);
