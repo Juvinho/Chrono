@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Conversation } from '../types';
 import { getConversations } from '../api/messagingApi';
 
@@ -6,6 +6,7 @@ export function useConversations() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchConversations = async () => {
     try {
@@ -25,7 +26,19 @@ export function useConversations() {
   };
 
   useEffect(() => {
+    // Carrega conversas ao iniciar
     fetchConversations();
+
+    // Inicia polling a cada 3 segundos
+    pollingIntervalRef.current = setInterval(() => {
+      fetchConversations();
+    }, 3000);
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
   }, []);
 
   return {
