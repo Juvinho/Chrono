@@ -118,7 +118,7 @@ export class ChatService {
           const otherUserId = row.user1_id === userId ? row.user2_id : row.user1_id;
           
           const usersResult = await pool.query(
-            `SELECT id, username, avatar FROM users WHERE id = $1`,
+            `SELECT id, username, COALESCE(display_name, username) as display_name, avatar FROM users WHERE id = $1`,
             [otherUserId]
           );
 
@@ -151,7 +151,7 @@ export class ChatService {
             otherUser: {
               id: otherUser.id,
               username: otherUser.username,
-              displayName: otherUser.username,
+              displayName: otherUser.display_name,
               avatarUrl: otherUser.avatar || null,
             },
             lastMessage,
