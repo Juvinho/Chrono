@@ -20,7 +20,7 @@ router.get('/', async (req: Request, res: Response) => {
         created_at,
         updated_at,
         COALESCE(is_banned, false) as is_banned,
-        (SELECT COUNT(*) FROM posts WHERE user_id = users.id) as post_count,
+        (SELECT COUNT(*) FROM posts WHERE author_id = users.id) as post_count,
         (SELECT COUNT(*) FROM follows WHERE follower_id = users.id) as followers_count
       FROM users 
       ORDER BY created_at DESC`
@@ -71,7 +71,7 @@ router.get('/:id', async (req: Request, res: Response) => {
     const user = result.rows[0];
 
     // Buscar relacionados
-    const posts = await pool.query('SELECT COUNT(*) FROM posts WHERE user_id = $1', [id]);
+    const posts = await pool.query('SELECT COUNT(*) FROM posts WHERE author_id = $1', [id]);
     const followers = await pool.query('SELECT COUNT(*) FROM follows WHERE following_id = $1', [id]);
     const following = await pool.query('SELECT COUNT(*) FROM follows WHERE follower_id = $1', [id]);
     const conversations = await pool.query('SELECT COUNT(*) FROM conversations WHERE user1_id = $1 OR user2_id = $1', [id]);
