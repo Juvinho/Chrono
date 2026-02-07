@@ -438,8 +438,13 @@ function App() {
                  isPrivate: newPostData.isPrivate,
                  imageUrl: newPostData.imageUrl,
                  videoUrl: newPostData.videoUrl,
-                 poll: newPostData.poll,
              };
+             
+             // Convert poll object to pollOptions and pollEndsAt
+             if (newPostData.poll && (newPostData.poll as any).options) {
+                 updateData.pollOptions = (newPostData.poll as any).options;
+                 updateData.pollEndsAt = (newPostData.poll as any).endsAt;
+             }
              
              const result = await apiClient.updatePost(postId, updateData);
              if (result.error) {

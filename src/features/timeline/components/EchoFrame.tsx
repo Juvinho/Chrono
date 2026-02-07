@@ -160,7 +160,19 @@ export default function EchoFrame({
         // MIGRATION: Sending new post to Backend
         setIsSubmitting(true);
         try {
-            const result = await apiClient.createPost(postData as any);
+            // Transform poll data from frontend format to backend format
+            const apiPostData: any = {
+                ...postData,
+            };
+            
+            // Convert poll object to pollOptions and pollEndsAt
+            if (postData.poll && (postData.poll as any).options) {
+                apiPostData.pollOptions = (postData.poll as any).options;
+                apiPostData.pollEndsAt = (postData.poll as any).endsAt;
+                delete apiPostData.poll;
+            }
+            
+            const result = await apiClient.createPost(apiPostData);
             
             if (result.error) {
                 console.error("Failed to transmit echo to the network:", result.error);
