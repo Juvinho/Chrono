@@ -6,6 +6,9 @@ import { SplitLayout } from '../layouts/SplitLayout';
 import { FeedContent } from '../components/FeedContent';
 import { Error404, Error500, Error403, Error429, Error503, ErrorTimeout } from '../components/ErrorPages';
 import { ErrorTestPage } from '../components/ErrorTestPage';
+import { AdminLogin } from '../pages/AdminLogin';
+import { AdminDashboard } from '../pages/AdminDashboard';
+import { ProtectedAdminRoute } from '../components/ProtectedAdminRoute';
 
 // Lazy load components
 const LoginScreen = React.lazy(() => import('../features/auth/components/LoginScreen'));
@@ -355,6 +358,17 @@ export default function AppRoutes(props: AppRoutesProps) {
             <Route path="/error/429" element={<Error429 onNavigate={() => handleNavigate(Page.Dashboard)} />} />
             <Route path="/error/503" element={<Error503 onNavigate={() => handleNavigate(Page.Dashboard)} />} />
             <Route path="/error/timeout" element={<ErrorTimeout onNavigate={() => handleNavigate(Page.Dashboard)} />} />
+
+            {/* 🔐 ADMIN PANEL ROUTES */}
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route
+              path="/admin/dashboard"
+              element={
+                <ProtectedAdminRoute>
+                  <AdminDashboard />
+                </ProtectedAdminRoute>
+              }
+            />
 
             {/* Redirect root */}
             <Route path="/" element={<Navigate to={currentUser ? "/echoframe" : "/welcome"} replace />} />

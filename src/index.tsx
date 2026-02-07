@@ -7,6 +7,7 @@ import { SoundProvider } from './contexts/SoundContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { FloatingChatProvider } from './contexts/FloatingChatContext';
 import { MessagesSidebarProvider } from './contexts/MessagesSidebarContext';
+import { AdminProvider } from './contexts/AdminContext';
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
   state = { hasError: false, error: null as Error | null };
@@ -90,17 +91,19 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <ErrorBoundary>
-      <FloatingChatProvider>
-        <SoundProvider>
-          <ToastProvider>
-            <MessagesSidebarProvider>
-              <BrowserRouter>
-                <App />
-              </BrowserRouter>
-            </MessagesSidebarProvider>
-          </ToastProvider>
-        </SoundProvider>
-      </FloatingChatProvider>
+      <BrowserRouter>
+        <AdminProvider>
+          <FloatingChatProvider>
+            <SoundProvider>
+              <ToastProvider>
+                <MessagesSidebarProvider>
+                  <App />
+                </MessagesSidebarProvider>
+              </ToastProvider>
+            </SoundProvider>
+          </FloatingChatProvider>
+        </AdminProvider>
+      </BrowserRouter>
     </ErrorBoundary>
   </React.StrictMode>
 );
