@@ -91,6 +91,7 @@ const io = new Server(httpServer, {
 });
 
 app.set('io', io);
+app.set('trust proxy', 1); // Trust Railway's proxy for X-Forwarded-For header
 
 // Socket.io authentication middleware
 io.use((socket, next) => {
@@ -154,11 +155,22 @@ io.on('connection', (socket) => {
   });
 });
 
-// Rate Limiting
+// Rate Limiting - Custom key generator for Railway (handles X-Forwarded-For safely)
+const getClientIp = (req: any) => {
+  // For Railway/Render with trust proxy enabled
+  const forwarded = req.get('x-forwarded-for');
+  if (forwarded) {
+    return forwarded.split(',')[0].trim();
+  }
+  // Fallback to direct connection
+  return req.socket.remoteAddress || req.connection.remoteAddress || 'unknown';
+};
+
 const apiLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
   max: 100, // 100 requests per minute per IP
   message: { error: 'rateLimitError' },
+  keyGenerator: getClientIp,
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -167,6 +179,7 @@ const authLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 100, // More restrictive for auth to prevent brute force
   message: { error: 'Too many login attempts. Please try again in an hour.' },
+  keyGenerator: getClientIp,
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -175,6 +188,7 @@ const profileUpdateLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
   max: 30, // Allow 30 profile updates per minute (more than enough for a human)
   message: { error: 'Você está atualizando seu perfil muito rápido. Aguarde um momento.' },
+  keyGenerator: getClientIp,
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -183,6 +197,7 @@ const postLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
   max: 20, // Increased to 20 posts per minute
   message: { error: 'Você está postando muito rápido. Aguarde um momento.' },
+  keyGenerator: getClientIp,
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -191,6 +206,7 @@ const chatLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
   max: 60, // 60 messages per minute per user (generous for real conversations)
   message: { error: 'Você está enviando mensagens muito rápido. Aguarde um momento.' },
+  keyGenerator: getClientIp,
   standardHeaders: true,
   legacyHeaders: false,
 });
