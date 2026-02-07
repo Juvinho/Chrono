@@ -60,6 +60,25 @@ export default function SearchOverlay({ onClose, onSearch, onViewProfile, allUse
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [searchResults, setSearchResults] = useState<User[]>([]);
+    const [trendingCordoes, setTrendingCordoes] = useState<Array<{ tag: string; mentions: number; displayName: string }>>([]);
+
+    // Load trending cordões on component mount
+    useEffect(() => {
+        const loadTrendingCordoes = async () => {
+            try {
+                const response = await apiClient.get('/posts/trending/cordoes');
+                if (response.data) {
+                    setTrendingCordoes(response.data);
+                }
+            } catch (error) {
+                console.error("Failed to load trending cordões:", error);
+                // Fall back to client-side data if API fails
+                setTrendingCordoes([]);
+            }
+        };
+        
+        loadTrendingCordoes();
+    }, []);
 
     useEffect(() => {
         const timer = setTimeout(async () => {
@@ -290,16 +309,29 @@ export default function SearchOverlay({ onClose, onSearch, onViewProfile, allUse
                                     <div className="space-y-2">
                                         <h2 className="search-section-header text-center">:: {t('popularCords')}</h2>
                                         <div className="flex flex-col gap-2">
-                                            {popularCords.map(cord => {
-                                                const match = cord.content.match(/\$[A-Za-z0-9_]+/);
-                                                const tag = match ? match[0] : '';
-                                                return (
-                                            <div key={cord.id} onClick={() => onSearch(tag || cord.content)} className="search-result-item text-sm cursor-pointer p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-sm transition-colors">
-                                                    <p className="truncate text-[var(--theme-text-primary)] font-bold">{cord.content}</p>
-                                                    <p className="text-xs text-[var(--theme-text-secondary)]">{t('byUser', { username: cord.author.username })}</p>
-                                                </div>
-                                                );
-                                            })}
+                                            {trendingCordoes.length > 0 ? (
+                                                trendingCordoes.map(cord => (
+                                                    <div 
+                                                        key={cord.tag} 
+                                                        onClick={() => onSearch(cord.displayName)} 
+                                                        className="search-result-item text-sm cursor-pointer p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-sm transition-colors"
+                                                    >
+                                                        <p className="font-bold text-[var(--theme-primary)]">{cord.displayName}</p>
+                                                        <p className="text-xs text-[var(--theme-text-secondary)]">{cord.mentions.toLocaleString()} mentions</p>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                popularCords.map(cord => {
+                                                    const match = cord.content.match(/\$[A-Za-z0-9_]+/);
+                                                    const tag = match ? match[0] : '';
+                                                    return (
+                                                <div key={cord.id} onClick={() => onSearch(tag || cord.content)} className="search-result-item text-sm cursor-pointer p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-sm transition-colors">
+                                                        <p className="truncate text-[var(--theme-text-primary)] font-bold">{cord.content}</p>
+                                                        <p className="text-xs text-[var(--theme-text-secondary)]">{t('byUser', { username: cord.author.username })}</p>
+                                                    </div>
+                                                    );
+                                                })
+                                            )}
                                         </div>
                                     </div>
                                      <div className="space-y-2">
@@ -362,16 +394,29 @@ export default function SearchOverlay({ onClose, onSearch, onViewProfile, allUse
                                 <div className="space-y-2">
                                 <h2 className="search-section-header text-center">:: {t('popularCords')}</h2>
                                 <div className="flex flex-col gap-2">
-                                    {popularCords.map(cord => {
-                                        const match = cord.content.match(/\$[A-Za-z0-9_]+/);
-                                        const tag = match ? match[0] : '';
-                                        return (
-                                    <div key={cord.id} onClick={() => onSearch(tag || cord.content)} className="search-result-item text-sm cursor-pointer p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-sm transition-colors">
-                                            <p className="truncate text-[var(--theme-text-primary)] font-bold">{cord.content}</p>
-                                            <p className="text-xs text-[var(--theme-text-secondary)]">{t('byUser', { username: cord.author.username })}</p>
-                                        </div>
-                                        );
-                                    })}
+                                    {trendingCordoes.length > 0 ? (
+                                        trendingCordoes.map(cord => (
+                                            <div 
+                                                key={cord.tag} 
+                                                onClick={() => onSearch(cord.displayName)} 
+                                                className="search-result-item text-sm cursor-pointer p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-sm transition-colors"
+                                            >
+                                                <p className="font-bold text-[var(--theme-primary)]">{cord.displayName}</p>
+                                                <p className="text-xs text-[var(--theme-text-secondary)]">{cord.mentions.toLocaleString()} mentions</p>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        popularCords.map(cord => {
+                                            const match = cord.content.match(/\$[A-Za-z0-9_]+/);
+                                            const tag = match ? match[0] : '';
+                                            return (
+                                        <div key={cord.id} onClick={() => onSearch(tag || cord.content)} className="search-result-item text-sm cursor-pointer p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-sm transition-colors">
+                                                <p className="truncate text-[var(--theme-text-primary)] font-bold">{cord.content}</p>
+                                                <p className="text-xs text-[var(--theme-text-secondary)]">{t('byUser', { username: cord.author.username })}</p>
+                                            </div>
+                                            );
+                                        })
+                                    )}
                                 </div>
                             </div>
                                 <div className="space-y-2">
