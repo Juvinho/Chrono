@@ -478,7 +478,11 @@ const PostCard: React.FC<PostCardProps> = React.memo(({ post, currentUser, onVie
             
             {post.replies && post.replies.length > 0 && (
                 <div className="reply-container">
-                    {post.replies.map(reply => (
+                    {/* In feed view, limit to 5 replies. In thread view, show all */}
+                    {(!isThreadedReply && !isContextualView 
+                        ? post.replies.slice(0, 5) 
+                        : post.replies
+                    ).map(reply => (
                         <PostCard 
                             key={reply.id} 
                             post={reply} 
@@ -494,8 +498,19 @@ const PostCard: React.FC<PostCardProps> = React.memo(({ post, currentUser, onVie
                             typingParentIds={typingParentIds}
                             nestingLevel={nestingLevel + 1}
                             isThreadedReply={true}
+                            onPostClick={onPostClick}
                         />
                     ))}
+                    
+                    {/* Show "View more replies" button if there are more than 5 replies in feed view */}
+                    {!isThreadedReply && !isContextualView && post.replies.length > 5 && (
+                        <button
+                            onClick={() => onPostClick?.(post.id)}
+                            className="ml-4 mt-3 text-sm text-[var(--theme-primary)] hover:text-[var(--theme-secondary)] transition-colors font-medium"
+                        >
+                            › Ver mais {post.replies.length - 5} resposta{post.replies.length - 5 !== 1 ? 's' : ''}
+                        </button>
+                    )}
                 </div>
             )}
             {!isThreadedReply && isTyping && <TypingIndicatorCard />}
