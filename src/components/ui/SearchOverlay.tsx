@@ -67,12 +67,15 @@ export default function SearchOverlay({ onClose, onSearch, onViewProfile, allUse
         const loadTrendingCordoes = async () => {
             try {
                 const response = await apiClient.get('/posts/trending/cordoes');
-                if (response.data) {
+                if (response.data && Array.isArray(response.data)) {
+                    console.log('✅ Trending cordões loaded:', response.data);
                     setTrendingCordoes(response.data);
+                } else {
+                    console.warn('⚠️ No trending cordoes data:', response.data);
+                    setTrendingCordoes([]);
                 }
             } catch (error) {
                 console.error("Failed to load trending cordões:", error);
-                // Fall back to client-side data if API fails
                 setTrendingCordoes([]);
             }
         };
@@ -237,16 +240,18 @@ export default function SearchOverlay({ onClose, onSearch, onViewProfile, allUse
                                 foundCords.map(cord => {
                                     const match = cord.content.match(/\$[A-Za-z0-9_]+/);
                                     const tag = match ? match[0] : '';
+                                    // Count mentions of this tag in all posts
+                                    const mentionCount = allPosts.filter(p => p.content.includes(tag || '')).length;
                                     return (
                                     <div 
                                         key={cord.id} 
                                         onClick={() => onSearch(tag || cord.content)} 
                                         tabIndex={0}
                                         onKeyDown={(e) => e.key === 'Enter' && onSearch(tag || cord.content)}
-                                        className="search-result-item text-sm cursor-pointer p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-sm transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--theme-primary)]"
+                                        className="search-result-item cursor-pointer p-3 hover:bg-red-900/20 rounded-sm transition-colors border-l-2 border-red-500 bg-black/30 focus:outline-none focus:ring-1 focus:ring-red-500"
                                     >
-                                        <p className="truncate font-bold text-[var(--theme-text-primary)]">{cord.content}</p>
-                                        <p className="text-xs text-[var(--theme-text-secondary)]">{t('byUser', { username: cord.author.username })}</p>
+                                        <p className="truncate font-bold text-red-500">{tag || cord.content}</p>
+                                        <p className="text-xs text-red-400 mt-1">📊 {mentionCount} mentions</p>
                                     </div>
                                     );
                                 })
@@ -314,10 +319,10 @@ export default function SearchOverlay({ onClose, onSearch, onViewProfile, allUse
                                                     <div 
                                                         key={cord.tag} 
                                                         onClick={() => onSearch(cord.displayName)} 
-                                                        className="search-result-item text-sm cursor-pointer p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-sm transition-colors"
+                                                        className="search-result-item cursor-pointer p-3 hover:bg-red-900/20 rounded-sm transition-colors border-l-2 border-red-500 bg-black/30"
                                                     >
-                                                        <p className="font-bold text-[var(--theme-primary)]">{cord.displayName}</p>
-                                                        <p className="text-xs text-[var(--theme-text-secondary)]">{cord.mentions.toLocaleString()} mentions</p>
+                                                        <p className="font-bold text-red-500 text-sm">{cord.displayName}</p>
+                                                        <p className="text-xs text-red-400 mt-1">📊 {cord.mentions.toLocaleString()} mentions</p>
                                                     </div>
                                                 ))
                                             ) : (
@@ -399,10 +404,10 @@ export default function SearchOverlay({ onClose, onSearch, onViewProfile, allUse
                                             <div 
                                                 key={cord.tag} 
                                                 onClick={() => onSearch(cord.displayName)} 
-                                                className="search-result-item text-sm cursor-pointer p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-sm transition-colors"
+                                                className="search-result-item cursor-pointer p-3 hover:bg-red-900/20 rounded-sm transition-colors border-l-2 border-red-500 bg-black/30"
                                             >
-                                                <p className="font-bold text-[var(--theme-primary)]">{cord.displayName}</p>
-                                                <p className="text-xs text-[var(--theme-text-secondary)]">{cord.mentions.toLocaleString()} mentions</p>
+                                                <p className="font-bold text-red-500 text-sm">{cord.displayName}</p>
+                                                <p className="text-xs text-red-400 mt-1">📊 {cord.mentions.toLocaleString()} mentions</p>
                                             </div>
                                         ))
                                     ) : (
