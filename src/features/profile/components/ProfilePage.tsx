@@ -297,48 +297,54 @@ export default function ProfilePage({
   };
 
   const handleSendMessage = async () => {
-    if (!profileUser || !currentUser) return;
+    if (!profileUser || !currentUser) {
+      console.error('❌ Missing profileUser or currentUser');
+      return;
+    }
     
     try {
-      console.log('📨 Abrindo mini-chat para:', profileUser.displayName);
-      
-      // 1. Tentar achar conversa existente
-      let conversation = conversations.find(c => {
-        const otherUserId = c.participants?.[0] === currentUser.id ? c.participants?.[1] : c.participants?.[0];
-        return otherUserId === profileUser.id;
+      console.log('📨 Abrindo mini-chat para:', {
+        profileUserName: profileUser.displayName,
+        profileUserId: profileUser.id,
+        currentUserId: currentUser.id
       });
       
-      // 2. Se não existe, criar nova
-      if (!conversation) {
-        console.log('📝 Criando nova conversa com:', profileUser.id);
-        const response = await apiClient.post('/api/chat/init', {
-          targetUserId: profileUser.id
-        });
-        
-        if (response.data?.id) {
-          conversation = response.data;
-          console.log('✅ Conversa criada:', conversation.id);
-        } else {
-          throw new Error('Resposta inválida da API');
-        }
+      // Call API to init/get conversation
+      console.log('🔄 Chamando /api/chat/init...');
+      const response = await apiClient.post('/api/chat/init', {
+        targetUserId: profileUser.id
+      });
+      
+      console.log('📦 Resposta da API:', {
+        hasData: !!response.data,
+        dataKeys: response.data ? Object.keys(response.data) : [],
+        data: response.data
+      });
+      
+      if (!response.data) {
+        throw new Error('API retornou sem dados');
       }
       
-      // 3. Converter para formato do FloatingChatBox
+      const apiConversation = response.data;
+      
+      // Convert to FloatingChatBox format
       const floatingConversation: any = {
-        id: conversation.id,
-        otherUser: {
+        id: apiConversation.id,
+        otherUser: apiConversation.otherUser || {
           id: profileUser.id,
           username: profileUser.username,
           displayName: profileUser.displayName || profileUser.username,
           avatarUrl: profileUser.profilePicture || null,
           isOnline: profileUser.isOnline
         },
-        lastMessage: null,
-        unreadCount: 0,
-        updatedAt: new Date().toISOString()
+        lastMessage: apiConversation.lastMessage || null,
+        unreadCount: apiConversation.unreadCount || 0,
+        updatedAt: apiConversation.updatedAt || new Date().toISOString()
       };
       
-      // 4. Abrir mini-chat
+      console.log('✅ Estrutura final do chat:', floatingConversation);
+      
+      // Open floating chat
       openChat(floatingConversation);
       console.log('✅ Mini-chat aberto com sucesso');
       
