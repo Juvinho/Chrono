@@ -19,6 +19,46 @@ interface AggregatedNotification {
     read: boolean;
 }
 
+// Função para formatar timestamps relativos
+const formatRelativeTime = (date: Date): string => {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffSecs = Math.floor(diffMs / 1000);
+    const diffMins = Math.floor(diffSecs / 60);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    // Menos de 1 minuto
+    if (diffSecs < 60) {
+        return 'agora';
+    }
+    
+    // Menos de 1 hora
+    if (diffMins < 60) {
+        return `${diffMins}m`;
+    }
+    
+    // Hoje
+    if (diffHours < 24 && date.toDateString() === now.toDateString()) {
+        return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+    }
+    
+    // Ontem
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (date.toDateString() === yesterday.toDateString()) {
+        return `ontem ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+    }
+    
+    // Últimos 7 dias
+    if (diffDays <= 7) {
+        return `${diffDays}d ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+    }
+    
+    // Mais anterior
+    return date.toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' });
+};
+
 const NotificationItem: React.FC<{ 
     notification: AggregatedNotification, 
     onNotificationClick: (notification: any) => void
@@ -76,7 +116,7 @@ const NotificationItem: React.FC<{
                         "{notification.post.content}"
                     </p>
                 )}
-                <p className="text-[10px] text-[var(--theme-text-secondary)] mt-1 uppercase tracking-tighter">{notification.timestamp.toLocaleTimeString()}</p>
+                <p className="text-[10px] text-[var(--theme-text-secondary)] mt-1 uppercase tracking-tighter">{formatRelativeTime(notification.timestamp)}</p>
             </div>
         </div>
     );
