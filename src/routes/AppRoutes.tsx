@@ -14,7 +14,7 @@ const Verify = React.lazy(() => import('../features/auth/components/Verify'));
 const ForgotPassword = React.lazy(() => import('../features/auth/components/ForgotPassword'));
 const ResetPassword = React.lazy(() => import('../features/auth/components/ResetPassword'));
 const DataSlicerPage = React.lazy(() => import('../features/analysis/components/DataSlicerPage'));
-const MessagesPage = React.lazy(() => import('../features/messaging/components/MessagingLayout').then(m => ({ default: m.MessagingLayout })));
+const MessagesSplitView = React.lazy(() => import('../features/messaging/components/MessagesSplitView').then(m => ({ default: m.MessagesSplitView })));
 const Marketplace = React.lazy(() => import('../features/marketplace/components/Marketplace'));
 const EchoDetailModal = React.lazy(() => import('../features/timeline/components/EchoDetailModal'));
 const ThreadView = React.lazy(() => import('../features/timeline/components/ThreadView'));
@@ -285,7 +285,40 @@ export default function AppRoutes(props: AppRoutesProps) {
                 />
             ) : <Navigate to="/welcome" />} />
 
-            <Route path="/messages" element={currentUser ? <MessagesPage /> : <Navigate to="/welcome" />} />
+            <Route path="/messages" element={currentUser ? (
+                <MessagesSplitView
+                    currentUser={currentUser}
+                    onLogout={handleLogout}
+                    onNavigate={handleNavigate}
+                    onNotificationClick={handleNotificationClick}
+                    onViewNotifications={onViewNotifications}
+                    selectedDate={selectedDate}
+                    setSelectedDate={setSelectedDate}
+                    allUsers={combinedUsers}
+                    allPosts={memoizedPosts}
+                    allKnownPosts={memoizedAllPosts}
+                    onNewPost={handleNewPost}
+                    onUpdateReaction={handleUpdateReaction}
+                    onReply={handleReply}
+                    onEcho={handleEcho}
+                    onDeletePost={handleDeletePost}
+                    onEditPost={handleEditPost}
+                    onPollVote={handlePollVote}
+                    isGenerating={isGenerating}
+                    typingParentIds={typingParentIds}
+                    conversations={conversations}
+                    newPostsCount={pendingPosts.length}
+                    onShowNewPosts={handleShowNewPosts}
+                    onUpdateUser={handleUpdateUser}
+                    onOpenMarketplace={() => setIsMarketplaceOpen(true)}
+                    onOpenChat={handleOpenChat}
+                    nextAutoRefresh={nextAutoRefresh}
+                    isAutoRefreshPaused={isAutoRefreshPaused}
+                    onBack={handleBack}
+                    lastViewedNotifications={lastViewedNotifications}
+                    onPostClick={handleOpenThreadView}
+                />
+            ) : <Navigate to="/welcome" />} />
 
             <Route path="/thread/:postId" element={currentUser ? (
                 <Suspense fallback={<LoadingSpinner />}>

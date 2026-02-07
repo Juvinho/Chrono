@@ -1,4 +1,5 @@
 import React, { create } from 'zustand';
+import { useLocation } from 'react-router-dom';
 import { FloatingChatBox } from './FloatingChatBox';
 import { Conversation } from '../types';
 
@@ -33,6 +34,12 @@ export const useChatStore = create<ChatStore>((set) => ({
 // Componente que renderiza todos os chats flutuantes
 export const FloatingChatManager: React.FC = () => {
   const { openChats, closeChat } = useChatStore();
+  const location = useLocation();
+
+  // 🚫 Esconde mini-chats quando estiver na página /messages
+  if (location.pathname === '/messages') {
+    return null;
+  }
 
   return (
     <div className="floating-chat-container">
