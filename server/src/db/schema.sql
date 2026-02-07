@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS users (
     connections_count INTEGER DEFAULT 0,
     is_private BOOLEAN DEFAULT FALSE,
     is_verified BOOLEAN DEFAULT FALSE,
+    is_banned BOOLEAN DEFAULT FALSE,
     email_verification_token VARCHAR(255),
     verification_badge_label VARCHAR(100),
     verification_badge_color VARCHAR(20),
