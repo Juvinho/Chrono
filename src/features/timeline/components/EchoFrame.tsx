@@ -257,20 +257,20 @@ export default function EchoFrame({
             .slice(0, 5);
     }, [allPosts]);
 
-    // Popular posts for today (with most reactions - 24h window, max 10)
+    // Popular posts for selected date (with most reactions - 24h window, max 10)
     const popularPostsToday = useMemo(() => {
-        const today = new Date();
         const todayPosts = allPosts
-            .filter(p => !p.isThread && isSameDay(new Date(p.timestamp), today))
+            .filter(p => !p.isThread && isSameDay(new Date(p.timestamp), selectedDate))
             .sort((a, b) => {
                 const reactionsA = Object.values(a.reactions || {}).reduce((sum, v) => sum + v, 0);
                 const reactionsB = Object.values(b.reactions || {}).reduce((sum, v) => sum + v, 0);
                 return reactionsB - reactionsA;
             })
             .slice(0, 10);
-        console.log('[Popular Posts] Today:', today, 'Posts:', todayPosts.length, 'Data:', todayPosts);
+        console.log('[Popular Posts] Date:', selectedDate, 'Posts found:', todayPosts.length, 'All posts total:', allPosts.length);
+        console.log('[Popular Posts Debug] Reactions-sorted posts:', todayPosts.map(p => ({ id: p.id, reactions: Object.values(p.reactions || {}).reduce((sum, v) => sum + v, 0) })));
         return todayPosts;
-    }, [allPosts]);
+    }, [allPosts, selectedDate]);
 
     const handleComposerClose = useCallback(() => {
         setIsComposerOpen(false);
