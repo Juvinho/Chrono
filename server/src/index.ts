@@ -313,10 +313,10 @@ app.get('/health', async (_req: express.Request, res: express.Response) => {
 
 // Serve static files from the React app
 const possibleBuildPaths = [
-  path.resolve(__dirname, 'public'),           // server/dist/public (Standard production)
-  path.resolve(__dirname, '../public'),        // server/public
-  path.resolve(process.cwd(), 'dist'),         // Root dist
-  path.resolve(process.cwd(), 'server/dist/public'), // Root to server/dist/public
+  path.resolve(__dirname, '../dist/public'),   // server/dist/public (after TypeScript compilation)
+  path.resolve(__dirname, '../../dist'),       // Root dist
+  path.resolve(__dirname, '../../server/dist/public'), // Alternative path
+  path.resolve(process.cwd(), 'server/dist/public'), // Root to server/dist/public  
 ];
 
 // Debug information
