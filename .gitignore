@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# TypeScript built files (generated during build)
+*.d.ts
+*.d.ts.map
+*.js
+*.js.map
+
 # Environment variables
 .env
 .env.production
