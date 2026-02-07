@@ -50,7 +50,7 @@ export default function EchoFrame({
     const [isCordModalOpen, setIsCordModalOpen] = useState(false);
     const [cordContent, setCordContent] = useState('');
     const [activePostId, setActivePostId] = useState<string | null>(null);
-    const [activeFilter, setActiveFilter] = useState<'All' | 'Following' | 'Trending' | 'Media' | 'Polls'>('All');
+    const [activeFilter, setActiveFilter] = useState<'All' | 'Following' | 'Media' | 'Polls'>('All');
     const [isSubmitting, setIsSubmitting] = useState(false);
     // Removed local timeToRefresh state to prevent re-renders
     // Direct Chat removed from EchoFrame to avoid duplication with Messages module
@@ -77,26 +77,6 @@ export default function EchoFrame({
 
         let filteredPosts: Post[];
         const lowercasedQuery = searchQuery.toLowerCase();
-
-        if (activeFilter === 'Trending') {
-            // Trending: "Quente" - Posts from the last 24 hours, sorted by engagement
-            const sourcePosts = allKnownPosts || allPosts;
-            const oneDayAgo = new Date();
-            oneDayAgo.setHours(oneDayAgo.getHours() - 24);
-            
-            // Filter posts from the last 24 hours
-            filteredPosts = sourcePosts.filter(p => new Date(p.timestamp) >= oneDayAgo);
-            
-            // Sort by engagement score
-            return filteredPosts.sort((a, b) => {
-                const getScore = (p: Post) => {
-                    const reactionCount = Object.values(p.reactions || {}).reduce((sum, count) => sum + count, 0);
-                    const replyCount = p.replies?.length || 0;
-                    return (reactionCount * 2 + replyCount * 5);
-                };
-                return getScore(b) - getScore(a);
-            });
-        }
 
         if (searchQuery) {
             const sourcePosts = allKnownPosts || allPosts;
@@ -387,7 +367,7 @@ export default function EchoFrame({
 
         const renderFilterBar = () => (
             <div className="mb-4 flex items-center justify-center space-x-2 border border-[var(--theme-border-primary)] bg-[var(--theme-bg-secondary)] p-1 rounded-sm overflow-x-auto no-scrollbar">
-                {(['All', 'Following', 'Trending', 'Media', 'Polls'] as const).map(filter => (
+                {(['All', 'Following', 'Media', 'Polls'] as const).map(filter => (
                     <button
                         key={filter}
                         onClick={() => setActiveFilter(filter)}
