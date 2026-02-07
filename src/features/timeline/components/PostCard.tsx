@@ -218,15 +218,17 @@ const PostCard: React.FC<PostCardProps> = React.memo(({ post, currentUser, onVie
     };
 
     const renderPoll = () => {
-        if (!post.pollOptions) return null;
+        const pollOptions = post.poll?.options || post.pollOptions;
+        if (!pollOptions || !Array.isArray(pollOptions) || pollOptions.length === 0) return null;
 
-        const totalVotes = post.pollOptions.reduce((sum, option) => sum + option.votes, 0);
-        const pollEnded = post.pollEndsAt ? new Date() > post.pollEndsAt : false;
-        const votedFor = post.voters?.[currentUser.username];
+        const totalVotes = post.poll?.totalVotes || pollOptions.reduce((sum: number, option: any) => sum + (option.votes || 0), 0);
+        const pollEnded = (post.poll?.endsAt || post.pollEndsAt) ? new Date() > (post.poll?.endsAt || post.pollEndsAt) : false;
+        const voters = post.poll?.voters || post.voters || {};
+        const votedFor = voters?.[currentUser.username];
 
         return (
             <div className="mt-4 space-y-2">
-                {post.pollOptions.map((option, index) => {
+                {pollOptions.map((option: any, index: number) => {
                     const percentage = totalVotes > 0 ? (option.votes / totalVotes) * 100 : 0;
                     return (
                         <div key={index} className="relative w-full bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] rounded-sm text-sm overflow-hidden">
@@ -235,13 +237,13 @@ const PostCard: React.FC<PostCardProps> = React.memo(({ post, currentUser, onVie
                                 style={{ width: `${percentage}%` }}
                             ></div>
                             <button 
-                                onClick={() => onPollVote(post.id, index)}
+                                onClick={() => { if (!pollEnded && votedFor === undefined) onPollVote(post.id, index); }}
                                 disabled={pollEnded || votedFor !== undefined}
                                 className={`relative w-full text-left p-2 flex justify-between items-center hover:bg-white/5 transition-colors disabled:cursor-not-allowed disabled:opacity-70 group ${justVotedIndex === index ? 'poll-vote-animation' : ''}`}
                             >
                                 <span className="relative font-bold text-[var(--theme-text-light)] flex items-center">
                                     {votedFor === index && <CheckCircleIcon className="w-4 h-4 mr-2 text-[var(--theme-secondary)]" />}
-                                    {option.option}
+                                    {option?.option || option}
                                 </span>
                                 <span className="relative text-[var(--theme-text-secondary)]">{percentage.toFixed(0)}%</span>
                             </button>
@@ -249,7 +251,7 @@ const PostCard: React.FC<PostCardProps> = React.memo(({ post, currentUser, onVie
                     );
                 })}
                 <div className="text-xs text-[var(--theme-text-secondary)] pt-1">
-                    {t('pollTotalVotes', { count: totalVotes })} • {pollEnded ? t('pollEnded') : t('pollEndsIn', { time: post.pollEndsAt?.toLocaleDateString() || ''})}
+                    {t('pollTotalVotes', { count: totalVotes })} • {pollEnded ? t('pollEnded') : t('pollEndsIn', { time: (post.poll?.endsAt || post.pollEndsAt)?.toLocaleDateString() || ''})}
                 </div>
             </div>
         )

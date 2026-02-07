@@ -167,11 +167,16 @@ export interface Post {
   reactions?: { [key in CyberpunkReaction]?: number }; // Count of each reaction type
   userReaction?: CyberpunkReaction; // The current user's reaction
   poll?: {
-    options: { option: string; votes: number }[];
-    totalVotes: number;
+    options?: { option: string; votes: number }[];
+    totalVotes?: number;
     userVotedOption?: number | null; // Index of option voted by current user
     endsAt?: Date;
+    voters?: { [username: string]: number };
   };
+  // Backward compatibility
+  pollOptions?: { option: string; votes: number }[];
+  pollEndsAt?: Date;
+  voters?: { [username: string]: number };
   isPrivate?: boolean;
   viewCount?: number;
   unlockAt?: string | Date; // Time Capsule
