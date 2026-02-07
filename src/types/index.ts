@@ -24,6 +24,40 @@ export interface Conversation {
 
 export type CyberpunkReaction = 'Glitch' | 'Upload' | 'Corrupt' | 'Rewind' | 'Static';
 
+// ==================== TAG/BADGE SYSTEM ====================
+export type TagCategory = 'positive' | 'moderation' | 'time' | 'style';
+export type TagVisibility = 'public' | 'private' | 'admin_only';
+
+export interface TagDefinition {
+  id: string;
+  nome: string;
+  icone: string;
+  cor_hex: string;
+  cor_border: string;
+  prioridade_exibicao: number; // 1-10, higher = more important
+  categoria: TagCategory;
+  visibilidade: TagVisibility;
+  condicao_aquisicao: Record<string, any>;
+  condicao_remocao?: Record<string, any>;
+  descricao_publica: string;
+  descricao_interna?: string;
+  notificar_aquisicao?: boolean;
+  notificar_remocao?: boolean;
+  criado_em: Date;
+  atualizado_em: Date;
+}
+
+export interface UserTag {
+  id: string;
+  userId: string;
+  tagId: string;
+  tag?: TagDefinition;
+  adquirida_em: Date;
+  removida_em?: Date | null;
+  motivo_remocao?: string;
+  ativo: boolean;
+}
+
 export interface ProfileSettings {
   theme: 'dark' | 'light';
   accentColor: 'purple' | 'green' | 'amber' | 'red' | 'blue';
@@ -93,6 +127,7 @@ export interface User {
   lastSeen?: Date | string | null;
   equippedFrame?: Item;
   equippedEffect?: Item;
+  tags?: UserTag[]; // Achievements/badges system
 }
 
 export interface Item {

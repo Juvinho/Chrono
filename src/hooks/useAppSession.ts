@@ -323,7 +323,11 @@ export const useAppSession = ({
                         console.error(`Failed to update user via API (Attempt ${attempt + 1}/${maxAttempts}):`, result.error);
                         if (attempt === maxAttempts - 1) return { success: false, error: lastError };
                         attempt++;
-                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        
+                        // If rate limited, wait longer (check retryAfter from the response)
+                        const waitTime = result.retryAfter || 1000;
+                        console.log(`Waiting ${waitTime}ms before retry...`);
+                        await new Promise(resolve => setTimeout(resolve, waitTime));
                         continue;
                     }
                     
