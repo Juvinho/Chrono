@@ -207,6 +207,7 @@ export default function Dashboard({
                     nextAutoRefresh={nextAutoRefresh}
                     isAutoRefreshPaused={isAutoRefreshPaused}
                     onPostClick={onPostClick}
+                    navigate={navigate}
                 />
             </div>
             <Timeline 
