@@ -19,7 +19,9 @@ import reactionsRoutes from './routes/reactions.js';
 import notificationRoutes from './routes/notifications.js';
 import marketplaceRoutes from './routes/marketplace.js';
 import companionRoutes from './routes/companionRoutes.js';
+import tagsRoutes from './routes/tags.js';
 import { NotificationService } from './services/notificationService.js';
+import { scheduleTagUpdates } from './services/tagService.js';
 
 dotenv.config();
 
@@ -186,7 +188,7 @@ const authLimiter = rateLimit({
 
 const profileUpdateLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 30, // Allow 30 profile updates per minute (more than enough for a human)
+  max: 100, // Allow 100 profile updates per minute (more generous for users with slow connections)
   message: { error: 'Você está atualizando seu perfil muito rápido. Aguarde um momento.' },
   keyGenerator: getClientIp,
   standardHeaders: true,
@@ -260,6 +262,7 @@ app.use('/api/posts', reactionsRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
+app.use('/api/tags', tagsRoutes);
 
 // Health check
 app.get('/health', async (_req: express.Request, res: express.Response) => {
@@ -419,6 +422,10 @@ const startServer = async () => {
         console.log('✅ Migrações concluídas com sucesso.');
         const notifSvc = new NotificationService();
         notifSvc.startQueueWorker();
+        
+        // Initialize automatic tag updates (every 6 hours)
+        console.log('🏷️  Iniciando scheduler de atualização de tags...');
+        scheduleTagUpdates();
     }).catch(err => {
         console.error('❌ Erro nas migrações:', err);
         // We still keep server running, but it might be unstable

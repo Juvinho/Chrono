@@ -1,5 +1,6 @@
 import { pool } from './connection.js';
 import bcrypt from 'bcryptjs';
+import { TAGS_SEED } from './tags-seed.js';
 
 const items = [
   // FRAMES
@@ -294,6 +295,42 @@ async function seed() {
       console.log(`Added ${item.name}`);
     } else {
       console.log(`Skipped ${item.name} (already exists)`);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // 4. SEED TAGS / BADGES
+  // -------------------------------------------------------------------------
+  console.log('Seeding tag definitions...');
+  for (const tag of TAGS_SEED) {
+    const res = await pool.query('SELECT id FROM tag_definitions WHERE id = $1', [tag.id]);
+    
+    if (res.rows.length === 0) {
+      await pool.query(
+        `INSERT INTO tag_definitions (id, nome, icone, cor_hex, cor_border, prioridade_exibicao, categoria, visibilidade, condicao_aquisicao, condicao_remocao, descricao_publica, descricao_interna, notificar_aquisicao, notificar_remocao, criado_em, atualizado_em)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+        [
+          tag.id,
+          tag.nome,
+          tag.icone,
+          tag.cor_hex,
+          tag.cor_border,
+          tag.prioridade_exibicao,
+          tag.categoria,
+          tag.visibilidade,
+          JSON.stringify(tag.condicao_aquisicao),
+          tag.condicao_remocao ? JSON.stringify(tag.condicao_remocao) : null,
+          tag.descricao_publica,
+          tag.descricao_interna || null,
+          tag.notificar_aquisicao,
+          tag.notificar_remocao,
+          tag.criado_em,
+          tag.atualizado_em
+        ]
+      );
+      console.log(`✅ Tag "${tag.nome}" criada`);
+    } else {
+      console.log(`⏭️  Tag "${tag.nome}" já existe`);
     }
   }
   

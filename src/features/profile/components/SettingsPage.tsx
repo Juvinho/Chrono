@@ -102,6 +102,15 @@ export default function SettingsPage({
     setDraftUser(prev => ({ ...prev, [name]: value }));
   };
 
+  // Validate onUpdateUser is available
+  useEffect(() => {
+    if (typeof onUpdateUser !== 'function') {
+      console.error('❌ WARNING: onUpdateUser prop is not a function:', typeof onUpdateUser, onUpdateUser);
+      setSaveMessage('⚠️ Update function unavailable. Try refreshing the page.');
+      setSaveStatus('error');
+    }
+  }, [onUpdateUser]);
+
   const handleProfileSettingChange = (setting: keyof ProfileSettings, value: any) => {
     setDraftUser(prev => {
         const updates: User = {
@@ -162,6 +171,11 @@ export default function SettingsPage({
     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     
     try {
+      // Safety check: verify onUpdateUser is a function
+      if (typeof onUpdateUser !== 'function') {
+        throw new Error('Update function is not available. Please refresh the page and try again.');
+      }
+
       // Basic validation
       if (!draftUser.username?.trim()) {
           throw new Error(t('errorUsernameRequired') || 'Username is required');
@@ -190,7 +204,20 @@ export default function SettingsPage({
       };
       
       console.log('Saving user settings...', userToSave);
-      const result = await onUpdateUser(userToSave);
+      
+      // Double-check onUpdateUser is still a function before calling
+      if (typeof onUpdateUser !== 'function') {
+        throw new Error(`onUpdateUser is not a function (got ${typeof onUpdateUser}). Please refresh the page.`);
+      }
+
+      let result: any;
+      try {
+        result = await onUpdateUser(userToSave);
+      } catch (callError: any) {
+        console.error('Error calling onUpdateUser:', callError);
+        throw new Error(`Failed to call update function: ${callError.message}`);
+      }
+      
       console.log('Save result:', result);
       
       if (result && result.success) {

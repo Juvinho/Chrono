@@ -15,6 +15,8 @@ import FramePreview, { getFrameShape } from './FramePreview';
 import Avatar from './Avatar';
 import LoadingSpinner from '../../../components/ui/LoadingSpinner';
 import { apiClient } from '../../../api';
+import { TagBadgeGroup } from '../../../components/ui/TagBadge';
+import { useUserTags } from '../../../hooks/useTags';
 
 interface ProfilePageProps {
   currentUser: User;
@@ -74,11 +76,28 @@ export default function ProfilePage({
   
   const followButtonRef = useRef<HTMLButtonElement>(null);
   
+  // Load user tags
+  const { tags: userTags } = useUserTags(profileUser?.id || null);
+
   // Lazy load EditProfileModal
   const EditProfileModal = useMemo(() => React.lazy(() => import('./EditProfileModal')), []);
 
-  // Prioritize currentUser if it matches the profileUsername to ensure we show the latest state
-  const isOwnProfile = currentUser.username.toLowerCase() === profileUsername.toLowerCase();
+  // DEBUG: Log data sources for troubleshooting inconsistencies
+  useEffect(() => {
+    if (profileUser) {
+      const dataSource = isOwnProfile ? 'currentUser' : (effectiveFetchedUser ? 'API' : 'localCache');
+      console.log(`[ProfilePage] Username: @${profileUser.username} | Followers: ${profileUser.followers} | Source: ${dataSource}`);
+      
+      // SAFEGUARD: Warn if we're using cache when API data is available
+      if (!isOwnProfile && foundUser && effectiveFetchedUser && foundUser.followers !== effectiveFetchedUser.followers) {
+        console.warn(`⚠️ [ProfilePage] Data mismatch detected for @${profileUser.username}:`, {
+          localCache: foundUser.followers,
+          apiData: effectiveFetchedUser.followers,
+          using: 'API (correct)'
+        });
+      }
+    }
+  }, [profileUser, effectiveFetchedUser, isOwnProfile, foundUser]);
   
   // Memoize foundUser to avoid unnecessary recalculations
   const foundUser = useMemo(() => {
@@ -101,10 +120,11 @@ export default function ProfilePage({
         setFetchError(null);
     }
 
-    // If user is not in props/local state and we have a username, fetch it
-    // Or if we want to ensure we have the latest data for a profile we are viewing (even if in local state)
-    // For now, fetch if not found OR if we want to prioritize API data
-    if ((!foundUser && !effectiveFetchedUser) && profileUsername && !isOwnProfile) {
+    // CRITICAL FIX: Always fetch profile data from API for non-own profiles
+    // Local data in allUsers/users can be stale (followers/following change in other tabs)
+    // API is the source of truth - must prioritize it
+    // Only skip fetch if we're viewing our own profile (always use currentUser)
+    if (!isOwnProfile && profileUsername && !effectiveFetchedUser) {
         setIsLoadingUser(true);
         setFetchError(null);
         
@@ -124,7 +144,7 @@ export default function ProfilePage({
                 setIsLoadingUser(false);
             });
     }
-  }, [profileUsername, foundUser, isOwnProfile, effectiveFetchedUser, fetchedUser]);
+  }, [profileUsername, isOwnProfile, effectiveFetchedUser]);
 
   useEffect(() => {
       if (typeof window === 'undefined' || !profileUser) return;
@@ -504,6 +524,12 @@ export default function ProfilePage({
                               return part;
                           });
                       })()}
+                  </div>
+                )}
+                {/* Tags/Badges Display */}
+                {userTags && userTags.length > 0 && (
+                  <div className="mt-4 pt-3 border-t border-[var(--theme-border-secondary)]">
+                    <TagBadgeGroup tags={userTags} maxVisible={5} size="sm" />
                   </div>
                 )}
                 {profileUser.birthday && (
