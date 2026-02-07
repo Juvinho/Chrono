@@ -8,7 +8,7 @@ import { PostComposer } from '../../timeline/components/PostComposer';
 import { isSameDay } from '../../../utils/date';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useSound } from '../../../contexts/SoundContext';
-import { useFloatingChat } from '../../../contexts/FloatingChatContext';
+import { useChatStore } from '../../messaging/components/FloatingChatManager';
 import UserListModal from '../../../components/ui/UserListModal';
 import { VerifiedIcon, MessageIcon, PaperPlaneIcon } from '../../../components/ui/icons';
 import FramePreview, { getFrameShape } from './FramePreview';
@@ -54,7 +54,7 @@ export default function ProfilePage({
   const { t } = useTranslation();
   const { playSound } = useSound();
   const navigate = useNavigate();
-  const { openChat } = useFloatingChat();
+  const openChat = useChatStore((state) => state.openChat);
   const { username: routeUsername } = useParams<{ username: string }>();
   
   // Determine the profile username to display:
@@ -294,15 +294,48 @@ export default function ProfilePage({
       }
   };
 
-  const handleSendMessage = () => {
-    if (profileUser) {
-      console.log('📨 Navigating to messages with targetUserId:', profileUser.id);
-      navigate('/messages', {
-        state: {
-          targetUserId: profileUser.id,
-          targetUsername: profileUser.username
+  const handleSendMessage = async () => {
+    if (profileUser && currentUser) {
+      try {
+        console.log('📨 Opening mini-chat for:', profileUser.displayName);
+        
+        // Chamando API para obter ou criar conversa
+        const response = await apiClient.post('/api/chat/init', {
+          targetUserId: profileUser.id
+        });
+        
+        if (response.data) {
+          const conversation = response.data;
+          
+          // Converter para formato esperado pelo FloatingChatBox
+          const floatingConversation: any = {
+            id: conversation.id,
+            otherUser: {
+              id: profileUser.id,
+              username: profileUser.username,
+              displayName: profileUser.displayName || profileUser.username,
+              avatarUrl: profileUser.profilePicture || null,
+              isOnline: profileUser.isOnline
+            },
+            lastMessage: null,
+            unreadCount: 0,
+            updatedAt: new Date().toISOString()
+          };
+          
+          // Abrir mini-chat flutuante
+          openChat(floatingConversation);
+          console.log('✅ Mini-chat aberto');
         }
-      });
+      } catch (error) {
+        console.error('❌ Erro ao abrir mini-chat:', error);
+        // Fallback: navegar para /messages
+        navigate('/messages', {
+          state: {
+            targetUserId: profileUser.id,
+            targetUsername: profileUser.username
+          }
+        });
+      }
     }
   };
 
