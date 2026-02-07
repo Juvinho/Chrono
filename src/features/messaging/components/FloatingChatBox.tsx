@@ -20,10 +20,10 @@ export const FloatingChatBox: React.FC<FloatingChatBoxProps> = ({ conversation, 
 
   // Auto-scroll para última mensagem
   useEffect(() => {
-    if (!isMinimized) {
+    if (!isMinimized && messages.length > 0) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, isMinimized]);
+  }, [messages.length, isMinimized]);
 
   return (
     <div className={`floating-chat-box ${isMinimized ? 'minimized' : ''}`}>
