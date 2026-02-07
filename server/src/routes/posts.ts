@@ -385,10 +385,11 @@ router.post('/:id/poll/vote', authenticateToken, async (req: AuthRequest, res: R
     if (!post) {
       return res.status(404).json({ error: 'Post not found' });
     }
-    const votes = await pollService.getVotesForPost(id);
-    res.json({ voters: votes });
+    // Return the enriched post with updated voters
+    const enrichedPost = await enrichPost(post, 0, 1);
+    res.json(enrichedPost);
   } catch (error: any) {
-    console.error('Vote error (alias):', error);
+    console.error('Vote error:', error);
     res.status(500).json({ error: error.message || 'Failed to vote' });
   }
 });

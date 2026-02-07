@@ -38,6 +38,21 @@ export function mapApiUserToUser(apiUser: any): any {
 }
 
 export function mapApiPostToPost(apiPost: any): any {
+  const pollOptions = apiPost.pollOptions || apiPost.poll_options;
+  const pollEndsAt = apiPost.pollEndsAt || apiPost.poll_ends_at;
+  const voters = apiPost.voters || {};
+  
+  // Calculate total votes and current user's vote
+  let totalVotes = 0;
+  let userVotedOption: number | null = null;
+  
+  if (pollOptions && Array.isArray(pollOptions)) {
+    totalVotes = pollOptions.reduce((sum: number, opt: any) => sum + (opt.votes || 0), 0);
+  }
+  
+  // Find current user's vote (will be set later when we have currentUser context)
+  // For now, store voters map for PostCard to use
+  
   return {
     id: apiPost.id,
     author: apiPost.author ? mapApiUserToUser(apiPost.author) : {
@@ -55,9 +70,16 @@ export function mapApiPostToPost(apiPost: any): any {
     inReplyTo: apiPost.inReplyTo,
     replies: (apiPost.replies || []).map(mapApiPostToPost),
     repostOf: apiPost.repostOf ? mapApiPostToPost(apiPost.repostOf) : undefined,
-    pollOptions: apiPost.pollOptions || apiPost.poll_options,
-    pollEndsAt: apiPost.pollEndsAt || apiPost.poll_ends_at ? new Date(apiPost.pollEndsAt || apiPost.poll_ends_at) : undefined,
-    voters: apiPost.voters || {},
+    poll: pollOptions ? {
+      options: pollOptions,
+      totalVotes: totalVotes,
+      endsAt: pollEndsAt ? new Date(pollEndsAt) : undefined,
+      voters: voters,
+    } : undefined,
+    // Keep these for backward compatibility
+    pollOptions: pollOptions,
+    pollEndsAt: pollEndsAt ? new Date(pollEndsAt) : undefined,
+    voters: voters,
   };
 }
 
