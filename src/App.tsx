@@ -279,6 +279,13 @@ export default function App() {
             }
 
             await reloadBackendData();
+            
+            // Also load the parent post with updated replies
+            const parentPostResult = await apiClient.getPost(parentPostId);
+            if (parentPostResult.data) {
+                const mappedParentPost = mapApiPostToPost(parentPostResult.data);
+                setPosts(prev => prev.map(p => p.id === parentPostId ? mappedParentPost : p));
+            }
         } catch (error) {
             console.error("Failed to reply via API:", error);
             showToast('Falha ao enviar resposta.', 'error');
