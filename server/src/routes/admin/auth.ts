@@ -40,7 +40,7 @@ router.post('/login', async (req: Request, res: Response) => {
     const userIdToUse = userId || adminConfig.adminUserId;
     
     const result = await pool.query(
-      'SELECT id, username, display_name, avatar_url FROM users WHERE id = $1',
+      'SELECT id, username, display_name FROM users WHERE id = $1',
       [userIdToUse]
     );
 
