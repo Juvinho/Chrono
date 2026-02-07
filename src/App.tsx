@@ -607,6 +607,8 @@ function App() {
                                 handleEditPost={handleEditPost}
                                 handlePollVote={handlePollVote}
                                 handleShowNewPosts={handleShowNewPosts}
+                                handleUpdateUser={handleUpdateUser}
+                                handleOpenThreadView={handleOpenThreadView}
                                 
                                 setIsMarketplaceOpen={setIsMarketplaceOpen}
                                 handleBack={handleBack}
