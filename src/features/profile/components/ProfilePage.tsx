@@ -40,6 +40,7 @@ interface ProfilePageProps {
   typingParentIds: Set<string>;
   conversations: Conversation[];
   onOpenMarketplace?: () => void;
+  onOpenChat?: () => void;
   onBack?: () => void;
   lastViewedNotifications?: Date | null;
 }
@@ -47,7 +48,7 @@ interface ProfilePageProps {
 export default function ProfilePage({ 
   currentUser, profileUsername: propProfileUsername, onLogout, onNavigate, onNotificationClick, onViewNotifications, users, onFollowToggle, 
   allPosts, allUsers, conversations, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost,
-  onPollVote, selectedDate, setSelectedDate, typingParentIds, onOpenMarketplace, 
+  onPollVote, selectedDate, setSelectedDate, typingParentIds, onOpenMarketplace, onOpenChat, 
   onUpdateUser, onBack, lastViewedNotifications
 }: ProfilePageProps & { onUpdateUser?: (user: User) => Promise<{ success: boolean; error?: string }> }) {
   const { t } = useTranslation();
@@ -404,8 +405,8 @@ export default function ProfilePage({
                 allUsers={allUsers}
                 conversations={conversations}
                 onOpenMarketplace={onOpenMarketplace}
+                onOpenChat={onOpenChat}
                 onBack={onBack}
-                onToggleChat={onToggleChat}
                 lastViewedNotifications={lastViewedNotifications}
             />
             <div className="flex-grow flex flex-col items-center justify-center">
@@ -435,6 +436,7 @@ export default function ProfilePage({
           allUsers={allUsers} 
           conversations={conversations}
           onOpenMarketplace={onOpenMarketplace}
+          onOpenChat={onOpenChat}
           onBack={onBack}
           lastViewedNotifications={lastViewedNotifications}
       />

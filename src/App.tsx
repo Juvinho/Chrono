@@ -302,6 +302,10 @@ function App() {
         navigate(`/thread/${postId}`);
     };
 
+    const handleOpenChat = () => {
+        navigate('/messages');
+    };
+
     const simulateUserPostInteraction = (post: Post) => {
         if (!currentUser) return;
     
@@ -609,6 +613,7 @@ function App() {
                                 handleShowNewPosts={handleShowNewPosts}
                                 handleUpdateUser={handleUpdateUser}
                                 handleOpenThreadView={handleOpenThreadView}
+                                handleOpenChat={handleOpenChat}
                                 
                                 setIsMarketplaceOpen={setIsMarketplaceOpen}
                                 handleBack={handleBack}

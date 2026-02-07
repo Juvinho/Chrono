@@ -39,12 +39,13 @@ interface SettingsPageProps {
   allPosts: Post[];
   conversations: Conversation[];
   onOpenMarketplace?: () => void;
+  onOpenChat?: () => void;
   onBack?: () => void;
   lastViewedNotifications?: Date | null;
 }
 
 export default function SettingsPage({
-  user, onLogout, onNavigate, onNotificationClick, onViewNotifications, onUpdateUser, allUsers, allPosts, conversations, onOpenMarketplace, onBack, lastViewedNotifications
+  user, onLogout, onNavigate, onNotificationClick, onViewNotifications, onUpdateUser, allUsers, allPosts, conversations, onOpenMarketplace, onOpenChat, onBack, lastViewedNotifications
 }: SettingsPageProps) {
   const { t, setLanguage, language } = useTranslation();
 
@@ -326,6 +327,7 @@ export default function SettingsPage({
         allPosts={allPosts}
         conversations={conversations}
         onOpenMarketplace={onOpenMarketplace}
+        onOpenChat={onOpenChat}
         onSearch={handleSearch}
         onBack={onBack}
         lastViewedNotifications={lastViewedNotifications}
