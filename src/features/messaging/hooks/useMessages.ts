@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Message, SendMessageRequest } from '../types';
 import { getMessages, sendMessage } from '../api/messagingApi';
 
@@ -7,6 +7,7 @@ export function useMessages(conversationId: number | string | null) {
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Carrega mensagens
   const fetchMessages = useCallback(async () => {
@@ -54,9 +55,24 @@ export function useMessages(conversationId: number | string | null) {
     }
   };
 
+  // Inicia polling automático
   useEffect(() => {
+    if (!conversationId) return;
+
+    // Carrega mensagens ao iniciar
     fetchMessages();
-  }, [fetchMessages]);
+
+    // Inicia polling a cada 2 segundos
+    pollingIntervalRef.current = setInterval(() => {
+      fetchMessages();
+    }, 2000);
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, [conversationId, fetchMessages]);
 
   return {
     messages,
