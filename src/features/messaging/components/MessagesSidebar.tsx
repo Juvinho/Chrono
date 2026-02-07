@@ -4,14 +4,10 @@ import { ConversationList } from './ConversationList';
 import { ChatArea } from './ChatArea';
 import { CloseIcon, ChevronLeftIcon } from '../../../components/ui/icons';
 import { useTranslation } from '../../../hooks/useTranslation';
-import './messages-sidebar.css';
+import { useConversations } from '../hooks/useConversations';
+import '../styles/messaging.css';
 
-interface MessagesSidebarProps {
-  conversations?: any[];
-  isLoading?: boolean;
-}
-
-export function MessagesSidebar({ conversations = [], isLoading = false }: MessagesSidebarProps) {
+export function MessagesSidebar() {
   const { 
     isOpen, 
     closeSidebar, 
@@ -19,19 +15,18 @@ export function MessagesSidebar({ conversations = [], isLoading = false }: Messa
     setSelectedConversation 
   } = useMessagesSidebar();
 
+  const { conversations, isLoading, error } = useConversations();
   const { t } = useTranslation();
 
-  // Estado local para controlar se está mostrando lista ou chat (mobile)
   const [showChatArea, setShowChatArea] = useState(false);
 
   useEffect(() => {
-    // Se tem conversa selecionada, mostra o chat
     if (selectedConversationId) {
       setShowChatArea(true);
     }
   }, [selectedConversationId]);
 
-  const handleSelectConversation = (id: number) => {
+  const handleSelectConversation = (id: number | string) => {
     setSelectedConversation(id);
     setShowChatArea(true);
   };
@@ -45,7 +40,7 @@ export function MessagesSidebar({ conversations = [], isLoading = false }: Messa
 
   return (
     <>
-      {/* OVERLAY (fundo escuro clicável) */}
+      {/* OVERLAY */}
       <div 
         className="messages-sidebar-overlay"
         onClick={closeSidebar}
@@ -54,60 +49,104 @@ export function MessagesSidebar({ conversations = [], isLoading = false }: Messa
 
       {/* PAINEL LATERAL */}
       <aside className={`messages-sidebar-panel ${isOpen ? 'open' : ''}`}>
-        {/* HEADER DO PAINEL */}
-        <div className="messages-sidebar-header">
-          <div className="header-title">
+        {/* HEADER */}
+        <div className="messaging-sidebar-header">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h2>{t('messages') || 'Mensagens'}</h2>
+            {/* BOTÃO FECHAR */}
+            <button 
+              onClick={closeSidebar}
+              className="close-button"
+              aria-label="Fechar mensagens"
+              style={{ 
+                background: 'none', 
+                border: 'none', 
+                padding: '8px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--theme-text-secondary)',
+                transition: 'all 0.2s ease',
+                borderRadius: '50%'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(0, 0, 0, 0.05)';
+                e.currentTarget.style.transform = 'rotate(90deg)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'none';
+                e.currentTarget.style.transform = 'rotate(0deg)';
+              }}
+            >
+              <CloseIcon className="w-6 h-6" />
+            </button>
           </div>
-
-          {/* BOTÃO FECHAR com animação */}
-          <button 
-            onClick={closeSidebar}
-            className="close-button"
-            aria-label="Fechar mensagens"
-          >
-            <CloseIcon className="w-6 h-6" />
-          </button>
         </div>
 
-        {/* CONTEÚDO DO PAINEL */}
-        <div className="messages-sidebar-content">
-          {/* DESKTOP: Mostra lista e chat lado a lado */}
-          <div className="messages-desktop-layout">
-            {/* Lista de conversas */}
-            <div className="conversations-panel">
+        {/* CONTEÚDO */}
+        <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
+          {/* DESKTOP: Lista + Chat */}
+          <div className="messages-sidebar-desktop" style={{ width: '100%', height: '100%', display: 'flex' }}>
+            {/* Lista */}
+            <div style={{ width: '360px', borderRight: '1px solid var(--theme-border-primary)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <ConversationList
                 conversations={conversations}
                 isLoading={isLoading}
+                error={error}
                 selectedId={selectedConversationId}
                 onSelect={handleSelectConversation}
               />
             </div>
 
-            {/* Área de chat */}
-            <div className="chat-panel">
+            {/* Chat */}
+            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               {selectedConversationId ? (
                 <ChatArea conversationId={selectedConversationId} />
               ) : (
-                <EmptyState />
+                <div className="messaging-empty-state">
+                  <div className="empty-state-icon">💬</div>
+                  <h3>{t('yourMessages') || 'Suas Mensagens'}</h3>
+                  <p>{t('selectConversationToStart') || 'Selecione uma conversa para começar'}</p>
+                </div>
               )}
             </div>
           </div>
 
-          {/* MOBILE: Mostra lista OU chat */}
-          <div className="messages-mobile-layout">
+          {/* MOBILE: Lista OU Chat */}
+          <div className="messages-sidebar-mobile" style={{ width: '100%', height: '100%', display: 'none', flexDirection: 'column' }}>
             {!showChatArea ? (
               <ConversationList
                 conversations={conversations}
                 isLoading={isLoading}
+                error={error}
                 selectedId={selectedConversationId}
                 onSelect={handleSelectConversation}
               />
             ) : (
-              <div className="mobile-chat-container">
+              <>
                 <button 
                   onClick={handleBackToList}
-                  className="back-to-list-button"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '12px 16px',
+                    background: 'none',
+                    border: 'none',
+                    borderBottom: '1px solid var(--theme-border-primary)',
+                    width: '100%',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    color: 'var(--theme-text-primary)',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(0, 0, 0, 0.05)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'none';
+                  }}
                 >
                   <ChevronLeftIcon className="w-5 h-5" />
                   <span>{t('back') || 'Voltar'}</span>
@@ -116,23 +155,75 @@ export function MessagesSidebar({ conversations = [], isLoading = false }: Messa
                 {selectedConversationId && (
                   <ChatArea conversationId={selectedConversationId} />
                 )}
-              </div>
+              </>
             )}
           </div>
         </div>
       </aside>
+
+      <style>{`
+        .messages-sidebar-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.4);
+          backdrop-filter: blur(2px);
+          z-index: 9998;
+          animation: fadeIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        .messages-sidebar-panel {
+          position: fixed;
+          top: 0;
+          right: 0;
+          width: 50%;
+          height: 100vh;
+          background: var(--theme-bg-primary);
+          box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+          z-index: 9999;
+          display: flex;
+          flex-direction: column;
+          transform: translateX(100%);
+          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .messages-sidebar-panel.open {
+          transform: translateX(0);
+        }
+
+        @media (prefers-color-scheme: dark) {
+          .messages-sidebar-panel {
+            box-shadow: -4px 0 24px rgba(0, 0, 0, 0.5);
+          }
+        }
+
+        @media (max-width: 1024px) {
+          .messages-sidebar-panel {
+            width: 60%;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .messages-sidebar-panel {
+            width: 100%;
+          }
+
+          .messages-sidebar-desktop {
+            display: none !important;
+          }
+
+          .messages-sidebar-mobile {
+            display: flex !important;
+          }
+        }
+      `}</style>
     </>
-  );
-}
-
-function EmptyState() {
-  const { t } = useTranslation();
-
-  return (
-    <div className="messages-empty-state">
-      <div className="empty-icon">💬</div>
-      <h3>{t('yourMessages') || 'Suas Mensagens'}</h3>
-      <p>{t('selectConversationToStart') || 'Selecione uma conversa para começar'}</p>
-    </div>
   );
 }
