@@ -314,6 +314,14 @@ export const translations = {
     yourStory: 'Your Profile',
     share: 'Share',
     typeSomething: 'Type something...',
+    
+    // Tags and Badges
+    allTags: 'All Tags',
+    acquiredOn: 'Acquired on',
+    tagCategoryPositive: 'Positive',
+    tagCategoryModeration: 'Moderation',
+    tagCategoryTime: 'Time & Engagement',
+    tagCategoryStyle: 'Style & Behavior',
   },
   pt: {
     // Welcome
@@ -628,5 +636,13 @@ export const translations = {
     yourStory: 'Seu Perfil',
     share: 'Compartilhar',
     typeSomething: 'Digite algo...',
+    
+    // Tags and Badges
+    allTags: 'Todas as Tags',
+    acquiredOn: 'Adquirida em',
+    tagCategoryPositive: 'Positivo',
+    tagCategoryModeration: 'Moderação',
+    tagCategoryTime: 'Tempo e Engajamento',
+    tagCategoryStyle: 'Estilo e Comportamento',
   }
 };
