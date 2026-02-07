@@ -6,6 +6,7 @@ import App from './App';
 import { SoundProvider } from './contexts/SoundContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { FloatingChatProvider } from './contexts/FloatingChatContext';
+import { MessagesSidebarProvider } from './contexts/MessagesSidebarContext';
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: Error | null }> {
   state = { hasError: false, error: null as Error | null };
@@ -92,9 +93,11 @@ root.render(
       <FloatingChatProvider>
         <SoundProvider>
           <ToastProvider>
-            <BrowserRouter>
-              <App />
-            </BrowserRouter>
+            <MessagesSidebarProvider>
+              <BrowserRouter>
+                <App />
+              </BrowserRouter>
+            </MessagesSidebarProvider>
           </ToastProvider>
         </SoundProvider>
       </FloatingChatProvider>
