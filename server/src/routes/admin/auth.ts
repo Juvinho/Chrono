@@ -37,12 +37,21 @@ router.post('/login', async (req: Request, res: Response) => {
     }
 
     // Busca dados do usuário admin no DB
-    const userIdToUse = userId || adminConfig.adminUserId;
+    // Se houver userId, usa especificamente; senão pega o @Juvinho ou @Chrono
+    const userIdToUse = userId;
     
-    const result = await pool.query(
-      'SELECT id, username, display_name FROM users WHERE id = $1',
-      [userIdToUse]
-    );
+    let result;
+    if (userIdToUse) {
+      result = await pool.query(
+        'SELECT id, username, display_name FROM users WHERE id::text = $1',
+        [userIdToUse.toString()]
+      );
+    } else {
+      // Busca primeiro usuário (criador do sistema)
+      result = await pool.query(
+        'SELECT id, username, display_name FROM users ORDER BY created_at ASC LIMIT 1'
+      );
+    }
 
     if (result.rows.length === 0) {
       return res.status(404).json({
