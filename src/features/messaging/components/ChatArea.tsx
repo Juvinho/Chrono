@@ -3,12 +3,14 @@ import { useMessages } from '../hooks/useMessages';
 import { useConversations } from '../hooks/useConversations';
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 interface ChatAreaProps {
   conversationId: number | string;
 }
 
 export const ChatArea: React.FC<ChatAreaProps> = ({ conversationId }) => {
+  const { t } = useTranslation();
   const {
     messages,
     isLoading,
@@ -36,7 +38,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ conversationId }) => {
   if (isLoading) {
     return (
       <div className="chat-area-loading">
-        <div className="spinner">Carregando mensagens...</div>
+        <div className="spinner">{t('loadingMessagesEllipsis')}</div>
       </div>
     );
   }
@@ -66,7 +68,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ conversationId }) => {
             </div>
             <div className="chat-header-info">
               <h3>{currentConversation.otherUser.displayName}</h3>
-              <span className="status">Online</span>
+              <span className="status">{t('online')}</span>
             </div>
           </>
         )}
