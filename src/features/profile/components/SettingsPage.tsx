@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, Page, Post, ProfileSettings, Notification, Item } from '../../../types/index';
+import { User, Page, Post, ProfileSettings, Notification, Item, Conversation } from '../../../types/index';
 import Header from '../../../components/ui/Header';
 import Avatar from './Avatar';
 import { BlockIcon, FlagIcon } from '../../../components/ui/icons';
