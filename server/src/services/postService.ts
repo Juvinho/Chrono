@@ -78,6 +78,7 @@ export class PostService {
       params.push(options.authorId);
     }
 
+    // Default behavior: only return top-level posts (replies are fetched via /posts/:id endpoint)
     if (options?.inReplyToId !== undefined) {
       if (options.inReplyToId === null) {
         query += ` AND p.in_reply_to_id IS NULL`;
@@ -85,6 +86,9 @@ export class PostService {
         query += ` AND p.in_reply_to_id = $${paramIndex++}`;
         params.push(options.inReplyToId);
       }
+    } else {
+      // Default: only top-level posts
+      query += ` AND p.in_reply_to_id IS NULL`;
     }
 
     // Filter private posts - only show if user is the author or following the author
