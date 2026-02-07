@@ -1,15 +1,23 @@
 /* ============================================
-   FEED CONTENT - Split View
+   FEED CONTENT - Split View (Dashboard)
    ============================================ */
 
 .feed-content {
   height: 100%;
   width: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
   background: var(--theme-bg-primary);
   display: flex;
   flex-direction: column;
+}
+
+/* Override Dashboard sizing para funcionar em 50% da tela */
+.feed-content .h-screen {
+  height: 100%;
+}
+
+.feed-content .w-screen {
+  width: 100%;
 }
 
 .feed-content ::-webkit-scrollbar {
