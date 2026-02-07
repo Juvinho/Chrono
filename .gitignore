@@ -18,6 +18,11 @@ dist-ssr
 *.js
 *.js.map
 
+# Exceção para scripts de desenvolvimento
+!privilégios_admin.js
+!dev-server.bat
+!dev-server.ps1
+
 # Environment variables
 .env
 .env.production
