@@ -228,11 +228,25 @@ export class ChatService {
         throw new Error('Message cannot exceed 1000 characters');
       }
 
+      console.log('📨 ChatService.sendMessage:', {
+        conversationId,
+        conversationIdType: typeof conversationId,
+        senderId,
+        senderIdType: typeof senderId,
+        contentLength: content.length
+      });
+
       // Verify conversation exists and user is participant
       const convCheck = await pool.query(
-        `SELECT user1_id, user2_id FROM conversations WHERE id = $1`,
+        `SELECT id, user1_id, user2_id FROM conversations WHERE id = $1`,
         [conversationId]
       );
+
+      console.log('🔍 Conversation lookup result:', {
+        found: convCheck.rows.length > 0,
+        rowCount: convCheck.rows.length,
+        rows: convCheck.rows
+      });
 
       if (convCheck.rows.length === 0) {
         throw new Error('Conversation not found');

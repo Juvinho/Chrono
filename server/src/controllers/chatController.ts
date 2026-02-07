@@ -92,6 +92,15 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
     const { conversationId } = req.params;
     const { content } = req.body;
     
+    console.log('📨 sendMessage called:', {
+      userId,
+      conversationId,
+      conversationIdType: typeof conversationId,
+      contentLength: content?.length,
+      url: req.originalUrl,
+      method: req.method
+    });
+    
     const message = await chatService.sendMessage(conversationId, userId, content);
     
     // Emit socket events if io is available on app
