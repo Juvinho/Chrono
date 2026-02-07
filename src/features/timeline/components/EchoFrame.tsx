@@ -52,8 +52,25 @@ export default function EchoFrame({
     const [activePostId, setActivePostId] = useState<string | null>(null);
     const [activeFilter, setActiveFilter] = useState<'All' | 'Following' | 'Media' | 'Polls'>('All');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [trendingCordoes, setTrendingCordoes] = useState<Array<{ tag: string; mentions: number; displayName: string }>>([]);
     // Removed local timeToRefresh state to prevent re-renders
     // Direct Chat removed from EchoFrame to avoid duplication with Messages module
+
+    // Load trending cordões
+    useEffect(() => {
+        const loadTrendingCordoes = async () => {
+            try {
+                const response = await apiClient.get('/posts/trending/cordoes');
+                if (response.data && Array.isArray(response.data)) {
+                    setTrendingCordoes(response.data.slice(0, 10)); // Limit to 10
+                }
+            } catch (error) {
+                console.error("Failed to load trending cordões:", error);
+            }
+        };
+        
+        loadTrendingCordoes();
+    }, []);
 
     useEffect(() => {
         if (composerDate) {
@@ -281,7 +298,7 @@ export default function EchoFrame({
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <div>
                         <h3 className="text-xl font-bold text-[var(--theme-text-light)] mb-4 border-b border-[var(--theme-border-primary)] pb-2">
-                            {t('popularCords') || 'Cordões Populares'}
+                            {t('popularPosts') || 'Posts Populares'}
                         </h3>
                         <div className="space-y-4">
                             {cordPopular.length > 0 ? cordPopular.map(post => (
@@ -318,6 +335,30 @@ export default function EchoFrame({
                                 inline={true}
                             />
                         </div>
+                        
+                        {/* Trending Cordões Section */}
+                        <div className="mb-8">
+                            <h3 className="text-lg font-bold text-[var(--theme-text-light)] mb-3 border-b border-[var(--theme-border-primary)] pb-2">
+                                {t('popularCords') || 'Cordões Populares'}
+                            </h3>
+                            <div className="space-y-2">
+                                {trendingCordoes.length > 0 ? (
+                                    trendingCordoes.map(cord => (
+                                        <div 
+                                            key={cord.tag}
+                                            onClick={() => setActiveCordTag(cord.displayName)}
+                                            className="cursor-pointer p-3 hover:bg-red-900/20 rounded-sm transition-colors border-l-2 border-red-500 bg-black/30"
+                                        >
+                                            <p className="font-bold text-red-500 text-sm">{cord.displayName}</p>
+                                            <p className="text-xs text-red-400 mt-1">📊 {cord.mentions.toLocaleString()} mentions</p>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="text-[var(--theme-text-secondary)] text-sm italic">Nenhum cordão encontrado</p>
+                                )}
+                            </div>
+                        </div>
+                        
                         <h3 className="text-xl font-bold text-[var(--theme-text-light)] mb-4 border-b border-[var(--theme-border-primary)] pb-2 flex justify-between items-center">
                             <span>{t('recentPosts') || 'Posts Recentes'}</span>
                             <span className="text-xs text-[var(--theme-primary)] animate-pulse">● LIVE</span>
