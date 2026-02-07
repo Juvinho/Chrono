@@ -11,16 +11,22 @@ export function useMessages(conversationId: number | string | null) {
 
   // Carrega mensagens
   const fetchMessages = useCallback(async () => {
-    if (!conversationId) return;
+    if (!conversationId) {
+      console.warn('⚠️ conversationId não definido:', conversationId);
+      return;
+    }
 
     try {
       setIsLoading(true);
       setError(null);
       
+      console.log(`📨 Buscando mensagens para conversa ID: ${conversationId}`);
       const data = await getMessages(conversationId);
+      console.log(`✅ Mensagens carregadas:`, {
+        total: data.length,
+        data: data
+      });
       setMessages(data);
-      
-      console.log('✅ Mensagens carregadas:', data.length);
     } catch (err) {
       console.error('❌ Erro ao carregar mensagens:', err);
       setError('Falha ao carregar mensagens');
