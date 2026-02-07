@@ -327,4 +327,20 @@ export function ChevronRightIcon({ className }: { className?: string }) {
     );
 }
 
+export function ChevronDownIcon({ className }: { className?: string }) {
+    return (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+    </svg>
+    );
+}
+
+export function ChevronUpIcon({ className }: { className?: string }) {
+    return (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+    </svg>
+    );
+}
+
 
