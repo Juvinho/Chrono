@@ -349,30 +349,6 @@ router.post('/:id/reply', authenticateToken, async (req: AuthRequest, res: Respo
 });
 
 // Vote on poll
-router.post('/:id/vote', authenticateToken, async (req: AuthRequest, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { optionIndex } = req.body;
-
-    if (typeof optionIndex !== 'number') {
-      return res.status(400).json({ error: 'optionIndex must be a number' });
-    }
-
-    await pollService.vote(id, req.userId!, optionIndex);
-
-    const post = await postService.getPostById(id);
-    if (!post) {
-      return res.status(404).json({ error: 'Post not found' });
-    }
-
-    const votes = await pollService.getVotesForPost(id);
-    res.json({ voters: votes });
-  } catch (error: any) {
-    console.error('Vote error:', error);
-    res.status(500).json({ error: error.message || 'Failed to vote' });
-  }
-});
-
 router.post('/:id/poll/vote', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
@@ -385,7 +361,7 @@ router.post('/:id/poll/vote', authenticateToken, async (req: AuthRequest, res: R
     if (!post) {
       return res.status(404).json({ error: 'Post not found' });
     }
-    // Return the enriched post with updated voters
+    // Return the enriched post with updated voters and poll data
     const enrichedPost = await enrichPost(post, 0, 1);
     res.json(enrichedPost);
   } catch (error: any) {

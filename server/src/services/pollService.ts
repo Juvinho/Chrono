@@ -12,23 +12,33 @@ export class PollService {
       throw new Error('User already voted on this poll');
     }
 
-    // Add vote
+    // Add vote to poll_votes table
     await pool.query(
       'INSERT INTO poll_votes (post_id, user_id, option_index) VALUES ($1, $2, $3)',
       [postId, userId, optionIndex]
     );
 
-    // Update poll options counts in post
+    // Update poll options counts in post JSONB
     const post = await pool.query('SELECT poll_options FROM posts WHERE id = $1', [postId]);
     if (post.rows[0]?.poll_options) {
       const options = post.rows[0].poll_options;
-      if (options[optionIndex]) {
+      
+      // Ensure option exists and has votes initialized
+      if (Array.isArray(options) && options[optionIndex]) {
         options[optionIndex].votes = (options[optionIndex].votes || 0) + 1;
+        
+        // Save updated options back to database
         await pool.query('UPDATE posts SET poll_options = $1::jsonb WHERE id = $2', [
           JSON.stringify(options),
           postId,
         ]);
+      } else {
+        // Log warning if option index is out of bounds
+        console.warn(`Poll option index ${optionIndex} out of bounds for post ${postId}`);
       }
+    } else {
+      // Log warning if post has no poll_options JSONB
+      console.warn(`Post ${postId} has no poll_options data`);
     }
   }
 
