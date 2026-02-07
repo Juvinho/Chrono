@@ -62,7 +62,10 @@ export default function EchoFrame({
             try {
                 const response = await apiClient.get('/posts/trending/cordoes');
                 if (response.data && Array.isArray(response.data)) {
+                    console.log('✅ Trending cordões loaded:', response.data);
                     setTrendingCordoes(response.data.slice(0, 10)); // Limit to 10
+                } else {
+                    console.warn('⚠️ No trending data:', response.data);
                 }
             } catch (error) {
                 console.error("Failed to load trending cordões:", error);
@@ -223,12 +226,11 @@ export default function EchoFrame({
     const cordTopics = useMemo(() => {
         const topics = new Map<string, number>();
         allPosts.forEach(post => {
-            if(post.isThread) {
-                const tags = post.content.match(/\$\w+/g) || [];
-                tags.forEach(tag => {
-                    topics.set(tag, (topics.get(tag) || 0) + 1);
-                });
-            }
+            // Count cords in ALL posts, not just threads
+            const tags = post.content.match(/\$[A-Za-z0-9_]+/g) || [];
+            tags.forEach(tag => {
+                topics.set(tag, (topics.get(tag) || 0) + 1);
+            });
         });
         return Array.from(topics.entries()).sort((a, b) => b[1] - a[1]);
     }, [allPosts]);
@@ -252,6 +254,19 @@ export default function EchoFrame({
         return allPosts
             .filter(p => p.isThread)
             .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+            .slice(0, 5);
+    }, [allPosts]);
+
+    // Popular posts for today (with most reactions/engagement)
+    const popularPostsToday = useMemo(() => {
+        const today = new Date();
+        return allPosts
+            .filter(p => !p.isThread && isSameDay(new Date(p.timestamp), today))
+            .sort((a, b) => {
+                const scoreA = (a.replies?.length || 0) * 2 + Object.values(a.reactions || {}).reduce((sum, v) => sum + v, 0);
+                const scoreB = (b.replies?.length || 0) * 2 + Object.values(b.reactions || {}).reduce((sum, v) => sum + v, 0);
+                return scoreB - scoreA;
+            })
             .slice(0, 5);
     }, [allPosts]);
 
@@ -522,9 +537,9 @@ export default function EchoFrame({
                                 <PostCard key={post.id} post={post} currentUser={currentUser} onViewProfile={onViewProfile} onUpdateReaction={onUpdateReaction} onReply={onReply} onEcho={onEcho} onDelete={onDeletePost} onEdit={setPostToEdit} onTagClick={onTagClick} onPollVote={onPollVote} typingParentIds={typingParentIds} compact={true}/>
                             ))}
                         </div>
-                     ) : recentCords.length > 0 ? (
+                     ) : popularPostsToday.length > 0 ? (
                         <div className="space-y-4">
-                            {recentCords.map(post => (
+                            {popularPostsToday.map(post => (
                                 <PostCard key={post.id} post={post} currentUser={currentUser} onViewProfile={onViewProfile} onUpdateReaction={onUpdateReaction} onReply={onReply} onEcho={onEcho} onDelete={onDeletePost} onEdit={setPostToEdit} onTagClick={onTagClick} onPollVote={onPollVote} typingParentIds={typingParentIds} compact={true}/>
                             ))}
                         </div>
