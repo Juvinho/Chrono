@@ -13,6 +13,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import LoadingSpinner from './components/ui/LoadingSpinner';
 import AppRoutes from './routes/AppRoutes';
 import { FloatingChatContainer } from './components/FloatingChatContainer';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import './styles/floating-chats.css';
 
 // Lazy load components for performance
@@ -20,7 +21,7 @@ const Marketplace = React.lazy(() => import('./features/marketplace/components/M
 // Chat system removed
 const GlitchiOverlay = React.lazy(() => import('./features/companion/components/GlitchiOverlay'));
 
-export default function App() {
+function App() {
     const navigate = useNavigate();
     const location = useLocation();
     const { playSound } = useSound();
@@ -635,5 +636,14 @@ export default function App() {
                 </div>
             </AuthProvider>
         </LanguageProvider>
+    );
+}
+
+// Export App wrapped with ErrorBoundary as default
+export default function AppWithErrorBoundary() {
+    return (
+        <ErrorBoundary>
+            <App />
+        </ErrorBoundary>
     );
 }
