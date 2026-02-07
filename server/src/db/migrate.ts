@@ -8,6 +8,98 @@ import bcrypt from 'bcryptjs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Proper SQL parser that respects dollar-quoted strings
+function parseSqlStatements(sql: string): string[] {
+  const statements: string[] = [];
+  let current = '';
+  let i = 0;
+
+  while (i < sql.length) {
+    // Check for dollar-quoted string
+    if (sql[i] === '$') {
+      // Extract the tag (e.g., $function$, $$, etc.)
+      let j = i + 1;
+      while (j < sql.length && sql[j] !== '$') {
+        j++;
+      }
+      if (j < sql.length) {
+        j++; // Include the closing $
+        const tag = sql.substring(i, j);
+        current += tag;
+        i = j;
+
+        // Find the matching closing tag
+        while (i < sql.length) {
+          if (sql.substring(i, i + tag.length) === tag) {
+            current += tag;
+            i += tag.length;
+            break;
+          }
+          current += sql[i];
+          i++;
+        }
+        continue;
+      }
+    }
+
+    // Check for single-line comment
+    if (sql[i] === '-' && sql[i + 1] === '-') {
+      while (i < sql.length && sql[i] !== '\n') {
+        current += sql[i];
+        i++;
+      }
+      if (i < sql.length) {
+        current += sql[i];
+        i++;
+      }
+      continue;
+    }
+
+    // Check for multi-line comment
+    if (sql[i] === '/' && sql[i + 1] === '*') {
+      current += sql[i];
+      i++;
+      current += sql[i];
+      i++;
+      while (i < sql.length) {
+        if (sql[i] === '*' && sql[i + 1] === '/') {
+          current += sql[i];
+          i++;
+          current += sql[i];
+          i++;
+          break;
+        }
+        current += sql[i];
+        i++;
+      }
+      continue;
+    }
+
+    // Check for statement terminator
+    if (sql[i] === ';') {
+      current += sql[i];
+      i++;
+      const trimmed = current.trim();
+      if (trimmed.length > 0) {
+        statements.push(trimmed);
+      }
+      current = '';
+      continue;
+    }
+
+    current += sql[i];
+    i++;
+  }
+
+  // Don't forget the last statement if it doesn't end with ;
+  const trimmed = current.trim();
+  if (trimmed.length > 0) {
+    statements.push(trimmed + ';');
+  }
+
+  return statements;
+}
+
 export async function migrate(retries = 3) {
   if (!process.env.DATABASE_URL) {
     console.warn('⚠️ DATABASE_URL não definido. Migrações de banco foram puladas no pre-deploy.');
@@ -21,16 +113,13 @@ export async function migrate(retries = 3) {
       const schemaPath = join(__dirname, 'schema.sql');
       const schema = readFileSync(schemaPath, 'utf-8');
       
-      // Split by semicolon and execute each statement
-      const statements = schema
-        .split(';')
-        .map(s => s.trim())
-        .filter(s => s.length > 0);
+      // Parse SQL statements respecting dollar-quoted strings
+      const statements = parseSqlStatements(schema);
       
       console.log(`📄 Found ${statements.length} SQL statements in schema.sql`);
       
       for (let i = 0; i < statements.length; i++) {
-        const statement = statements[i] + ';';
+        const statement = statements[i];
         try {
           await pool.query(statement);
         } catch (err: any) {
