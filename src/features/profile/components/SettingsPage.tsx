@@ -44,7 +44,7 @@ interface SettingsPageProps {
 }
 
 export default function SettingsPage({
-  user, onLogout, onNavigate, onNotificationClick, onViewNotifications, onUpdateUser, allUsers, allPosts, onOpenMarketplace, onBack, lastViewedNotifications
+  user, onLogout, onNavigate, onNotificationClick, onViewNotifications, onUpdateUser, allUsers, allPosts, conversations, onOpenMarketplace, onBack, lastViewedNotifications
 }: SettingsPageProps) {
   const { t, setLanguage, language } = useTranslation();
 
