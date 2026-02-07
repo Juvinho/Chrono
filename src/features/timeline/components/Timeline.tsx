@@ -211,7 +211,6 @@ export default function Timeline({ selectedDate, setSelectedDate, onNavigate, al
                     );
                 })}
             </div>
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-full w-1 bg-[var(--theme-secondary)] opacity-50 pointer-events-none"></div>
             
             {isCalendarOpen && (
                 <CalendarModal
