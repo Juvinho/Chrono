@@ -51,8 +51,7 @@ export default function App() {
     useAppTheme(currentUser);
 
     // 3. Other Local State
-    // Stories feature removed
-    // const [isMarketplaceOpen, setIsMarketplaceOpen] = useState(false); // Moved to route /marketplace
+    const [isMarketplaceOpen, setIsMarketplaceOpen] = useState(false);
     const [openChatUsernames, setOpenChatUsernames] = useState<string[]>([]);
     const [minimizedChatUsernames, setMinimizedChatUsernames] = useState<string[]>([]);
     const [animationKey, setAnimationKey] = useState(0);
@@ -608,7 +607,7 @@ export default function App() {
                                 handlePollVote={handlePollVote}
                                 handleShowNewPosts={handleShowNewPosts}
                                 
-                                setIsMarketplaceOpen={() => navigate('/marketplace')}
+                                setIsMarketplaceOpen={setIsMarketplaceOpen}
                                 handleBack={handleBack}
                                 handleFollowToggle={handleFollowToggle}
                                 handleSendGlitchi={handleSendGlitchi}
@@ -619,6 +618,14 @@ export default function App() {
                                 <GlitchiOverlay 
                                     senderUsername={activeGlitchi.senderUsername}
                                     onComplete={() => setActiveGlitchi(null)}
+                                />
+                            )}
+
+                            {isMarketplaceOpen && currentUser && (
+                                <Marketplace 
+                                    currentUser={currentUser}
+                                    onClose={() => setIsMarketplaceOpen(false)}
+                                    onUserUpdate={handleUpdateUser}
                                 />
                             )}
 
