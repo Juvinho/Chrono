@@ -140,6 +140,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     onBack={handleBack}
                     lastViewedNotifications={lastViewedNotifications}
                     onPostClick={handleOpenThreadView}
+                    onOpenChat={handleOpenChat}
                 />
             ) : <Navigate to="/welcome" />} />
 
@@ -175,6 +176,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     onBack={handleBack}
                     lastViewedNotifications={lastViewedNotifications}
                     onPostClick={handleOpenThreadView}
+                    onOpenChat={handleOpenChat}
                 />
             ) : <Navigate to="/welcome" />} />
 
@@ -203,6 +205,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     onUpdateUser={handleUpdateUser}
                     onBack={handleBack}
                     lastViewedNotifications={lastViewedNotifications}
+                    onOpenChat={handleOpenChat}
                 />
             ) : <Navigate to="/welcome" />} />
             
@@ -223,6 +226,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     onOpenMarketplace={() => setIsMarketplaceOpen(true)}
                     onBack={handleBack}
                     lastViewedNotifications={lastViewedNotifications}
+                    onOpenChat={handleOpenChat}
                 />
             ) : <Navigate to="/welcome" />} />
             
@@ -239,6 +243,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     onOpenMarketplace={() => setIsMarketplaceOpen(true)}
                     onBack={handleBack}
                     lastViewedNotifications={lastViewedNotifications}
+                    onOpenChat={handleOpenChat}
                 />
             ) : <Navigate to="/welcome" />} />
             
@@ -276,6 +281,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     onBack={handleBack}
                     lastViewedNotifications={lastViewedNotifications}
                     onPostClick={handleOpenThreadView}
+                    onOpenChat={handleOpenChat}
                 />
             ) : <Navigate to="/welcome" />} />
 
