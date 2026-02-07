@@ -64,12 +64,22 @@ export async function sendMessage(request: SendMessageRequest): Promise<Message>
     throw new Error('ID da conversa é obrigatório');
   }
 
+  const endpoint = `${API_BASE}/${request.conversationId}/messages`;
+  console.log('📤 sendMessage API:', {
+    conversationId: request.conversationId,
+    conversationIdType: typeof request.conversationId,
+    contentLength: request.content.trim().length,
+    endpoint
+  });
+
   const response = await baseClient.post<Message>(
-    `${API_BASE}/${request.conversationId}/messages`,
+    endpoint,
     {
       content: request.content.trim(),
     }
   );
+  
+  console.log('📬 sendMessage response:', response);
   if (response.error) throw new Error(response.error);
   if (!response.data) throw new Error('No message data returned');
   return response.data;

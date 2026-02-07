@@ -37,7 +37,15 @@ export function useMessages(conversationId: number | string | null) {
 
   // Envia mensagem
   const handleSendMessage = async (content: string) => {
-    if (!conversationId || !content.trim()) return;
+    if (!conversationId || !content.trim()) {
+      console.warn('⚠️ Cannot send message:', {
+        hasConversationId: !!conversationId,
+        conversationId,
+        conversationIdType: typeof conversationId,
+        contentValid: content.trim().length > 0
+      });
+      return;
+    }
 
     try {
       setIsSending(true);
@@ -46,6 +54,13 @@ export function useMessages(conversationId: number | string | null) {
         conversationId,
         content: content.trim(),
       };
+      
+      console.log('📤 Sending message:', {
+        conversationId,
+        conversationIdType: typeof conversationId,
+        contentLength: content.trim().length,
+        endpoint: `/chat/${conversationId}/messages`
+      });
       
       const newMessage = await sendMessage(request);
       
