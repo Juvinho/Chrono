@@ -8,6 +8,7 @@ import { PostComposer } from '../../timeline/components/PostComposer';
 import { isSameDay } from '../../../utils/date';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useSound } from '../../../contexts/SoundContext';
+import { useToast } from '../../../contexts/ToastContext';
 import { useChatStore } from '../../messaging/components/FloatingChatManager';
 import UserListModal from '../../../components/ui/UserListModal';
 import { VerifiedIcon, MessageIcon, PaperPlaneIcon } from '../../../components/ui/icons';
@@ -53,6 +54,7 @@ export default function ProfilePage({
 }: ProfilePageProps & { onUpdateUser?: (user: User) => Promise<{ success: boolean; error?: string }> }) {
   const { t } = useTranslation();
   const { playSound } = useSound();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const openChat = useChatStore((state) => state.openChat);
   const { username: routeUsername } = useParams<{ username: string }>();
@@ -295,47 +297,54 @@ export default function ProfilePage({
   };
 
   const handleSendMessage = async () => {
-    if (profileUser && currentUser) {
-      try {
-        console.log('📨 Opening mini-chat for:', profileUser.displayName);
-        
-        // Chamando API para obter ou criar conversa
+    if (!profileUser || !currentUser) return;
+    
+    try {
+      console.log('📨 Abrindo mini-chat para:', profileUser.displayName);
+      
+      // 1. Tentar achar conversa existente
+      let conversation = conversations.find(c => {
+        const otherUserId = c.participants?.[0] === currentUser.id ? c.participants?.[1] : c.participants?.[0];
+        return otherUserId === profileUser.id;
+      });
+      
+      // 2. Se não existe, criar nova
+      if (!conversation) {
+        console.log('📝 Criando nova conversa com:', profileUser.id);
         const response = await apiClient.post('/api/chat/init', {
           targetUserId: profileUser.id
         });
         
-        if (response.data) {
-          const conversation = response.data;
-          
-          // Converter para formato esperado pelo FloatingChatBox
-          const floatingConversation: any = {
-            id: conversation.id,
-            otherUser: {
-              id: profileUser.id,
-              username: profileUser.username,
-              displayName: profileUser.displayName || profileUser.username,
-              avatarUrl: profileUser.profilePicture || null,
-              isOnline: profileUser.isOnline
-            },
-            lastMessage: null,
-            unreadCount: 0,
-            updatedAt: new Date().toISOString()
-          };
-          
-          // Abrir mini-chat flutuante
-          openChat(floatingConversation);
-          console.log('✅ Mini-chat aberto');
+        if (response.data?.id) {
+          conversation = response.data;
+          console.log('✅ Conversa criada:', conversation.id);
+        } else {
+          throw new Error('Resposta inválida da API');
         }
-      } catch (error) {
-        console.error('❌ Erro ao abrir mini-chat:', error);
-        // Fallback: navegar para /messages
-        navigate('/messages', {
-          state: {
-            targetUserId: profileUser.id,
-            targetUsername: profileUser.username
-          }
-        });
       }
+      
+      // 3. Converter para formato do FloatingChatBox
+      const floatingConversation: any = {
+        id: conversation.id,
+        otherUser: {
+          id: profileUser.id,
+          username: profileUser.username,
+          displayName: profileUser.displayName || profileUser.username,
+          avatarUrl: profileUser.profilePicture || null,
+          isOnline: profileUser.isOnline
+        },
+        lastMessage: null,
+        unreadCount: 0,
+        updatedAt: new Date().toISOString()
+      };
+      
+      // 4. Abrir mini-chat
+      openChat(floatingConversation);
+      console.log('✅ Mini-chat aberto com sucesso');
+      
+    } catch (error) {
+      console.error('❌ Erro ao abrir mini-chat:', error);
+      showToast('Erro ao abrir chat. Tente novamente.', 'error');
     }
   };
 
