@@ -11,16 +11,27 @@ export const MessagingLayout: React.FC = () => {
   const { conversations, isLoading, error, refetch } = useConversations();
   const [selectedConversationId, setSelectedConversationId] = useState<number | string | null>(null);
 
+  console.log('💬 MessagingLayout carregado', {
+    selectedConversationId,
+    conversationsCount: conversations.length,
+    conversations: conversations.map(c => ({ id: c.id, otherUser: c.otherUser.username }))
+  });
+
   // ✅ Seleciona conversa ao vir de navegação (botão "Enviar Mensagem")
   useEffect(() => {
     const state = location.state as { selectedConversationId?: number | string; targetUserId?: number | string };
     
+    console.log('📍 location.state:', state);
+    
     if (state?.selectedConversationId) {
+      console.log('✅ Selecionando conversa:', state.selectedConversationId);
       setSelectedConversationId(state.selectedConversationId);
     } else if (state?.targetUserId) {
       // Se veio com targetUserId, cria/busca a conversa
+      console.log('🔗 Iniciando conversa com:', state.targetUserId);
       initConversation(state.targetUserId)
         .then((conversation) => {
+          console.log('✅ Conversa criada/encontrada:', conversation.id);
           setSelectedConversationId(conversation.id);
           refetch();
         })

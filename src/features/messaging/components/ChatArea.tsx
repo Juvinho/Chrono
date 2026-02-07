@@ -11,6 +11,8 @@ interface ChatAreaProps {
 
 export const ChatArea: React.FC<ChatAreaProps> = ({ conversationId }) => {
   const { t } = useTranslation();
+  console.log(`📍 ChatArea carregado com conversationId:`, conversationId);
+  
   const {
     messages,
     isLoading,
