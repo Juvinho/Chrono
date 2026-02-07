@@ -2,14 +2,29 @@
    FLOATING CHAT WINDOW - Facebook Messenger Style
    ============================================ */
 
-.floating-chat-window {
-  position: relative;
+/* Container para múltiplos chats */
+.floating-chat-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.floating-chat-wrapper {
+  pointer-events: auto;
+}
+
+/* Caixa de chat individual */
+.floating-chat-box {
   width: 360px;
   max-height: 500px;
   background: var(--theme-bg-primary);
   border: 1px solid var(--theme-border-primary);
-  border-bottom: none;
-  border-radius: 8px 8px 0 0;
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
   box-shadow: 0 5px 40px rgba(0, 0, 0, 0.16);
@@ -30,7 +45,7 @@
   }
 }
 
-.floating-chat-window.minimized {
+.floating-chat-box.minimized {
   max-height: 56px;
 }
 
@@ -45,27 +60,31 @@
   flex-shrink: 0;
 }
 
-.floating-chat-header-info {
+/* User Info Section */
+.header-user-info {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex: 1;
+  min-width: 0;
 }
 
-.floating-chat-avatar {
+.avatar-mini {
   width: 40px;
   height: 40px;
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
+  background: var(--theme-bg-secondary);
 }
 
-.floating-chat-avatar img {
+.avatar-mini-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.floating-chat-avatar .avatar-placeholder {
+.avatar-placeholder-mini {
   width: 100%;
   height: 100%;
   display: flex;
@@ -77,7 +96,15 @@
   font-weight: 600;
 }
 
-.floating-chat-name {
+.user-name-floating {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.user-display-name {
   font-size: 15px;
   font-weight: 600;
   color: var(--theme-text-light);
@@ -86,19 +113,29 @@
   white-space: nowrap;
 }
 
-.floating-chat-actions {
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot.online {
+  background: #31a24c;
+}
+
+/* Header Actions */
+.header-actions {
   display: flex;
   gap: 8px;
   align-items: center;
 }
 
-.floating-chat-minimize,
-.floating-chat-close {
+.icon-btn-floating {
   background: none;
   border: none;
   color: var(--theme-text-secondary);
   cursor: pointer;
-  font-size: 18px;
   padding: 4px 8px;
   transition: color 0.2s;
   display: flex;
@@ -106,13 +143,16 @@
   justify-content: center;
 }
 
-.floating-chat-minimize:hover,
-.floating-chat-close:hover {
+.icon-btn-floating:hover {
   color: var(--theme-text-light);
 }
 
+.icon-btn-floating.close-btn:hover {
+  color: #e74c3c;
+}
+
 /* MESSAGES AREA */
-.floating-chat-messages {
+.floating-chat-body {
   flex: 1;
   overflow-y: auto;
   padding: 12px 12px;
@@ -122,9 +162,34 @@
   background: var(--theme-bg-primary);
 }
 
-.floating-chat-loading,
-.floating-chat-error,
-.floating-chat-empty {
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  color: var(--theme-text-secondary);
+  font-size: 13px;
+  text-align: center;
+  gap: 12px;
+}
+
+.spinner-mini {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--theme-border-primary);
+  border-top-color: var(--theme-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.empty-state {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -134,8 +199,11 @@
   text-align: center;
 }
 
-.floating-chat-error {
-  color: #e74c3c;
+.messages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
 }
 
 /* MESSAGES */
@@ -184,7 +252,7 @@
 }
 
 /* INPUT AREA */
-.floating-chat-input-container {
+.floating-chat-footer {
   display: flex;
   align-items: flex-end;
   gap: 8px;
@@ -249,42 +317,44 @@
 }
 
 /* SCROLLBAR */
-.floating-chat-messages::-webkit-scrollbar {
+.floating-chat-body::-webkit-scrollbar {
   width: 6px;
 }
 
-.floating-chat-messages::-webkit-scrollbar-track {
+.floating-chat-body::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.floating-chat-messages::-webkit-scrollbar-thumb {
+.floating-chat-body::-webkit-scrollbar-thumb {
   background: var(--theme-border-primary);
   border-radius: 3px;
 }
 
-.floating-chat-messages::-webkit-scrollbar-thumb:hover {
+.floating-chat-body::-webkit-scrollbar-thumb:hover {
   background: var(--theme-text-secondary);
 }
 
 /* RESPONSIVE */
 @media (max-width: 768px) {
-  .floating-chats-container {
+  .floating-chat-container {
     right: 0;
     left: 0;
+    bottom: 0;
     gap: 0;
+    border-radius: 0;
   }
 
-  .floating-chat-window {
+  .floating-chat-box {
     width: 100vw;
     max-height: 100vh;
     border-radius: 0;
   }
 
-  .floating-chat-window.minimized {
+  .floating-chat-box.minimized {
     width: auto;
     position: fixed;
-    bottom: auto;
-    right: auto;
+    bottom: 10px;
+    right: 10px;
     border-radius: 8px;
   }
 }
