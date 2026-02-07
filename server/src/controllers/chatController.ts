@@ -12,6 +12,13 @@ export const initConversation = async (req: AuthRequest, res: Response) => {
     const userId = req.userId!;
     const { targetUserId } = req.body;
     
+    console.log('🔗 initConversation called:', {
+      userId,
+      userId_type: typeof userId,
+      targetUserId,
+      targetUserId_type: typeof targetUserId
+    });
+    
     if (!targetUserId) return res.status(400).json({ error: 'Target user required' });
     
     // Prevent self-messaging
@@ -37,11 +44,23 @@ export const initConversation = async (req: AuthRequest, res: Response) => {
       conversation = await chatService.createConversation(userId, targetUserId);
     }
     
+    console.log('✅ Conversation found/created:', {
+      conversationId: conversation.id,
+      conversationId_type: typeof conversation.id
+    });
+    
     // Get conversations in DTO format
     const conversations = await chatService.getUserConversations(userId);
     const result = conversations.find(c => c.id === conversation.id);
     
-    res.json(result || conversation);
+    const responseData = result || conversation;
+    console.log('📤 initConversation response:', {
+      hasResult: !!result,
+      responseId: responseData.id,
+      responseId_type: typeof responseData.id
+    });
+    
+    res.json(responseData);
   } catch (error: any) {
     console.error('Error init conversation:', error);
     res.status(500).json({ error: error.message });
