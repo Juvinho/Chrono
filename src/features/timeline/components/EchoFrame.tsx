@@ -260,7 +260,7 @@ export default function EchoFrame({
     // Popular posts for today (with most reactions - 24h window, max 10)
     const popularPostsToday = useMemo(() => {
         const today = new Date();
-        return allPosts
+        const todayPosts = allPosts
             .filter(p => !p.isThread && isSameDay(new Date(p.timestamp), today))
             .sort((a, b) => {
                 const reactionsA = Object.values(a.reactions || {}).reduce((sum, v) => sum + v, 0);
@@ -268,6 +268,8 @@ export default function EchoFrame({
                 return reactionsB - reactionsA;
             })
             .slice(0, 10);
+        console.log('[Popular Posts] Today:', today, 'Posts:', todayPosts.length, 'Data:', todayPosts);
+        return todayPosts;
     }, [allPosts]);
 
     const handleComposerClose = useCallback(() => {
