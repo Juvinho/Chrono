@@ -3,12 +3,14 @@ import { useLocation } from 'react-router-dom';
 import { ConversationList } from './ConversationList';
 import { ChatArea } from './ChatArea';
 import { useConversations } from '../hooks/useConversations';
+import { useMessageNotification } from '../../../contexts/MessageNotificationContext';
 import { initConversation } from '../api/messagingApi';
 import '../styles/messaging.css';
 
 export const MessagingLayout: React.FC = () => {
   const location = useLocation();
   const { conversations, isLoading, error, refetch } = useConversations();
+  const { unreadCount, resetUnread } = useMessageNotification();
   const [selectedConversationId, setSelectedConversationId] = useState<number | string | null>(null);
 
   console.log('💬 MessagingLayout carregado', {
@@ -16,6 +18,21 @@ export const MessagingLayout: React.FC = () => {
     conversationsCount: conversations.length,
     conversations: conversations.map(c => ({ id: c.id, otherUser: c.otherUser.username }))
   });
+
+  // ✅ Limpa contador quando volta avisualizar a aba
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Página ficou visível novamente
+        resetUnread();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [resetUnread]);
 
   // ✅ Seleciona conversa ao vir de navegação (botão "Enviar Mensagem")
   useEffect(() => {
@@ -46,7 +63,28 @@ export const MessagingLayout: React.FC = () => {
       {/* SIDEBAR - Lista de conversas */}
       <div className="messaging-sidebar">
         <div className="messaging-sidebar-header">
-          <h2>Mensagens</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <h2 style={{ margin: 0 }}>Mensagens</h2>
+            {unreadCount > 0 && (
+              <span 
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minWidth: '24px',
+                  height: '24px',
+                  background: 'linear-gradient(135deg, #00f0ff, #ff00ff)',
+                  color: '#000',
+                  borderRadius: '50%',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  boxShadow: '0 0 10px rgba(0, 240, 255, 0.6)'
+                }}
+              >
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </div>
         </div>
         
         <ConversationList

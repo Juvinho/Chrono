@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Message, SendMessageRequest } from '../types';
 import { getMessages, sendMessage } from '../api/messagingApi';
+import { useSound } from '../../../contexts/SoundContext';
+import { useMessageNotification } from '../../../contexts/MessageNotificationContext';
 
 export function useMessages(conversationId: number | string | null) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -10,6 +12,10 @@ export function useMessages(conversationId: number | string | null) {
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastFetchRef = useRef<number>(0);
   const isFetchingRef = useRef<boolean>(false);
+  const previousMessagesLengthRef = useRef<number>(0);
+  
+  const { playSound } = useSound();
+  const { incrementUnread, isPageVisible } = useMessageNotification();
 
   // Carrega mensagens com debounce
   const fetchMessages = useCallback(async () => {
@@ -35,6 +41,21 @@ export function useMessages(conversationId: number | string | null) {
       console.log(`✅ Mensagens carregadas:`, {
         total: data.length,
       });
+      
+      // Detecta novas mensagens recebidas
+      if (data.length > previousMessagesLengthRef.current) {
+        const newMessagesCount = data.length - previousMessagesLengthRef.current;
+        
+        // Reproduz som apropriado
+        if (isPageVisible) {
+          playSound('message_receive');
+        } else {
+          playSound('message_background');
+          incrementUnread(newMessagesCount);
+        }
+      }
+      
+      previousMessagesLengthRef.current = data.length;
       setMessages(data);
       setError(null);
     } catch (err) {
@@ -43,7 +64,7 @@ export function useMessages(conversationId: number | string | null) {
     } finally {
       isFetchingRef.current = false;
     }
-  }, [conversationId]);
+  }, [conversationId, playSound, incrementUnread, isPageVisible]);
 
   // Envia mensagem
   const handleSendMessage = async (content: string) => {
@@ -71,8 +92,12 @@ export function useMessages(conversationId: number | string | null) {
       
       const newMessage = await sendMessage(request);
       
+      // Reproduz som ao enviar
+      playSound('message_send');
+      
       // Adiciona mensagem à lista
       setMessages((prev) => [...prev, newMessage]);
+      previousMessagesLengthRef.current += 1;
       
       console.log('✅ Mensagem enviada:', newMessage.id);
     } catch (err) {
