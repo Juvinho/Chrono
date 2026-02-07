@@ -440,9 +440,9 @@
 
 .floating-chat-footer {
   display: flex;
-  align-items: flex-end;
-  gap: 10px;
-  padding: 12px 16px;
+  align-items: stretch;
+  gap: 8px;
+  padding: 12px 14px;
   border-top: 1px solid var(--theme-border-primary);
   background: var(--theme-bg-primary);
   flex-shrink: 0;
@@ -460,8 +460,17 @@
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
 }
 
+/* Message Input Container */
+.message-input {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  min-height: 42px;
+}
+
 /* Input Field */
-.chat-input-field {
+.message-input-field {
   flex: 1;
   background: var(--theme-bg-secondary);
   border: 1px solid var(--theme-border-primary);
@@ -472,35 +481,36 @@
   transition: var(--floating-transition);
   resize: none;
   font-family: inherit;
-  max-height: 80px;
+  max-height: 100px;
   line-height: 1.5;
+  min-height: 40px;
 }
 
-.chat-input-field::placeholder {
+.message-input-field::placeholder {
   color: var(--theme-text-secondary);
   opacity: 0.6;
 }
 
-.chat-input-field:focus {
+.message-input-field:focus {
   outline: none;
   border-color: var(--theme-primary);
   background: var(--theme-bg-primary);
   box-shadow: 0 0 12px rgba(0, 0, 0, 0.08), inset 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-.chat-input-field:hover:not(:focus) {
+.message-input-field:hover:not(:focus) {
   border-color: var(--theme-border-primary);
   background: var(--theme-bg-secondary);
 }
 
 /* Send Button */
-.chat-send-btn {
+.message-send-button {
   background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-secondary) 100%);
   border: none;
   color: white;
   cursor: pointer;
-  padding: 10px 14px;
-  border-radius: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
   font-size: 16px;
   transition: var(--floating-transition);
   display: flex;
@@ -510,9 +520,12 @@
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
 }
 
-.chat-send-btn::before {
+.message-send-button::before {
   content: '';
   position: absolute;
   top: 0;
@@ -523,17 +536,17 @@
   transition: left 0.5s ease;
 }
 
-.chat-send-btn:hover {
+.message-send-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
 
-.chat-send-btn:active {
+.message-send-button:active {
   transform: translateY(0);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.chat-send-btn:disabled {
+.message-send-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
