@@ -203,9 +203,20 @@ function SearchResultsSection({
 
             {results.cordoes.length > 0 && (
                 <ResultSection title="Cordões" count={results.cordoes.length}>
-                    {results.cordoes.map(c => (
-                        <CordaoCard key={c.id} cordao={c} onClick={() => onSearch(SearchService.extractCordoes(c.content)[0] || c.content)} />
-                    ))}
+                    {results.cordoes.map(c => {
+                        const tag = SearchService.extractCordoes(c.content)[0];
+                        const mentions = allPosts.filter(p => 
+                            SearchService.extractCordoes(p.content).includes(tag)
+                        ).length;
+                        return (
+                            <CordaoCard 
+                                key={c.id} 
+                                cordao={c} 
+                                mentions={mentions}
+                                onClick={() => onSearch(tag || c.content)} 
+                            />
+                        );
+                    })}
                 </ResultSection>
             )}
 
@@ -256,9 +267,20 @@ function RecommendationsSection({
                                 <TrendingCordaoCard key={c.tag} cordao={c} onSearch={onSearch} />
                             ))
                         ) : (
-                            recommendations.popularCordoes.map(c => (
-                                <CordaoCard key={c.id} cordao={c} onClick={() => onSearch(SearchService.extractCordoes(c.content)[0] || c.content)} />
-                            ))
+                            recommendations.popularCordoes.map(c => {
+                                const tag = SearchService.extractCordoes(c.content)[0];
+                                const mentions = allPosts.filter(p => 
+                                    SearchService.extractCordoes(p.content).includes(tag)
+                                ).length;
+                                return (
+                                    <CordaoCard 
+                                        key={c.id} 
+                                        cordao={c} 
+                                        mentions={mentions}
+                                        onClick={() => onSearch(tag || c.content)} 
+                                    />
+                                );
+                            })
                         )}
                     </div>
                 </div>
@@ -334,10 +356,12 @@ function UserCard({
 
 function CordaoCard({ 
     cordao, 
-    onClick 
+    onClick,
+    mentions
 }: {
     cordao: Post;
     onClick: () => void;
+    mentions?: number;
 }) {
     const tag = SearchService.extractCordoes(cordao.content)[0];
     
@@ -347,7 +371,7 @@ function CordaoCard({
             className="w-full text-left p-3 hover:bg-red-900/20 rounded-sm transition-colors border-l-2 border-red-500 bg-black/30 focus:outline-none focus:ring-1 focus:ring-red-500"
         >
             <p className="font-bold text-red-500 truncate">{tag}</p>
-            <p className="text-xs text-[var(--theme-text-secondary)] mt-1">by @{cordao.author.username}</p>
+            <p className="text-xs text-red-400 mt-1">📊 {mentions ? mentions.toLocaleString() : 'N/A'} mentions</p>
         </button>
     );
 }
