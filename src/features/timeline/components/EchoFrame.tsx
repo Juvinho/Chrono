@@ -167,11 +167,23 @@ export default function EchoFrame({
             
             // Convert poll object to pollOptions and pollEndsAt
             if (postData.poll && (postData.poll as any).options) {
+                console.log('🔄 Transforming poll data:', {
+                    frontendPoll: postData.poll,
+                    pollOptions: (postData.poll as any).options,
+                    pollEndsAt: (postData.poll as any).endsAt,
+                });
                 apiPostData.pollOptions = (postData.poll as any).options;
-                apiPostData.pollEndsAt = (postData.poll as any).endsAt;
+                apiPostData.pollEndsAt = (postData.poll as any).endsAt instanceof Date 
+                    ? (postData.poll as any).endsAt.toISOString()
+                    : (postData.poll as any).endsAt;
                 delete apiPostData.poll;
+                console.log('✅ After transformation:', {
+                    pollOptions: apiPostData.pollOptions,
+                    pollEndsAt: apiPostData.pollEndsAt,
+                });
             }
             
+            console.log('📤 Sending to API:', apiPostData);
             const result = await apiClient.createPost(apiPostData);
             
             if (result.error) {
@@ -181,6 +193,7 @@ export default function EchoFrame({
             
             // The post was created successfully, notify parent to reload data
             if (result.data) {
+                console.log('📥 Received from API:', result.data);
                 const mappedPost = {
                     ...result.data,
                     timestamp: new Date(result.data.createdAt || result.data.created_at || Date.now()),
