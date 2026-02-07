@@ -288,6 +288,28 @@ export const translations = {
     dataSlicer_noVideo: 'No video uploaded. Please select a file to analyze.',
     dataSlicer_errorOnlyOneVideo: 'Only one video allowed at a time. Please remove the current one first.',
     
+    // Messaging - Missing Strings
+    noConversationYet: 'No conversations yet',
+    startConversation: 'Start conversation',
+    loadingMessagesEllipsis: 'Loading messages...',
+    loadingEllipsis: 'Loading...',
+    online: 'Online',
+    seen: 'Seen',
+    messageInputPlaceholder: 'Write a message...',
+    messageSendError: 'Failed to send message',
+    messageSendErrorRetry: 'Failed to send message. Please try again.',
+    messageErrorOnSend: 'Error sending message:',
+    sendButtonTitle: 'Press Enter to send',
+    
+    // UI Elements
+    threadNotFound: 'THREAD NOT FOUND',
+    threadDoesNotExist: 'This thread does not exist',
+    goBack: 'Go back',
+    thread: 'THREAD',
+    selectConversationToStart: 'Select a conversation to start messaging.',
+    noMessagesYet: 'No messages yet. Send the first one!',
+    errorUnauthenticatedUser: 'Error: User not authenticated',
+    
     // Stories
     yourStory: 'Your Profile',
     share: 'Share',
@@ -579,6 +601,28 @@ export const translations = {
     dataSlicer_analysisComplete: 'Análise Concluída',
     dataSlicer_noVideo: 'Nenhum vídeo carregado. Por favor, selecione um arquivo para analisar.',
     dataSlicer_errorOnlyOneVideo: 'Apenas um vídeo por vez é permitido. Por favor, remova o atual primeiro.',
+    
+    // Messaging - Missing Strings
+    noConversationYet: 'Nenhuma conversa ainda',
+    startConversation: 'Iniciar conversa',
+    loadingMessagesEllipsis: 'Carregando mensagens...',
+    loadingEllipsis: 'Carregando...',
+    online: 'Online',
+    seen: 'Visto',
+    messageInputPlaceholder: 'Escrever uma mensagem...',
+    messageSendError: 'Erro ao enviar mensagem',
+    messageSendErrorRetry: 'Falha ao enviar mensagem. Tente novamente.',
+    messageErrorOnSend: 'Erro ao enviar mensagem:',
+    sendButtonTitle: 'Pressione Enter para enviar',
+    
+    // UI Elements
+    threadNotFound: 'THREAD NÃO ENCONTRADA',
+    threadDoesNotExist: 'Esta thread não existe',
+    goBack: 'Voltar',
+    thread: 'THREAD',
+    selectConversationToStart: 'Selecione uma conversa para começar a trocar mensagens.',
+    noMessagesYet: 'Nenhuma mensagem ainda. Envie a primeira!',
+    errorUnauthenticatedUser: 'Erro: Usuário não autenticado',
     
     // Stories
     yourStory: 'Seu Perfil',

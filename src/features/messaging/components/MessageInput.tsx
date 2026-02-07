@@ -1,4 +1,5 @@
 import React, { useState, useRef, KeyboardEvent } from 'react';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 interface MessageInputProps {
   onSend: (content: string) => Promise<void>;
@@ -9,6 +10,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   onSend,
   isSending,
 }) => {
+  const { t } = useTranslation();
   const [content, setContent] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -24,8 +26,8 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         textareaRef.current.style.height = 'auto';
       }
     } catch (error) {
-      console.error('Erro ao enviar mensagem:', error);
-      alert('Falha ao enviar mensagem. Tente novamente.');
+      console.error(t('messageErrorOnSend'), error);
+      alert(t('messageSendErrorRetry'));
     }
   };
 
@@ -55,7 +57,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         value={content}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
-        placeholder="Escreva uma mensagem..."
+        placeholder={t('messageInputPlaceholder')}
         rows={1}
         disabled={isSending}
         className="message-input-field"
@@ -65,8 +67,8 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         onClick={handleSend}
         disabled={!content.trim() || isSending}
         className="message-send-button"
-        aria-label="Enviar mensagem"
-        title="Pressione Enter para enviar"
+        aria-label={t('send')}
+        title={t('sendButtonTitle')}
       >
         {isSending ? (
           <span>⏳</span>

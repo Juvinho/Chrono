@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { Message } from '../types';
 import { formatMessageTime } from '../utils/formatTimestamp';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 interface MessageListProps {
   messages: Message[];
@@ -9,12 +10,13 @@ interface MessageListProps {
 
 export const MessageList: React.FC<MessageListProps> = ({ messages }) => {
   const { user: currentUser } = useAuth();
+  const { t } = useTranslation();
   
   // Guard against invalid state
   if (!currentUser) {
     return (
       <div className="messages-empty">
-        <p>Erro: Usuário não autenticado</p>
+        <p>{t('errorUnauthenticatedUser') || 'Erro: Usuário não autenticado'}</p>
       </div>
     );
   }
@@ -22,7 +24,7 @@ export const MessageList: React.FC<MessageListProps> = ({ messages }) => {
   if (messages.length === 0) {
     return (
       <div className="messages-empty">
-        <p>Nenhuma mensagem ainda. Envie a primeira!</p>
+        <p>{t('noMessagesYet') || 'Nenhuma mensagem ainda. Envie a primeira!'}</p>
       </div>
     );
   }
@@ -54,6 +56,8 @@ interface MessageBubbleProps {
 }
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isMine }) => {
+  const { t } = useTranslation();
+  
   return (
     <div className={`message-bubble-container ${isMine ? 'mine' : 'theirs'}`}>
       {!isMine && (
@@ -74,7 +78,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isMine }) => {
         </div>
         <div className="message-time">
           {formatMessageTime(message.sentAt)}
-          {isMine && message.isRead && <span className="read-indicator"> · Visto</span>}
+          {isMine && message.isRead && <span className="read-indicator"> · {t('seen')}</span>}
         </div>
       </div>
     </div>

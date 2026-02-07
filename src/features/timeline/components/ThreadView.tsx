@@ -6,6 +6,7 @@ import { mapApiPostToPost } from '../../../api/mappers';
 import LoadingSpinner from '../../../components/ui/LoadingSpinner';
 import PostCard from './PostCard';
 import { ChevronLeftIcon } from '../../../components/ui/icons';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 interface ThreadViewProps {
     currentUser: User;
@@ -36,6 +37,7 @@ export const ThreadView: React.FC<ThreadViewProps> = ({
     onBack,
     typingParentIds,
 }) => {
+    const { t } = useTranslation();
     const { postId } = useParams<{ postId: string }>();
     const navigate = useNavigate();
     const [rootPost, setRootPost] = useState<Post | null>(null);
@@ -80,14 +82,14 @@ export const ThreadView: React.FC<ThreadViewProps> = ({
     if (error || !rootPost) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--theme-bg-primary)] text-[var(--theme-text-primary)]">
-                <h2 className="text-2xl font-bold mb-4 text-[var(--theme-primary)]">THREAD NOT FOUND</h2>
-                <p className="text-[var(--theme-text-secondary)] mb-6">{error || 'This thread does not exist'}</p>
+                <h2 className="text-2xl font-bold mb-4 text-[var(--theme-primary)]">{t('threadNotFound')}</h2>
+                <p className="text-[var(--theme-text-secondary)] mb-6">{error || t('threadDoesNotExist')}</p>
                 <button
                     onClick={onBack}
                     className="flex items-center gap-2 px-4 py-2 bg-[var(--theme-bg-secondary)] border border-[var(--theme-primary)] rounded hover:bg-[var(--theme-bg-tertiary)] transition-colors"
                 >
                     <ChevronLeftIcon className="w-4 h-4" />
-                    GO BACK
+                    {t('goBack')}
                 </button>
             </div>
         );
@@ -146,11 +148,11 @@ export const ThreadView: React.FC<ThreadViewProps> = ({
                     <button
                         onClick={onBack}
                         className="flex items-center justify-center w-10 h-10 rounded hover:bg-[var(--theme-bg-secondary)] transition-colors"
-                        title="Go back"
+                        title={t('goBack')}
                     >
                         <ChevronLeftIcon className="w-5 h-5" />
                     </button>
-                    <h1 className="text-2xl font-bold">THREAD</h1>
+                    <h1 className="text-2xl font-bold">{t('thread')}</h1>
                 </div>
             </div>
 

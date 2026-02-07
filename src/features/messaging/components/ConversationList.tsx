@@ -1,6 +1,7 @@
 import React from 'react';
 import { Conversation } from '../types';
 import { formatTimestamp } from '../utils/formatTimestamp';
+import { useTranslation } from '../../../hooks/useTranslation';
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -17,6 +18,8 @@ export const ConversationList: React.FC<ConversationListProps> = ({
   selectedId,
   onSelect,
 }) => {
+  const { t } = useTranslation();
+
   if (isLoading) {
     return (
       <div className="conversation-list-loading">
@@ -36,7 +39,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
   if (conversations.length === 0) {
     return (
       <div className="conversation-list-empty">
-        <p>Nenhuma conversa ainda</p>
+        <p>{t('noConversationYet')}</p>
       </div>
     );
   }
@@ -68,6 +71,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
   onClick,
 }) => {
   const { otherUser, lastMessage, unreadCount } = conversation;
+  const { t } = useTranslation();
 
   return (
     <div
@@ -105,7 +109,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
                 : lastMessage.content}
             </span>
           ) : (
-            <span className="no-messages">Iniciar conversa</span>
+            <span className="no-messages">{t('startConversation')}</span>
           )}
         </div>
       </div>
