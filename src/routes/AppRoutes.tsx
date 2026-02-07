@@ -133,7 +133,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     onShowNewPosts={handleShowNewPosts}
                     
                     onUpdateUser={handleUpdateUser}
-                    onOpenMarketplace={() => handleNavigate(Page.Dashboard, 'marketplace')} // Will be handled by route
+                    onOpenMarketplace={() => setIsMarketplaceOpen(true)}
                     nextAutoRefresh={nextAutoRefresh}
                     isAutoRefreshPaused={isAutoRefreshPaused}
                     onBack={handleBack}
@@ -198,7 +198,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     selectedDate={selectedDate}
                     setSelectedDate={setSelectedDate}
                     typingParentIds={typingParentIds}
-                    onOpenMarketplace={() => handleNavigate(Page.Dashboard, 'marketplace')}
+                    onOpenMarketplace={() => setIsMarketplaceOpen(true)}
                     onUpdateUser={handleUpdateUser}
                     onBack={handleBack}
                     lastViewedNotifications={lastViewedNotifications}
@@ -235,7 +235,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     allUsers={combinedUsers}
                     allPosts={memoizedPosts}
                     conversations={conversations}
-                    onOpenMarketplace={() => handleNavigate(Page.Dashboard, 'marketplace')}
+                    onOpenMarketplace={() => setIsMarketplaceOpen(true)}
                     onBack={handleBack}
                     lastViewedNotifications={lastViewedNotifications}
                 />
