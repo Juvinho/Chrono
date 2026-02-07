@@ -18,6 +18,7 @@ interface HeaderProps {
     onViewNotifications: () => void;
     onSearch: (query: string) => void;
     onOpenMarketplace?: () => void;
+    onOpenChat?: () => void;
     onBack?: () => void;
     allUsers: User[];
     allPosts: Post[];
@@ -25,7 +26,7 @@ interface HeaderProps {
     lastViewedNotifications?: Date | null;
 }
 
-export default function Header({ user, onLogout, onViewProfile, onNavigate, onNotificationClick, onViewNotifications, onSearch, onOpenMarketplace, onBack, allUsers, allPosts, conversations, lastViewedNotifications }: HeaderProps) {
+export default function Header({ user, onLogout, onViewProfile, onNavigate, onNotificationClick, onViewNotifications, onSearch, onOpenMarketplace, onOpenChat, onBack, allUsers, allPosts, conversations, lastViewedNotifications }: HeaderProps) {
     const { t } = useTranslation();
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -49,6 +50,13 @@ export default function Header({ user, onLogout, onViewProfile, onNavigate, onNo
         if (notifications.length === 0) return 0;
         return notifications.filter(n => !n.read).length;
     }, [user.notifications]);
+
+    const unreadMessageCount = useMemo(() => {
+        if (!conversations) return 0;
+        return conversations.reduce((total, conv) => {
+            return total + (conv.unreadCount || 0);
+        }, 0);
+    }, [conversations]);
 
     return (
         <header className="h-16 bg-[var(--theme-bg-primary)] border-b-2 border-[var(--theme-border-primary)] z-50 relative flex items-center justify-between px-6 flex-shrink-0">
@@ -81,11 +89,21 @@ export default function Header({ user, onLogout, onViewProfile, onNavigate, onNo
                  <button onClick={() => onNavigate(Page.VideoAnalysis)} title={t('dataSlicer')} className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-secondary)] p-2 rounded-full hover:bg-[var(--theme-bg-tertiary)] transition-colors hidden sm:block">
                     <FilmIcon className="w-5 h-5 md:w-6 md:h-6" />
                  </button>
-                 {/* Chat removido */}
 
                  {onOpenMarketplace && (
                     <button onClick={onOpenMarketplace} title={t('marketplace')} className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-secondary)] p-2 rounded-full hover:bg-[var(--theme-bg-tertiary)] transition-colors">
                         <ShoppingBagIcon className="w-5 h-5 md:w-6 md:h-6" />
+                    </button>
+                 )}
+                 {/* Chat Icon */}
+                 {onOpenChat && (
+                    <button onClick={onOpenChat} title={t('messages')} className="relative text-[var(--theme-text-secondary)] hover:text-[var(--theme-secondary)] p-2 rounded-full hover:bg-[var(--theme-bg-tertiary)] transition-colors">
+                        <MessageIcon className="w-5 h-5 md:w-6 md:h-6" />
+                        {unreadMessageCount > 0 && (
+                            <span className="absolute top-1 right-1 w-3 h-3 md:w-4 md:h-4 bg-red-600 text-white text-[10px] md:text-xs rounded-full flex items-center justify-center animate-pulse">
+                                {unreadMessageCount > 9 ? '9+' : unreadMessageCount}
+                            </span>
+                        )}
                     </button>
                  )}
                  <div className="relative">

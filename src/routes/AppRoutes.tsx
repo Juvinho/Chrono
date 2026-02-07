@@ -78,6 +78,7 @@ interface AppRoutesProps {
     handleUpdateUser: (user: User) => Promise<{ success: boolean; error?: string }>;
     setIsMarketplaceOpen: (val: boolean) => void;
     handleBack: () => void;
+    handleOpenChat: () => void;
     handleFollowToggle: (username: string, actor?: User) => void;
     handleSendGlitchi: (username: string) => void;
     handlePasswordReset: (email: string, pass: string) => void;
@@ -93,7 +94,7 @@ export default function AppRoutes(props: AppRoutesProps) {
         handleNavigate, handleLogin, handleLogout, handleNotificationClick, onViewNotifications, handleNewPost,
         handleUpdateReaction, handleReply, handleEcho, handleDeletePost, handleEditPost,
         handlePollVote, handleShowNewPosts, handleUpdateUser,
-        setIsMarketplaceOpen, handleBack, handleFollowToggle, handleSendGlitchi, handlePasswordReset, handleOpenThreadView
+        setIsMarketplaceOpen, handleBack, handleFollowToggle, handleSendGlitchi, handlePasswordReset, handleOpenThreadView, handleOpenChat
     } = props;
 
     return (

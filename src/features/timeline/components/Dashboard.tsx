@@ -32,6 +32,7 @@ interface DashboardProps {
     allKnownPosts?: Post[];
     onUpdateUser?: (user: User) => void;
     onOpenMarketplace?: () => void;
+    onOpenChat?: () => void;
     nextAutoRefresh?: Date | null;
     isAutoRefreshPaused?: boolean;
     onBack?: () => void;
@@ -42,7 +43,7 @@ interface DashboardProps {
 export default function Dashboard({ 
     user, onLogout, onNavigate, onNotificationClick, onViewNotifications, selectedDate, setSelectedDate, allUsers, allPosts,
     onNewPost, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost, onPollVote, isGenerating, typingParentIds,
-    conversations, newPostsCount = 0, onShowNewPosts, allKnownPosts, onUpdateUser = () => {}, onOpenMarketplace,
+    conversations, newPostsCount = 0, onShowNewPosts, allKnownPosts, onUpdateUser = () => {}, onOpenMarketplace, onOpenChat,
     nextAutoRefresh, isAutoRefreshPaused, onBack, lastViewedNotifications, onPostClick
 }: DashboardProps) {
     const { t } = useTranslation();
@@ -160,6 +161,7 @@ export default function Dashboard({
                 onViewNotifications={onViewNotifications}
                 onSearch={handleSearch} 
                 onOpenMarketplace={onOpenMarketplace}
+                onOpenChat={onOpenChat}
                 allPosts={postsForSearch} 
                 allUsers={allUsers} 
                 conversations={conversations}
