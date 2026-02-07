@@ -483,9 +483,9 @@ const PostCard: React.FC<PostCardProps> = React.memo(({ post, currentUser, onVie
             
             {post.replies && post.replies.length > 0 && (
                 <div className="reply-container">
-                    {/* In feed view, limit to 5 replies. In thread view, show all */}
+                    {/* In feed view, limit to 3 replies. In thread view, show all */}
                     {(!isThreadedReply && !isContextualView 
-                        ? post.replies.slice(0, 5) 
+                        ? post.replies.slice(0, 3) 
                         : post.replies
                     ).map(reply => (
                         <PostCard 
@@ -507,13 +507,14 @@ const PostCard: React.FC<PostCardProps> = React.memo(({ post, currentUser, onVie
                         />
                     ))}
                     
-                    {/* Show "View more replies" button if there are more than 5 replies in feed view */}
-                    {!isThreadedReply && !isContextualView && post.replies.length > 5 && (
+                    {/* Show "View all replies" button if there are more than 3 replies in feed view */}
+                    {!isThreadedReply && !isContextualView && post.replies.length > 3 && (
                         <button
                             onClick={() => onPostClick?.(post.id)}
-                            className="ml-4 mt-3 text-sm text-[var(--theme-primary)] hover:text-[var(--theme-secondary)] transition-colors font-medium"
+                            className="ml-4 mt-3 px-3 py-1.5 text-sm text-[var(--theme-primary)] hover:text-[var(--theme-secondary)] bg-[var(--theme-bg-tertiary)] hover:bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-secondary)] hover:border-[var(--theme-primary)] rounded transition-all font-medium"
+                            aria-label={`View thread with ${post.replies.length - 3} more replies`}
                         >
-                            › Ver mais {post.replies.length - 5} resposta{post.replies.length - 5 !== 1 ? 's' : ''}
+                            💬 Ver todos os {post.replies.length} coment{post.replies.length !== 1 ? 'ários' : 'ário'}
                         </button>
                     )}
                 </div>

@@ -120,6 +120,7 @@ export const ThreadView: React.FC<ThreadViewProps> = ({
                     typingParentIds={typingParentIds}
                     nestingLevel={depth}
                     isThreadedReply={depth > 0}
+                    isContextualView={true}
                 />
             </div>
         );
@@ -144,15 +145,24 @@ export const ThreadView: React.FC<ThreadViewProps> = ({
         <div className="min-h-screen bg-[var(--theme-bg-primary)] text-[var(--theme-text-primary)]">
             {/* Header */}
             <div className="sticky top-0 z-40 bg-[var(--theme-bg-primary)] border-b-2 border-[var(--theme-primary)]">
-                <div className="flex items-center gap-4 p-4 max-w-4xl mx-auto">
-                    <button
-                        onClick={onBack}
-                        className="flex items-center justify-center w-10 h-10 rounded hover:bg-[var(--theme-bg-secondary)] transition-colors"
-                        title={t('goBack')}
-                    >
-                        <ChevronLeftIcon className="w-5 h-5" />
-                    </button>
-                    <h1 className="text-2xl font-bold">{t('thread')}</h1>
+                <div className="flex items-center justify-between gap-4 p-4 max-w-4xl mx-auto w-full">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={onBack}
+                            className="flex items-center justify-center w-10 h-10 rounded hover:bg-[var(--theme-bg-secondary)] transition-colors"
+                            title={t('goBack')}
+                        >
+                            <ChevronLeftIcon className="w-5 h-5" />
+                        </button>
+                        <div>
+                            <h1 className="text-2xl font-bold">{t('thread')}</h1>
+                            {rootPost && rootPost.replies && rootPost.replies.length > 0 && (
+                                <p className="text-xs text-[var(--theme-text-secondary)] mt-1">
+                                    💬 {rootPost.replies.length} comentário{rootPost.replies.length !== 1 ? 's' : ''}
+                                </p>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
 
