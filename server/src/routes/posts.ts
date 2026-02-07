@@ -57,13 +57,20 @@ async function batchEnrichPosts(posts: any[], userId?: string): Promise<any[]> {
       }
     }
 
+    // Load first 5 replies (preview) for feed view
+    let replies: any[] = [];
+    const rawReplies = await postService.getReplies(post.id);
+    if (rawReplies.length > 0) {
+      replies = await Promise.all(rawReplies.slice(0, 5).map((r: any) => enrichPost(r, 1, 1)));
+    }
+
     return {
       ...post,
       reactions: allReactions[post.id] || {},
       voters: allVotes[post.id] || {},
       repostOf,
       inReplyTo,
-      replies: [] // Replies are fetched separately or via single post view
+      replies
     };
   }));
 }
