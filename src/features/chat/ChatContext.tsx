@@ -47,45 +47,51 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
+  const listenersRef = useRef<Array<{ event: string; handler: Function }>>([]);
 
-  // Initialize Socket
+  // Initialize Socket - ONLY once per user authentication
   useEffect(() => {
     if (!user) return;
 
-    // Get token from localStorage or AuthContext
-    const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    // Prevent multiple socket connections
+    if (socketRef.current) {
+      return;
+    }
+
+    // Get token from sessionStorage or localStorage
+    const token = sessionStorage.getItem('chrono_token') || localStorage.getItem('chrono_token');
     
     if (!token) {
-      console.error('❌ No auth token available for Socket.io connection');
+      console.warn('[Chat] No auth token available for Socket.io connection');
       return;
     }
 
     const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:3001', {
       withCredentials: true,
-      auth: {
-        token: token,
-      },
+      auth: { token },
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
     });
 
-    newSocket.on('connect', () => {
-      console.log('✅ Socket connected with authentication');
+    // Define event handlers before attaching
+    const onConnect = () => {
+      console.log('[Chat] Socket connected');
       setIsConnected(true);
-    });
+    };
 
-    newSocket.on('disconnect', () => {
-      console.log('Socket disconnected');
+    const onDisconnect = () => {
+      console.log('[Chat] Socket disconnected');
       setIsConnected(false);
-    });
+    };
 
-    newSocket.on('error', (error: any) => {
-      console.error('❌ Socket error:', error);
-    });
+    const onError = (error: any) => {
+      console.error('[Chat] Socket error:', error);
+    };
 
-    newSocket.on('new_message', (message: Message) => {
-      if (activeConversation && message.conversation_id === activeConversation.id) {
-        setMessages((prev) => [...prev, message]);
-      }
-      // Update last message in conversation list
+    const onNewMessage = (message: Message) => {
+      setMessages((prev) => [...prev, message]);
       setConversations((prev) => {
         return prev.map((conv) => {
           if (conv.id === message.conversation_id) {
@@ -99,10 +105,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return conv;
         }).sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
       });
-    });
+    };
 
-    // Handle real-time conversation updates (lastMessage, updatedAt)
-    newSocket.on('conversation_updated', (conversationUpdate: any) => {
+    const onConversationUpdated = (conversationUpdate: any) => {
       setConversations((prev) => {
         return prev.map((conv) => {
           if (conv.id === conversationUpdate.id) {
@@ -116,14 +121,42 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return conv;
         }).sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
       });
-    });
+    };
 
+    // Attach listeners
+    newSocket.on('connect', onConnect);
+    newSocket.on('disconnect', onDisconnect);
+    newSocket.on('error', onError);
+    newSocket.on('new_message', onNewMessage);
+    newSocket.on('conversation_updated', onConversationUpdated);
+
+    // Track listeners for cleanup
+    listenersRef.current = [
+      { event: 'connect', handler: onConnect },
+      { event: 'disconnect', handler: onDisconnect },
+      { event: 'error', handler: onError },
+      { event: 'new_message', handler: onNewMessage },
+      { event: 'conversation_updated', handler: onConversationUpdated },
+    ];
+
+    socketRef.current = newSocket;
     setSocket(newSocket);
 
+    // Cleanup function - remove ALL listeners and disconnect
     return () => {
-      newSocket.close();
+      console.log('[Chat] Cleaning up socket listeners');
+      if (socketRef.current) {
+        listenersRef.current.forEach(({ event, handler }) => {
+          socketRef.current?.off(event, handler as any);
+        });
+        listenersRef.current = [];
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+      setSocket(null);
+      setIsConnected(false);
     };
-  }, [user, activeConversation]);
+  }, [user]); // Only depend on user, NOT activeConversation
 
   // Load conversations
   const loadConversations = async () => {
@@ -132,7 +165,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const list = Array.isArray(res.data) ? res.data : [];
       setConversations(list);
     } catch (error) {
-      console.error('Failed to load conversations', error);
+      console.error('[Chat] Failed to load conversations', error);
     }
   };
 
@@ -144,20 +177,21 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Load messages when active conversation changes
   useEffect(() => {
-    if (activeConversation && socket) {
-      socket.emit('join_conversation', activeConversation.id);
+    if (activeConversation && socketRef.current) {
+      socketRef.current.emit('join_conversation', activeConversation.id);
       
       const fetchMessages = async () => {
         try {
           const res = await apiClient.get(`/chat/${activeConversation.id}/messages`);
           setMessages(Array.isArray(res.data) ? res.data : []);
         } catch (error) {
-          console.error('Failed to load messages', error);
+          console.error('[Chat] Failed to load messages', error);
           setMessages([]);
         }
       };
       
       fetchMessages();
+
 
       return () => {
         socket.emit('leave_conversation', activeConversation.id);

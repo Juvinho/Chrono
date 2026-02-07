@@ -163,13 +163,17 @@ const PostCard: React.FC<PostCardProps> = React.memo(({ post, currentUser, onVie
     const renderContentWithTags = (content: string) => {
         // Regex to match $tags and @mentions, respecting punctuation and word boundaries
         // Matches $word or @word, ensuring it's not preceded by a non-whitespace character (unless it's the start of the string)
-        const parts = content.split(/((?:^|\s)(?:\$[\wÀ-ÿ]+|@[\wÀ-ÿ]+))/g);
+        // Validate and sanitize tags/mentions before processing
+        const parts = content.split(/((?:^|\s)(?:\$[\w]{1,30}|@[\w]{1,30}))/g);
         
         return parts.map((part, index) => {
+            if (!part) return null; // Skip empty parts
+            
             const trimmedPart = part.trim();
             const prefix = part.startsWith(' ') ? ' ' : '';
             
-            if (trimmedPart.startsWith('$')) {
+            if (trimmedPart.startsWith('$') && /^\$[\w]{1,30}$/.test(trimmedPart)) {
+                // Validate tag format: only letters, numbers, underscores, max 30 chars
                 return (
                     <React.Fragment key={index}>
                         {prefix}
@@ -183,13 +187,13 @@ const PostCard: React.FC<PostCardProps> = React.memo(({ post, currentUser, onVie
                 );
             }
             
-            if (trimmedPart.startsWith('@')) {
+            if (trimmedPart.startsWith('@') && /^@[\w]{1,30}$/.test(trimmedPart)) {
+                // Validate mention format: only letters, numbers, underscores, max 30 chars
                 const username = trimmedPart.substring(1);
                 return (
                     <React.Fragment key={index}>
                         {prefix}
                         <button 
-                            key={index} 
                             onClick={(e) => { e.stopPropagation(); onViewProfile(username); }} 
                             className="chrono-tag font-bold hover:text-[var(--theme-secondary)] transition-colors"
                         >
@@ -199,6 +203,7 @@ const PostCard: React.FC<PostCardProps> = React.memo(({ post, currentUser, onVie
                 );
             }
             
+            // Render plain text - React automatically escapes content in JSX
             return <span key={index}>{part}</span>;
         });
     };

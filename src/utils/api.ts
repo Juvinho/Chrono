@@ -32,19 +32,29 @@ interface ApiResponse<T> {
 
 class ApiClient {
   private token: string | null = null;
+  private readonly STORAGE_KEY = 'chrono_token';
+  private readonly USE_SESSION_STORAGE = true; // More secure than localStorage for tokens
 
   setToken(token: string | null) {
     this.token = token;
+    const storage = this.USE_SESSION_STORAGE ? sessionStorage : localStorage;
+    
     if (token) {
-      localStorage.setItem('chrono_token', token);
+      // Validate token format before storing (should be JWT)
+      if (!/^[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.[A-Za-z0-9-_.+/=]*$/.test(token)) {
+        console.warn('[Security] Invalid token format');
+        return;
+      }
+      storage.setItem(this.STORAGE_KEY, token);
     } else {
-      localStorage.removeItem('chrono_token');
+      storage.removeItem(this.STORAGE_KEY);
     }
   }
 
   getToken(): string | null {
     if (!this.token) {
-      this.token = localStorage.getItem('chrono_token');
+      const storage = this.USE_SESSION_STORAGE ? sessionStorage : localStorage;
+      this.token = storage.getItem(this.STORAGE_KEY);
     }
     return this.token;
   }
