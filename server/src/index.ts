@@ -240,8 +240,8 @@ app.get('/api', (_req: express.Request, res: express.Response) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/posts', postRoutes);
+app.use('/api/posts', reactionsRoutes);
 app.use('/api/chat', chatRoutes);
-app.use('/api/reactions', reactionsRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
 
