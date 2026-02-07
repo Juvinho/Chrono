@@ -25,6 +25,7 @@ const MessagingLayout = React.lazy(() => import('../features/messaging/component
 const Marketplace = React.lazy(() => import('../features/marketplace/components/Marketplace'));
 const EchoDetailModal = React.lazy(() => import('../features/timeline/components/EchoDetailModal'));
 const ThreadView = React.lazy(() => import('../features/timeline/components/ThreadView'));
+const PostDetail = React.lazy(() => import('../features/timeline/components/PostDetail'));
 
 const RedirectToProfile = () => {
     const { username } = useParams<{ username: string }>();
@@ -334,6 +335,26 @@ export default function AppRoutes(props: AppRoutesProps) {
             <Route path="/thread/:postId" element={currentUser ? (
                 <Suspense fallback={<LoadingSpinner />}>
                     <ThreadView 
+                        currentUser={currentUser}
+                        allUsers={combinedUsers}
+                        allPosts={memoizedPosts}
+                        onReply={handleReply}
+                        onUpdateReaction={handleUpdateReaction}
+                        onEcho={handleEcho}
+                        onDeletePost={handleDeletePost}
+                        onEditPost={handleEditPost}
+                        onPollVote={handlePollVote}
+                        onViewProfile={(...args: any[]) => handleNavigate(Page.Profile, args[0])}
+                        onBack={handleBack}
+                        typingParentIds={typingParentIds}
+                    />
+                </Suspense>
+            ) : <Navigate to="/welcome" />} />
+
+            {/* Post Detail with shareable random ID (7 digits) */}
+            <Route path="/post/:randomId" element={currentUser ? (
+                <Suspense fallback={<LoadingSpinner />}>
+                    <PostDetail 
                         currentUser={currentUser}
                         allUsers={combinedUsers}
                         allPosts={memoizedPosts}

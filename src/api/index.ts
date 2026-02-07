@@ -29,6 +29,11 @@ export const apiClient = {
   ...conversationService,
   setToken: (token: string | null) => baseClient.setToken(token),
   getToken: () => baseClient.getToken(),
+  get: <T,>(endpoint: string, options?: RequestInit) => baseClient.get<T>(endpoint, options),
+  post: <T,>(endpoint: string, body: any, options?: RequestInit) => baseClient.post<T>(endpoint, body, options),
+  put: <T,>(endpoint: string, body: any, options?: RequestInit) => baseClient.put<T>(endpoint, body, options),
+  delete: <T,>(endpoint: string, options?: RequestInit) => baseClient.delete<T>(endpoint, options),
+  request: <T,>(endpoint: string, options?: RequestInit) => baseClient.request<T>(endpoint, options),
 };
 
 export * from './mappers';
