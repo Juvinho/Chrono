@@ -61,6 +61,19 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isMine }) => {
   return (
     <div className={`message-item ${isMine ? 'mine' : 'theirs'}`}>
       <div className="message-bubble">
+        {message.imageUrl && (
+          <div style={{ marginBottom: message.content ? '8px' : '0' }}>
+            <img
+              src={message.imageUrl}
+              alt="Message"
+              style={{
+                maxWidth: '200px',
+                borderRadius: '8px',
+                display: 'block',
+              }}
+            />
+          </div>
+        )}
         <div className="message-content">
           {message.content}
         </div>

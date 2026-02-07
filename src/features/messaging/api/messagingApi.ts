@@ -76,6 +76,7 @@ export async function sendMessage(request: SendMessageRequest): Promise<Message>
     endpoint,
     {
       content: request.content.trim(),
+      ...(request.imageUrl && { imageUrl: request.imageUrl }),
     }
   );
   

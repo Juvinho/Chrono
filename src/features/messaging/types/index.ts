@@ -27,6 +27,7 @@ export interface Message {
   conversationId: number | string;
   sender: User;
   content: string;
+  imageUrl?: string; // Support for image attachments
   sentAt: string;
   isRead: boolean;
 }
@@ -34,4 +35,5 @@ export interface Message {
 export interface SendMessageRequest {
   conversationId: number | string;
   content: string;
+  imageUrl?: string;
 }
