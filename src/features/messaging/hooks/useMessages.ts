@@ -45,13 +45,20 @@ export function useMessages(conversationId: number | string | null) {
       // Detecta novas mensagens recebidas
       if (data.length > previousMessagesLengthRef.current) {
         const newMessagesCount = data.length - previousMessagesLengthRef.current;
+        console.log(`🔊 Nova(s) mensagem(ns) recebida(s): ${newMessagesCount}`);
         
-        // Reproduz som apropriado
-        if (isPageVisible) {
-          playSound('message_receive');
-        } else {
-          playSound('message_background');
-          incrementUnread(newMessagesCount);
+        // Reproduza som apropriado
+        try {
+          if (isPageVisible) {
+            console.log('📢 Reproduzindo som: message_receive (página visível)');
+            playSound('message_receive');
+          } else {
+            console.log('📢 Reproduzindo som: message_background (página escondida) + incrementando unread');
+            playSound('message_background');
+            incrementUnread(newMessagesCount);
+          }
+        } catch (soundError) {
+          console.error('❌ Erro ao reproduzir som:', soundError);
         }
       }
       
@@ -121,10 +128,10 @@ export function useMessages(conversationId: number | string | null) {
     // Carrega mensagens ao iniciar
     fetchMessages();
 
-    // Inicia polling a cada 5 segundos (aumentado de 3 para reduzir piscadas)
+    // Inicia polling a cada 3 segundos para detecção mais rápida de novas mensagens
     pollingIntervalRef.current = setInterval(() => {
       fetchMessages();
-    }, 5000);
+    }, 3000);
 
     return () => {
       if (pollingIntervalRef.current) {
