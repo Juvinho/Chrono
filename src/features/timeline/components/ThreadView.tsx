@@ -39,8 +39,11 @@ export const ThreadView: React.FC<ThreadViewProps> = ({
     const { t } = useTranslation();
     const { postId } = useParams<{ postId: string }>();
     const navigate = useNavigate();
-    const [rootPost, setRootPost] = useState<Post | null>(null);
-    const [loading, setLoading] = useState(true);
+    
+    // Try to find the post in allPosts first to avoid flicker
+    const postFromAllPosts = allPosts.find(p => p.id === postId);
+    const [rootPost, setRootPost] = useState<Post | null>(postFromAllPosts || null);
+    const [loading, setLoading] = useState(!postFromAllPosts);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -51,8 +54,13 @@ export const ThreadView: React.FC<ThreadViewProps> = ({
                 return;
             }
 
+            // If we already have the post, don't fetch again
+            if (rootPost) {
+                setLoading(false);
+                return;
+            }
+
             try {
-                setLoading(true);
                 setError(null);
                 
                 const response = await apiClient.getPost(postId);
@@ -72,7 +80,7 @@ export const ThreadView: React.FC<ThreadViewProps> = ({
         };
 
         loadPost();
-    }, [postId]);
+    }, [postId, rootPost]);
 
     if (loading) {
         return null;
