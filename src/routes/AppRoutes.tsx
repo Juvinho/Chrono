@@ -1,7 +1,6 @@
 import React, { Suspense } from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { User, Page, Post, Conversation } from '../types';
-import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { SplitLayout } from '../layouts/SplitLayout';
 import { FeedContent } from '../components/FeedContent';
 import { Error404, Error500, Error403, Error429, Error503, ErrorTimeout } from '../components/ErrorPages';
@@ -333,7 +332,7 @@ export default function AppRoutes(props: AppRoutesProps) {
             ) : <Navigate to="/welcome" />} />
 
             <Route path="/thread/:postId" element={currentUser ? (
-                <Suspense fallback={<LoadingSpinner />}>
+                <Suspense fallback={null}>
                     <ThreadView 
                         currentUser={currentUser}
                         allUsers={combinedUsers}
@@ -353,7 +352,7 @@ export default function AppRoutes(props: AppRoutesProps) {
 
             {/* Post Detail with shareable random ID (7 digits) */}
             <Route path="/post/:randomId" element={currentUser ? (
-                <Suspense fallback={<LoadingSpinner />}>
+                <Suspense fallback={null}>
                     <PostDetail 
                         currentUser={currentUser}
                         allUsers={combinedUsers}
