@@ -170,7 +170,7 @@ const getClientIp = (req: any) => {
 
 const apiLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 300, // Increased to 300 to support polling (30 requests every 2 seconds is reasonable)
+  max: 1000, // Increased to 1000 for better usability and polling support
   message: { error: 'Too many requests. Please try again later.' },
   keyGenerator: getClientIp,
   standardHeaders: true,
@@ -192,7 +192,7 @@ const authLimiter = rateLimit({
 
 const profileUpdateLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 100, // Allow 100 profile updates per minute (more generous for users with slow connections)
+  max: 300, // Increased for better usability
   message: { error: 'Você está atualizando seu perfil muito rápido. Aguarde um momento.' },
   keyGenerator: getClientIp,
   standardHeaders: true,
@@ -201,7 +201,7 @@ const profileUpdateLimiter = rateLimit({
 
 const postLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 20, // Increased to 20 posts per minute
+  max: 100, // Increased to 100 posts per minute
   message: { error: 'Você está postando muito rápido. Aguarde um momento.' },
   keyGenerator: getClientIp,
   standardHeaders: true,
@@ -210,7 +210,7 @@ const postLimiter = rateLimit({
 
 const chatLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 120, // 120 requests per minute (supports 2 polling intervals + active messaging)
+  max: 500, // Increased to 500 requests per minute for better chat usability
   message: { error: 'Você está enviando muitas mensagens. Aguarde um momento.' },
   keyGenerator: getClientIp,
   standardHeaders: true,
