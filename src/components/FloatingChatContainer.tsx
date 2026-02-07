@@ -73,7 +73,7 @@ export const FloatingChatContainer: React.FC<FloatingChatContainerProps> = ({ cu
                 // Exponential backoff: 500ms, 1s, 2s
                 const delay = Math.pow(2, 3 - retries) * 500;
                 console.warn(`⚠️  Falha ao inicializar conversa, retry em ${delay}ms...`);
-                await new Promise(r => setTimeout(r, delay));
+                await new Promise(resolve => setTimeout(resolve, delay));
               }
             }
           }

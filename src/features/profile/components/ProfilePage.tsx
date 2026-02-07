@@ -208,7 +208,7 @@ export default function ProfilePage({
     });
 
     allPosts.forEach(post => {
-        const userReplied = post.replies?.some(r => r.author.username === profileUser.username);
+        const userReplied = post.replies?.some(reply => reply.author.username === profileUser.username);
         if (userReplied) {
              const matches = post.content.match(/\$[a-zA-Z0-9_]+/g);
              if (matches) {
