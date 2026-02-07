@@ -20,6 +20,8 @@ import notificationRoutes from './routes/notifications.js';
 import marketplaceRoutes from './routes/marketplace.js';
 import companionRoutes from './routes/companionRoutes.js';
 import tagsRoutes from './routes/tags.js';
+import adminAuthRoutes from './routes/admin/auth.js';
+import adminTagsRoutes from './routes/admin/tags.js';
 import { NotificationService } from './services/notificationService.js';
 import { scheduleTagUpdates } from './services/tagService.js';
 
@@ -271,6 +273,10 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
 app.use('/api/tags', tagsRoutes);
+
+// 🔐 ADMIN ROUTES (com autenticação especial)
+app.use('/api/admin/auth', adminAuthRoutes);
+app.use('/api/admin/tags', adminTagsRoutes);
 
 // Health check
 app.get('/health', async (_req: express.Request, res: express.Response) => {
