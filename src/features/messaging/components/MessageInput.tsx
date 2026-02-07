@@ -1,6 +1,6 @@
 import React, { useState, useRef, KeyboardEvent } from 'react';
 import { useTranslation } from '../../../hooks/useTranslation';
-import { PaperClipIcon, SmileIcon } from '../../../components/ui/icons';
+import { CameraIcon } from '../../../components/ui/icons';
 
 interface MessageInputProps {
   onSend: (content: string, imageUrl?: string) => Promise<void>;
@@ -17,6 +17,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
   const emojiSet = ['😀', '😂', '❤️', '👍', '🎉', '🔥', '😍', '🤔', '👏', '💯', '🚀', '⭐'];
 
   const handleSend = async () => {
@@ -26,8 +27,9 @@ export const MessageInput: React.FC<MessageInputProps> = ({
       await onSend(content, imageUrl || undefined);
       setContent('');
       setImageUrl(null);
+      setShowEmojiPicker(false);
       
-      // Reset altura do textarea
+      // Reset textarea height
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
       }
@@ -38,22 +40,18 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    // Enter sem Shift = enviar
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
-    
-    // Shift+Enter = nova linha (comportamento padrão)
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
     
-    // Auto-resize textarea
     const textarea = e.target;
     textarea.style.height = 'auto';
-    textarea.style.height = `${Math.min(textarea.scrollHeight, 150)}px`;
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 100)}px`;
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -85,71 +83,22 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   };
 
   return (
-    <div className="message-input">
+    <div className="message-input-wrapper">
       {imageUrl && (
-        <div className="image-preview" style={{ marginBottom: '8px', position: 'relative' }}>
-          <img src={imageUrl} alt="Preview" style={{ maxWidth: '100%', maxHeight: '150px', borderRadius: '4px' }} />
+        <div className="image-preview-container">
+          <img src={imageUrl} alt="Preview" className="image-preview-img" />
           <button
             onClick={() => setImageUrl(null)}
-            style={{
-              position: 'absolute',
-              top: '4px',
-              right: '4px',
-              background: 'rgba(0,0,0,0.6)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '50%',
-              width: '24px',
-              height: '24px',
-              cursor: 'pointer',
-              fontSize: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
+            className="image-preview-remove"
+            type="button"
+            aria-label="Remove image"
           >
             ✕
           </button>
         </div>
       )}
 
-      {showEmojiPicker && (
-        <div className="emoji-picker" style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: '4px',
-          marginBottom: '8px',
-          padding: '8px',
-          background: '#f0f0f0',
-          borderRadius: '4px',
-        }}>
-          {emojiSet.map((emoji) => (
-            <button
-              key={emoji}
-              onClick={() => addEmoji(emoji)}
-              style={{
-                background: 'white',
-                border: 'none',
-                padding: '8px',
-                fontSize: '20px',
-                cursor: 'pointer',
-                borderRadius: '4px',
-                transition: 'background 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                (e.target as HTMLButtonElement).style.background = '#e0e0e0';
-              }}
-              onMouseLeave={(e) => {
-                (e.target as HTMLButtonElement).style.background = 'white';
-              }}
-            >
-              {emoji}
-            </button>
-          ))}
-        </div>
-      )}
-
-      <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+      <div className="message-input-container">
         <textarea
           ref={textareaRef}
           value={content}
@@ -158,78 +107,89 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           placeholder={t('messageInputPlaceholder')}
           rows={1}
           disabled={isSending}
-          className="message-input-field"
-          style={{ flex: 1 }}
+          className="message-textarea"
         />
         
-        <button
-          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-          disabled={isSending}
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: '20px',
-            padding: '4px 8px',
-          }}
-          title="Emoji"
-        >
-          😊
-        </button>
+        <div className="message-controls">
+          {/* Emoji Button */}
+          <div className="control-group emoji-group">
+            <button
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              disabled={isSending}
+              className="control-button emoji-button"
+              title="Add emoji"
+              type="button"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                <line x1="9" y1="9" x2="9.01" y2="9" />
+                <line x1="15" y1="9" x2="15.01" y2="9" />
+              </svg>
+            </button>
+            
+            {showEmojiPicker && (
+              <div ref={emojiPickerRef} className="emoji-picker-popup">
+                <div className="emoji-picker-grid">
+                  {emojiSet.map((emoji) => (
+                    <button
+                      key={emoji}
+                      onClick={() => addEmoji(emoji)}
+                      className="emoji-button-item"
+                      type="button"
+                      title={emoji}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleImageSelect}
-          style={{ display: 'none' }}
-        />
-        
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isSending}
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: '20px',
-            padding: '4px 8px',
-          }}
-          title="Imagem"
-        >
-          🖼️
-        </button>
+          {/* Image Upload Button */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isSending}
+            className="control-button image-button"
+            title="Upload image"
+            type="button"
+          >
+            <CameraIcon className="control-icon" />
+          </button>
 
-        <button
-          onClick={handleSend}
-          disabled={!content.trim() || isSending}
-          className="message-send-button"
-          aria-label={t('send')}
-          title={t('sendButtonTitle')}
-        >
-          {isSending ? (
-            <span>⏳</span>
-          ) : (
-            <SendIcon />
-          )}
-        </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageSelect}
+            style={{ display: 'none' }}
+            aria-label="Upload image file"
+          />
+
+          {/* Send Button */}
+          <button
+            onClick={handleSend}
+            disabled={!content.trim() || isSending}
+            className="control-button send-button"
+            type="button"
+            title={t('send')}
+          >
+            {isSending ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="spinner">
+                <circle cx="12" cy="12" r="1" />
+                <circle cx="19" cy="5" r="1" />
+                <circle cx="5" cy="19" r="1" />
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="22" y1="2" x2="11" y2="13" strokeLinecap="round" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" fill="currentColor" />
+              </svg>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
 };
-
-const SendIcon: React.FC = () => (
-  <svg
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <line x1="22" y1="2" x2="11" y2="13" />
-    <polygon points="22 2 15 22 11 13 2 9 22 2" />
-  </svg>
-);
