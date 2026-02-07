@@ -1,53 +1,140 @@
-/* Split Layout - 50/50 */
+/* ============================================
+   SPLIT LAYOUT - 50/50 Container
+   ============================================ */
+
 .split-layout-container {
   display: flex;
   height: calc(100vh - 70px);
+  width: 100%;
   overflow: hidden;
   background: var(--theme-bg-primary);
 }
 
-.split-layout-left {
-  flex: 0 0 auto;
+/* ============================================
+   PAINÉIS (Esquerdo e Direito)
+   ============================================ */
+
+.split-layout-panel {
+  height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  border-right: 1px solid var(--theme-border-primary);
+  flex: 0 0 auto;
+}
+
+.split-layout-left {
+  width: 50%;
   background: var(--theme-bg-primary);
+  border-right: 1px solid var(--theme-border-primary);
 }
 
 .split-layout-right {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
+  width: 50%;
   background: var(--theme-bg-primary);
 }
 
-/* Scrollbar customizada */
-.split-layout-left::-webkit-scrollbar,
-.split-layout-right::-webkit-scrollbar {
+.split-layout-content {
+  min-height: 100%;
+  width: 100%;
+}
+
+/* ============================================
+   DIVISÓRIA VISUAL ENTRE OS PAINÉIS
+   ============================================ */
+
+.split-layout-divider {
+  width: 1px;
+  background: var(--theme-border-primary);
+  flex-shrink: 0;
+  transition: background 0.2s ease;
+}
+
+.split-layout-divider:hover {
+  background: var(--theme-primary);
+  opacity: 0.5;
+}
+
+/* ============================================
+   SCROLLBAR CUSTOMIZADA
+   ============================================ */
+
+.split-layout-panel::-webkit-scrollbar {
   width: 8px;
 }
 
-.split-layout-left::-webkit-scrollbar-track,
-.split-layout-right::-webkit-scrollbar-track {
+.split-layout-panel::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.split-layout-left::-webkit-scrollbar-thumb,
-.split-layout-right::-webkit-scrollbar-thumb {
-  background: var(--theme-border-primary);
+.split-layout-panel::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
   border-radius: 4px;
   transition: background 0.2s ease;
 }
 
-.split-layout-left::-webkit-scrollbar-thumb:hover,
-.split-layout-right::-webkit-scrollbar-thumb:hover {
-  background: var(--theme-text-secondary);
+.split-layout-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
 }
 
-/* Responsive - Mobile (empilha verticalmente) */
+@media (prefers-color-scheme: dark) {
+  .split-layout-panel::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .split-layout-panel::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+}
+
+/* ============================================
+   RESPONSIVE - TABLET (empilha em 1024px)
+   ============================================ */
+
 @media (max-width: 1024px) {
   .split-layout-container {
     flex-direction: column;
+    height: auto;
+    min-height: calc(100vh - 70px);
+  }
+
+  .split-layout-left,
+  .split-layout-right {
+    width: 100% !important;
+    height: auto;
+    min-height: 50vh;
+    border-right: none;
+    border-bottom: 1px solid var(--theme-border-primary);
+  }
+
+  .split-layout-right {
+    border-bottom: none;
+  }
+
+  .split-layout-divider {
+    width: 100%;
+    height: 1px;
+  }
+}
+
+/* ============================================
+   RESPONSIVE - MOBILE (scroll vertical)
+   ============================================ */
+
+@media (max-width: 768px) {
+  .split-layout-container {
+    height: auto;
+    flex-direction: column;
+  }
+
+  .split-layout-left {
+    min-height: 50vh;
+    height: auto;
+  }
+
+  .split-layout-right {
+    min-height: 80vh;
+    height: auto;
+  }
+}
   }
 
   .split-layout-left,
