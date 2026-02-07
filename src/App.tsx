@@ -642,7 +642,7 @@ function App() {
 
                             <FloatingChatContainer currentUser={currentUser} />
                             <FloatingChatManager />
-                            <MessagesSidebar conversations={conversations} isLoading={isSessionLoading} />
+                            <MessagesSidebar />
                         </div>
                     </Suspense>
                 </div>
