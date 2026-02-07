@@ -44,11 +44,11 @@ export class ChatService {
   async getConversation(user1Id: string, user2Id: string) {
     try {
       // Compare UUIDs correctly - let PostgreSQL handle the comparison
-      // Use LEAST and GREATEST functions which work with UUIDs
+      // Explicit ::uuid casting to ensure PostgreSQL knows these are UUIDs
       const result = await pool.query(
         `SELECT id FROM conversations 
-         WHERE (user1_id = $1 AND user2_id = $2) 
-            OR (user1_id = $2 AND user2_id = $1)
+         WHERE (user1_id = $1::uuid AND user2_id = $2::uuid) 
+            OR (user1_id = $2::uuid AND user2_id = $1::uuid)
          LIMIT 1`,
         [user1Id, user2Id]
       );
@@ -62,7 +62,7 @@ export class ChatService {
 
       return result.rows[0] || null;
     } catch (error: any) {
-      console.error('getConversation error:', error.message);
+      console.error('getConversation error:', error.message, error);
       return null;
     }
   }
@@ -90,10 +90,10 @@ export class ChatService {
   async createConversation(user1Id: string, user2Id: string) {
     try {
       // PostgreSQL LEAST and GREATEST will correctly compare UUIDs
-      // This ensures user1_id < user2_id in UUID ordering, not string ordering
+      // Explicit ::uuid casting to ensure PostgreSQL knows these are UUIDs
       const result = await pool.query(
         `INSERT INTO conversations (user1_id, user2_id, created_at, updated_at) 
-         VALUES (LEAST($1, $2), GREATEST($1, $2), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) 
+         VALUES (LEAST($1::uuid, $2::uuid), GREATEST($1::uuid, $2::uuid), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) 
          RETURNING id`,
         [user1Id, user2Id]
       );
@@ -106,7 +106,7 @@ export class ChatService {
 
       return { id: result.rows[0].id };
     } catch (error: any) {
-      console.error('createConversation error:', error.message);
+      console.error('createConversation error:', error.message, error);
       throw error;
     }
   }
@@ -119,7 +119,7 @@ export class ChatService {
       const result = await pool.query(
         `SELECT id, user1_id, user2_id, updated_at
          FROM conversations 
-         WHERE user1_id = $1 OR user2_id = $1
+         WHERE user1_id = $1::uuid OR user2_id = $1::uuid
          ORDER BY updated_at DESC 
          LIMIT $2 OFFSET $3`,
         [userId, limit, offset]
@@ -133,7 +133,7 @@ export class ChatService {
           const otherUserId = row.user1_id === userId ? row.user2_id : row.user1_id;
           
           const usersResult = await pool.query(
-            `SELECT id, username, COALESCE(display_name, username) as display_name, avatar FROM users WHERE id = $1`,
+            `SELECT id, username, COALESCE(display_name, username) as display_name, avatar FROM users WHERE id = $1::uuid`,
             [otherUserId]
           );
 
@@ -146,7 +146,7 @@ export class ChatService {
           try {
             const msgResult = await pool.query(
               `SELECT content, created_at, is_read FROM messages 
-               WHERE conversation_id = $1 
+               WHERE conversation_id = $1::uuid
                ORDER BY created_at DESC LIMIT 1`,
               [row.id]
             );
@@ -205,7 +205,7 @@ export class ChatService {
           m.is_read
         FROM messages m
         JOIN users u ON m.sender_id = u.id
-        WHERE m.conversation_id = $1
+        WHERE m.conversation_id = $1::uuid
         ORDER BY m.created_at ASC
         LIMIT 100`,
         [conversationId]
@@ -253,7 +253,7 @@ export class ChatService {
 
       // Verify conversation exists and user is participant
       const convCheck = await pool.query(
-        `SELECT id, user1_id, user2_id FROM conversations WHERE id = $1`,
+        `SELECT id, user1_id, user2_id FROM conversations WHERE id = $1::uuid`,
         [conversationId]
       );
 
@@ -276,20 +276,20 @@ export class ChatService {
       // Insert message
       const result = await pool.query(
         `INSERT INTO messages (conversation_id, sender_id, content, is_read, created_at)
-         VALUES ($1, $2, $3, false, CURRENT_TIMESTAMP)
+         VALUES ($1::uuid, $2::uuid, $3, false, CURRENT_TIMESTAMP)
          RETURNING id, sender_id, content, created_at, is_read`,
         [conversationId, senderId, content]
       );
 
       // Update conversation updated_at
       await pool.query(
-        `UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+        `UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = $1::uuid`,
         [conversationId]
       );
 
       // Get sender info
       const senderResult = await pool.query(
-        `SELECT id, username, COALESCE(display_name, '') as display_name, avatar FROM users WHERE id = $1`,
+        `SELECT id, username, COALESCE(display_name, '') as display_name, avatar FROM users WHERE id = $1::uuid`,
         [senderId]
       );
 
