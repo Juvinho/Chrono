@@ -8,6 +8,20 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
+
+// Define __dirname for ES modules FIRST (needed for dotenv path)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables from root or server .env file IMMEDIATELY
+// Try server/.env first, then root/.env
+let envPath = path.join(__dirname, '../.env'); // server/.env
+if (!fs.existsSync(envPath)) {
+  envPath = path.join(__dirname, '../../.env'); // root/.env
+}
+dotenv.config({ path: envPath });
+
+// NOW import modules that depend on environment variables
 import { migrate } from './db/migrate.js';
 import { initializeDatabase } from './db/initializeDatabase.js';
 import { pool } from './db/connection.js';
@@ -25,17 +39,11 @@ import adminTagsRoutes from './routes/admin/tags.js';
 import { NotificationService } from './services/notificationService.js';
 import { scheduleTagUpdates } from './services/tagService.js';
 
-dotenv.config();
-
 // Get JWT_SECRET - must be defined
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
   throw new Error('CRITICAL: JWT_SECRET environment variable is not set. Cannot start server.');
 }
-
-// Define __dirname for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
 const httpServer = createServer(app);

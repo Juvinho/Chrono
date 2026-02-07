@@ -46,7 +46,7 @@ function logTitle(text) {
 // Função para verificar se porta está aberta
 function isPortOpen(port) {
   return new Promise((resolve) => {
-    const socket = createConnection();
+    const socket = createConnection(port, 'localhost');
     socket.setTimeout(1000);
     
     socket.on('connect', () => {
@@ -62,8 +62,6 @@ function isPortOpen(port) {
     socket.on('error', () => {
       resolve(false);
     });
-    
-    socket.connect(port, 'localhost');
   });
 }
 
