@@ -1,4 +1,5 @@
 import React, { useState, ReactNode, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Post, CyberpunkReaction, User } from '../../../types/index';
 import { ReactIcon, GlitchIcon, UploadIcon, CorruptIcon, RewindIcon, StaticIcon, ReplyIcon, EchoIcon, EditIcon, VerifiedIcon, CheckCircleIcon, LockClosedIcon, DotsHorizontalIcon, TrashIcon } from '../../../components/ui/icons';
 import { useTranslation } from '../../../hooks/useTranslation';
@@ -6,6 +7,7 @@ import { useSound } from '../../../contexts/SoundContext';
 import Avatar from '../../profile/components/Avatar';
 import TypingIndicatorCard from './TypingIndicatorCard';
 import FramePreview, { getFrameShape } from '../../profile/components/FramePreview';
+import { postIdMapper } from '../../../utils/postIdMapper';
 
 interface PostCardProps {
     post: Post;
@@ -76,11 +78,18 @@ const formatRelativeTime = (date: Date): string => {
 
 const PostCard: React.FC<PostCardProps> = React.memo(({ post, currentUser, onViewProfile, onUpdateReaction, onReply, onEcho, onDelete, onEdit, onTagClick, onPollVote, typingParentIds, compact = false, nestingLevel = 0, isThreadedReply = false, isContextualView = false, onPostClick }) => {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const { playSound } = useSound();
     const [showReactions, setShowReactions] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
     const [isReplying, setIsReplying] = useState(false);
     const [replyContent, setReplyContent] = useState('');
+
+    // Helper para navegar para o post com ID randômico
+    const handleNavigateToPost = (postId: string) => {
+        const randomId = postIdMapper.getRandomId(postId);
+        navigate(`/post/${randomId}`);
+    };
     const [isReplyPrivate, setIsReplyPrivate] = useState(false);
     const [replyMedia, setReplyMedia] = useState<{ imageUrl?: string, videoUrl?: string } | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -451,7 +460,7 @@ const PostCard: React.FC<PostCardProps> = React.memo(({ post, currentUser, onVie
                 <>
                     <p 
                         className={`whitespace-pre-wrap ${compact ? 'text-sm mb-2' : 'mb-4'} ${!isThreadedReply ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
-                        onClick={() => !isThreadedReply && onPostClick?.(post.id)}
+                        onClick={() => !isThreadedReply && handleNavigateToPost(post.id)}
                     >
                         {renderContentWithTags(post.content)}
                     </p>
@@ -510,7 +519,7 @@ const PostCard: React.FC<PostCardProps> = React.memo(({ post, currentUser, onVie
                     {/* Show "View all replies" button if there are more than 3 replies in feed view */}
                     {!isThreadedReply && !isContextualView && post.replies.length > 3 && (
                         <button
-                            onClick={() => onPostClick?.(post.id)}
+                            onClick={() => handleNavigateToPost(post.id)}
                             className="ml-4 mt-3 px-3 py-1.5 text-sm text-[var(--theme-primary)] hover:text-[var(--theme-secondary)] bg-[var(--theme-bg-tertiary)] hover:bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-secondary)] hover:border-[var(--theme-primary)] rounded transition-all font-medium"
                             aria-label={`View thread with ${post.replies.length - 3} more replies`}
                         >
