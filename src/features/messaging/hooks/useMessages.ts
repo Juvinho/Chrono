@@ -74,7 +74,7 @@ export function useMessages(conversationId: number | string | null) {
   }, [conversationId, playSound, incrementUnread, isPageVisible]);
 
   // Envia mensagem
-  const handleSendMessage = async (content: string) => {
+  const handleSendMessage = async (content: string, imageUrl?: string) => {
     if (!conversationId || !content.trim()) {
       console.warn('⚠️ Cannot send message:', {
         hasConversationId: !!conversationId,
@@ -90,11 +90,13 @@ export function useMessages(conversationId: number | string | null) {
       const request: SendMessageRequest = {
         conversationId,
         content: content.trim(),
+        ...(imageUrl && { imageUrl }),
       };
       
       console.log('📤 Sending message:', {
         conversationId,
         contentLength: content.trim().length,
+        hasImage: !!imageUrl,
       });
       
       const newMessage = await sendMessage(request);
