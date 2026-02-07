@@ -257,17 +257,17 @@ export default function EchoFrame({
             .slice(0, 5);
     }, [allPosts]);
 
-    // Popular posts for today (with most reactions/engagement)
+    // Popular posts for today (with most reactions - 24h window, max 10)
     const popularPostsToday = useMemo(() => {
         const today = new Date();
         return allPosts
             .filter(p => !p.isThread && isSameDay(new Date(p.timestamp), today))
             .sort((a, b) => {
-                const scoreA = (a.replies?.length || 0) * 2 + Object.values(a.reactions || {}).reduce((sum, v) => sum + v, 0);
-                const scoreB = (b.replies?.length || 0) * 2 + Object.values(b.reactions || {}).reduce((sum, v) => sum + v, 0);
-                return scoreB - scoreA;
+                const reactionsA = Object.values(a.reactions || {}).reduce((sum, v) => sum + v, 0);
+                const reactionsB = Object.values(b.reactions || {}).reduce((sum, v) => sum + v, 0);
+                return reactionsB - reactionsA;
             })
-            .slice(0, 5);
+            .slice(0, 10);
     }, [allPosts]);
 
     const handleComposerClose = useCallback(() => {
