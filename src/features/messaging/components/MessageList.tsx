@@ -59,20 +59,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isMine }) => {
   const { t } = useTranslation();
   
   return (
-    <div className={`message-bubble-container ${isMine ? 'mine' : 'theirs'}`}>
-      {!isMine && (
-        <div className="message-avatar">
-          {message.sender.avatarUrl ? (
-            <img src={message.sender.avatarUrl} alt="" />
-          ) : (
-            <div className="avatar-placeholder-small">
-              {message.sender.displayName.charAt(0)}
-            </div>
-          )}
-        </div>
-      )}
-
-      <div className={`message-bubble ${isMine ? 'mine' : 'theirs'}`}>
+    <div className={`message-item ${isMine ? 'mine' : 'theirs'}`}>
+      <div className="message-bubble">
         <div className="message-content">
           {message.content}
         </div>
