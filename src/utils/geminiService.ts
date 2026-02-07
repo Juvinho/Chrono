@@ -423,3 +423,72 @@ Responda APENAS com o texto da nova bio, sem aspas ou explicações.`,
         return null;
     }
 };
+
+/**
+ * Analyzes user's profile based on their posts and generates an AI-powered analysis
+ * Returns personality traits, interests, and a unique bio description
+ */
+export const analyzeProfileWithAI = async (userData: any): Promise<{ bio: string; analysis: string } | null> => {
+    if (!ai) return null;
+    try {
+        const { username, posts = [] } = userData;
+        
+        if (!posts || posts.length === 0) {
+            return null;
+        }
+
+        // Prepare posts content for analysis
+        const postsContent = posts
+            .slice(0, 20)
+            .map((p: any) => `"${p.content}"`)
+            .join('\n');
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-flash-lite-latest',
+            contents: `Você é um especialista em análise de personalidade digital baseado em redes sociais.
+Você vai analisar os posts de um usuário do Chrono (rede social cyberpunk) e:
+
+1. Gerar uma bio única que descreve quem é essa pessoa baseado nos seus posts
+2. Fornecer uma análise concisa sobre sua personalidade, interesses e estilo
+
+Posts do usuário @${username}:
+${postsContent}
+
+Responda em PORTUGUÊS apenas com este JSON (sem markdown, sem aspas externas):
+{
+  "bio": "Uma bio única e criativa com máximo 160 caracteres que capture a essência dessa pessoa baseado nos posts",
+  "personality": "Lista de 2-3 traços de personalidade identificados nos posts (ex: criativo, questionador, otimista)",
+  "interests": "Principais temas e interesses encontrados nos posts (ex: tecnologia, filosofia, humor)"
+}
+
+Garanta que a bio seja escrita em tom cyberpunk/futurista, criativa e autêntica.`,
+            config: {
+                responseMimeType: 'text/plain',
+            }
+        });
+
+        const responseText = response.text?.trim() || '{}';
+        
+        try {
+            const parsed = JSON.parse(responseText);
+            return {
+                bio: parsed.bio?.substring(0, 160) || null,
+                analysis: `${parsed.personality || ''} • ${parsed.interests || ''}`
+            };
+        } catch (parseError) {
+            console.error("Error parsing AI response:", parseError);
+            // Try to extract bio manually if JSON parsing fails
+            const bioMatch = responseText.match(/"bio"\s*:\s*"([^"]+)"/);
+            if (bioMatch && bioMatch[1]) {
+                return {
+                    bio: bioMatch[1].substring(0, 160),
+                    analysis: responseText
+                };
+            }
+            return null;
+        }
+    } catch (error) {
+        console.error("Error analyzing profile with AI:", error);
+        return null;
+    }
+};

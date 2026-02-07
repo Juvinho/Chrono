@@ -7,7 +7,7 @@ import { useTranslation } from '../../../hooks/useTranslation';
 import { ImageCropper } from '../../../components/ui/ImageCropper';
 import FramePreview, { getFrameShape } from './FramePreview';
 import { apiClient } from '../../../api';
-import { generateBio } from '../../../utils/geminiService';
+import { generateBio, analyzeProfileWithAI } from '../../../utils/geminiService';
 
 // FIX: Add a default settings object to fall back on.
 const defaultSettings: Omit<ProfileSettings, 'coverImage'> = {
@@ -114,6 +114,8 @@ export default function SettingsPage({
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [isGeneratingBio, setIsGeneratingBio] = useState(false);
+  const [isAnalyzingProfile, setIsAnalyzingProfile] = useState(false);
+  const [profileAnalysis, setProfileAnalysis] = useState<{ bio: string; analysis: string } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -299,6 +301,48 @@ export default function SettingsPage({
       setSaveMessage(error.message || t('aiBioError'));
     } finally {
       setIsGeneratingBio(false);
+    }
+  };
+
+  const handleAnalyzeProfile = async () => {
+    setIsAnalyzingProfile(true);
+    setProfileAnalysis(null);
+    try {
+      // Get user posts
+      const userPosts = allPosts.filter(p => p.author.username === draftUser.username);
+      
+      if (userPosts.length === 0) {
+        throw new Error('You need to have some posts to analyze your profile');
+      }
+
+      const analysis = await analyzeProfileWithAI({
+        username: draftUser.username,
+        posts: userPosts
+      });
+      
+      if (analysis) {
+        setProfileAnalysis(analysis);
+        setSaveStatus('success');
+        setSaveMessage('Profile analysis complete! Your AI-generated bio is ready.');
+        setTimeout(() => setSaveStatus('idle'), 5000);
+      } else {
+        throw new Error('Failed to analyze profile');
+      }
+    } catch (error: any) {
+      setSaveStatus('error');
+      setSaveMessage(error.message || 'Error analyzing profile');
+    } finally {
+      setIsAnalyzingProfile(false);
+    }
+  };
+  
+  const handleApplyAnalysisBio = () => {
+    if (profileAnalysis?.bio) {
+      setDraftUser(prev => ({ ...prev, bio: profileAnalysis.bio }));
+      setProfileAnalysis(null);
+      setSaveStatus('success');
+      setSaveMessage('AI-generated bio applied! Click Save to confirm.');
+      setTimeout(() => setSaveStatus('idle'), 3000);
     }
   };
   
@@ -561,18 +605,63 @@ export default function SettingsPage({
                     <div className="space-y-2">
                         <div className="flex justify-between items-center">
                             <label className="text-sm text-[var(--theme-text-secondary)] font-mono uppercase">{t('bio')}</label>
-                            <button 
-                                onClick={handleGenerateBio}
-                                disabled={isGeneratingBio}
-                                className="text-xs flex items-center gap-1 text-[var(--theme-primary)] hover:underline disabled:opacity-50"
-                            >
-                                {isGeneratingBio ? t('generatingBio') : (
-                                    <>
-                                        <span className="text-lg">✨</span> {t('generateWithAI')}
-                                    </>
-                                )}
-                            </button>
+                            <div className="flex gap-2">
+                                <button 
+                                    onClick={handleGenerateBio}
+                                    disabled={isGeneratingBio}
+                                    className="text-xs flex items-center gap-1 text-[var(--theme-primary)] hover:underline disabled:opacity-50"
+                                >
+                                    {isGeneratingBio ? t('generatingBio') : (
+                                        <>
+                                            <span className="text-lg">✨</span> {t('generateWithAI')}
+                                        </>
+                                    )}
+                                </button>
+                                <button 
+                                    onClick={handleAnalyzeProfile}
+                                    disabled={isAnalyzingProfile || allPosts.filter(p => p.author.username === draftUser.username).length === 0}
+                                    className="text-xs flex items-center gap-1 text-cyan-400 hover:underline disabled:opacity-50"
+                                    title="Analyze your posts to generate a personalized bio"
+                                >
+                                    {isAnalyzingProfile ? (
+                                        <>
+                                            <span className="text-lg animate-pulse">🔍</span> Analyzing...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className="text-lg">🔍</span> Analyze Posts
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
+                        
+                        {profileAnalysis && (
+                            <div className="bg-gradient-to-r from-cyan-900/30 to-purple-900/30 border border-cyan-500/50 rounded p-3 space-y-2 mb-2">
+                                <div className="text-xs font-mono uppercase text-cyan-400">AI Profile Analysis</div>
+                                <div className="text-sm text-[var(--theme-text-primary)]">
+                                    <strong>Generated Bio:</strong> "{profileAnalysis.bio}"
+                                </div>
+                                <div className="text-xs text-[var(--theme-text-secondary)]">
+                                    <strong>Analysis:</strong> {profileAnalysis.analysis}
+                                </div>
+                                <div className="flex gap-2">
+                                    <button 
+                                        onClick={handleApplyAnalysisBio}
+                                        className="text-xs bg-cyan-600/70 hover:bg-cyan-500 px-2 py-1 rounded transition-colors"
+                                    >
+                                        Apply Bio
+                                    </button>
+                                    <button 
+                                        onClick={() => setProfileAnalysis(null)}
+                                        className="text-xs bg-slate-600/70 hover:bg-slate-500 px-2 py-1 rounded transition-colors"
+                                    >
+                                        Dismiss
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                        
                         <textarea
                             name="bio"
                             value={draftUser.bio || ''}
