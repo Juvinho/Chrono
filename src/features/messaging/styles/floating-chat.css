@@ -2,9 +2,8 @@
    FLOATING CHAT WINDOW - Premium Facebook Messenger Style
    ============================================ */
 
-/* Root Variables */
+/* Root Variables - usando variáveis de tema */
 :root {
-  --chat-primary-color: #ff2b2b;
   --chat-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
   --chat-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
   --chat-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.18);
@@ -121,7 +120,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #ff2b2b, #ff5555);
+  background: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
   color: white;
   font-size: 16px;
   font-weight: 700;
@@ -152,7 +151,7 @@
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
-  background: #ccc;
+  background: var(--theme-border-primary);
   transition: all 0.3s ease;
   box-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
 }
@@ -203,8 +202,8 @@
 }
 
 .icon-btn-floating.close-btn:hover {
-  background: rgba(231, 76, 60, 0.1);
-  color: #e74c3c;
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--theme-text-secondary);
 }
 
 .icon-btn-floating:active {
@@ -364,7 +363,7 @@
 }
 
 .message-item.mine .message-bubble {
-  background: linear-gradient(135deg, #ff2b2b, #ff5555);
+  background: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
   color: white;
   border-bottom-right-radius: 4px;
 }
@@ -420,7 +419,7 @@
 
 .floating-chat-input:focus {
   border-color: var(--theme-primary);
-  box-shadow: 0 0 0 2px rgba(255, 43, 43, 0.1);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
   background: var(--theme-bg-secondary);
 }
 
@@ -441,7 +440,7 @@
   height: 32px;
   min-width: 32px;
   border: none;
-  background: linear-gradient(135deg, #ff2b2b, #ff5555);
+  background: linear-gradient(135deg, var(--theme-primary), var(--theme-secondary));
   color: white;
   border-radius: 50%;
   display: flex;
@@ -452,13 +451,13 @@
   flex-shrink: 0;
   font-size: 16px;
   padding: 0;
-  box-shadow: 0 2px 8px rgba(255, 43, 43, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   font-weight: 600;
 }
 
 .floating-chat-send:hover:not(:disabled) {
   transform: scale(1.08);
-  box-shadow: 0 4px 12px rgba(255, 43, 43, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .floating-chat-send:active:not(:disabled) {
@@ -554,8 +553,8 @@
 }
 
 [data-theme="dark"] .floating-chat-input:focus {
-  border-color: #ff2b2b;
-  box-shadow: 0 0 0 2px rgba(255, 43, 43, 0.2);
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
 }
 
 [data-theme="dark"] .message-item.theirs .message-bubble {
