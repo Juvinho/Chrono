@@ -321,6 +321,11 @@ function App() {
     };
 
     const simulateUserPostInteraction = (post: Post) => {
+        // 🚫 DESABILITADO - Não simular mais interações IA
+        console.log('[simulateUserPostInteraction] ✅ Desabilitado - Nenhuma interação IA simulada');
+        return;
+        
+        /*
         if (!currentUser) return;
     
         const aiUsers = usersRef.current.filter(u => u.username !== currentUser.username && !CORE_USERS.some(cu => cu.username === u.username));
@@ -370,6 +375,7 @@ function App() {
                 
             }, replyDelay);
         }
+        */
     };
 
     const handleNewPost = async (post: Post) => {
