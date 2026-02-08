@@ -18,39 +18,67 @@ export function useRealtimeFeed() {
     const token = sessionStorage.getItem('chrono_token') || localStorage.getItem('chrono_token');
     
     if (!token) {
-      console.warn('[useRealtimeFeed] Sem token, WebSocket desabilitado');
+      console.warn('[useRealtimeFeed] ⚠️ Sem token, WebSocket desabilitado');
       return;
     }
 
-    // Connect to WebSocket
-    socketRef.current = io(import.meta.env.VITE_API_URL || 'http://localhost:3001', {
-      auth: { token },
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-    });
+    try {
+      // Determinar URL do servidor
+      const apiUrl = import.meta.env.VITE_API_URL;
+      console.log('[useRealtimeFeed] 🔌 Tentando conectar ao Socket.io:', apiUrl);
 
-    // ✅ LISTEN para novos posts
-    socketRef.current.on('post_added', (newPost: Post) => {
-      console.log('[📡 useRealtimeFeed] Novo post recebido:', newPost.id);
-      
-      // Callback para o componente que está ouvindo
-      if (onNewPost) {
-        onNewPost(newPost);
-      }
-    });
+      // Connect to WebSocket com configuração CORS agressiva
+      socketRef.current = io(apiUrl || 'http://localhost:3001', {
+        auth: { token },
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        reconnectionAttempts: 5,
+        transports: ['websocket', 'polling', 'http_long_polling'],
+        withCredentials: true,
+        secure: false,
+      });
 
-    socketRef.current.on('connect', () => {
-      console.log('[✅ useRealtimeFeed] WebSocket conectado');
-    });
+      // ✅ LISTEN para novos posts
+      socketRef.current.on('post_added', (newPost: Post) => {
+        console.log('[✅ useRealtimeFeed] 📡 Novo post recebido:', newPost.id);
+        
+        // Callback para o componente que está ouvindo
+        if (onNewPost) {
+          onNewPost(newPost);
+        }
+      });
 
-    socketRef.current.on('disconnect', () => {
-      console.log('[❌ useRealtimeFeed] WebSocket desconectado');
-    });
+      socketRef.current.on('connect', () => {
+        console.log('[✅ useRealtimeFeed] ✅ WebSocket conectado com sucesso!');
+        console.log('[✅ useRealtimeFeed] 🔗 Transport:', socketRef.current?.io?.engine?.transport?.name);
+      });
+
+      // ✅ Teste de conectividade ping/pong
+      socketRef.current.on('ping_from_server', (data: any) => {
+        console.log('[✅ useRealtimeFeed] 🏓 Ping recebido do servidor:', data);
+        socketRef.current?.emit('pong_from_client');
+      });
+
+      socketRef.current.on('disconnect', (reason: string) => {
+        console.log('[useRealtimeFeed] ❌ WebSocket desconectado:', reason);
+      });
+
+      socketRef.current.on('connect_error', (error: any) => {
+        console.error('[useRealtimeFeed] 🚨 Erro de conexão:', error?.message || error);
+      });
+
+      socketRef.current.on('error', (error: any) => {
+        console.error('[useRealtimeFeed] 🚨 Socket error:', error);
+      });
+    } catch (error) {
+      console.error('[useRealtimeFeed] 🚨 Erro ao criar Socket.io:', error);
+    }
 
     return () => {
       if (socketRef.current) {
         socketRef.current.disconnect();
+        console.log('[useRealtimeFeed] 🔌 Socket desconectado no cleanup');
       }
     };
   }, []);
