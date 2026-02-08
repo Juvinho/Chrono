@@ -63,7 +63,7 @@ export default function Dashboard({
                 setSelectedDate(dateFromUrl);
             }
         }
-    }, [dateSegment, selectedDate, setSelectedDate]);
+    }, [dateSegment]); // Remove selectedDate from deps to prevent loop
 
     // Sync selectedDate to URL when it changes
     useEffect(() => {
@@ -80,7 +80,7 @@ export default function Dashboard({
                 navigate(`/echoframe/${urlDate}`, { replace: true });
             }
         }
-    }, [selectedDate, dateSegment, navigate]);
+    }, [selectedDate]); // Remove dateSegment from deps to prevent loop
 
     useEffect(() => {
         if (tag) {
