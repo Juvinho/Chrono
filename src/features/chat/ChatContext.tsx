@@ -134,6 +134,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!activeConversationRef.current || activeConversationRef.current.id !== message.conversation_id) {
         console.log('[Chat] 🔓 Abrindo chat automaticamente para:', message.conversation_id);
         
+        let foundOrCreatedConv: Conversation | null = null;
+        
+        // Atualizar conversations array
         setConversations((prevConversations) => {
           let conv = prevConversations.find(c => c.id === message.conversation_id);
           
@@ -142,24 +145,31 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             console.log('[Chat] 📝 Conversa não encontrada, criando mínima para:', message.conversation_id);
             conv = {
               id: message.conversation_id,
-              user_id: user?.id || '',
+              user1_id: user?.id || '',
+              user2_id: message.sender_id,
               other_user_id: message.sender_id,
-              other_username: message.sender_id, // Will be updated when full conv loads
+              other_username: message.sender_id,
+              other_avatar: '',
               last_message_content: message.content,
               last_message_time: message.created_at,
-              created_at: new Date().toISOString(),
               updated_at: message.created_at,
             } as Conversation;
             
-            // Add to list if not already there
-            const updated = [conv, ...prevConversations];
-            setActiveConversation(conv);
-            console.log('[Chat] ✅ Conversa criada e setada ativa:', conv.id);
-            return updated;
+            foundOrCreatedConv = conv;
+            console.log('[Chat] ✅ Conversa criada:', conv.id);
+            return [conv, ...prevConversations];
           } else {
-            console.log('[Chat] ✅ Setando conversa ativa:', conv.id, conv.other_username);
-            setActiveConversation(conv);
+            foundOrCreatedConv = conv;
+            console.log('[Chat] ✅ Conversa encontrada:', conv.id, conv.other_username);
             return prevConversations;
+          }
+        });
+        
+        // Usar microtask para garantir que o setState completou ANTES de setar activeConversation
+        Promise.resolve().then(() => {
+          if (foundOrCreatedConv) {
+            console.log('[Chat] 🎯 Setando como ativa:', foundOrCreatedConv.id);
+            setActiveConversation(foundOrCreatedConv);
           }
         });
       }
