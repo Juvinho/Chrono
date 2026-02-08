@@ -152,13 +152,23 @@ export class SearchService {
   }
 
   /**
-   * Carrega cordões em alta (trending)
+   * Carrega cordões em alta (trending) do backend
    */
   static async fetchTrendingCordoes(): Promise<TrendingCordao[]> {
     try {
-      // TODO: Implement trending endpoint on backend
-      // For now, return empty array as feature is not yet implemented
-      console.warn('Trending cordões feature not yet implemented');
+      const { apiClient } = await import('../api/client');
+      const response = await apiClient.get('/posts/trending/cordoes');
+      
+      if (response.data && Array.isArray(response.data)) {
+        // Converter dados do backend para TrendingCordao
+        return response.data.map((cord: any) => ({
+          tag: cord.tag,
+          mentions: cord.mentions,
+          displayName: cord.displayName,
+          content: cord.displayName, // para compatibilidade
+        }));
+      }
+      
       return [];
     } catch (error) {
       console.error('Failed to load trending cordões:', error);
