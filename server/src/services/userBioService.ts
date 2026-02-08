@@ -171,287 +171,116 @@ export class UserBioService {
       tags.push('verified');
     }
     
-    // Founder: IDs 1-10 (usuários mais antigos)
-    const userIdNum = parseInt(userId.substring(0, 8), 16) || 1;
-    if (userIdNum <= 10) {
-      tags.push('founder');
+    // ==========================================
+    // TAGS DE ATIVIDADE
+    // ==========================================
+    
+    // Active: tem pelo menos 1 post
+    if (stats.totalPosts > 0) {
+      tags.push('active');
+    }
+    
+    // Prolific: muitos posts (10+)
+    if (stats.totalPosts > 10) {
+      tags.push('prolific');
     }
     
     // ==========================================
     // TAGS DE COMPORTAMENTO - OBSERVADOR/CRIADOR
     // ==========================================
     
-    // Observador: likes muito mais que posts
-    if (stats.likesToPostsRatio > 10 && stats.totalLikesGiven > 50) {
+    // Criador: muitos posts (5+)
+    if (stats.totalPosts > 5) {
+      tags.push('creator');
+    }
+    
+    // Observador: likes muito mais que posts (e deu likes)
+    if (stats.totalLikesGiven > stats.totalPosts * 2 && stats.totalLikesGiven > 10) {
       tags.push('observer');
     }
     
-    // Criador: muitos posts
-    if (stats.totalPosts > 50) {
-      tags.push('creator');
+    // Supporter: deu alguns likes (1+)
+    if (stats.totalLikesGiven > 0) {
+      tags.push('supporter');
+    }
+    
+    // ==========================================
+    // TAGS DE POPULARIDADE
+    // ==========================================
+    
+    // Popular: tem followers
+    if (stats.totalFollowers > 0) {
+      tags.push('popular');
+    }
+    
+    // Influencer: muitos followers
+    if (stats.totalFollowers > 5) {
+      tags.push('influencer');
+    }
+    
+    // ==========================================
+    // TAGS DE ENGAJAMENTO
+    // ==========================================
+    
+    // Engagement god: alta taxa de engajamento (10%+)
+    if (stats.likesToPostsRatio > 0.1) {
+      tags.push('engagement_god');
+    }
+    
+    // Viral: recebeu muitos likes (10+)
+    if (stats.totalLikesReceived > 10) {
+      tags.push('viral');
+    }
+    
+    // Trending: recebeu likes em posts recentes
+    if (stats.postsLast30Days > 0 && stats.totalLikesReceived > 0) {
+      tags.push('trending');
     }
     
     // ==========================================
     // TAGS DE CONTEÚDO ESPECÍFICO
     // ==========================================
     
-    // Storyteller: posts longos (>500 chars) com descrição
-    if (stats.totalPosts > 20 && stats.customBio && stats.customBio.length > 50) {
+    // Storyteller: posts com descrição longa
+    if (stats.totalPosts > 10 && stats.customBio && stats.customBio.length > 50) {
       tags.push('storyteller');
     }
     
-    // Visual Artist: muitos posts com imagens
-    // Aproximação: se tem muitos posts, assume que alguns têm imagens
+    // Visual Artist: muitos posts (assume criatividade)
+    if (stats.totalPosts > 20) {
+      tags.push('visual_artist');
+    }
+    
+    // Videomaker: posts frequentes (assume variação de conteúdo)
     if (stats.totalPosts > 30) {
-      try {
-        const imagePostsResult = await pool.query(`
-          SELECT COUNT(*) as count
-          FROM posts
-          WHERE user_id = $1 AND content ILIKE '%<img%' OR content ILIKE '%photo%'
-        `, [userId]);
-        
-        const imagePosts = parseInt(imagePostsResult.rows[0]?.count || 0, 10);
-        if (imagePosts > stats.totalPosts * 0.4) {
-          tags.push('visual_artist');
-        }
-      } catch (err) {
-        // Silently fail on image detection
-      }
+      tags.push('videomaker');
     }
     
-    // Videomaker: posts com vídeos
-    if (stats.totalPosts > 10) {
-      try {
-        const videoPostsResult = await pool.query(`
-          SELECT COUNT(*) as count
-          FROM posts
-          WHERE user_id = $1 AND (content ILIKE '%<video%' OR content ILIKE '%youtube%' OR content ILIKE '%vimeo%')
-        `, [userId]);
-        
-        const videoPosts = parseInt(videoPostsResult.rows[0]?.count || 0, 10);
-        if (videoPosts >= 5) {
-          tags.push('videomaker');
-        }
-      } catch (err) {
-        // Silently fail on video detection
-      }
+    // Thread Master: posts moderados a altos
+    if (stats.totalPosts > 15) {
+      tags.push('thread_master');
     }
     
-    // Thread Master: posts muito longos (>1000 chars)
-    try {
-      const threadsResult = await pool.query(`
-        SELECT COUNT(*) as count
-        FROM posts
-        WHERE user_id = $1 AND LENGTH(content) > 1000
-      `, [userId]);
-      
-      const longPosts = parseInt(threadsResult.rows[0]?.count || 0, 10);
-      if (longPosts >= 10) {
-        tags.push('thread_master');
-      }
-    } catch (err) {
-      // Silently fail
-    }
-    
-    // ==========================================
-    // TAGS DE INTERAÇÃO SOCIAL
-    // ==========================================
-    
-    // Social: muitos comentários
-    if (stats.totalCommentsGiven > 100) {
+    // Social: interação moderada
+    if (stats.totalPosts > 5 && stats.totalLikesGiven > 0) {
       tags.push('social');
     }
     
-    // Reply King: sempre responde comentários
-    if (stats.totalCommentsGiven > 50) {
-      try {
-        const repliesResult = await pool.query(`
-          SELECT COUNT(*) as count
-          FROM comments
-          WHERE user_id = $1 AND parent_comment_id IS NOT NULL
-        `, [userId]);
-        
-        const replies = parseInt(repliesResult.rows[0]?.count || 0, 10);
-        if (replies > stats.totalCommentsGiven * 0.6) {
-          tags.push('reply_king');
-        }
-      } catch (err) {
-        // Silently fail
-      }
-    }
-    
-    // Debater: comentários longos e engajados
-    if (stats.totalCommentsGiven > 30) {
-      try {
-        const longCommentsResult = await pool.query(`
-          SELECT COUNT(*) as count
-          FROM comments
-          WHERE user_id = $1 AND LENGTH(content) > 200
-        `, [userId]);
-        
-        const deepComments = parseInt(longCommentsResult.rows[0]?.count || 0, 10);
-        if (deepComments > stats.totalCommentsGiven * 0.5) {
-          tags.push('debater');
-        }
-      } catch (err) {
-        // Silently fail
-      }
-    }
-    
     // ==========================================
-    // TAGS DE ENGAGEMENT
+    // TAGS DE TEMPO/ATIVIDADE
     // ==========================================
     
-    // Viral: um post com >1000 likes
-    try {
-      const viralResult = await pool.query(`
-        SELECT MAX(COALESCE((data->'likes')::int, 0)) as max_likes
-        FROM posts
-        WHERE user_id = $1
-      `, [userId]);
-      
-      const maxLikes = parseInt(viralResult.rows[0]?.max_likes || 0, 10);
-      if (maxLikes > 1000) {
-        tags.push('viral');
-      }
-    } catch (err) {
-      // Silently fail
-    }
-    
-    // Trending: posts aparecem em trending (muitos posts com alto engajamento)
-    if (stats.totalLikesReceived > stats.totalPosts * 50) {
-      tags.push('trending');
-    }
-    
-    // Engagement God: taxa média de engajamento >20%
-    if (stats.totalPosts > 0) {
-      const avgEngagement = stats.totalLikesReceived / (stats.totalPosts * 10);
-      if (avgEngagement > 0.2) {
-        tags.push('engagement_god');
-      }
-    }
-    
-    // ==========================================
-    // TAGS DE TEMPO/HÁBITOS
-    // ==========================================
-    
-    // Pioneiro: primeiros usuários + posts
-    if (stats.daysSinceJoined > 300 && stats.totalPosts > 0) {
+    // Pioneer: membro antigo (> 365 dias)
+    if (stats.daysSinceJoined > 365) {
       tags.push('pioneer');
     }
     
-    // Veterano: mais de 365 dias
-    if (stats.daysSinceJoined > 365) {
+    // Veteran: usuário antigo (> 180 dias)
+    if (stats.daysSinceJoined > 180) {
       tags.push('veteran');
     }
     
-    // Ativo: postando regularmente
-    if (stats.postsLast30Days > 10) {
-      tags.push('active');
-    }
-    
-    // Beta Tester: cadastrado antes de 2025
-    if (stats.joinedAt < new Date('2025-01-01')) {
-      tags.push('beta_tester');
-    }
-    
-    // Insomniac: posta entre 00h-06h
-    if (stats.totalPosts > 20) {
-      try {
-        const insomniaCResult = await pool.query(`
-          SELECT COUNT(*) as count
-          FROM posts
-          WHERE user_id = $1 AND EXTRACT(HOUR FROM created_at) BETWEEN 0 AND 5
-        `, [userId]);
-        
-        const insomniaPosts = parseInt(insomniaCResult.rows[0]?.count || 0, 10);
-        if (insomniaPosts > stats.totalPosts * 0.3) {
-          tags.push('insomniac');
-        }
-      } catch (err) {
-        // Silently fail
-      }
-    }
-    
-    // Morning Person: posta entre 05h-09h
-    if (stats.totalPosts > 20) {
-      try {
-        const morningResult = await pool.query(`
-          SELECT COUNT(*) as count
-          FROM posts
-          WHERE user_id = $1 AND EXTRACT(HOUR FROM created_at) BETWEEN 5 AND 8
-        `, [userId]);
-        
-        const morningPosts = parseInt(morningResult.rows[0]?.count || 0, 10);
-        if (morningPosts > stats.totalPosts * 0.3) {
-          tags.push('morning_person');
-        }
-      } catch (err) {
-        // Silently fail
-      }
-    }
-    
-    // Night Owl: posta entre 22h-03h
-    if (stats.totalPosts > 20) {
-      try {
-        const nightResult = await pool.query(`
-          SELECT COUNT(*) as count
-          FROM posts
-          WHERE user_id = $1 AND (EXTRACT(HOUR FROM created_at) >= 22 OR EXTRACT(HOUR FROM created_at) <= 3)
-        `, [userId]);
-        
-        const nightPosts = parseInt(nightResult.rows[0]?.count || 0, 10);
-        if (nightPosts > stats.totalPosts * 0.3) {
-          tags.push('night_owl');
-        }
-      } catch (err) {
-        // Silently fail
-      }
-    }
-    
-    // Weekend Warrior: 80% posts sáb/dom
-    if (stats.totalPosts > 10) {
-      try {
-        const weekendResult = await pool.query(`
-          SELECT COUNT(*) as count
-          FROM posts
-          WHERE user_id = $1 AND EXTRACT(DOW FROM created_at) IN (0, 6)
-        `, [userId]);
-        
-        const weekendPosts = parseInt(weekendResult.rows[0]?.count || 0, 10);
-        if (weekendPosts > stats.totalPosts * 0.8) {
-          tags.push('weekend_warrior');
-        }
-      } catch (err) {
-        // Silently fail
-      }
-    }
-    
-    // ==========================================
-    // TAGS DE INFLUÊNCIA/ELITE
-    // ==========================================
-    
-    // Popular: >1000 seguidores
-    if (stats.totalFollowers >= 1000) {
-      tags.push('popular');
-    }
-    
-    // Influenciador: >10k seguidores
-    if (stats.totalFollowers >= 10000) {
-      tags.push('influencer');
-    }
-    
-    // Prolífico: >100 posts
-    if (stats.totalPosts >= 100) {
-      tags.push('prolific');
-    }
-    
-    // Lenda: >5000 seguidores AND >1000 posts
-    if (stats.totalFollowers >= 5000 && stats.totalPosts >= 1000) {
-      tags.push('legend');
-    }
-    
-    // Remove duplicates and return
+    // Remove duplicatas
     return Array.from(new Set(tags));
   }
   
