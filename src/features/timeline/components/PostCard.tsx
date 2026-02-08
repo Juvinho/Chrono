@@ -8,6 +8,7 @@ import Avatar from '../../profile/components/Avatar';
 import TypingIndicatorCard from './TypingIndicatorCard';
 import FramePreview, { getFrameShape } from '../../profile/components/FramePreview';
 import { postIdMapper } from '../../../utils/postIdMapper';
+import '../../../styles/post-glitch-animation.css';
 
 interface PostCardProps {
     post: Post;
@@ -77,7 +78,7 @@ const formatRelativeTime = (date: Date): string => {
     return date.toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' });
 };
 
-const PostCard: React.FC<PostCardProps> = React.memo(({ post, currentUser, onViewProfile, onUpdateReaction, onReply, onEcho, onDelete, onEdit, onTagClick, onPollVote, typingParentIds, compact = false, nestingLevel = 0, isThreadedReply = false, isContextualView = false, onPostClick, isNew = false }) => {
+const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, onUpdateReaction, onReply, onEcho, onDelete, onEdit, onTagClick, onPollVote, typingParentIds, compact = false, nestingLevel = 0, isThreadedReply = false, isContextualView = false, onPostClick, isNew = false }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const { playSound } = useSound();
@@ -679,6 +680,15 @@ const PostCard: React.FC<PostCardProps> = React.memo(({ post, currentUser, onVie
             )}
         </div>
     );
-});
+};
 
-export default React.memo(PostCard);
+export default React.memo(PostCard, (prevProps, nextProps) => {
+    // Re-render if isNew changed (for glitch animation)
+    if (prevProps.isNew !== nextProps.isNew) return false;
+    // Re-render if post ID changed
+    if (prevProps.post.id !== nextProps.post.id) return false;
+    // Re-render if reactions changed
+    if (JSON.stringify(prevProps.post.reactions) !== JSON.stringify(nextProps.post.reactions)) return false;
+    // Otherwise skip re-render
+    return true;
+});
