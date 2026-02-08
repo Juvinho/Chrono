@@ -32,12 +32,20 @@ export function useRealtimeFeed() {
       socketRef.current = io(baseUrl, {
         auth: { token },
         reconnection: true,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
-        reconnectionAttempts: 5,
-        transports: ['websocket', 'polling', 'http_long_polling'],
+        reconnectionDelay: 500,
+        reconnectionDelayMax: 2000,
+        reconnectionAttempts: 10,
+        transports: ['websocket', 'polling', 'http_long_polling', 'websocket'],
         withCredentials: true,
-        secure: false,
+        secure: true,
+        rejectUnauthorized: false,
+        forceNew: true,
+        timeout: 20000,
+        autoConnect: true,
+        multiplex: true,
+        rememberUpgrade: true,
+        // Detalhes do upgrading de transporte
+        upgrade_transport: true,
       });
 
       // ✅ LISTEN para novos posts
@@ -66,11 +74,20 @@ export function useRealtimeFeed() {
       });
 
       socketRef.current.on('connect_error', (error: any) => {
-        console.error('[useRealtimeFeed] 🚨 Erro de conexão:', error?.message || error);
+        console.error('[useRealtimeFeed] 🚨 Erro de conexão:', {
+          message: error?.message,
+          code: error?.code,
+          type: error?.type,
+          data: error?.data,
+        });
       });
 
       socketRef.current.on('error', (error: any) => {
-        console.error('[useRealtimeFeed] 🚨 Socket error:', error);
+        console.error('[useRealtimeFeed] ❌ Erro WebSocket:', error);
+      });
+
+      socketRef.current.on('connect_timeout', () => {
+        console.error('[useRealtimeFeed] ⏱️ Timeout na conexão - servidor não respondeu em tempo');
       });
     } catch (error) {
       console.error('[useRealtimeFeed] 🚨 Erro ao criar Socket.io:', error);
