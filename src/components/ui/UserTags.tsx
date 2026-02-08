@@ -55,17 +55,6 @@ const UserTags: React.FC<UserTagsProps> = ({
         {visibleTags.map((tag) => (
           <UserTagBadge key={tag.id} tag={tag} showTooltip={true} />
         ))}
-
-        {/* "+N more" button */}
-        {hasMore && showModal && (
-          <button
-            onClick={handleModalOpen}
-            className="px-2 py-1.5 rounded-full text-sm font-medium bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-            title={`${remainingCount} ${remainingCount === 1 ? 'tag' : 'tags'} á vê `}
-          >
-            +{remainingCount}
-          </button>
-        )}
       </div>
 
       {/* Modal with all tags */}
