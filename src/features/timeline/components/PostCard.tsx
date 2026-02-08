@@ -219,17 +219,6 @@ const PostCard: React.FC<PostCardProps> = React.memo(({ post, currentUser, onVie
 
     const renderPoll = () => {
         const pollOptions = post.poll?.options || post.pollOptions;
-        
-        if (post.content?.includes('bolo')) {
-            console.log('🎯 Checking poll for bolo post:', {
-                'post.poll': post.poll,
-                'post.pollOptions': post.pollOptions,
-                pollOptions,
-                isArray: Array.isArray(pollOptions),
-                length: pollOptions?.length,
-            });
-        }
-        
         if (!pollOptions || !Array.isArray(pollOptions) || pollOptions.length === 0) {
             return null;
         }

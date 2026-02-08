@@ -184,12 +184,6 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 
     const { content, imageUrl, videoUrl, isThread, isPrivate, inReplyToId, repostOfId, pollOptions, pollEndsAt, unlockAt, mood } = req.body;
 
-    console.log('📨 POST /posts received:', {
-      content: content?.substring(0, 50),
-      pollOptions: pollOptions ? `Array of ${(pollOptions as any).length} options` : 'none',
-      pollEndsAt,
-    });
-
     if (!content && !repostOfId) {
       return res.status(400).json({ error: 'Content or repostOfId is required' });
     }
@@ -222,11 +216,6 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
       mood,
     } as any);
 
-    console.log('✅ Post created:', {
-      id: post.id,
-      pollOptions: post.pollOptions ? `${(post.pollOptions as any).length} options` : 'none',
-    });
-
     // Create notification if reply
     if (inReplyToId) {
       const parentPost = await postService.getPostById(inReplyToId);
@@ -256,13 +245,6 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     }
 
     const enrichedPost = await enrichPost(post);
-
-    console.log('📤 Sending enriched post response:', {
-      id: enrichedPost.id,
-      content: enrichedPost.content?.substring(0, 50),
-      pollOptions: enrichedPost.pollOptions ? `Array of ${(enrichedPost.pollOptions as any).length} options` : 'none',
-      pollEndsAt: enrichedPost.pollEndsAt,
-    });
 
     // Real-time emission removed
 

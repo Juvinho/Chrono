@@ -229,13 +229,6 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
             .map(opt => opt.trim())
             .filter(opt => opt !== '');
           
-          console.log('📝 Poll in PostComposer:', {
-            showPoll,
-            pollOptions,
-            validPollOptions,
-            validLength: validPollOptions.length,
-          });
-
           if (validPollOptions.length >= 2) {
             const oldOptions = postToEdit?.poll?.options?.map(o => o.option).join('||');
             const newOptions = validPollOptions.join('||');
@@ -255,11 +248,8 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
                 endsAt: pollEndsAt,
                 userVotedOption: optionsChanged ? undefined : postToEdit?.poll?.userVotedOption
             };
-            
-            console.log('✅ Poll created:', postData.poll);
           } else {
             // Signal to remove the poll by clearing options
-            console.warn('⚠️ Poll not created - need at least 2 options, got:', validPollOptions.length);
             postData.poll = undefined;
           }
         } else if (postToEdit?.poll) {
@@ -267,7 +257,6 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
             postData.poll = postToEdit.poll;
         }
         
-        console.log('📤 Final postData being submitted:', postData);
         await onSubmit(postData, postToEdit?.id);
         
         if (!postToEdit) {
