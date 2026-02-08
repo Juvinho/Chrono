@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { api } from '@/api/client';
+import { apiClient } from '@/api/client';
 
 interface UserTag {
   key: string;
@@ -31,7 +31,7 @@ export function useBio(userId: string | null) {
     const fetchBio = async () => {
       try {
         setIsLoading(true);
-        const response = await api.get<UserBioData>(`/bio/${userId}/bio`);
+        const response = await apiClient.get<UserBioData>(`/bio/${userId}/bio`);
         setBioData(response.data);
         setError(null);
       } catch (err) {
@@ -55,7 +55,7 @@ export function useBio(userId: string | null) {
     if (!userId) return;
     
     try {
-      const response = await api.post<{ tags: UserTag[] }>(`/bio/${userId}/bio/refresh`);
+      const response = await apiClient.post<{ tags: UserTag[] }>(`/bio/${userId}/bio/refresh`);
       if (bioData) {
         setBioData({
           ...bioData,
