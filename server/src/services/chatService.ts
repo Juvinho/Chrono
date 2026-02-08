@@ -117,7 +117,12 @@ export class ChatService {
    */
   async getUserConversations(userId: string, limit: number = 50, offset: number = 0): Promise<ConversationDTO[]> {
     try {
-      console.log('🔍 getUserConversations starting:', { userId, limit, offset });
+      console.log('🔍 getUserConversations starting:', { 
+        userId, 
+        limit, 
+        offset, 
+        timestamp: new Date().toISOString() 
+      });
       
       const result = await pool.query(
         `SELECT id, user1_id, user2_id, updated_at
@@ -130,10 +135,19 @@ export class ChatService {
 
       console.log('📊 Raw query result:', {
         rowCount: result.rows.length,
-        userId
+        userId,
+        rows: result.rows.map(r => ({ id: r.id, u1: r.user1_id, u2: r.user2_id }))
       });
 
+      // Se não encontrou conversas no banco
+      if (result.rows.length === 0) {
+        console.warn('⚠️ No conversations found in database for user:', userId);
+        return [];
+      }
+
       const conversations: ConversationDTO[] = [];
+      let processedCount = 0;
+      let skippedCount = 0;
 
       for (const row of result.rows) {
         try {
@@ -153,6 +167,7 @@ export class ChatService {
 
           if (usersResult.rows.length === 0) {
             console.warn('⚠️ Other user not found:', otherUserId);
+            skippedCount++;
             continue;
           }
 
@@ -191,18 +206,25 @@ export class ChatService {
             unreadCount: 0,
             updatedAt: row.updated_at,
           });
+          
+          processedCount++;
         } catch (convError: any) {
           console.log('⚠️ Processing conversation error:', {
             conversationId: row.id,
             message: convError.message?.substring(0, 80)
           });
+          skippedCount++;
           continue;
         }
       }
 
       console.log('✅ getUserConversations complete:', {
-        totalProcessed: conversations.length,
-        userId
+        totalInDB: result.rows.length,
+        processed: processedCount,
+        skipped: skippedCount,
+        returned: conversations.length,
+        userId,
+        timestamp: new Date().toISOString()
       });
 
       return conversations;
@@ -210,7 +232,8 @@ export class ChatService {
       console.error('❌ getUserConversations error:', {
         message: error.message,
         code: error.code,
-        userId
+        userId,
+        timestamp: new Date().toISOString()
       });
       return [];
     }

@@ -9,11 +9,14 @@ export function useConversations() {
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const retryCountRef = useRef<number>(0);
   const maxRetriesRef = useRef<number>(3);
+  const lastSuccessfulDataRef = useRef<Conversation[]>([]); // Guardar último resultado bem-sucedido
 
-  const fetchConversations = async (isRetry = false) => {
+  const fetchConversations = async (isRetry = false, isPolling = false) => {
     try {
       if (!isRetry) {
-        setIsLoading(true);
+        if (!isPolling) {
+          setIsLoading(true);
+        }
         setError(null);
         retryCountRef.current = 0;
       }
@@ -24,27 +27,41 @@ export function useConversations() {
         throw new Error('Resposta inválida: esperado array de conversas');
       }
       
+      // ✅ Sucesso! Atualiza conversas
       setConversations(data);
+      lastSuccessfulDataRef.current = data; // Salva em ref também
       setError(null);
       retryCountRef.current = 0;
       
-      console.log('✅ Conversas carregadas:', data.length);
+      console.log('✅ Conversas carregadas:', {
+        count: data.length,
+        isPolling,
+        conversationIds: data.map(c => c.id)
+      });
     } catch (err: any) {
       console.error('❌ Erro ao carregar conversas:', {
         message: err?.message,
         code: err?.code,
         statusCode: err?.statusCode,
-        retry: retryCountRef.current
+        retry: retryCountRef.current,
+        isPolling,
+        lastSuccessfulCount: lastSuccessfulDataRef.current.length
       });
       
-      // Retry logic para erros temporários
-      if (retryCountRef.current < maxRetriesRef.current) {
+      // Se é polling e temos dados anteriores, não limpa (pode ser erro temporário)
+      if (isPolling && lastSuccessfulDataRef.current.length > 0) {
+        console.log('📌 Mantendo conversas anteriores durante polling');
+        return;
+      }
+      
+      // Retry logic para erros temporários (apenas se não for polling)
+      if (!isPolling && retryCountRef.current < maxRetriesRef.current) {
         retryCountRef.current++;
         console.log(`🔄 Tentativa ${retryCountRef.current}/${maxRetriesRef.current}...`);
         
         // Aguarda 1 segundo antes de tentar novamente
         await new Promise(resolve => setTimeout(resolve, 1000));
-        return fetchConversations(true);
+        return fetchConversations(true, false);
       }
       
       // Se mesmo após retries continuar offline, tenta restaurar do cache
@@ -54,6 +71,7 @@ export function useConversations() {
           const cached = JSON.parse(cachedConversations);
           if (Array.isArray(cached) && cached.length > 0) {
             setConversations(cached);
+            lastSuccessfulDataRef.current = cached;
             setError('⚠️ Usando dados em cache (conexão perdida)');
             console.log('📦 Usando conversas em cache:', cached.length);
             return;
@@ -63,8 +81,11 @@ export function useConversations() {
         }
       }
       
-      setError('Falha ao carregar conversas. Verifique sua conexão.');
-      setConversations([]);
+      // Só mostra erro se realmente não tem dados anteriores
+      if (lastSuccessfulDataRef.current.length === 0) {
+        setError('Falha ao carregar conversas. Verifique sua conexão.');
+        setConversations([]);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -72,11 +93,11 @@ export function useConversations() {
 
   useEffect(() => {
     // Carrega conversas ao iniciar
-    fetchConversations();
+    fetchConversations(false, false);
 
-    // Inicia polling a cada 3 segundos (menos frequente que antes para economizar banda)
+    // Inicia polling a cada 3 segundos
     pollingIntervalRef.current = setInterval(() => {
-      fetchConversations();
+      fetchConversations(false, true); // isPolling = true
     }, 3000);
 
     return () => {
@@ -97,6 +118,6 @@ export function useConversations() {
     conversations,
     isLoading,
     error,
-    refetch: fetchConversations,
+    refetch: (isPolling = false) => fetchConversations(false, isPolling),
   };
 }
