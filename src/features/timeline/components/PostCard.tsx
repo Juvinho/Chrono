@@ -7,6 +7,7 @@ import { useSound } from '../../../contexts/SoundContext';
 import Avatar from '../../profile/components/Avatar';
 import TypingIndicatorCard from './TypingIndicatorCard';
 import FramePreview, { getFrameShape } from '../../profile/components/FramePreview';
+import ReactionTooltip from './ReactionTooltip';
 import { postIdMapper } from '../../../utils/postIdMapper';
 import '../../../styles/post-glitch-animation.css';
 
@@ -83,6 +84,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
     const navigate = useNavigate();
     const { playSound } = useSound();
     const [showReactions, setShowReactions] = useState(false);
+    const [showReactionTooltip, setShowReactionTooltip] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
     const [isReplying, setIsReplying] = useState(false);
     const [replyContent, setReplyContent] = useState('');
@@ -555,11 +557,15 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
             {!isThreadedReply && isTyping && <TypingIndicatorCard />}
 
             <div className="mt-4 flex items-center justify-between text-[var(--theme-text-secondary)] border-t border-[var(--theme-border-primary)] pt-2">
-                <div className="flex items-center space-x-3 overflow-x-auto">
+                <div 
+                    className="flex items-center space-x-3 overflow-x-auto relative"
+                    onMouseEnter={() => setShowReactionTooltip(true)}
+                    onMouseLeave={() => setShowReactionTooltip(false)}
+                >
                     {post.reactions && Object.entries(post.reactions).map(([reaction, count]) => (
                         <span 
                             key={reaction} 
-                            className="text-xs flex items-center space-x-1 flex-shrink-0" 
+                            className="text-xs flex items-center space-x-1 flex-shrink-0 cursor-pointer hover:text-[var(--theme-primary)] transition-colors" 
                             title={reaction}
                             aria-label={`${count} ${reaction} reactions`}
                         >
@@ -567,6 +573,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
                            <span className="text-[var(--theme-primary)] font-bold">{count}</span>
                         </span>
                     ))}
+                    <ReactionTooltip 
+                        postId={post.id}
+                        reactions={post.reactions || {}}
+                        isVisible={showReactionTooltip}
+                    />
                 </div>
                 <div className="flex items-center space-x-4">
                     <button 

@@ -28,6 +28,22 @@ router.get('/:postId/reactions', optionalAuthenticateToken, async (req: AuthRequ
 });
 
 /**
+ * GET /api/posts/:postId/reactions/details
+ * Retorna lista completa de quem reagiu com informações de usuário.
+ */
+router.get('/:postId/reactions/details', optionalAuthenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const { postId } = req.params;
+    const reactionDetails = await reactionService.getReactionDetails(postId);
+    const userReaction = req.userId ? await reactionService.getUserReaction(postId, req.userId) : null;
+    res.json({ reactionDetails, userReaction });
+  } catch (error: any) {
+    console.error('[Reactions] Details error:', error);
+    res.status(500).json({ error: error.message || 'Failed to get reaction details' });
+  }
+});
+
+/**
  * POST /api/posts/:postId/reactions
  * Cria/atualiza reação. Alterna removendo se a mesma.
  * body: { reactionType: 'Glitch' | 'Upload' | 'Corrupt' | 'Rewind' | 'Static' }

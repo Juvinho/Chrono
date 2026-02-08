@@ -123,5 +123,47 @@ export class ReactionService {
     }
     return postReactions;
   }
+
+  /**
+   * Retorna lista completa de quem reagiu com detalhes de usuário.
+   * Agrupa por tipo de reação.
+   */
+  async getReactionDetails(postId: string): Promise<{
+    [key in CyberpunkReaction]?: {
+      count: number;
+      users: Array<{ id: string; username: string; avatar: string }>;
+    };
+  }> {
+    const result = await pool.query(
+      `SELECT r.reaction_type, u.id, u.username, u.avatar
+       FROM reactions r
+       JOIN users u ON r.user_id = u.id
+       WHERE r.post_id = $1
+       ORDER BY r.reaction_type, u.username`,
+      [postId]
+    );
+
+    const reactionDetails: {
+      [key in CyberpunkReaction]?: {
+        count: number;
+        users: Array<{ id: string; username: string; avatar: string }>;
+      };
+    } = {};
+
+    for (const row of result.rows) {
+      const reactionType = row.reaction_type as CyberpunkReaction;
+      if (!reactionDetails[reactionType]) {
+        reactionDetails[reactionType] = { count: 0, users: [] };
+      }
+      reactionDetails[reactionType]!.users.push({
+        id: row.id,
+        username: row.username,
+        avatar: row.avatar,
+      });
+      reactionDetails[reactionType]!.count = reactionDetails[reactionType]!.users.length;
+    }
+
+    return reactionDetails;
+  }
 }
 
