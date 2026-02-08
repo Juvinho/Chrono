@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSound } from '../../contexts/SoundContext';
 import { apiClient } from '../../api/client';
 
 interface Message {
@@ -42,6 +43,15 @@ const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
+  let playSound: ((type: 'notification' | 'post' | 'reply' | 'like' | 'follow' | 'blim' | 'message_send' | 'message_receive' | 'message_background') => void) | null = null;
+  
+  try {
+    const soundContext = useSound();
+    playSound = soundContext.playSound;
+  } catch (e) {
+    // Sound context may not be available
+  }
+  
   const [socket, setSocket] = useState<Socket | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
@@ -91,6 +101,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const onNewMessage = (message: Message) => {
+      // Play sound notification for new message
+      if (playSound) {
+        playSound('message_background');
+      }
+      
       setMessages((prev) => [...prev, message]);
       setConversations((prev) => {
         return prev.map((conv) => {
