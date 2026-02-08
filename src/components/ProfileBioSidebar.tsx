@@ -1,4 +1,3 @@
-import { FileText } from 'lucide-react';
 import { useBio } from '@/hooks/useBio';
 import './profile-bio-sidebar.css';
 
@@ -32,7 +31,7 @@ export function ProfileBioSidebar({ userId }: ProfileBioSidebarProps) {
     <aside className="bio-sidebar">
       {/* Header */}
       <div className="bio-header">
-        <FileText size={18} className="bio-icon" />
+        <span className="bio-icon">📝</span>
         <h3>bio</h3>
       </div>
 
