@@ -28,6 +28,7 @@ interface MessageDTO {
     avatarUrl: string | null;
   };
   content: string;
+  imageUrl?: string;
   sentAt: string;
   isRead: boolean;
 }
@@ -201,6 +202,7 @@ export class ChatService {
           COALESCE(u.display_name, u.username) as display_name,
           u.avatar as avatar_url,
           m.content,
+          m.image_url,
           m.created_at,
           m.is_read
         FROM messages m
@@ -221,6 +223,7 @@ export class ChatService {
           avatarUrl: row.avatar_url || null,
         },
         content: row.content,
+        imageUrl: row.image_url || undefined,
         sentAt: row.created_at,
         isRead: row.is_read || false,
       }));
@@ -233,7 +236,7 @@ export class ChatService {
   /**
    * Send a message
    */
-  async sendMessage(conversationId: string, senderId: string, content: string): Promise<MessageDTO> {
+  async sendMessage(conversationId: string, senderId: string, content: string, imageUrl?: string): Promise<MessageDTO> {
     try {
       // Validate content
       if (!content || content.trim().length === 0) {
@@ -248,7 +251,8 @@ export class ChatService {
         conversationIdType: typeof conversationId,
         senderId,
         senderIdType: typeof senderId,
-        contentLength: content.length
+        contentLength: content.length,
+        hasImage: !!imageUrl
       });
 
       // Verify conversation exists and user is participant
@@ -273,12 +277,12 @@ export class ChatService {
         throw new Error('User is not a participant in this conversation');
       }
 
-      // Insert message
+      // Insert message with imageUrl if provided
       const result = await pool.query(
-        `INSERT INTO messages (conversation_id, sender_id, content, is_read, created_at)
-         VALUES ($1::uuid, $2::uuid, $3, false, CURRENT_TIMESTAMP)
-         RETURNING id, sender_id, content, created_at, is_read`,
-        [conversationId, senderId, content]
+        `INSERT INTO messages (conversation_id, sender_id, content, image_url, is_read, created_at)
+         VALUES ($1::uuid, $2::uuid, $3, $4, false, CURRENT_TIMESTAMP)
+         RETURNING id, sender_id, content, image_url, created_at, is_read`,
+        [conversationId, senderId, content, imageUrl || null]
       );
 
       // Update conversation updated_at
@@ -310,6 +314,7 @@ export class ChatService {
           avatarUrl: sender.avatar || null,
         },
         content: row.content,
+        imageUrl: row.image_url || undefined,
         sentAt: row.created_at,
         isRead: row.is_read || false,
       };

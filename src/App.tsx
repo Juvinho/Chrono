@@ -20,6 +20,7 @@ import { FloatingChatManager } from './features/messaging/components/FloatingCha
 import { MessagesSidebar } from './features/messaging/components/MessagesSidebar';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import './styles/floating-chats.css';
+import './styles/animations.css';
 
 // Lazy load components for performance
 const Marketplace = React.lazy(() => import('./features/marketplace/components/Marketplace'));

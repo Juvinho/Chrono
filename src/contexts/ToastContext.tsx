@@ -34,32 +34,26 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`pointer-events-auto px-4 py-2 rounded-sm border shadow-lg animate-[slideIn_0.3s_ease-out] flex items-center space-x-2 ${
-              toast.type === 'success' ? 'bg-green-900/80 border-green-500 text-green-100' :
-              toast.type === 'error' ? 'bg-red-900/80 border-red-500 text-red-100' :
-              toast.type === 'warning' ? 'bg-amber-900/80 border-amber-500 text-amber-100' :
+            className={`pointer-events-auto px-4 py-2 rounded-sm border shadow-lg animate-slideInRight flex items-center space-x-2 ${
+              toast.type === 'success' ? 'bg-green-900/80 border-green-500 text-green-100 animate-success' :
+              toast.type === 'error' ? 'bg-red-900/80 border-red-500 text-red-100 animate-error' :
+              toast.type === 'warning' ? 'bg-amber-900/80 border-amber-500 text-amber-100 animate-pulse' :
               'bg-[var(--theme-bg-tertiary)] border-[var(--theme-border-primary)] text-[var(--theme-text-light)]'
             }`}
           >
-            <span>
+            <span className={toast.type === 'success' ? 'animate-bounceSmall' : ''}>
               {toast.type === 'success' ? '✓' : toast.type === 'error' ? '✕' : toast.type === 'warning' ? '⚠' : 'ℹ'}
             </span>
             <span className="font-mono text-sm">{toast.message}</span>
             <button
               onClick={() => setToasts((prev) => prev.filter((t) => t.id !== toast.id))}
-              className="ml-2 hover:opacity-70"
+              className="ml-2 hover:opacity-70 hover-rotate"
             >
               ×
             </button>
           </div>
         ))}
       </div>
-      <style>{`
-        @keyframes slideIn {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-      `}</style>
     </ToastContext.Provider>
   );
 };

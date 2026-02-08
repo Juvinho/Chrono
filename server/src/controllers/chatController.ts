@@ -127,18 +127,19 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
     const { conversationId } = req.params;
-    const { content } = req.body;
+    const { content, imageUrl } = req.body;
     
     console.log('📨 sendMessage called:', {
       userId,
       conversationId,
       conversationIdType: typeof conversationId,
       contentLength: content?.length,
+      hasImage: !!imageUrl,
       url: req.originalUrl,
       method: req.method
     });
     
-    const message = await chatService.sendMessage(conversationId, userId, content);
+    const message = await chatService.sendMessage(conversationId, userId, content, imageUrl);
     
     // Emit socket events if io is available on app
     const io = req.app.get('io');

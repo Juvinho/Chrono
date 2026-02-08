@@ -367,7 +367,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
     }
 
     return (
-        <div className={`${rootClasses} ${compact ? 'p-3' : 'p-4'} ${isDeleting ? 'post-disintegrate' : ''} ${isNew ? 'post-glitch-new' : ''}`}>
+        <div className={`${rootClasses} ${compact ? 'p-3' : 'p-4'} ${isDeleting ? 'post-disintegrate' : ''} ${isNew ? 'post-glitch-new animate-slideInUp' : 'animate-fadeIn'}`}>
             <div className="flex justify-between items-start">
                 <div className="flex items-center mb-3">
                     <div className={`relative ${compact ? 'w-8 h-8' : 'w-10 h-10'} flex-shrink-0 cursor-pointer hover:scale-105 transition-transform mr-3`} onClick={() => onViewProfile(post.author.username)}>

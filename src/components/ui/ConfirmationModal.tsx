@@ -31,8 +31,8 @@ export default function ConfirmationModal({
     };
 
     return (
-        <div className="modal-overlay" onClick={handleOverlayClick}>
-            <div className="modal-content w-full max-w-lg">
+        <div className="modal-overlay animate-fadeIn" onClick={handleOverlayClick}>
+            <div className="modal-content w-full max-w-lg animate-slideInDown">
                 <h2 className="text-xl font-bold text-[var(--theme-text-light)] glitch-effect" data-text={title}>{title}</h2>
                 <p className="text-[var(--theme-text-secondary)] mt-2">{message}</p>
                 
