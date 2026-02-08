@@ -39,6 +39,32 @@ export function ProfileBioSidebar({ userId }: ProfileBioSidebarProps) {
       <div className="bio-content">
         <p>{displayBio}</p>
       </div>
+
+      {/* Tags do Sistema */}
+      {bioData.tags.length > 0 && (
+        <div className="bio-tags-section">
+          <div className="tags-header">
+            <span className="tags-label">: SYSTEM TAGS :</span>
+          </div>
+
+          <div className="tags-grid">
+            {bioData.tags.map((tag) => (
+              <div
+                key={tag.key}
+                className="bio-tag"
+                style={{
+                  borderColor: tag.color,
+                  color: tag.color,
+                }}
+                title={tag.description}
+              >
+                {tag.icon && <span className="tag-icon">{tag.icon}</span>}
+                <span className="tag-name">{tag.displayName}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </aside>
   );
 }
