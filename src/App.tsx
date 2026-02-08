@@ -6,7 +6,7 @@ import { isSameDay } from './utils/date';
 import { cleanupLocalStorage } from './utils/storageCleanup';
 import { useAppSession } from './hooks/useAppSession';
 import { useAppTheme } from './hooks/useAppTheme';
-import { useRealtimeFeed, setOnNewPostCallback } from './hooks/useRealtimeFeed';
+import { useRealtimeFeed } from './hooks/useRealtimeFeed';
 import { LanguageProvider } from './hooks/useTranslation';
 import { generateReplyContent } from './utils/geminiService';
 import { apiClient, mapApiPostToPost } from './api';
@@ -62,7 +62,7 @@ function App() {
       cleanupLocalStorage();
     }, []);
 
-    // ✅ Inicializar WebSocket para posts em tempo real
+    // ✅ Inicializar WebSocket para posts em tempo real (ou stub se não disponível)
     useRealtimeFeed();
 
     // 3. Other Local State
@@ -373,7 +373,7 @@ function App() {
     };
 
     const handleNewPost = async (post: Post) => {
-        console.log('[handleNewPost] Novo post:', post.id, post.content.substring(0, 50));
+        console.log('[handleNewPost] 📬 Novo post:', post.id, post.content.substring(0, 50));
         
         if (post.author.username === currentUser?.username) {
             playSound('post');
@@ -387,12 +387,15 @@ function App() {
             }
         }
 
-        // Add new post to the top with glitch animation
-        console.log('[handleNewPost] Adicionando post ao topo da lista');
-        setPosts(prev => {
+        // 🎨 Adicionar direto em displayedPosts para aparecer sem F5
+        console.log('[handleNewPost] ✨ Adicionando post com animação glitch');
+        setDisplayedPosts(prev => {
             console.log('[handleNewPost] Posts antes:', prev.length, 'Posts depois:', prev.length + 1);
             return [post, ...prev];
         });
+        
+        // Também adicionar em posts para manter sincronizado
+        setPosts(prev => [post, ...prev]);
         
         // Mark post as new for glitch animation
         setNewPostIds(prev => new Set([...prev, post.id]));
@@ -411,15 +414,6 @@ function App() {
             simulateUserPostInteraction(post);
         }
     };
-
-    // 🔌 Registrar callback do Socket.io para novos posts
-    useEffect(() => {
-        console.log('[App] 🔗 Registrando callback para Socket.io');
-        setOnNewPostCallback((newPost: Post) => {
-            console.log('[App] 📬 Socket.io callback acionado para novo post:', newPost.id);
-            handleNewPost(newPost);
-        });
-    }, [handleNewPost]);
     
     const handleUpdateReaction = async (postId: string, reaction: CyberpunkReaction, actor?: User) => {
         const reactor = actor || currentUser;

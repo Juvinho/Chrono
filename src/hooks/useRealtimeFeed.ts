@@ -1,8 +1,6 @@
-// ✅ HOOK PARA FEED EM TEMPO REAL - POLLING ALTERNATIVO
-import { useEffect, useRef } from 'react';
+// ✅ Stub simples - atualização via callbacks diretos do EchoFrame
 import { Post } from '../types/index';
 
-// Callback para quando novo post chega
 let onNewPost: ((post: Post) => void) | null = null;
 
 export function setOnNewPostCallback(callback: (post: Post) => void) {
@@ -10,119 +8,7 @@ export function setOnNewPostCallback(callback: (post: Post) => void) {
 }
 
 export function useRealtimeFeed() {
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const seenPostIdsRef = useRef<Set<string>>(new Set());
-
-  useEffect(() => {
-    console.log('[useRealtimeFeed] 🔌 useEffect iniciado');
-    
-    // Get token from storage
-    const token = sessionStorage.getItem('chrono_token') || localStorage.getItem('chrono_token');
-    
-    if (!token) {
-      console.warn('[useRealtimeFeed] ⚠️ Sem token, feed em tempo real desabilitado');
-      return;
-    }
-
-    try {
-      // Polling alternativo: verificar novos posts a cada 3 segundos
-      let apiUrl = import.meta.env.VITE_API_URL;
-      
-      // Fallback: se VITE_API_URL não estiver definido, usar URL relativa ou detectada
-      if (!apiUrl) {
-        // Em produção, usar URL do navegador + /api
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-          apiUrl = 'http://localhost:3001/api';
-        } else {
-          // Production: usar window.location sem /api, deixar relativo
-          apiUrl = `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}/api`;
-        }
-      }
-      
-      console.log('%c[useRealtimeFeed] 📡 ✅ ATIVANDO POLLING DE POSTS (3s intervalo)', 'background:#00ff00;color:#000;font-weight:bold;font-size:14px');
-      console.log('[useRealtimeFeed] 🌐 API URL:', apiUrl);
-
-      let pollingAttempts = 0;
-
-      pollingIntervalRef.current = setInterval(async () => {
-        pollingAttempts++;
-        console.log(`[useRealtimeFeed] 🔄 Polling ciclo #${pollingAttempts}`);
-        
-        try {
-          console.log('[useRealtimeFeed] 📥 Buscando posts de:', `${apiUrl}/posts?limit=10`);
-          
-          // Buscar últimos posts
-          const response = await fetch(`${apiUrl}/posts?limit=10`, {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-            },
-          });
-
-          console.log('[useRealtimeFeed] 📊 Status da resposta:', response.status);
-
-          if (!response.ok) {
-            console.error('[useRealtimeFeed] ❌ Erro HTTP:', response.status, response.statusText);
-            return;
-          }
-
-          const contentType = response.headers.get('content-type');
-          if (!contentType || !contentType.includes('application/json')) {
-            const text = await response.text();
-            console.error('[useRealtimeFeed] ❌ Resposta não é JSON. Content-Type:', contentType);
-            console.error('[useRealtimeFeed] Resposta:', text.substring(0, 200));
-            return;
-          }
-
-          const data = await response.json();
-          const posts = data.data || data || [];
-          
-          console.log('[useRealtimeFeed] 📦 Posts recebidos:', Array.isArray(posts) ? posts.length : 0);
-
-          // Verificar se há posts novos (não vistos antes)
-          if (Array.isArray(posts) && posts.length > 0) {
-            for (const post of posts) {
-              if (!seenPostIdsRef.current.has(post.id)) {
-                console.log('%c[useRealtimeFeed] 📬 ✅ NOVO POST DETECTADO via polling', 'background:#00ff00;color:#000;font-weight:bold;font-size:16px');
-                console.log('[useRealtimeFeed] Post ID:', post.id);
-                console.log('[useRealtimeFeed] Autor:', post.author?.username);
-                console.log('[useRealtimeFeed] Conteúdo:', post.content.substring(0, 80) + '...');
-                
-                // Marcar como visto
-                seenPostIdsRef.current.add(post.id);
-
-                // Acionar callback
-                if (onNewPost) {
-                  console.log('[useRealtimeFeed] 🔔 Acionando callback onNewPost');
-                  onNewPost(post);
-                } else {
-                  console.error('[useRealtimeFeed] ❌ onNewPost não está definido!');
-                }
-              }
-            }
-            
-            console.log('[useRealtimeFeed] 📋 Posts já processados:', seenPostIdsRef.current.size);
-          } else {
-            console.log('[useRealtimeFeed] ℹ️ Nenhum post encontrado ou resposta em formato inesperado');
-          }
-        } catch (error: any) {
-          console.error('[useRealtimeFeed] 💥 Erro durante polling:', error?.message || error);
-          console.error('[useRealtimeFeed] Stack:', error?.stack);
-        }
-      }, 3000);
-
-      console.log('%c[useRealtimeFeed] ✅ Polling iniciado com sucesso', 'background:#0080ff;color:#fff;font-weight:bold');
-
-    } catch (error) {
-      console.error('[useRealtimeFeed] 🚨 Erro ao inicializar feed em tempo real:', error);
-    }
-
-    return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        console.log('[useRealtimeFeed] 🔌 Polling desabilitado no cleanup');
-      }
-    };
-  }, []);
-
+  // Hook vazio - EchoFrame chama onNewPost diretamente quando post é criado
+  console.log('[useRealtimeFeed] ✅ Esperando posts via callbacks diretos (sem polling)');
   return null;
 }
