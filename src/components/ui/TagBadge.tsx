@@ -119,7 +119,6 @@ export const TagBadgeGroup: React.FC<TagBadgeGroupProps> = ({
   }
 
   const visibleTags = tags.slice(0, maxVisible);
-  const hiddenCount = Math.max(0, tags.length - maxVisible);
 
   return (
     <div className={`flex flex-wrap items-center gap-2 ${className}`}>
@@ -135,16 +134,6 @@ export const TagBadgeGroup: React.FC<TagBadgeGroupProps> = ({
           />
         );
       })}
-
-      {hiddenCount > 0 && (
-        <button
-          className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-600 hover:bg-gray-700 text-white transition-colors"
-          onClick={() => {/** TODO: Open tag modal */}}
-          title={`+${hiddenCount} tags adicionais`}
-        >
-          +{hiddenCount}
-        </button>
-      )}
     </div>
   );
 };
