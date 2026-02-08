@@ -11,7 +11,7 @@ export function setOnNewPostCallback(callback: (post: Post) => void) {
 
 export function useRealtimeFeed() {
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const lastPostTimestampRef = useRef<number>(0);
+  const seenPostIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     console.log('[useRealtimeFeed] 🔌 useEffect iniciado');
@@ -41,9 +41,7 @@ export function useRealtimeFeed() {
       
       console.log('%c[useRealtimeFeed] 📡 ✅ ATIVANDO POLLING DE POSTS (3s intervalo)', 'background:#00ff00;color:#000;font-weight:bold;font-size:14px');
       console.log('[useRealtimeFeed] 🌐 API URL:', apiUrl);
-      console.log('[useRealtimeFeed] 🔑 Token:', token.substring(0, 30) + '...');
 
-      // Callback inicial para testar se polling está rodando
       let pollingAttempts = 0;
 
       pollingIntervalRef.current = setInterval(async () => {
@@ -80,29 +78,29 @@ export function useRealtimeFeed() {
           
           console.log('[useRealtimeFeed] 📦 Posts recebidos:', Array.isArray(posts) ? posts.length : 0);
 
-          // Verificar se há posts mais novos que o último registrado
+          // Verificar se há posts novos (não vistos antes)
           if (Array.isArray(posts) && posts.length > 0) {
-            const newestPost = posts[0];
-            const newestTimestamp = new Date(newestPost.created_at).getTime();
+            for (const post of posts) {
+              if (!seenPostIdsRef.current.has(post.id)) {
+                console.log('%c[useRealtimeFeed] 📬 ✅ NOVO POST DETECTADO via polling', 'background:#00ff00;color:#000;font-weight:bold;font-size:16px');
+                console.log('[useRealtimeFeed] Post ID:', post.id);
+                console.log('[useRealtimeFeed] Autor:', post.author?.username);
+                console.log('[useRealtimeFeed] Conteúdo:', post.content.substring(0, 80) + '...');
+                
+                // Marcar como visto
+                seenPostIdsRef.current.add(post.id);
 
-            console.log('[useRealtimeFeed] 🕐 Post mais novo:', newestPost.id, 'Timestamp:', newestTimestamp, 'Último registrado:', lastPostTimestampRef.current);
-
-            if (newestTimestamp > lastPostTimestampRef.current) {
-              console.log('%c[useRealtimeFeed] 📬 ✅ NOVO POST DETECTADO via polling', 'background:#00ff00;color:#000;font-weight:bold;font-size:14px');
-              console.log('[useRealtimeFeed] Post ID:', newestPost.id);
-              console.log('[useRealtimeFeed] Autor:', newestPost.author?.username);
-              
-              lastPostTimestampRef.current = newestTimestamp;
-
-              if (onNewPost) {
-                console.log('[useRealtimeFeed] 🔔 Acionando callback onNewPost');
-                onNewPost(newestPost);
-              } else {
-                console.error('[useRealtimeFeed] ❌ onNewPost não está definido!');
+                // Acionar callback
+                if (onNewPost) {
+                  console.log('[useRealtimeFeed] 🔔 Acionando callback onNewPost');
+                  onNewPost(post);
+                } else {
+                  console.error('[useRealtimeFeed] ❌ onNewPost não está definido!');
+                }
               }
-            } else {
-              console.log('[useRealtimeFeed] ⏭️ Post não é novo (já processado)');
             }
+            
+            console.log('[useRealtimeFeed] 📋 Posts já processados:', seenPostIdsRef.current.size);
           } else {
             console.log('[useRealtimeFeed] ℹ️ Nenhum post encontrado ou resposta em formato inesperado');
           }
