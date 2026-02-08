@@ -23,12 +23,13 @@ export function useRealtimeFeed() {
     }
 
     try {
-      // Determinar URL do servidor
+      // Determinar URL do servidor - Socket.io precisa da URL base sem /api
       const apiUrl = import.meta.env.VITE_API_URL;
-      console.log('[useRealtimeFeed] 🔌 Tentando conectar ao Socket.io:', apiUrl);
+      const baseUrl = apiUrl?.replace('/api', '') || 'https://chrono.railway.app';
+      console.log('[useRealtimeFeed] 🔌 Tentando conectar ao Socket.io:', baseUrl);
 
       // Connect to WebSocket com configuração CORS agressiva
-      socketRef.current = io(apiUrl || 'http://localhost:3001', {
+      socketRef.current = io(baseUrl, {
         auth: { token },
         reconnection: true,
         reconnectionDelay: 1000,
