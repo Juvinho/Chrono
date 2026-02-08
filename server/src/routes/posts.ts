@@ -246,7 +246,17 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 
     const enrichedPost = await enrichPost(post);
 
-    // Real-time emission removed
+    // ✅ BROADCAST novo post em tempo real
+    const io = req.app.get('io');
+    if (io) {
+      // Emit para o feed global
+      io.emit('post_added', enrichedPost);
+      
+      // Emit para seguidores do usuário
+      io.to(`user_feed_${req.userId}`).emit('post_added', enrichedPost);
+      
+      console.log(`📡 Post ${post.id} broadcasted via WebSocket`);
+    }
 
     res.status(201).json(enrichedPost);
   } catch (error: any) {

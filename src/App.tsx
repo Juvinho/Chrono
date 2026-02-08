@@ -5,6 +5,7 @@ import { CORE_USERS } from './utils/constants';
 import { isSameDay } from './utils/date';
 import { useAppSession } from './hooks/useAppSession';
 import { useAppTheme } from './hooks/useAppTheme';
+import { useRealtimeFeed } from './hooks/useRealtimeFeed';
 import { LanguageProvider } from './hooks/useTranslation';
 import { generateReplyContent } from './utils/geminiService';
 import { apiClient, mapApiPostToPost } from './api';
@@ -54,6 +55,9 @@ function App() {
     } = useAppSession({ setPosts, setConversations, playSound });
 
     useAppTheme(currentUser);
+
+    // ✅ Inicializar WebSocket para posts em tempo real
+    useRealtimeFeed();
 
     // 3. Other Local State
     const [isMarketplaceOpen, setIsMarketplaceOpen] = useState(false);
