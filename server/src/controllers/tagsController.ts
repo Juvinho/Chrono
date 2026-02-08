@@ -10,22 +10,22 @@ export async function getUserTags(req: Request, res: Response) {
       `SELECT 
         ut.id,
         ut.user_id,
-        ut.tag_id,
-        ut.adquirida_em,
-        ut.removida_em,
-        ut.ativo,
-        td.nome,
-        td.icone,
-        td.cor_hex,
-        td.cor_border,
-        td.prioridade_exibicao,
-        td.categoria,
-        td.visibilidade,
-        td.descricao_publica
+        ut.tag_key,
+        ut.earned_at,
+        ut.metadata,
+        td.tag_key,
+        td.display_name,
+        td.icon,
+        td.color,
+        td.tag_type,
+        td.criteria,
+        td.display_order,
+        td.is_active,
+        td.description
       FROM user_tags ut
-      JOIN tag_definitions td ON ut.tag_id = td.id
-      WHERE ut.user_id = $1 AND ut.ativo = true
-      ORDER BY td.prioridade_exibicao DESC, ut.adquirida_em DESC`,
+      JOIN tag_definitions td ON ut.tag_key = td.tag_key
+      WHERE ut.user_id = $1
+      ORDER BY td.display_order ASC, ut.earned_at DESC`,
       [userId]
     );
 
@@ -41,8 +41,8 @@ export async function getTagDefinitions(req: Request, res: Response) {
   try {
     const result = await pool.query(
       `SELECT * FROM tag_definitions 
-       WHERE visibilidade = 'public' 
-       ORDER BY prioridade_exibicao DESC`
+       WHERE is_active = true 
+       ORDER BY display_order ASC`
     );
 
     res.json(result.rows);
@@ -55,7 +55,7 @@ export async function getTagDefinitions(req: Request, res: Response) {
 // ==================== ADD TAG TO USER (ADMIN) ====================
 export async function addUserTag(req: Request, res: Response) {
   try {
-    const { userId, tagId } = req.body;
+    const { userId, tagKey } = req.body;
     const adminId = req.body.adminId || (req as any).user?.id;
 
     // Check if user is admin
@@ -65,27 +65,21 @@ export async function addUserTag(req: Request, res: Response) {
 
     // Check if tag already exists for user
     const existingTag = await pool.query(
-      `SELECT id FROM user_tags WHERE user_id = $1 AND tag_id = $2`,
-      [userId, tagId]
+      `SELECT id FROM user_tags WHERE user_id = $1 AND tag_key = $2`,
+      [userId, tagKey]
     );
 
     if (existingTag.rows.length > 0) {
-      // If exists but inactive, reactivate it
-      const existing = existingTag.rows[0];
-      await pool.query(
-        `UPDATE user_tags SET ativo = true, removida_em = NULL, motivo_remocao = NULL
-         WHERE id = $1`,
-        [existing.id]
-      );
-      return res.json({ message: 'Tag reactivated', tagId: existing.id });
+      // Tag already exists, return it
+      return res.json({ message: 'Tag already assigned', id: existingTag.rows[0].id });
     }
 
     // Create new tag assignment
     const result = await pool.query(
-      `INSERT INTO user_tags (user_id, tag_id, ativo, adquirida_em)
-       VALUES ($1, $2, true, NOW())
+      `INSERT INTO user_tags (user_id, tag_key, earned_at)
+       VALUES ($1, $2, NOW())
        RETURNING *`,
-      [userId, tagId]
+      [userId, tagKey]
     );
 
     res.status(201).json(result.rows[0]);
@@ -98,8 +92,7 @@ export async function addUserTag(req: Request, res: Response) {
 // ==================== REMOVE TAG FROM USER (ADMIN) ====================
 export async function removeUserTag(req: Request, res: Response) {
   try {
-    const { userId, tagId } = req.body;
-    const { motivo_remocao } = req.body;
+    const { userId, tagKey } = req.body;
     const adminId = req.body.adminId || (req as any).user?.id;
 
     // Check if user is admin
@@ -108,11 +101,10 @@ export async function removeUserTag(req: Request, res: Response) {
     }
 
     const result = await pool.query(
-      `UPDATE user_tags 
-       SET ativo = false, removida_em = NOW(), motivo_remocao = $3
-       WHERE user_id = $1 AND tag_id = $2
+      `DELETE FROM user_tags 
+       WHERE user_id = $1 AND tag_key = $2
        RETURNING *`,
-      [userId, tagId, motivo_remocao || null]
+      [userId, tagKey]
     );
 
     if (result.rows.length === 0) {
@@ -133,8 +125,8 @@ export async function getTagsByCategory(req: Request, res: Response) {
 
     const result = await pool.query(
       `SELECT * FROM tag_definitions 
-       WHERE categoria = $1 AND visibilidade = 'public'
-       ORDER BY prioridade_exibicao DESC`,
+       WHERE tag_type = $1 AND is_active = true
+       ORDER BY display_order ASC`,
       [categoria]
     );
 
@@ -150,15 +142,13 @@ export async function getTagStatistics(req: Request, res: Response) {
   try {
     const result = await pool.query(
       `SELECT 
-        td.nome,
-        td.categoria,
-        COUNT(ut.id) as total_users,
-        COUNT(CASE WHEN ut.ativo = true THEN 1 END) as ativo_users,
-        COUNT(CASE WHEN ut.ativo = false THEN 1 END) as removidos_users
+        td.display_name,
+        td.tag_type,
+        COUNT(ut.id) as total_users
       FROM tag_definitions td
-      LEFT JOIN user_tags ut ON td.id = ut.tag_id
-      GROUP BY td.id, td.nome, td.categoria
-      ORDER BY td.prioridade_exibicao DESC`
+      LEFT JOIN user_tags ut ON td.tag_key = ut.tag_key
+      GROUP BY td.id, td.display_name, td.tag_type
+      ORDER BY td.display_order ASC`
     );
 
     res.json(result.rows);
@@ -171,8 +161,8 @@ export async function getTagStatistics(req: Request, res: Response) {
 // ==================== UPDATE TAG DEFINITION (ADMIN) ====================
 export async function updateTagDefinition(req: Request, res: Response) {
   try {
-    const { tagId } = req.params;
-    const { nome, prioridade_exibicao, descricao_publica } = req.body;
+    const { tagKey } = req.params;
+    const { displayName, displayOrder, description } = req.body;
     const adminId = (req as any).user?.id;
 
     if (!adminId) {
@@ -181,13 +171,12 @@ export async function updateTagDefinition(req: Request, res: Response) {
 
     const result = await pool.query(
       `UPDATE tag_definitions 
-       SET nome = COALESCE($1, nome),
-           prioridade_exibicao = COALESCE($2, prioridade_exibicao),
-           descricao_publica = COALESCE($3, descricao_publica),
-           atualizado_em = NOW()
-       WHERE id = $4
+       SET display_name = COALESCE($1, display_name),
+           display_order = COALESCE($2, display_order),
+           description = COALESCE($3, description)
+       WHERE tag_key = $4
        RETURNING *`,
-      [nome || null, prioridade_exibicao || null, descricao_publica || null, tagId]
+      [displayName || null, displayOrder || null, description || null, tagKey]
     );
 
     if (result.rows.length === 0) {

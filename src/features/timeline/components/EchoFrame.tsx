@@ -8,7 +8,7 @@ import { isSameDay } from '../../../utils/date';
 import { PlusIcon } from '../../../components/ui/icons';
 import { useTranslation } from '../../../hooks/useTranslation';
 import ConfirmationModal from '../../../components/ui/ConfirmationModal';
-import { apiClient } from '../../../api';
+import { apiClient, mapApiPostToPost } from '../../../api';
 import '../../../styles/post-glitch-animation.css';
 
 import FramePreview, { getFrameShape } from '../../profile/components/FramePreview';
@@ -185,11 +185,7 @@ export default function EchoFrame({
             
             // The post was created successfully, notify parent to reload data
             if (result.data) {
-                const mappedPost = {
-                    ...result.data,
-                    timestamp: new Date(result.data.createdAt || result.data.created_at || Date.now()),
-                    author: currentUser,
-                };
+                const mappedPost = mapApiPostToPost(result.data);
                 onNewPost(mappedPost);
             }
             
@@ -222,11 +218,7 @@ export default function EchoFrame({
             }
             
             if (result.data) {
-                const mappedPost = {
-                    ...result.data,
-                    timestamp: new Date(result.data.createdAt || result.data.created_at || Date.now()),
-                    author: currentUser,
-                };
+                const mappedPost = mapApiPostToPost(result.data);
                 onNewPost(mappedPost);
             }
             

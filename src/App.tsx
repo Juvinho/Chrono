@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useRef, Suspense, useCallback } fr
 import { useNavigate, useLocation } from 'react-router-dom';
 import { User, Page, Post, CyberpunkReaction, Notification, NotificationType, Conversation, Message } from './types';
 import { CORE_USERS } from './utils/constants';
+import { isSameDay } from './utils/date';
 import { useAppSession } from './hooks/useAppSession';
 import { useAppTheme } from './hooks/useAppTheme';
 import { LanguageProvider } from './hooks/useTranslation';
@@ -362,27 +363,38 @@ function App() {
     };
 
     const handleNewPost = async (post: Post) => {
+        console.log('[handleNewPost] Novo post:', post.id, post.content.substring(0, 50));
+        
         if (post.author.username === currentUser?.username) {
             playSound('post');
             showToast('Post publicado com sucesso!', 'success');
+            
+            // If viewing a past/future date, switch back to today to show the new post
+            const today = new Date();
+            if (!isSameDay(selectedDate, today)) {
+                console.log('[handleNewPost] Mudando para hoje pois estava em outro dia');
+                setSelectedDate(today);
+            }
         }
 
         // Add new post to the top with glitch animation
-        setPosts(prev => [post, ...prev]);
+        console.log('[handleNewPost] Adicionando post ao topo da lista');
+        setPosts(prev => {
+            console.log('[handleNewPost] Posts antes:', prev.length, 'Posts depois:', prev.length + 1);
+            return [post, ...prev];
+        });
         
         // Mark post as new for glitch animation
         setNewPostIds(prev => new Set([...prev, post.id]));
         
         // Remove glitch animation after 3 seconds
-        const timer = setTimeout(() => {
+        setTimeout(() => {
             setNewPostIds(prev => {
                 const updated = new Set(prev);
                 updated.delete(post.id);
                 return updated;
             });
         }, 3000);
-        
-        return () => clearTimeout(timer);
         
         // Check for triggers and simulate interactions
         if (post.author.username === currentUser?.username) {
