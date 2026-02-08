@@ -21,10 +21,11 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   const emojiSet = ['😀', '😂', '❤️', '👍', '🎉', '🔥', '😍', '🤔', '👏', '💯', '🚀', '⭐'];
 
   const handleSend = async () => {
-    if (!content.trim() || isSending) return;
+    // Allow send if either has content OR has an image
+    if ((!content.trim() && !imageUrl) || isSending) return;
 
     try {
-      await onSend(content, imageUrl || undefined);
+      await onSend(content.trim(), imageUrl || undefined);
       setContent('');
       setImageUrl(null);
       setShowEmojiPicker(false);
@@ -32,6 +33,8 @@ export const MessageInput: React.FC<MessageInputProps> = ({
       // Reset textarea height
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
+        // Keep focus on input for next message
+        textareaRef.current.focus();
       }
     } catch (error) {
       console.error(t('messageErrorOnSend'), error);
@@ -170,7 +173,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
           {/* Send Button */}
           <button
             onClick={handleSend}
-            disabled={!content.trim() || isSending}
+            disabled={(!content.trim() && !imageUrl) || isSending}
             className="control-button send-button"
             type="button"
             title={t('send')}

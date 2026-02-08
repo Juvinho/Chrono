@@ -74,12 +74,14 @@ CREATE TABLE IF NOT EXISTS messages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
     sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    content TEXT NOT NULL,
+    content TEXT,
     image_url TEXT,
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT messages_content_len_chk CHECK (char_length(content) BETWEEN 1 AND 1000)
+    -- Allow either content or image_url, but not both empty
+    CONSTRAINT messages_content_or_image CHECK (char_length(COALESCE(content, '')) > 0 OR image_url IS NOT NULL),
+    CONSTRAINT messages_content_len_chk CHECK (content IS NULL OR char_length(content) BETWEEN 1 AND 1000)
 );
 
 CREATE INDEX IF NOT EXISTS idx_messages_conversation_created ON messages(conversation_id, created_at DESC);

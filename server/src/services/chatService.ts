@@ -238,11 +238,11 @@ export class ChatService {
    */
   async sendMessage(conversationId: string, senderId: string, content: string, imageUrl?: string): Promise<MessageDTO> {
     try {
-      // Validate content
-      if (!content || content.trim().length === 0) {
-        throw new Error('Message content cannot be empty');
+      // Validate content - allow if has content OR has image
+      if ((!content || content.trim().length === 0) && !imageUrl) {
+        throw new Error('Message content or image is required');
       }
-      if (content.length > 1000) {
+      if (content && content.length > 1000) {
         throw new Error('Message cannot exceed 1000 characters');
       }
 
@@ -280,9 +280,9 @@ export class ChatService {
       // Insert message with imageUrl if provided
       const result = await pool.query(
         `INSERT INTO messages (conversation_id, sender_id, content, image_url, is_read, created_at)
-         VALUES ($1::uuid, $2::uuid, $3, $4, false, CURRENT_TIMESTAMP)
+         VALUES ($1::uuid, $2::uuid, NULLIF(TRIM($3), ''), $4, false, CURRENT_TIMESTAMP)
          RETURNING id, sender_id, content, image_url, created_at, is_read`,
-        [conversationId, senderId, content, imageUrl || null]
+        [conversationId, senderId, content || '', imageUrl || null]
       );
 
       // Update conversation updated_at
