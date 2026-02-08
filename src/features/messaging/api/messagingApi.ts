@@ -53,9 +53,9 @@ export async function getMessages(conversationId: number | string): Promise<Mess
 
 // Envia nova mensagem
 export async function sendMessage(request: SendMessageRequest): Promise<Message> {
-  // Validate input
-  if (!request.content || request.content.trim().length === 0) {
-    throw new Error('Mensagem não pode estar vazia');
+  // Validate input - allow if has content OR has image
+  if ((!request.content || request.content.trim().length === 0) && !request.imageUrl) {
+    throw new Error('Mensagem ou imagem é obrigatória');
   }
   if (request.content.length > 1000) {
     throw new Error('Mensagem não pode exceder 1000 caracteres');

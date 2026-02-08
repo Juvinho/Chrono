@@ -74,9 +74,11 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isMine }) => {
             />
           </div>
         )}
-        <div className="message-content">
-          {message.content}
-        </div>
+        {message.content && (
+          <div className="message-content">
+            {message.content}
+          </div>
+        )}
         <div className="message-time">
           {formatMessageTime(message.sentAt)}
           {isMine && message.isRead && <span className="read-indicator"> · {t('seen')}</span>}
