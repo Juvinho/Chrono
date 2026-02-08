@@ -30,6 +30,7 @@ interface DashboardProps {
     conversations: Conversation[];
     newPostsCount?: number;
     onShowNewPosts?: () => void;
+    newPostIds: Set<string>;
     allKnownPosts?: Post[];
     onUpdateUser?: (user: User) => void;
     onOpenMarketplace?: () => void;
@@ -45,7 +46,7 @@ export default function Dashboard({
     user, onLogout, onNavigate, onNotificationClick, onViewNotifications, selectedDate, setSelectedDate, allUsers, allPosts,
     onNewPost, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost, onPollVote, isGenerating, typingParentIds,
     conversations, newPostsCount = 0, onShowNewPosts, allKnownPosts, onUpdateUser = () => {}, onOpenMarketplace, onOpenChat,
-    nextAutoRefresh, isAutoRefreshPaused, onBack, lastViewedNotifications, onPostClick
+    nextAutoRefresh, isAutoRefreshPaused, onBack, lastViewedNotifications, onPostClick, newPostIds
 }: DashboardProps) {
     const { t } = useTranslation();
     const { tag, dateSegment } = useParams<{ tag: string; dateSegment: string }>();
@@ -238,6 +239,7 @@ export default function Dashboard({
                     isAutoRefreshPaused={isAutoRefreshPaused}
                     onPostClick={onPostClick}
                     navigate={navigate}
+                    newPostIds={newPostIds}
                 />
             </div>
             <Timeline 

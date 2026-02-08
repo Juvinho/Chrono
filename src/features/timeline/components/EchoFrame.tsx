@@ -9,6 +9,7 @@ import { PlusIcon } from '../../../components/ui/icons';
 import { useTranslation } from '../../../hooks/useTranslation';
 import ConfirmationModal from '../../../components/ui/ConfirmationModal';
 import { apiClient } from '../../../api';
+import '../../../styles/post-glitch-animation.css';
 
 import FramePreview, { getFrameShape } from '../../profile/components/FramePreview';
 
@@ -38,13 +39,14 @@ interface EchoFrameProps {
     isAutoRefreshPaused?: boolean;
     onPostClick?: (postId: string) => void;
     navigate?: ReturnType<typeof useNavigate>;
+    newPostIds: Set<string>;
 }
 
 export default function EchoFrame({ 
     selectedDate, currentUser, posts: allPosts, onViewProfile, onTagClick, 
     onNewPost, onUpdateReaction, onReply, onEcho, onDeletePost, onEditPost, onPollVote, searchQuery, focusPostId, isGenerating,
     typingParentIds, activeCordTag, setActiveCordTag, composerDate, setComposerDate, allKnownPosts,
-    nextAutoRefresh, isAutoRefreshPaused, onPostClick, navigate
+    nextAutoRefresh, isAutoRefreshPaused, onPostClick, navigate, newPostIds
 }: EchoFrameProps) {
     const { t } = useTranslation();
     const [isComposerOpen, setIsComposerOpen] = useState(false);
@@ -518,7 +520,7 @@ export default function EchoFrame({
                             id={`post-${post.id}`}
                             key={post.id} 
                             onClick={() => setActivePostId(post.id)}
-                            className={`${activePostId === post.id ? 'bg-[var(--theme-bg-tertiary)]/30' : ''}`}
+                            className={`${activePostId === post.id ? 'bg-[var(--theme-bg-tertiary)]/30' : ''} ${newPostIds.has(post.id) ? 'post-glitch-enter' : ''}`}
                         >
                             <PostCard 
                                 post={post} 

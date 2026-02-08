@@ -54,6 +54,7 @@ interface AppRoutesProps {
     memoizedUsers: User[];
     memoizedAllPosts: Post[];
     pendingPosts: Post[];
+    newPostIds: Set<string>;
     
     conversations: Conversation[];
     selectedDate: Date;
@@ -95,7 +96,7 @@ interface AppRoutesProps {
 export default function AppRoutes(props: AppRoutesProps) {
     const {
         currentUser, users, setUsers, combinedUsers, memoizedPosts, memoizedAllPosts, memoizedUsers,
-        pendingPosts, conversations, selectedDate, setSelectedDate,
+        pendingPosts, newPostIds, conversations, selectedDate, setSelectedDate,
         userToVerify, emailToReset, isGenerating, typingParentIds, nextAutoRefresh, isAutoRefreshPaused,
         lastViewedNotifications,
         handleNavigate, handleLogin, handleLogout, handleNotificationClick, onViewNotifications, handleNewPost,
@@ -139,6 +140,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     conversations={conversations}
                     newPostsCount={pendingPosts.length}
                     onShowNewPosts={handleShowNewPosts}
+                    newPostIds={newPostIds}
                     
                     onUpdateUser={handleUpdateUser}
                     onOpenMarketplace={() => setIsMarketplaceOpen(true)}
@@ -175,6 +177,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     conversations={conversations}
                     newPostsCount={pendingPosts.length}
                     onShowNewPosts={handleShowNewPosts}
+                    newPostIds={newPostIds}
                     
                     onUpdateUser={handleUpdateUser}
                     onOpenMarketplace={() => setIsMarketplaceOpen(true)}
