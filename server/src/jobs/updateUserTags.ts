@@ -46,11 +46,11 @@ export async function updateAllUserTags(): Promise<void> {
 }
 
 /**
- * Schedules the tag update job to run daily at 3 AM
+ * Schedules the tag update job to run every 6 hours
  */
 export function scheduleTagUpdateJob(): void {
-  // Run every day at 3 AM (03:00:00)
-  cron.schedule('0 3 * * *', async () => {
+  // Run every 6 hours (0, 6, 12, 18 UTC)
+  cron.schedule('0 */6 * * *', async () => {
     try {
       await updateAllUserTags();
     } catch (error) {
@@ -58,5 +58,5 @@ export function scheduleTagUpdateJob(): void {
     }
   });
 
-  console.log('✅ Tag update cron job scheduled (daily at 3 AM)');
+  console.log('✅ Tag update cron job scheduled (every 6 hours at 0, 6, 12, 18 UTC)');
 }

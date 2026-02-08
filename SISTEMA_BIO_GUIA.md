@@ -4,11 +4,12 @@
 
 Um sistema completo de bio de usuário com:
 - ✅ Bio automática gerada dinamicamente baseada em comportamento
-- ✅ Sistema de tags dinâmicas com 12 tags predefinidas
-- ✅ Análise automática de estatísticas do usuário
-- ✅ Atualização automática diária via cron job
+- ✅ Sistema de tags dinâmicas com **30+ tags** predefinidas
+- ✅ Análise automática de 15+ critérios diferentes
+- ✅ Atualização automática a cada 6 horas via cron job
 - ✅ Interface visual dark/cyberpunk
 - ✅ Componente React reutilizável
+- ✅ Detecção de: conteúdo visual, vídeos, threads, engagement, horários de posting
 
 ## 🗄️ Banco de Dados
 
@@ -41,21 +42,76 @@ CREATE TABLE user_tags (
 
 ### Tags Disponíveis
 
-| Tag | Tipo | Requisitos | Cor |
-|-----|------|-----------|-----|
-| **Verificado** | system | Manual (is_verified=true) | 🔵 #0084ff |
-| **Admin** | system | Manual (papel de admin) | 🔴 #ff0000 |
-| **Moderador** | system | Manual (role moderador) | 🟠 #ff6b00 |
-| **Observador** | achievement | 10+ likes por post | 🟣 #9b59b6 |
-| **Criador** | achievement | 50+ posts | 🔴 #e74c3c |
-| **Contador de Histórias** | achievement | 20+ posts + bio customizada | 🟡 #f39c12 |
-| **Social** | achievement | 100+ comentários | 🔵 #3498db |
-| **Pioneiro** | badge | 300+ dias + 1+ post | 🟢 #2ecc71 |
-| **Veterano** | badge | 365+ dias | ⚫ #95a5a6 |
-| **Ativo** | badge | 10+ posts últimos 30 dias | 🟦 #1abc9c |
-| **Popular** | achievement | 1000+ seguidores | 🩷 #e91e63 |
-| **Influenciador** | achievement | 10000+ seguidores | 🟣 #9c27b0 |
-| **Prolífico** | achievement | 100+ posts | 🟠 #ff9800 |
+| Tag | Tipo | Requisitos | Cor | Emoji |
+|-----|------|-----------|-----|-------|
+| **Verificado** | system | Manual (is_verified=true) | 🔵 #0084ff | ✓ |
+| **Admin** | system | Manual (papel de admin) | 🔴 #ff0000 | ⚙️ |
+| **Moderador** | system | Manual (role moderador) | 🟠 #ff6b00 | 🛡️ |
+| **Premium** | system | Assinatura ativa | 🟡 #ffd700 | ⭐ |
+| **Observador** | achievement | 10+ likes por post | 🟣 #9b59b6 | 👁️ |
+| **Criador** | achievement | 50+ posts | 🔴 #e74c3c | ✍️ |
+| **Contador de Histórias** | achievement | 20+ posts + bio customizada ou posts >500 chars | 🟡 #f39c12 | 📖 |
+| **Artista Visual** | achievement | 40%+ posts com imagens | 🔴 #e74c3c | 🎨 |
+| **Videomaker** | achievement | 5+ posts com vídeos | 🟠 #ff6b00 | 🎥 |
+| **Mestre dos Threads** | achievement | 10+ posts >1000 caracteres | 🟣 #9b59b6 | 🧵 |
+| **Social** | achievement | 100+ comentários | 🔵 #3498db | 💬 |
+| **Rei das Respostas** | achievement | 60%+ comentários são respostas | 🟦 #1abc9c | ↩️ |
+| **Debatedor** | achievement | 50%+ comentários >200 caracteres | 🩷 #e91e63 | ⚔️ |
+| **Viral** | achievement | 1 post com >1000 likes | 🔴 #ff0000 | 🔥 |
+| **Trending** | achievement | Média >50 likes por post | 🟠 #ff6b00 | 📈 |
+| **Deus do Engagement** | achievement | Taxa média engajamento >20% | 🔴 #e74c3c | 👑 |
+| **Pioneiro** | badge | 300+ dias + 1+ post | 🟢 #2ecc71 | 🚀 |
+| **Veterano** | badge | 365+ dias | ⚫ #95a5a6 | ⭐ |
+| **Ativo** | badge | 10+ posts últimos 30 dias | 🟦 #1abc9c | 🔥 |
+| **Beta Tester** | badge | Cadastrado antes de 2025 | 🟢 #00ff00 | 🧪 |
+| **Insone** | badge | 30%+ posts entre 00h-06h | 🟣 #9b59b6 | 🌙 |
+| **Madrugada** | badge | 30%+ posts entre 05h-09h | 🟢 #2ecc71 | ☀️ |
+| **Coruja Noturna** | badge | 30%+ posts entre 22h-03h | 🟣 #8e44ad | 🦉 |
+| **Guerreiro de Fim de Semana** | badge | 80%+ posts sáb/dom | 🟡 #f39c12 | 🎉 |
+| **Popular** | achievement | 1000+ seguidores | 🩷 #e91e63 | 💫 |
+| **Influenciador** | achievement | 10000+ seguidores | 🟣 #9c27b0 | 👑 |
+| **Prolífico** | achievement | 100+ posts | 🟠 #ff9800 | 📝 |
+| **Lenda** | achievement | 5000+ seguidores AND 1000+ posts | 🟡 #ffd700 | 🏆 |
+| **Fundador** | system | IDs 1-10 | 🔴 #ff0000 | 👑 |
+| **Apoiador** | achievement | Doou/apoiou o projeto | 🟠 #ff6b00 | ❤️ |
+
+## 🧠 Critérios de Análise Automática
+
+O sistema analisa **15+ critérios** diferentes para calcular as tags:
+
+### Conteúdo
+- 📝 Número total de posts (threshold: 50, 100 para prolífico)
+- 📝 Comprimento médio dos posts (>500 chars = storyteller)
+- 🖼️ Posts com imagens (>40% = visual artist)
+- 🎥 Posts com vídeos (>5 = videomaker)
+- 🧵 Posts muito longos (>1000 chars = thread master)
+
+### Interação
+- 💬 Comentários totais (threshold: 100, 200+)
+- ↩️ Respostas a comentários (60%+ = reply king)
+- 📋 Comentários profundos (>200 chars = debater)
+- ❤️ Likes dados vs recebidos (ratio)
+
+### Engagement
+- 🔥 Post viral (>1000 likes)
+- 📈 Trending (média >50 likes por post)
+- 👑 Deus do engagement (>20% taxa média)
+
+### Tempo de Posting
+- 🌙 Insone (30% posts entre 00h-06h)
+- ☀️ Madrugada (30% posts entre 05h-09h)
+- 🦉 Coruja noturna (30% posts entre 22h-03h)
+- 🎉 Guerreiro de fim de semana (80% posts sáb/dom)
+
+### Tempo na Plataforma
+- 📅 Dias cadastrado (pioneer >300, veteran >365)
+- 📆 Posts recentes (ativo >10 nos últimos 30 dias)
+- 🧪 Beta tester (cadastrados antes de 2025-01-01)
+
+### Influência
+- 👥 Seguidores (popular >1000, influencer >10k)
+- 📝 Prolífico (>100 posts)
+- 🏆 Lenda (>5000 seguidores AND >1000 posts)
 
 ## 📝 Bio Automática
 
@@ -166,25 +222,27 @@ export function ProfilePage() {
 
 ## ⚙️ Automação
 
-### Cron Job (Atualização Diária)
+### Cron Job (Atualização a Cada 6 Horas)
 
-Executa todo dia às **3 AM UTC**
+Executa a cada **6 horas** (0h, 6h, 12h, 18h UTC) para atualizar os top 1000 usuários ativos
 
 ```typescript
 // server/src/jobs/updateUserTags.ts
-cron.schedule('0 3 * * *', async () => {
-  // Busca usuários ativos
-  // Calcula novas tags
-  // Atualiza banco de dados
+cron.schedule('0 */6 * * *', async () => {
+  // Busca top 1000 usuários ativos (últimos 30 dias)
+  // Calcula novas tags para cada um
+  // Atualiza banco de dados em batch
 });
 ```
 
 **Processo:**
-1. Busca todos os usuários que postaram nos últimos 30 dias
+1. Busca os 1000 usuários mais ativos (postaram nos últimos 30 dias)
 2. Para cada usuário:
    - Recalcula as tags baseado em comportamento atual
+   - Analisa: posts, imagens, vídeos, comentários, engagement, horários de posting
    - Remove tags automáticas antigas
    - Adiciona novas tags conquistadas
+3. Executa em batches de 10 usuários por performance
 
 ## 🚀 Uso Prático
 
