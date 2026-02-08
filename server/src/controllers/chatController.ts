@@ -95,10 +95,18 @@ export const getConversations = async (req: AuthRequest, res: Response) => {
       userId,
       userIdType: typeof userId,
       limit,
-      offset
+      offset,
+      timestamp: new Date().toISOString()
     });
     
     const conversations = await chatService.getUserConversations(userId, limit, offset);
+    
+    console.log('📤 getConversations response:', {
+      userId,
+      count: conversations.length,
+      conversationIds: conversations.map(c => c.id),
+      timestamp: new Date().toISOString()
+    });
     
     // Diagnose empty result
     if (conversations.length === 0) {
@@ -113,7 +121,8 @@ export const getConversations = async (req: AuthRequest, res: Response) => {
       const dbCount = checkResult.rows[0]?.count || 0;
       console.warn('🔍 Database check:', {
         userId,
-        totalConversationsInDB: dbCount
+        totalConversationsInDB: dbCount,
+        timestamp: new Date().toISOString()
       });
       
       if (dbCount > 0) {
@@ -127,7 +136,8 @@ export const getConversations = async (req: AuthRequest, res: Response) => {
       message: error.message,
       code: error.code,
       userId: req.userId,
-      stack: error.stack
+      stack: error.stack,
+      timestamp: new Date().toISOString()
     });
     res.status(500).json({ error: error.message });
   }
