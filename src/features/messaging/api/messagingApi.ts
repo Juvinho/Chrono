@@ -94,3 +94,21 @@ export async function markAsRead(conversationId: number | string): Promise<void>
   const response = await baseClient.post(`${API_BASE}/${conversationId}/read`, {});
   if (response.error) throw new Error(response.error);
 }
+
+/**
+ * ADMIN: Reindex conversations for current user
+ * Removes orphaned conversations and rebuilds conversation list
+ */
+export async function reindexConversations(): Promise<{
+  success: boolean;
+  diagnostics: {
+    orphanedDeleted: number;
+    validConversations: number;
+    rebuiltConversations: number;
+    conversations: any[];
+  };
+}> {
+  const response = await baseClient.post(`${API_BASE}/reindex/conversations`, {});
+  if (response.error) throw new Error(response.error);
+  return response.data || { success: false, diagnostics: { orphanedDeleted: 0, validConversations: 0, rebuiltConversations: 0, conversations: [] } };
+}

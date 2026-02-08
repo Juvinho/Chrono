@@ -91,10 +91,44 @@ export const getConversations = async (req: AuthRequest, res: Response) => {
     const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 50, 1), 100); // 1-100, default 50
     const offset = Math.max(parseInt(req.query.offset as string) || 0, 0); // 0+
     
+    console.log('📋 getConversations called:', {
+      userId,
+      userIdType: typeof userId,
+      limit,
+      offset
+    });
+    
     const conversations = await chatService.getUserConversations(userId, limit, offset);
+    
+    // Diagnose empty result
+    if (conversations.length === 0) {
+      console.warn('⚠️ User has no conversations - checking database directly...');
+      
+      // Check if user exists and has any conversations raw
+      const checkResult = await require('../db/connection').pool.query(
+        `SELECT COUNT(*) as count FROM conversations WHERE user1_id = $1::uuid OR user2_id = $1::uuid`,
+        [userId]
+      );
+      
+      const dbCount = checkResult.rows[0]?.count || 0;
+      console.warn('🔍 Database check:', {
+        userId,
+        totalConversationsInDB: dbCount
+      });
+      
+      if (dbCount > 0) {
+        console.error('❌ CRITICAL: Found conversations in DB but getUserConversations returned empty!');
+      }
+    }
+    
     res.json(conversations);
   } catch (error: any) {
-    console.error('Error getting conversations:', error);
+    console.error('❌ Error getting conversations:', {
+      message: error.message,
+      code: error.code,
+      userId: req.userId,
+      stack: error.stack
+    });
     res.status(500).json({ error: error.message });
   }
 };
@@ -202,5 +236,83 @@ export const markAsRead = async (req: AuthRequest, res: Response) => {
   } catch (error: any) {
     console.error('Error marking as read:', error);
     res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * ADMIN: Reindex conversations for a user
+ * Removes orphaned conversations and rebuilds conversation list
+ */
+export const reindexConversations = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.userId!;
+    
+    console.log('🔧 Reindexing conversations for user:', userId);
+    
+    // Step 1: Find orphaned conversations (where other user doesn't exist)
+    const orphanedResult = await pool.query(
+      `SELECT c.id, c.user1_id, c.user2_id
+       FROM conversations c
+       WHERE (c.user1_id = $1::uuid OR c.user2_id = $1::uuid)
+       AND (
+         NOT EXISTS (SELECT 1 FROM users WHERE id = c.user1_id)
+         OR NOT EXISTS (SELECT 1 FROM users WHERE id = c.user2_id)
+       )`,
+      [userId]
+    );
+    
+    const orphanedConversations = orphanedResult.rows;
+    console.log('🗑️ Found orphaned conversations:', orphanedConversations.length);
+    
+    // Step 2: Delete orphaned conversations
+    let deletedCount = 0;
+    for (const conv of orphanedConversations) {
+      await pool.query(
+        `DELETE FROM conversations WHERE id = $1::uuid`,
+        [conv.id]
+      );
+      deletedCount++;
+    }
+    
+    console.log('✅ Deleted orphaned conversations:', deletedCount);
+    
+    // Step 3: Count valid conversations
+    const validResult = await pool.query(
+      `SELECT COUNT(*) as count FROM conversations 
+       WHERE user1_id = $1::uuid OR user2_id = $1::uuid`,
+      [userId]
+    );
+    
+    const validCount = validResult.rows[0]?.count || 0;
+    console.log('📋 Valid conversations remaining:', validCount);
+    
+    // Step 4: Rebuild conversation list
+    const conversations = await chatService.getUserConversations(userId, 50, 0);
+    
+    console.log('🔄 Reindexing complete:', {
+      orphanedDeleted: deletedCount,
+      validConversations: validCount,
+      rebuiltConversations: conversations.length
+    });
+    
+    res.json({
+      success: true,
+      diagnostics: {
+        orphanedDeleted: deletedCount,
+        validConversations: validCount,
+        rebuiltConversations: conversations.length,
+        conversations
+      }
+    });
+  } catch (error: any) {
+    console.error('Error reindexing conversations:', {
+      message: error.message,
+      code: error.code,
+      userId: req.userId
+    });
+    res.status(500).json({ 
+      error: error.message,
+      details: 'Falha ao reindexar conversas'
+    });
   }
 };
