@@ -152,6 +152,8 @@ export interface UserItem {
 
 export interface Post {
   id: string;
+  tempId?: string; // Para posts temporários antes de serem salvo no servidor
+  isTemp?: boolean; // Flag para posts em otimistic update
   author: User;
   content: string;
   imageUrl?: string;
