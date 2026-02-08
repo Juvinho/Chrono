@@ -390,7 +390,7 @@ export default function EchoFrame({
                             <h3 className="text-lg font-bold text-[var(--theme-text-light)] mb-3 border-b border-[var(--theme-border-primary)] pb-2">
                                 {t('popularCords') || 'Cordões Populares'}
                             </h3>
-                            <div className="space-y-2">
+                            <div className="space-y-2 stagger-children">
                                 {trendingCordoes.length > 0 ? (
                                     trendingCordoes.map(cord => (
                                         <div 
