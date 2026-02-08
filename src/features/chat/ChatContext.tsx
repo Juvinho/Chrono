@@ -59,6 +59,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isConnected, setIsConnected] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const listenersRef = useRef<Array<{ event: string; handler: Function }>>([]);
+  const activeConversationRef = useRef<Conversation | null>(null);
+
+  // Update ref when activeConversation changes
+  useEffect(() => {
+    activeConversationRef.current = activeConversation;
+  }, [activeConversation]);
 
   // Initialize Socket - ONLY once per user authentication
   useEffect(() => {
@@ -103,7 +109,23 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const onNewMessage = (message: Message) => {
       // Play sound notification for new message
       if (playSound) {
-        playSound('message_background');
+        // Se o chat está fechado, toque som mais intrusivo
+        if (!activeConversationRef.current || activeConversationRef.current.id !== message.conversation_id) {
+          playSound('message_receive'); // Som mais intrusivo para abrir chat
+        } else {
+          playSound('message_background'); // Som discreto se chat já está aberto
+        }
+      }
+      
+      // Se o chat está fechado, abrir automaticamente
+      if (!activeConversationRef.current || activeConversationRef.current.id !== message.conversation_id) {
+        setConversations((prevConversations) => {
+          const conv = prevConversations.find(c => c.id === message.conversation_id);
+          if (conv) {
+            setActiveConversation(conv);
+          }
+          return prevConversations;
+        });
       }
       
       setMessages((prev) => [...prev, message]);
