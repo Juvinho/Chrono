@@ -93,38 +93,35 @@ export class UserBioService {
           u.username,
           u.display_name,
           u.bio AS custom_bio,
-          u.avatar_url AS avatar,
+          u.avatar AS avatar,
           u.created_at AS joined_at,
-          u.verified AS is_verified,
+          u.is_verified AS is_verified,
+          u.followers_count AS total_followers,
+          u.following_count AS total_following,
           
           COUNT(DISTINCT p.id) AS total_posts,
-          COUNT(DISTINCT l.id) AS total_likes_given,
-          COUNT(DISTINCT l2.id) AS total_likes_received,
-          COUNT(DISTINCT c.id) AS total_comments_given,
-          COUNT(DISTINCT f.id) AS total_followers,
-          COUNT(DISTINCT f2.id) AS total_following,
+          COUNT(DISTINCT r.id) FILTER (WHERE r.user_id = $1) AS total_likes_given,
+          COUNT(DISTINCT r2.id) AS total_likes_received,
           
           COUNT(DISTINCT CASE WHEN p.created_at > NOW() - INTERVAL '30 days' 
               THEN p.id END) AS posts_last_30_days,
           
           CASE 
               WHEN COUNT(DISTINCT p.id) > 0 THEN
-                  COUNT(DISTINCT l.id)::DECIMAL / COUNT(DISTINCT p.id)
+                  COUNT(DISTINCT r.id)::DECIMAL / COUNT(DISTINCT p.id)
               ELSE 0
           END AS likes_to_posts_ratio,
           
           EXTRACT(DAY FROM NOW() - u.created_at)::INTEGER AS days_since_joined
         
         FROM users u
-        LEFT JOIN posts p ON u.id = p.user_id
-        LEFT JOIN likes l ON u.id = l.user_id
-        LEFT JOIN likes l2 ON p.id = l2.post_id
-        LEFT JOIN comments c ON u.id = c.user_id
-        LEFT JOIN follows f ON u.id = f.following_id
-        LEFT JOIN follows f2 ON u.id = f2.follower_id
+        LEFT JOIN posts p ON u.id = p.author_id
+        LEFT JOIN reactions r ON u.id = r.user_id AND r.reaction_type = 'Glitch'
+        LEFT JOIN reactions r2 ON p.id = r2.post_id AND r2.reaction_type = 'Glitch'
         
         WHERE u.id = $1
-        GROUP BY u.id, u.username, u.display_name, u.bio, u.created_at, u.verified
+        GROUP BY u.id, u.username, u.display_name, u.bio, u.created_at, u.is_verified, 
+                 u.avatar, u.followers_count, u.following_count
       `, [userId]);
       
       if (result.rows.length === 0) {
@@ -143,11 +140,11 @@ export class UserBioService {
         totalPosts: parseInt(row.total_posts, 10),
         totalLikesGiven: parseInt(row.total_likes_given, 10),
         totalLikesReceived: parseInt(row.total_likes_received, 10),
-        totalCommentsGiven: parseInt(row.total_comments_given, 10),
-        totalFollowers: parseInt(row.total_followers, 10),
-        totalFollowing: parseInt(row.total_following, 10),
+        totalCommentsGiven: 0, // Simplified - no separate comments table
+        totalFollowers: parseInt(row.total_followers, 10) || 0,
+        totalFollowing: parseInt(row.total_following, 10) || 0,
         postsLast30Days: parseInt(row.posts_last_30_days, 10),
-        likesToPostsRatio: parseFloat(row.likes_to_posts_ratio),
+        likesToPostsRatio: parseFloat(row.likes_to_posts_ratio) || 0,
         daysSinceJoined: row.days_since_joined,
       };
     } catch (error) {
