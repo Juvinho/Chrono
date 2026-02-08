@@ -130,17 +130,24 @@ app.set('trust proxy', 1); // Trust Railway's proxy for X-Forwarded-For header
 
 // Socket.io authentication middleware
 io.use((socket, next) => {
+  console.log('[🔌 Socket.io Middleware] 🔍 Tentativa de conexão recebida:', {
+    id: socket.id,
+    handshake: socket.handshake?.url || 'unknown',
+  });
+
   try {
     // Extract token from handshake auth
     const token = socket.handshake.auth.token;
     
     if (!token) {
+      console.error('[🔌 Socket.io Middleware] ❌ Nenhum token fornecido');
       return next(new Error('Authentication error: token required'));
     }
     
     // Verify JWT
     jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
       if (err) {
+        console.error('[🔌 Socket.io Middleware] ❌ Token inválido:', err.message);
         return next(new Error('Authentication error: invalid token'));
       }
       
@@ -148,11 +155,23 @@ io.use((socket, next) => {
       socket.data.userId = user.id;
       socket.data.username = user.username;
       
+      console.log('[🔌 Socket.io Middleware] ✅ Token verificado para usuário:', user.username);
       next();
     });
   } catch (error) {
+    console.error('[🔌 Socket.io Middleware] 💥 Erro inesperado:', error);
     return next(new Error('Authentication error: unexpected error'));
   }
+});
+
+
+// Eventos de erro de conexão (antes de autenticação)
+io.on('connect_error', (error: any) => {
+  console.error('[🔌 Socket.io] 🚨 Erro de conexão (pré-autenticação):', {
+    message: error?.message,
+    code: error?.code,
+    type: error?.type,
+  });
 });
 
 io.on('connection', (socket) => {
