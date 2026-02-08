@@ -35,6 +35,7 @@ function App() {
     const [displayedPosts, setDisplayedPosts] = useState<Post[]>([]);
     const [pendingPosts, setPendingPosts] = useState<Post[]>([]);
     const [conversations, setConversations] = useState<Conversation[]>([]);
+    const [newPostIds, setNewPostIds] = useState<Set<string>>(new Set());
     // Stories feature removed
     
     // Chat system removed
@@ -366,9 +367,24 @@ function App() {
             showToast('Post publicado com sucesso!', 'success');
         }
 
-        await reloadBackendData();
+        // Add new post to the top with glitch animation
+        setPosts(prev => [post, ...prev]);
         
-        // Check for triggers and simulate interactions (removed checkForTriggers impl)
+        // Mark post as new for glitch animation
+        setNewPostIds(prev => new Set([...prev, post.id]));
+        
+        // Remove glitch animation after 3 seconds
+        const timer = setTimeout(() => {
+            setNewPostIds(prev => {
+                const updated = new Set(prev);
+                updated.delete(post.id);
+                return updated;
+            });
+        }, 3000);
+        
+        return () => clearTimeout(timer);
+        
+        // Check for triggers and simulate interactions
         if (post.author.username === currentUser?.username) {
             simulateUserPostInteraction(post);
         }
@@ -596,6 +612,7 @@ function App() {
                                 memoizedUsers={memoizedUsers}
                                 memoizedAllPosts={memoizedAllPosts}
                                 pendingPosts={pendingPosts}
+                                newPostIds={newPostIds}
                                 conversations={conversations}
                                 selectedDate={selectedDate}
                                 setSelectedDate={setSelectedDate}
