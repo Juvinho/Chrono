@@ -266,21 +266,25 @@ function RecommendationsSection({
                     <h3 className="text-center font-bold text-red-500">:: TRENDING CORDÕES ::</h3>
                     <div className="space-y-2">
                         {trendingCordoes.length > 0 ? (
-                            trendingCordoes.map(c => (
+                            // Deduplicate by tag
+                            Array.from(new Map(trendingCordoes.map(c => [c.tag, c])).values()).map(c => (
                                 <TrendingCordaoCard key={c.tag} cordao={c} onSearch={onSearch} />
                             ))
                         ) : (
-                            recommendations.popularCordoes.map(c => {
+                            // Fallback to popular cordoes if no trending data
+                            Array.from(new Map(recommendations.popularCordoes.map(c => {
                                 const tag = SearchService.extractCordoes(c.content)[0];
+                                return [tag, { id: c.id, content: c.content, tag }];
+                            })).values()).map(c => {
                                 const mentions = allPosts.filter(p => 
-                                    SearchService.extractCordoes(p.content).includes(tag)
+                                    SearchService.extractCordoes(p.content).includes(c.tag)
                                 ).length;
                                 return (
                                     <CordaoCard 
-                                        key={c.id} 
-                                        cordao={c} 
+                                        key={c.tag} 
+                                        cordao={c as any} 
                                         mentions={mentions}
-                                        onClick={() => onSearch(tag || c.content)} 
+                                        onClick={() => onSearch(c.tag || c.content)} 
                                     />
                                 );
                             })
