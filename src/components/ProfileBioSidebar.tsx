@@ -44,7 +44,7 @@ export function ProfileBioSidebar({ userId }: ProfileBioSidebarProps) {
       {bioData.tags.length > 0 && (
         <div className="bio-tags-section">
           <div className="tags-header">
-            <span className="tags-label">:: SYSTEM TAGS ::</span>
+            <span className="tags-label">: SYSTEM TAGS :</span>
           </div>
 
           <div className="tags-grid">
