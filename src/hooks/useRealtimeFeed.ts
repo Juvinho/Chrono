@@ -1,6 +1,5 @@
-// ✅ HOOK COMPLETO PARA POSTS EM TEMPO REAL
+// ✅ HOOK PARA FEED EM TEMPO REAL - POLLING ALTERNATIVO
 import { useEffect, useRef } from 'react';
-import { io, Socket } from 'socket.io-client';
 import { Post } from '../types/index';
 
 // Callback para quando novo post chega
@@ -11,95 +10,78 @@ export function setOnNewPostCallback(callback: (post: Post) => void) {
 }
 
 export function useRealtimeFeed() {
-  const socketRef = useRef<Socket | null>(null);
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastPostTimestampRef = useRef<number>(0);
 
   useEffect(() => {
     // Get token from storage
     const token = sessionStorage.getItem('chrono_token') || localStorage.getItem('chrono_token');
     
     if (!token) {
-      console.warn('[useRealtimeFeed] ⚠️ Sem token, WebSocket desabilitado');
+      console.warn('[useRealtimeFeed] ⚠️ Sem token, feed em tempo real desabilitado');
       return;
     }
 
     try {
-      // Determinar URL do servidor - Socket.io precisa da URL base sem /api
+      // Polling alternativo: verificar novos posts a cada 3 segundos
       const apiUrl = import.meta.env.VITE_API_URL;
-      const baseUrl = apiUrl?.replace('/api', '') || 'https://chrono.railway.app';
-      console.log('[useRealtimeFeed] 🔌 Tentando conectar ao Socket.io:', baseUrl);
+      
+      console.log('[useRealtimeFeed] 📡 ✅ ATIVANDO POLLING DE POSTS (3s intervalo)');
+      console.log('[useRealtimeFeed] 🔌 Usando API polling em vez de WebSocket');
 
-      // Connect to WebSocket com configuração CORS agressiva
-      socketRef.current = io(baseUrl, {
-        auth: { token },
-        reconnection: true,
-        reconnectionDelay: 500,
-        reconnectionDelayMax: 2000,
-        reconnectionAttempts: 10,
-        transports: ['websocket', 'polling', 'http_long_polling', 'websocket'],
-        withCredentials: true,
-        secure: true,
-        rejectUnauthorized: false,
-        forceNew: true,
-        timeout: 20000,
-        autoConnect: true,
-        multiplex: true,
-        rememberUpgrade: true,
-        // Detalhes do upgrading de transporte
-        upgrade_transport: true,
-      });
+      pollingIntervalRef.current = setInterval(async () => {
+        try {
+          // Buscar últimos posts
+          const response = await fetch(`${apiUrl}/posts?limit=10`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
 
-      // ✅ LISTEN para novos posts
-      socketRef.current.on('post_added', (newPost: Post) => {
-        console.log('[✅ useRealtimeFeed] 📡 Novo post recebido:', newPost.id);
-        
-        // Callback para o componente que está ouvindo
-        if (onNewPost) {
-          onNewPost(newPost);
+          if (!response.ok) {
+            if (response.status !== 401) {
+              console.error('[useRealtimeFeed] ❌ Erro ao buscar posts:', response.status);
+            }
+            return;
+          }
+
+          const data = await response.json();
+          const posts = data.data || [];
+
+          // Verificar se há posts mais novos que o último registrado
+          if (posts.length > 0) {
+            const newestPost = posts[0];
+            const newestTimestamp = new Date(newestPost.created_at).getTime();
+
+            if (newestTimestamp > lastPostTimestampRef.current) {
+              console.log('[useRealtimeFeed] 📬 ✅ Novo post detectado via polling:', newestPost.id);
+              lastPostTimestampRef.current = newestTimestamp;
+
+              if (onNewPost) {
+                onNewPost(newestPost);
+              }
+            }
+          }
+        } catch (error: any) {
+          if (!error.message.includes('Failed to fetch')) {
+            console.debug('[useRealtimeFeed] 🔄 Polling ciclo...');
+          }
         }
-      });
+      }, 3000);
 
-      socketRef.current.on('connect', () => {
-        console.log('[✅ useRealtimeFeed] ✅ WebSocket conectado com sucesso!');
-        console.log('[✅ useRealtimeFeed] 🔗 Transport:', socketRef.current?.io?.engine?.transport?.name);
-      });
+      console.log('[useRealtimeFeed] ✅ Polling iniciado - novos posts serão verificados a cada 3 segundos');
 
-      // ✅ Teste de conectividade ping/pong
-      socketRef.current.on('ping_from_server', (data: any) => {
-        console.log('[✅ useRealtimeFeed] 🏓 Ping recebido do servidor:', data);
-        socketRef.current?.emit('pong_from_client');
-      });
-
-      socketRef.current.on('disconnect', (reason: string) => {
-        console.log('[useRealtimeFeed] ❌ WebSocket desconectado:', reason);
-      });
-
-      socketRef.current.on('connect_error', (error: any) => {
-        console.error('[useRealtimeFeed] 🚨 Erro de conexão:', {
-          message: error?.message,
-          code: error?.code,
-          type: error?.type,
-          data: error?.data,
-        });
-      });
-
-      socketRef.current.on('error', (error: any) => {
-        console.error('[useRealtimeFeed] ❌ Erro WebSocket:', error);
-      });
-
-      socketRef.current.on('connect_timeout', () => {
-        console.error('[useRealtimeFeed] ⏱️ Timeout na conexão - servidor não respondeu em tempo');
-      });
     } catch (error) {
-      console.error('[useRealtimeFeed] 🚨 Erro ao criar Socket.io:', error);
+      console.error('[useRealtimeFeed] 🚨 Erro ao inicializar feed em tempo real:', error);
     }
 
     return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        console.log('[useRealtimeFeed] 🔌 Socket desconectado no cleanup');
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        console.log('[useRealtimeFeed] 🔌 Polling desabilitado no cleanup');
       }
     };
   }, []);
 
-  return socketRef.current;
+  return null;
 }
