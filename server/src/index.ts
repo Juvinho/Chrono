@@ -34,6 +34,7 @@ import notificationRoutes from './routes/notifications.js';
 import marketplaceRoutes from './routes/marketplace.js';
 import companionRoutes from './routes/companionRoutes.js';
 import tagsRoutes from './routes/tags.js';
+import userBioRoutes from './routes/userBio.js';
 import adminAuthRoutes from './routes/admin/auth.js';
 import adminTagsRoutes from './routes/admin/tags.js';
 import adminUsersRoutes from './routes/admin/users.js';
@@ -44,6 +45,7 @@ import adminTagsAdminRoutes from './routes/admin/tags-admin.js';
 import adminDashboardRoutes from './routes/admin/dashboard.js';
 import { NotificationService } from './services/notificationService.js';
 import { scheduleTagUpdates } from './services/tagService.js';
+import { scheduleTagUpdateJob } from './jobs/updateUserTags.js';
 
 // Get JWT_SECRET - must be defined
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -281,6 +283,7 @@ app.get('/api', (_req: express.Request, res: express.Response) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/bio', userBioRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/posts', reactionsRoutes);
 app.use('/api/chat', chatRoutes);
@@ -460,6 +463,10 @@ const startServer = async () => {
         // Initialize automatic tag updates (every 6 hours)
         console.log('🏷️  Iniciando scheduler de atualização de tags...');
         scheduleTagUpdates();
+        
+        // Initialize automatic user bio tags update (daily at 3 AM)
+        console.log('🏷️  Iniciando scheduler de tags de usuários...');
+        scheduleTagUpdateJob();
     }).catch(err => {
         console.error('❌ Erro nas migrações:', err);
         // We still keep server running, but it might be unstable
