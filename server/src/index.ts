@@ -101,13 +101,28 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Socket.io Setup
+// Socket.io Setup - com CORS agressivo para desenvolvimento
 const io = new Server(httpServer, {
   cors: {
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      // Permitir todos em desenvolvimento, ser específico em produção
+      if (process.env.NODE_ENV === 'production') {
+        if (allowedOrigins.includes(origin || '') || 
+            (origin && (origin.endsWith('.railway.app') || origin.endsWith('.onrender.com')))) {
+          callback(null, true);
+        } else {
+          callback(new Error('CORS error'));
+        }
+      } else {
+        // Desenvolvimento: permitir tudo
+        callback(null, true);
+      }
+    },
     credentials: true,
-    methods: ["GET", "POST"]
-  }
+    methods: ["GET", "POST"],
+  },
+  transports: ['websocket', 'polling'],
+  serveClient: true,
 });
 
 app.set('io', io);
@@ -141,7 +156,14 @@ io.use((socket, next) => {
 });
 
 io.on('connection', (socket) => {
-  console.log(`✅ Authenticated user ${socket.data.userId} connected (${socket.id})`);
+  console.log(`✅ [Socket.io] User ${socket.data.userId} (${socket.data.username}) connected. Total: ${io.engine.clientsCount}`);
+
+  // ✅ Teste de conexão - servidor envia ping
+  socket.emit('ping_from_server', { message: 'Server is live', timestamp: new Date().toISOString() });
+  
+  socket.on('pong_from_client', () => {
+    console.log(`✅ [Socket.io] Pong recebido de ${socket.data.username}`);
+  });
 
   socket.on('join_conversation', async (conversationId) => {
     try {
