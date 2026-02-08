@@ -7,6 +7,7 @@ import { PostComposer } from './PostComposer';
 import { isSameDay } from '../../../utils/date';
 import { PlusIcon } from '../../../components/ui/icons';
 import { useTranslation } from '../../../hooks/useTranslation';
+import { useHourlyRefresh } from '../../../hooks/useHourlyRefresh';
 import ConfirmationModal from '../../../components/ui/ConfirmationModal';
 import { apiClient, mapApiPostToPost } from '../../../api';
 import '../../../styles/post-glitch-animation.css';
@@ -57,27 +58,38 @@ export default function EchoFrame({
     const [activeFilter, setActiveFilter] = useState<'All' | 'Following' | 'Media' | 'Polls'>('All');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [trendingCordoes, setTrendingCordoes] = useState<Array<{ tag: string; mentions: number; displayName: string }>>([]);
+    const [currentDay, setCurrentDay] = useState(new Date().getDate());
     // Removed local timeToRefresh state to prevent re-renders
     // Direct Chat removed from EchoFrame to avoid duplication with Messages module
 
-    // Load trending cordões
-    useEffect(() => {
-        const loadTrendingCordoes = async () => {
-            try {
-                const response = await apiClient.get('/posts/trending/cordoes');
-                if (response.data && Array.isArray(response.data)) {
-                    console.log('✅ Trending cordões loaded:', response.data);
-                    setTrendingCordoes(response.data.slice(0, 10)); // Limit to 10
-                } else {
-                    console.warn('⚠️ No trending data:', response.data);
-                }
-            } catch (error) {
-                console.error("Failed to load trending cordões:", error);
+    // Load trending cordões - can be called multiple times
+    const loadTrendingCordoes = useCallback(async () => {
+        try {
+            const response = await apiClient.get('/posts/trending/cordoes');
+            if (response.data && Array.isArray(response.data)) {
+                console.log('✅ Trending cordões loaded:', response.data);
+                setTrendingCordoes(response.data.slice(0, 10)); // Limit to 10
+            } else {
+                console.warn('⚠️ No trending data:', response.data);
             }
-        };
-        
-        loadTrendingCordoes();
+        } catch (error) {
+            console.error("Failed to load trending cordões:", error);
+        }
     }, []);
+
+    // Initial load of trending cordões
+    useEffect(() => {
+        loadTrendingCordoes();
+    }, [loadTrendingCordoes]);
+
+    // Monitor day changes and reload trending cordões
+    useHourlyRefresh({
+        onNewDay: () => {
+            console.log('📅 New day detected! Reloading trending cordões...');
+            setCurrentDay(new Date().getDate());
+            loadTrendingCordoes(); // Reload trending when day changes
+        },
+    });
 
     useEffect(() => {
         if (composerDate) {

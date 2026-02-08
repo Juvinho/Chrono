@@ -413,32 +413,36 @@ router.post('/admin/cleanup-blank/:username', authenticateToken, async (req: Aut
 });
 
 // Get trending cordões with mention counts (Twitter-style trending)
+// Only shows cordões from today (00:00 to 23:59)
 router.get('/trending/cordoes', async (req: AuthRequest, res: Response) => {
   try {
-    const { pool } = await import('../db/connection.js');
+    const { trendingService } = await import('../services/trendingService.js');
     
-    // Extract all cordão tags ($tag pattern) from posts and count them
-    const result = await pool.query(`
-      SELECT 
-        (regexp_matches(content, '\\$([A-Za-z0-9_]+)', 'g'))[1] as tag,
-        COUNT(*) as mentions
-      FROM posts
-      WHERE content ~ '\\$[A-Za-z0-9_]+'
-      GROUP BY tag
-      ORDER BY mentions DESC
-      LIMIT 20
-    `);
-
-    const cordoes = result.rows.map(row => ({
-      tag: row.tag,
-      mentions: parseInt(row.mentions, 10),
-      displayName: `$${row.tag}`
-    }));
+    // Get trending cordões only from today
+    const cordoes = await trendingService.getTrendingCordoesForToday();
 
     res.json(cordoes);
   } catch (error: any) {
     console.error('Trending cordões error:', error);
     res.status(500).json({ error: error.message || 'Failed to fetch trending cordões' });
+  }
+});
+
+/**
+ * GET /api/posts/trending/threads
+ * Retorna threads trending do dia atual baseado em score (reações + replies)
+ */
+router.get('/trending/threads', async (req: AuthRequest, res: Response) => {
+  try {
+    const { trendingService } = await import('../services/trendingService.js');
+    
+    // Get trending threads only from today
+    const threads = await trendingService.getTrendingThreadsForToday();
+
+    res.json(threads);
+  } catch (error: any) {
+    console.error('Trending threads error:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch trending threads' });
   }
 });
 
