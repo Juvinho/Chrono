@@ -19,6 +19,7 @@ import LoadingSpinner from '../../../components/ui/LoadingSpinner';
 import { apiClient } from '../../../api';
 import { TagBadgeGroup } from '../../../components/ui/TagBadge';
 import { useUserTags } from '../../../hooks/useTags';
+import { ProfileBioSidebar } from '../../../components/ProfileBioSidebar';
 
 interface ProfilePageProps {
   currentUser: User;
@@ -825,49 +826,9 @@ export default function ProfilePage({
                     )}
                 </div>
 
-                {/* Right Column: Bio */}
+                {/* Right Column: Bio with Tags */}
                 <div className="hidden lg:block space-y-4">
-                    <div className="bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] rounded-lg p-4">
-                        <h3 className="font-bold text-[var(--theme-text-light)] mb-3 border-b border-[var(--theme-border-primary)] pb-2 flex items-center">
-                            <span className="mr-2">📝</span> {t('bio') || "Bio"}
-                        </h3>
-                        <div className="text-sm text-[var(--theme-text-primary)] space-y-2">
-                            {profileUser.bio ? (
-                                <p className="whitespace-pre-wrap">{profileUser.bio}</p>
-                            ) : (
-                                <p className="italic opacity-60 text-[var(--theme-text-secondary)]">
-                                    {t('noBio') || "Nenhuma biografia disponível."}
-                                </p>
-                            )}
-
-                            {profileUser.profileType === 'professional' && profileUser.skills && profileUser.skills.length > 0 && (
-                                <div className="mt-4 pt-4 border-t border-[var(--theme-border-primary)]">
-                                    <h4 className="text-xs font-mono uppercase text-[var(--theme-text-secondary)] mb-2">:: Skills ::</h4>
-                                    <div className="flex flex-wrap gap-2">
-                                        {profileUser.skills.map(skill => (
-                                            <span key={skill} className="bg-[var(--theme-bg-tertiary)] px-2 py-0.5 rounded border border-[var(--theme-border-secondary)] text-xs hover:border-[var(--theme-primary)] transition-colors">
-                                                {skill}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                            
-                            <div className="mt-4 pt-2 border-t border-[var(--theme-border-primary)]">
-                                <span className="text-xs text-[var(--theme-text-secondary)] font-mono uppercase">
-                                    :: System Tags ::
-                                </span>
-                                <div className="flex flex-wrap gap-2 mt-2">
-                                    <span className="bg-[var(--theme-bg-tertiary)] px-2 py-1 rounded text-xs border border-[var(--theme-primary)] text-[var(--theme-primary)]">
-                                        {profileUser.isVerified ? 'Verificado' : 'Nômade'}
-                                    </span>
-                                    <span className="bg-[var(--theme-bg-tertiary)] px-2 py-1 rounded text-xs border border-[var(--theme-secondary)] text-[var(--theme-secondary)]">
-                                        {filteredPosts.length > 10 ? 'Prolífico' : 'Observador'}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <ProfileBioSidebar userId={profileUser?.id || null} />
                 </div>
             </div>
           </div>
