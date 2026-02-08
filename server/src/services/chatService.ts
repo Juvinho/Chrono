@@ -117,6 +117,8 @@ export class ChatService {
    */
   async getUserConversations(userId: string, limit: number = 50, offset: number = 0): Promise<ConversationDTO[]> {
     try {
+      console.log('🔍 getUserConversations starting:', { userId, limit, offset });
+      
       const result = await pool.query(
         `SELECT id, user1_id, user2_id, updated_at
          FROM conversations 
@@ -126,6 +128,11 @@ export class ChatService {
         [userId, limit, offset]
       );
 
+      console.log('📊 Raw query result:', {
+        rowCount: result.rows.length,
+        userId
+      });
+
       const conversations: ConversationDTO[] = [];
 
       for (const row of result.rows) {
@@ -133,12 +140,21 @@ export class ChatService {
           // Get the other user
           const otherUserId = row.user1_id === userId ? row.user2_id : row.user1_id;
           
+          console.log('👤 Processing conversation:', {
+            conversationId: row.id,
+            otherUserId,
+            currentUserId: userId
+          });
+          
           const usersResult = await pool.query(
             `SELECT id, username, COALESCE(display_name, username) as display_name, avatar FROM users WHERE id = $1::uuid`,
             [otherUserId]
           );
 
-          if (usersResult.rows.length === 0) continue;
+          if (usersResult.rows.length === 0) {
+            console.warn('⚠️ Other user not found:', otherUserId);
+            continue;
+          }
 
           const otherUser = usersResult.rows[0];
 
@@ -153,13 +169,14 @@ export class ChatService {
             );
             if (msgResult.rows.length > 0) {
               lastMessage = {
-                content: msgResult.rows[0].content,
+                content: msgResult.rows[0].content || '[Imagem]',
                 sentAt: msgResult.rows[0].created_at,
                 isRead: msgResult.rows[0].is_read,
               };
             }
           } catch (e) {
             // If messages table query fails, continue
+            console.warn('⚠️ Failed to fetch last message for conversation:', row.id);
           }
 
           conversations.push({
@@ -175,14 +192,26 @@ export class ChatService {
             updatedAt: row.updated_at,
           });
         } catch (convError: any) {
-          console.log('Processing conversation error:', convError.message?.substring(0, 80));
+          console.log('⚠️ Processing conversation error:', {
+            conversationId: row.id,
+            message: convError.message?.substring(0, 80)
+          });
           continue;
         }
       }
 
+      console.log('✅ getUserConversations complete:', {
+        totalProcessed: conversations.length,
+        userId
+      });
+
       return conversations;
     } catch (error: any) {
-      console.error('getUserConversations error:', error.message);
+      console.error('❌ getUserConversations error:', {
+        message: error.message,
+        code: error.code,
+        userId
+      });
       return [];
     }
   }

@@ -4,7 +4,7 @@ import { ConversationList } from './ConversationList';
 import { ChatArea } from './ChatArea';
 import { useConversations } from '../hooks/useConversations';
 import { useMessageNotification } from '../../../contexts/MessageNotificationContext';
-import { initConversation } from '../api/messagingApi';
+import { initConversation, reindexConversations } from '../api/messagingApi';
 import '../styles/messaging.css';
 
 export const MessagingLayout: React.FC = () => {
@@ -12,6 +12,7 @@ export const MessagingLayout: React.FC = () => {
   const { conversations, isLoading, error, refetch } = useConversations();
   const { unreadCount, resetUnread } = useMessageNotification();
   const [selectedConversationId, setSelectedConversationId] = useState<number | string | null>(null);
+  const [isReindexing, setIsReindexing] = useState(false);
 
   console.log('💬 MessagingLayout carregado', {
     selectedConversationId,
@@ -58,31 +59,68 @@ export const MessagingLayout: React.FC = () => {
     }
   }, [location.state, refetch]);
 
+  const handleReindex = async () => {
+    setIsReindexing(true);
+    try {
+      const result = await reindexConversations();
+      console.log('✅ Conversas reindexadas:', result.diagnostics);
+      alert(`✅ Reindex completo!\n\n${JSON.stringify(result.diagnostics, null, 2)}`);
+      // Recarrega conversas
+      refetch();
+    } catch (err: any) {
+      console.error('❌ Erro ao reindexar:', err);
+      alert('❌ Erro ao reindexar conversas: ' + err.message);
+    } finally {
+      setIsReindexing(false);
+    }
+  };
+
   return (
     <div className="messaging-layout">
       {/* SIDEBAR - Lista de conversas */}
       <div className="messaging-sidebar">
         <div className="messaging-sidebar-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h2 style={{ margin: 0 }}>Mensagens</h2>
-            {unreadCount > 0 && (
-              <span 
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <h2 style={{ margin: 0 }}>Mensagens</h2>
+              {unreadCount > 0 && (
+                <span 
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minWidth: '24px',
+                    height: '24px',
+                    background: 'linear-gradient(135deg, #00f0ff, #ff00ff)',
+                    color: '#000',
+                    borderRadius: '50%',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    boxShadow: '0 0 10px rgba(0, 240, 255, 0.6)'
+                  }}
+                >
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
+            </div>
+            {error && (
+              <button
+                onClick={handleReindex}
+                disabled={isReindexing}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  minWidth: '24px',
-                  height: '24px',
-                  background: 'linear-gradient(135deg, #00f0ff, #ff00ff)',
-                  color: '#000',
-                  borderRadius: '50%',
+                  padding: '4px 8px',
                   fontSize: '12px',
-                  fontWeight: 'bold',
-                  boxShadow: '0 0 10px rgba(0, 240, 255, 0.6)'
+                  background: isReindexing ? '#666' : '#ff00ff',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: isReindexing ? 'not-allowed' : 'pointer',
+                  whiteSpace: 'nowrap'
                 }}
+                title={error}
               >
-                {unreadCount > 99 ? '99+' : unreadCount}
-              </span>
+                {isReindexing ? '⏳ Reindexando...' : '🔧 Reindex'}
+              </button>
             )}
           </div>
         </div>
