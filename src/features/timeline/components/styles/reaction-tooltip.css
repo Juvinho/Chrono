@@ -1,0 +1,150 @@
+.reaction-tooltip {
+  position: fixed;
+  background: var(--theme-bg-secondary);
+  border: 1px solid var(--theme-border-primary);
+  border-radius: 6px;
+  padding: 12px;
+  max-width: 300px;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  font-size: 0.875rem;
+  transition: opacity 0.2s ease-in-out;
+  bottom: 100%;
+  right: 0;
+  margin-bottom: 8px;
+  max-height: 50vh;
+  overflow-y: auto;
+  backdrop-filter: blur(8px);
+}
+
+.reaction-tooltip::-webkit-scrollbar {
+  width: 6px;
+}
+
+.reaction-tooltip::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.reaction-tooltip::-webkit-scrollbar-thumb {
+  background: var(--theme-border-primary);
+  border-radius: 3px;
+}
+
+.reaction-tooltip::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-text-secondary);
+}
+
+.reaction-tooltip-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reaction-tooltip-loading,
+.reaction-tooltip-empty {
+  padding: 8px;
+  text-align: center;
+  color: var(--theme-text-secondary);
+}
+
+.reaction-group {
+  border-left: 3px solid var(--theme-primary);
+  padding-left: 10px;
+}
+
+.reaction-group-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--theme-primary);
+}
+
+.reaction-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.reaction-label {
+  flex: 1;
+}
+
+.reaction-count {
+  background: var(--theme-highlight);
+  color: var(--theme-bg-secondary);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+
+.reaction-users {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.reaction-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  border-radius: 3px;
+  background: var(--theme-bg-tertiary);
+  transition: background 0.2s ease;
+}
+
+.reaction-user:hover {
+  background: var(--theme-border-primary);
+}
+
+.reaction-user-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--theme-border-primary);
+}
+
+.reaction-user-name {
+  flex: 1;
+  color: var(--theme-text-primary);
+  font-size: 0.813rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reaction-more {
+  padding: 4px;
+  color: var(--theme-text-secondary);
+  font-size: 0.75rem;
+  font-style: italic;
+  text-align: center;
+}
+
+.reaction-tooltip-footer {
+  border-top: 1px solid var(--theme-border-primary);
+  padding-top: 8px;
+  text-align: center;
+  color: var(--theme-text-secondary);
+  font-size: 0.75rem;
+}
+
+/* Animation for tooltip appearance */
+@keyframes tooltipIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.reaction-tooltip[style*="visibility: visible"] {
+  animation: tooltipIn 0.2s ease-out;
+}

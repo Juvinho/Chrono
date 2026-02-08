@@ -67,4 +67,8 @@ export const postService = {
       body: JSON.stringify({ optionIndex }),
     });
   },
+
+  async getReactionDetails(postId: string) {
+    return baseClient.request<any>(`/posts/${postId}/reactions/details`);
+  },
 };
