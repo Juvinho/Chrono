@@ -1,0 +1,152 @@
+/* ============================================
+   BIO SIDEBAR - Estilo Dark/Cyberpunk
+   ============================================ */
+
+.bio-sidebar {
+  background: #0a0a0a;
+  border: 1px solid #1a1a1a;
+  border-radius: 8px;
+  padding: 20px;
+  color: #ffffff;
+  font-family: 'Courier New', monospace;
+  position: sticky;
+  top: 80px;
+  max-width: 320px;
+}
+
+/* Header */
+.bio-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.bio-icon {
+  color: #ff0055;
+}
+
+.bio-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  text-transform: lowercase;
+}
+
+/* Conteúdo */
+.bio-content {
+  margin-bottom: 24px;
+}
+
+.bio-content p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #b0b0b0;
+}
+
+/* Tags Section */
+.bio-tags-section {
+  border-top: 1px solid #1a1a1a;
+  padding-top: 16px;
+}
+
+.tags-header {
+  margin-bottom: 12px;
+}
+
+.tags-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #666;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* Grid de Tags */
+.tags-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* Tag Individual */
+.bio-tag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  transition: all 0.2s;
+  cursor: default;
+}
+
+.bio-tag:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateY(-2px);
+}
+
+.tag-icon {
+  font-size: 12px;
+}
+
+.tag-name {
+  line-height: 1;
+}
+
+/* Loading */
+.bio-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  font-size: 13px;
+  color: #666;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .bio-sidebar {
+    position: relative;
+    top: 0;
+    max-width: 100%;
+    margin-bottom: 20px;
+  }
+}
+
+/* Light Mode (opcional) */
+@media (prefers-color-scheme: light) {
+  .bio-sidebar {
+    background: #f8f9fa;
+    border-color: #e1e4e8;
+  }
+
+  .bio-header h3 {
+    color: #050505;
+  }
+
+  .bio-content p {
+    color: #4a4a4a;
+  }
+
+  .tags-label {
+    color: #999;
+  }
+
+  .bio-tag {
+    background: rgba(255, 255, 255, 0.5);
+  }
+
+  .bio-tag:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+}
