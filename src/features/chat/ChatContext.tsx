@@ -134,9 +134,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!activeConversationRef.current || activeConversationRef.current.id !== message.conversation_id) {
         console.log('[Chat] 🔓 Abrindo chat automaticamente para:', message.conversation_id);
         
-        let foundOrCreatedConv: Conversation | null = null;
-        
-        // Atualizar conversations array
+        // Atualizar conversations array E setar ativa SIMULTANEAMENTE
         setConversations((prevConversations) => {
           let conv = prevConversations.find(c => c.id === message.conversation_id);
           
@@ -155,21 +153,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
               updated_at: message.created_at,
             } as Conversation;
             
-            foundOrCreatedConv = conv;
             console.log('[Chat] ✅ Conversa criada:', conv.id);
+            setActiveConversation(conv);
             return [conv, ...prevConversations];
           } else {
-            foundOrCreatedConv = conv;
             console.log('[Chat] ✅ Conversa encontrada:', conv.id, conv.other_username);
+            setActiveConversation(conv);
             return prevConversations;
-          }
-        });
-        
-        // Usar microtask para garantir que o setState completou ANTES de setar activeConversation
-        Promise.resolve().then(() => {
-          if (foundOrCreatedConv) {
-            console.log('[Chat] 🎯 Setando como ativa:', foundOrCreatedConv.id);
-            setActiveConversation(foundOrCreatedConv);
           }
         });
       }
