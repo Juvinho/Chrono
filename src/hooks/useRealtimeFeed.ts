@@ -26,7 +26,18 @@ export function useRealtimeFeed() {
 
     try {
       // Polling alternativo: verificar novos posts a cada 3 segundos
-      const apiUrl = import.meta.env.VITE_API_URL;
+      let apiUrl = import.meta.env.VITE_API_URL;
+      
+      // Fallback: se VITE_API_URL não estiver definido, usar URL relativa ou detectada
+      if (!apiUrl) {
+        // Em produção, usar URL do navegador + /api
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          apiUrl = 'http://localhost:3001/api';
+        } else {
+          // Production: usar window.location sem /api, deixar relativo
+          apiUrl = `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':' + window.location.port : ''}/api`;
+        }
+      }
       
       console.log('%c[useRealtimeFeed] 📡 ✅ ATIVANDO POLLING DE POSTS (3s intervalo)', 'background:#00ff00;color:#000;font-weight:bold;font-size:14px');
       console.log('[useRealtimeFeed] 🌐 API URL:', apiUrl);
@@ -56,13 +67,21 @@ export function useRealtimeFeed() {
             return;
           }
 
+          const contentType = response.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('[useRealtimeFeed] ❌ Resposta não é JSON. Content-Type:', contentType);
+            console.error('[useRealtimeFeed] Resposta:', text.substring(0, 200));
+            return;
+          }
+
           const data = await response.json();
-          const posts = data.data || [];
+          const posts = data.data || data || [];
           
-          console.log('[useRealtimeFeed] 📦 Posts recebidos:', posts.length);
+          console.log('[useRealtimeFeed] 📦 Posts recebidos:', Array.isArray(posts) ? posts.length : 0);
 
           // Verificar se há posts mais novos que o último registrado
-          if (posts.length > 0) {
+          if (Array.isArray(posts) && posts.length > 0) {
             const newestPost = posts[0];
             const newestTimestamp = new Date(newestPost.created_at).getTime();
 
@@ -85,7 +104,7 @@ export function useRealtimeFeed() {
               console.log('[useRealtimeFeed] ⏭️ Post não é novo (já processado)');
             }
           } else {
-            console.log('[useRealtimeFeed] ℹ️ Nenhum post encontrado');
+            console.log('[useRealtimeFeed] ℹ️ Nenhum post encontrado ou resposta em formato inesperado');
           }
         } catch (error: any) {
           console.error('[useRealtimeFeed] 💥 Erro durante polling:', error?.message || error);
