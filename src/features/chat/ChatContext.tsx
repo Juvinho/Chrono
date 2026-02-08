@@ -48,8 +48,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   try {
     const soundContext = useSound();
     playSound = soundContext.playSound;
+    console.log('[Chat] ✅ SoundContext disponível');
   } catch (e) {
-    // Sound context may not be available
+    console.warn('[Chat] ⚠️ SoundContext não disponível:', e);
   }
   
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -64,6 +65,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Update ref when activeConversation changes
   useEffect(() => {
     activeConversationRef.current = activeConversation;
+    console.log('[Chat] 📍 Ref atualizado - Conversa ativa:', activeConversation?.id, activeConversation?.other_username);
   }, [activeConversation]);
 
   // Initialize Socket - ONLY once per user authentication
@@ -107,24 +109,58 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const onNewMessage = (message: Message) => {
+      console.log('[Chat] 🔔 Nova mensagem recebida:', {
+        conversationId: message.conversation_id,
+        senderId: message.sender_id,
+        activeConvId: activeConversationRef.current?.id,
+        isChatOpen: !!activeConversationRef.current,
+      });
+
       // Play sound notification for new message
       if (playSound) {
         // Se o chat está fechado, toque som mais intrusivo
-        if (!activeConversationRef.current || activeConversationRef.current.id !== message.conversation_id) {
+        const isChatWindowOpen = activeConversationRef.current && activeConversationRef.current.id === message.conversation_id;
+        
+        if (!isChatWindowOpen) {
+          console.log('[Chat] 📢 Tocando som INTRUSIVO (chat fechado)');
           playSound('message_receive'); // Som mais intrusivo para abrir chat
         } else {
+          console.log('[Chat] 🔕 Tocando som discreto (chat aberto)');
           playSound('message_background'); // Som discreto se chat já está aberto
         }
       }
       
       // Se o chat está fechado, abrir automaticamente
       if (!activeConversationRef.current || activeConversationRef.current.id !== message.conversation_id) {
+        console.log('[Chat] 🔓 Abrindo chat automaticamente para:', message.conversation_id);
+        
         setConversations((prevConversations) => {
-          const conv = prevConversations.find(c => c.id === message.conversation_id);
-          if (conv) {
+          let conv = prevConversations.find(c => c.id === message.conversation_id);
+          
+          // Se conversa não existe na lista, criar uma mínima
+          if (!conv) {
+            console.log('[Chat] 📝 Conversa não encontrada, criando mínima para:', message.conversation_id);
+            conv = {
+              id: message.conversation_id,
+              user_id: user?.id || '',
+              other_user_id: message.sender_id,
+              other_username: message.sender_id, // Will be updated when full conv loads
+              last_message_content: message.content,
+              last_message_time: message.created_at,
+              created_at: new Date().toISOString(),
+              updated_at: message.created_at,
+            } as Conversation;
+            
+            // Add to list if not already there
+            const updated = [conv, ...prevConversations];
             setActiveConversation(conv);
+            console.log('[Chat] ✅ Conversa criada e setada ativa:', conv.id);
+            return updated;
+          } else {
+            console.log('[Chat] ✅ Setando conversa ativa:', conv.id, conv.other_username);
+            setActiveConversation(conv);
+            return prevConversations;
           }
-          return prevConversations;
         });
       }
       
