@@ -26,6 +26,7 @@ interface PostCardProps {
     isThreadedReply?: boolean;
     isContextualView?: boolean;
     onPostClick?: (postId: string) => void;
+    isNew?: boolean;
 }
 
 const reactionIcons: { [key in CyberpunkReaction]: ReactNode } = {
@@ -76,7 +77,7 @@ const formatRelativeTime = (date: Date): string => {
     return date.toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' });
 };
 
-const PostCard: React.FC<PostCardProps> = React.memo(({ post, currentUser, onViewProfile, onUpdateReaction, onReply, onEcho, onDelete, onEdit, onTagClick, onPollVote, typingParentIds, compact = false, nestingLevel = 0, isThreadedReply = false, isContextualView = false, onPostClick }) => {
+const PostCard: React.FC<PostCardProps> = React.memo(({ post, currentUser, onViewProfile, onUpdateReaction, onReply, onEcho, onDelete, onEdit, onTagClick, onPollVote, typingParentIds, compact = false, nestingLevel = 0, isThreadedReply = false, isContextualView = false, onPostClick, isNew = false }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const { playSound } = useSound();
@@ -363,7 +364,7 @@ const PostCard: React.FC<PostCardProps> = React.memo(({ post, currentUser, onVie
     }
 
     return (
-        <div className={`${rootClasses} ${compact ? 'p-3' : 'p-4'} ${isDeleting ? 'post-disintegrate' : ''}`}>
+        <div className={`${rootClasses} ${compact ? 'p-3' : 'p-4'} ${isDeleting ? 'post-disintegrate' : ''} ${isNew ? 'post-glitch-new' : ''}`}>
             <div className="flex justify-between items-start">
                 <div className="flex items-center mb-3">
                     <div className={`relative ${compact ? 'w-8 h-8' : 'w-10 h-10'} flex-shrink-0 cursor-pointer hover:scale-105 transition-transform mr-3`} onClick={() => onViewProfile(post.author.username)}>

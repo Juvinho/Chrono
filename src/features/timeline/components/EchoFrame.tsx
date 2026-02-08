@@ -528,6 +528,7 @@ export default function EchoFrame({
                                 searchQuery={searchQuery}
                                 typingParentIds={typingParentIds}
                                 onPostClick={onPostClick}
+                                isNew={newPostIds.has(post.id)}
                             />
                         </div>
                     ))
