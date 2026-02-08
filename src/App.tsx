@@ -3,9 +3,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { User, Page, Post, CyberpunkReaction, Notification, NotificationType, Conversation, Message } from './types';
 import { CORE_USERS } from './utils/constants';
 import { isSameDay } from './utils/date';
+import { cleanupLocalStorage } from './utils/storageCleanup';
 import { useAppSession } from './hooks/useAppSession';
 import { useAppTheme } from './hooks/useAppTheme';
-import { useRealtimeFeed } from './hooks/useRealtimeFeed';
+import { useRealtimeFeed, setOnNewPostCallback } from './hooks/useRealtimeFeed';
 import { LanguageProvider } from './hooks/useTranslation';
 import { generateReplyContent } from './utils/geminiService';
 import { apiClient, mapApiPostToPost } from './api';
@@ -55,6 +56,11 @@ function App() {
     } = useAppSession({ setPosts, setConversations, playSound });
 
     useAppTheme(currentUser);
+
+    // 🧹 Limpar localStorage no startup
+    useEffect(() => {
+      cleanupLocalStorage();
+    }, []);
 
     // ✅ Inicializar WebSocket para posts em tempo real
     useRealtimeFeed();
@@ -405,6 +411,15 @@ function App() {
             simulateUserPostInteraction(post);
         }
     };
+
+    // 🔌 Registrar callback do Socket.io para novos posts
+    useEffect(() => {
+        console.log('[App] 🔗 Registrando callback para Socket.io');
+        setOnNewPostCallback((newPost: Post) => {
+            console.log('[App] 📬 Socket.io callback acionado para novo post:', newPost.id);
+            handleNewPost(newPost);
+        });
+    }, [handleNewPost]);
     
     const handleUpdateReaction = async (postId: string, reaction: CyberpunkReaction, actor?: User) => {
         const reactor = actor || currentUser;
