@@ -47,18 +47,11 @@ export function useMessages(conversationId: number | string | null) {
         const newMessagesCount = data.length - previousMessagesLengthRef.current;
         console.log(`🔊 Nova(s) mensagem(ns) recebida(s): ${newMessagesCount}`);
         
-        // Reproduza som apropriado
-        try {
-          if (isPageVisible) {
-            console.log('📢 Reproduzindo som: message_receive (página visível)');
-            playSound('message_receive');
-          } else {
-            console.log('📢 Reproduzindo som: message_background (página escondida) + incrementando unread');
-            playSound('message_background');
-            incrementUnread(newMessagesCount);
-          }
-        } catch (soundError) {
-          console.error('❌ Erro ao reproduzir som:', soundError);
+        // Som já é tocado via ChatContext (socket.io)
+        // Apenas incrementa unread se página não visível
+        if (!isPageVisible) {
+          console.log('🔔 Incrementando unread (página escondida)');
+          incrementUnread(newMessagesCount);
         }
       }
       
