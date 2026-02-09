@@ -175,7 +175,13 @@ export default function Dashboard({
                 p.author.displayName.toLowerCase().includes(query)
             );
         } else {
-            filtered = filtered.filter(p => new Date(p.timestamp).toDateString() === selectedDate.toDateString());
+            // Show posts from selectedDate and up to 60 days before
+            const startDate = new Date(selectedDate);
+            startDate.setDate(startDate.getDate() - 60);
+            filtered = filtered.filter(p => {
+                const postDate = new Date(p.timestamp);
+                return postDate >= startDate && postDate <= selectedDate;
+            });
         }
         return filtered;
     }, [postsForSearch, allPosts, activeCordTag, searchQuery, selectedDate]);

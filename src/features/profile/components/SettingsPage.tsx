@@ -219,10 +219,7 @@ export default function SettingsPage({
           websiteToSave = `https://${websiteToSave}`;
       }
 
-      // Only validate email if it's being updated or if we are in the account tab
-      if (activeTab === 'account' && !draftUser.email?.trim()) {
-        throw new Error('Email is required');
-      }
+      // Email is optional - removed required validation
 
       // Ensure birthday is formatted correctly if it was edited
       const userToSave = {
