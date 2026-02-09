@@ -23,6 +23,7 @@ interface FeedContentProps {
   isGenerating: boolean;
   typingParentIds: Set<string>;
   conversations: Conversation[];
+  newPostIds?: Set<string>;
   newPostsCount?: number;
   onShowNewPosts?: () => void;
   onUpdateUser?: (user: User) => Promise<{ success: boolean; error?: string }>;
@@ -59,6 +60,7 @@ export const FeedContent: React.FC<FeedContentProps> = (props) => {
         isGenerating={props.isGenerating}
         typingParentIds={props.typingParentIds}
         conversations={props.conversations}
+        newPostIds={props.newPostIds || new Set()}
         newPostsCount={props.newPostsCount}
         onShowNewPosts={props.onShowNewPosts}
         onUpdateUser={props.onUpdateUser}

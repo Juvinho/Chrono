@@ -55,11 +55,11 @@ export function useBio(userId: string | null) {
     if (!userId) return;
     
     try {
-      const response = await apiClient.post<{ tags: UserTag[] }>(`/bio/${userId}/bio/refresh`);
+      const response = await apiClient.post<{ tags: UserTag[] }>(`/bio/${userId}/bio/refresh`, {});
       if (bioData) {
         setBioData({
           ...bioData,
-          tags: response.data.tags,
+          tags: response.data?.tags || [],
         });
       }
     } catch (err) {

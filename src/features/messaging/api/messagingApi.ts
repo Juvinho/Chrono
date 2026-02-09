@@ -134,5 +134,6 @@ export async function reindexConversations(): Promise<{
 }> {
   const response = await baseClient.post(`${API_BASE}/reindex/conversations`, {});
   if (response.error) throw new Error(response.error);
-  return response.data || { success: false, diagnostics: { orphanedDeleted: 0, validConversations: 0, rebuiltConversations: 0, conversations: [] } };
+  const data = response.data as any || { success: false, diagnostics: { orphanedDeleted: 0, validConversations: 0, rebuiltConversations: 0, conversations: [] } };
+  return data;
 }

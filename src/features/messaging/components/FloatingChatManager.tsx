@@ -1,4 +1,5 @@
-import React, { create } from 'zustand';
+import React from 'react';
+import { create } from 'zustand';
 import { useLocation } from 'react-router-dom';
 import { FloatingChatBox } from './FloatingChatBox';
 import { useMessagesSidebar } from '../../../contexts/MessagesSidebarContext';
