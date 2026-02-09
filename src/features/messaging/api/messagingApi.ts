@@ -75,19 +75,33 @@ export async function sendMessage(request: SendMessageRequest): Promise<Message>
   }
 
   const endpoint = `${API_BASE}/${request.conversationId}/messages`;
+  
+  const payload = {
+    content: request.content.trim(),
+    ...(request.imageUrl && { imageUrl: request.imageUrl }),
+  };
+  
   console.log('📤 sendMessage API:', {
     conversationId: request.conversationId,
     conversationIdType: typeof request.conversationId,
     contentLength: request.content.trim().length,
+    hasImageUrl: !!request.imageUrl,
+    imageUrlType: typeof request.imageUrl,
+    imageUrlLength: request.imageUrl ? request.imageUrl.length : 0,
+    imageUrlPreview: request.imageUrl ? request.imageUrl.substring(0, 50) : null,
+    payloadKeys: Object.keys(payload),
     endpoint
+  });
+
+  console.log('🔍 Request payload:', {
+    content: payload.content.substring(0, 50),
+    imageUrl: payload.imageUrl ? 'present (base64 data URL)' : 'not present',
+    payloadString: JSON.stringify(payload).substring(0, 150)
   });
 
   const response = await baseClient.post<Message>(
     endpoint,
-    {
-      content: request.content.trim(),
-      ...(request.imageUrl && { imageUrl: request.imageUrl }),
-    }
+    payload
   );
   
   console.log('📬 sendMessage response:', response);
