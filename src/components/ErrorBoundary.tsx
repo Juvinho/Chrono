@@ -1,4 +1,4 @@
-import React, { ReactNode, ErrorInfo, Component } from 'react';
+import React, { ReactNode, ErrorInfo } from 'react';
 
 interface Props {
   children: ReactNode;
@@ -15,7 +15,7 @@ interface State {
  * Catches errors in child components and displays a fallback UI
  * instead of crashing the entire application
  */
-export class ErrorBoundary extends Component<Props, State> {
+export class ErrorBoundary extends React.Component<Props, State> {
   state: State = {
     hasError: false,
     error: null,

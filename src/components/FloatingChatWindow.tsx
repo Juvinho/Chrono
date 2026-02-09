@@ -141,14 +141,14 @@ export const FloatingChatWindow: React.FC<FloatingChatWindowProps> = ({
               onChange={(e) => setMessageText(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Escreva uma mensagem..."
-              disabled={isSending}
+              disabled={isSendingMessage}
             />
             <button
               className="floating-chat-send"
               onClick={handleSendMessage}
-              disabled={isSending || !messageText.trim()}
+              disabled={isSendingMessage || !messageText.trim()}
             >
-              {isSending ? '...' : '→'}
+              {isSendingMessage ? '...' : '→'}
             </button>
           </div>
         </>
