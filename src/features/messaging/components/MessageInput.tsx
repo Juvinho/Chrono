@@ -15,6 +15,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   const [content, setContent] = useState('');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
@@ -24,7 +25,14 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     // Allow send if either has content OR has an image
     if ((!content.trim() && !imageUrl) || isSending) return;
 
+    setSendError(null);
     try {
+      console.log('🎯 MessageInput.handleSend called with:', {
+        hasContent: content.trim().length > 0,
+        hasImage: !!imageUrl,
+        content: content.substring(0, 50)
+      });
+      
       await onSend(content.trim(), imageUrl || undefined);
       setContent('');
       setImageUrl(null);
@@ -36,9 +44,15 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         // Keep focus on input for next message
         textareaRef.current.focus();
       }
-    } catch (error) {
-      console.error(t('messageErrorOnSend'), error);
-      alert(t('messageSendErrorRetry'));
+    } catch (error: any) {
+      const errorMsg = error?.message || 'Erro ao enviar mensagem';
+      console.error('❌ MessageInput send error:', {
+        message: errorMsg,
+        error,
+      });
+      setSendError(errorMsg);
+      // Auto-clear error after 5 seconds
+      setTimeout(() => setSendError(null), 5000);
     }
   };
 
@@ -87,6 +101,36 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
   return (
     <div className="message-input-wrapper">
+      {sendError && (
+        <div style={{
+          padding: '8px 12px',
+          background: 'rgba(255, 0, 0, 0.1)',
+          border: '1px solid rgba(255, 0, 0, 0.3)',
+          borderRadius: '4px',
+          color: '#ff6b6b',
+          fontSize: '12px',
+          marginBottom: '8px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <span>❌ {sendError}</span>
+          <button
+            onClick={() => setSendError(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#ff6b6b',
+              cursor: 'pointer',
+              fontSize: '16px',
+              padding: '0',
+              marginLeft: '8px'
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
       {imageUrl && (
         <div className="image-preview-container">
           <img src={imageUrl} alt="Preview" className="image-preview-img" />
