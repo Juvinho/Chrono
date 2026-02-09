@@ -9,6 +9,7 @@ import TypingIndicatorCard from './TypingIndicatorCard';
 import FramePreview, { getFrameShape } from '../../profile/components/FramePreview';
 import ReactionTooltip from './ReactionTooltip';
 import { postIdMapper } from '../../../utils/postIdMapper';
+import { ImageViewer } from '../../../components/ImageViewer';
 import '../../../styles/post-glitch-animation.css';
 
 interface PostCardProps {
@@ -88,6 +89,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
     const [showMenu, setShowMenu] = useState(false);
     const [isReplying, setIsReplying] = useState(false);
     const [replyContent, setReplyContent] = useState('');
+    const [showImageViewer, setShowImageViewer] = useState(false);
 
     // Helper para navegar para o post com ID randômico
     const handleNavigateToPost = (postId: string) => {
@@ -491,7 +493,13 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
                         {renderContentWithTags(post.content)}
                     </p>
                     {post.imageUrl && (
-                        <img src={post.imageUrl} alt={t('postImageAlt', { username: post.author.username }) || `Image posted by @${post.author.username}`} className="w-full object-cover rounded-sm mt-2" loading="lazy" />
+                        <img 
+                            src={post.imageUrl} 
+                            alt={t('postImageAlt', { username: post.author.username }) || `Image posted by @${post.author.username}`} 
+                            className="w-full object-cover rounded-sm mt-2 cursor-pointer hover:opacity-80 transition-opacity" 
+                            loading="lazy"
+                            onClick={() => setShowImageViewer(true)}
+                        />
                     )}
                     {post.videoUrl && (
                         <video src={post.videoUrl} controls muted loop className="w-full object-cover rounded-sm mt-2 bg-black" aria-label={t('postVideoLabel', { username: post.author.username }) || `Video posted by @${post.author.username}`}></video>
@@ -688,6 +696,15 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
                         </button>
                     </div>
                 </div>
+            )}
+        
+            {post.imageUrl && (
+                <ImageViewer
+                    isOpen={showImageViewer}
+                    imageUrl={post.imageUrl}
+                    onClose={() => setShowImageViewer(false)}
+                    alt={`Post by @${post.author.username}`}
+                />
             )}
         </div>
     );
