@@ -173,14 +173,18 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
     const { conversationId } = req.params;
     const { content, imageUrl } = req.body;
     
-    console.log('📨 sendMessage called:', {
+    console.log('📨 sendMessage controller called', {
       userId,
       conversationId,
       conversationIdType: typeof conversationId,
-      contentLength: content?.length,
+      contentLength: content ? content.length : 0,
+      contentPreview: content ? content.substring(0, 50) : null,
       hasImage: !!imageUrl,
-      url: req.originalUrl,
-      method: req.method
+      imageUrlType: typeof imageUrl,
+      imageUrlLength: imageUrl ? imageUrl.length : 0,
+      imageUrlPreview: imageUrl ? imageUrl.substring(0, 50) : null,
+      requestBodyKeys: Object.keys(req.body),
+      fullBody: JSON.stringify(req.body).substring(0, 200)
     });
     
     const message = await chatService.sendMessage(conversationId, userId, content, imageUrl);

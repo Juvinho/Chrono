@@ -303,8 +303,11 @@ export class ChatService {
         conversationIdType: typeof conversationId,
         senderId,
         senderIdType: typeof senderId,
-        contentLength: content.length,
-        hasImage: !!imageUrl
+        contentLength: content ? content.length : 0,
+        hasImage: !!imageUrl,
+        imageUrlType: typeof imageUrl,
+        imageUrlLength: imageUrl ? imageUrl.length : 0,
+        imageUrlPreview: imageUrl ? imageUrl.substring(0, 50) : null
       });
 
       // Verify conversation exists and user is participant
@@ -329,6 +332,16 @@ export class ChatService {
         throw new Error('User is not a participant in this conversation');
       }
 
+      // Prepare values for insertion
+      const finalImage = imageUrl || null;
+      
+      console.log('📝 Preparing INSERT values:', {
+        content: content ? content.substring(0, 50) : null,
+        contentTrimmed: content ? content.trim() : null,
+        finalImage: finalImage ? finalImage.substring(0, 50) : null,
+        finalImageIsNull: finalImage === null
+      });
+
       // Insert message with imageUrl if provided
       const result = await pool.query(
         `INSERT INTO messages (conversation_id, sender_id, content, image_url, is_read, created_at)
@@ -336,6 +349,13 @@ export class ChatService {
          RETURNING id, sender_id, content, image_url, created_at, is_read`,
         [conversationId, senderId, content || '', imageUrl || null]
       );
+      
+      console.log('✅ Message inserted successfully:', {
+        messageId: result.rows[0]?.id,
+        inserted: result.rowCount,
+        returnedContent: result.rows[0]?.content,
+        returnedImage: result.rows[0]?.image_url ? result.rows[0].image_url.substring(0, 50) : null
+      });
 
       // Update conversation updated_at
       await pool.query(
