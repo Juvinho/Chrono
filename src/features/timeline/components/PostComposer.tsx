@@ -280,7 +280,7 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
   const isPostable = content.trim().length > 0 || generatedImageUrl || videoUrl;
 
   const containerClass = inline 
-      ? "w-full bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] p-4 rounded-lg mb-6" 
+      ? "w-full bg-[var(--theme-bg-primary)] border border-[var(--theme-border-primary)] p-4 rounded-lg mb-6" 
       : "modal-content w-full max-w-2xl";
 
   const contentElement = (
