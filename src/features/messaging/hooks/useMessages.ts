@@ -68,11 +68,13 @@ export function useMessages(conversationId: number | string | null) {
 
   // Envia mensagem
   const handleSendMessage = async (content: string, imageUrl?: string) => {
-    if (!conversationId || !content.trim()) {
+    // Permite enviar se tem conteúdo OU imagem
+    if (!conversationId || (!content.trim() && !imageUrl)) {
       console.warn('⚠️ Cannot send message:', {
         hasConversationId: !!conversationId,
         conversationId,
-        contentValid: content.trim().length > 0
+        contentValid: content.trim().length > 0,
+        hasImage: !!imageUrl
       });
       return;
     }
@@ -90,6 +92,7 @@ export function useMessages(conversationId: number | string | null) {
         conversationId,
         contentLength: content.trim().length,
         hasImage: !!imageUrl,
+        request
       });
       
       const newMessage = await sendMessage(request);
@@ -102,8 +105,12 @@ export function useMessages(conversationId: number | string | null) {
       previousMessagesLengthRef.current += 1;
       
       console.log('✅ Mensagem enviada:', newMessage.id);
-    } catch (err) {
-      console.error('❌ Erro ao enviar mensagem:', err);
+    } catch (err: any) {
+      console.error('❌ Erro ao enviar mensagem:', {
+        message: err?.message,
+        error: err,
+        conversationId
+      });
       throw err;
     } finally {
       setIsSending(false);
