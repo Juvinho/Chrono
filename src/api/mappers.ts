@@ -22,6 +22,12 @@ export function mapApiUserToUser(apiUser: any): any {
         label: (apiUser.verificationBadge?.label || apiUser.verification_badge?.label),
         color: (apiUser.verificationBadge?.color || apiUser.verification_badge?.color)
     } : undefined,
+    profileType: apiUser.profileType || apiUser.profile_type || 'personal',
+    headline: apiUser.headline || '',
+    skills: apiUser.skills || [],
+    workExperience: apiUser.workExperience || apiUser.work_experience || [],
+    education: apiUser.education || [],
+    connections: apiUser.connections || apiUser.connections_count || 0,
     profileSettings: apiUser.profileSettings || apiUser.profile_settings || {
       theme: 'light',
       accentColor: 'purple',
@@ -34,6 +40,8 @@ export function mapApiUserToUser(apiUser: any): any {
     notifications: apiUser.notifications || [],
     createdAt: apiUser.createdAt || apiUser.created_at,
     lastSeen: apiUser.lastSeen || apiUser.last_seen || null,
+    subscriptionTier: apiUser.subscriptionTier || apiUser.subscription_tier || 'free',
+    updatedAt: apiUser.updatedAt || apiUser.updated_at,
   };
 }
 
