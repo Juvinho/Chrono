@@ -175,12 +175,17 @@ export default function Dashboard({
                 p.author.displayName.toLowerCase().includes(query)
             );
         } else {
-            // Show posts from selectedDate and up to 60 days before
+            // Show posts from selectedDate back to 60+ days ago
+            // Compare dates inclusively - include all posts from startDate through selectedDate
+            const endDate = new Date(selectedDate);
+            endDate.setHours(23, 59, 59, 999); // End of selected day
             const startDate = new Date(selectedDate);
             startDate.setDate(startDate.getDate() - 60);
+            startDate.setHours(0, 0, 0, 0); // Start of that day
+            
             filtered = filtered.filter(p => {
                 const postDate = new Date(p.timestamp);
-                return postDate >= startDate && postDate <= selectedDate;
+                return postDate >= startDate && postDate <= endDate;
             });
         }
         return filtered;
