@@ -9,7 +9,7 @@ interface ChatAreaProps {
   conversationId: number | string;
 }
 
-export const ChatArea: React.FC<ChatAreaProps> = ({ conversationId }) => {
+const ChatArea: React.FC<ChatAreaProps> = ({ conversationId }) => {
   const { t } = useTranslation();
   console.log(`📍 ChatArea carregado com conversationId:`, conversationId);
   
@@ -24,18 +24,24 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ conversationId }) => {
   const { conversations } = useConversations();
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const previousLengthRef = useRef<number>(0);
 
-  // Encontra a conversa atual para pegar dados do outro usuário
+  // Find current conversation
   const currentConversation = conversations.find(c => c.id === conversationId);
 
-  // Auto-scroll para última mensagem
+  // Auto-scroll only when NEW messages arrive (not on load)
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    // Only scroll if new messages arrived, not on initial load
+    if (messages.length > previousLengthRef.current) {
+      console.log(`📬 New messages: ${previousLengthRef.current} -> ${messages.length}`);
+      scrollToBottom();
+    }
+    previousLengthRef.current = messages.length;
+  }, [messages.length]); // Only depend on length change
 
   if (isLoading) {
     return (
@@ -92,3 +98,5 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ conversationId }) => {
     </div>
   );
 };
+
+export { ChatArea };
