@@ -1,4 +1,4 @@
-import React, { ReactNode, ErrorInfo } from 'react';
+import React, { ReactNode, ErrorInfo, Component } from 'react';
 
 interface Props {
   children: ReactNode;
@@ -15,14 +15,11 @@ interface State {
  * Catches errors in child components and displays a fallback UI
  * instead of crashing the entire application
  */
-export class ErrorBoundary extends React.Component<Props, State> {
-  constructor(props: Props) {
-    super(props);
-    this.state = {
-      hasError: false,
-      error: null,
-    };
-  }
+export class ErrorBoundary extends Component<Props, State> {
+  state: State = {
+    hasError: false,
+    error: null,
+  };
 
   static getDerivedStateFromError(error: Error): State {
     return {

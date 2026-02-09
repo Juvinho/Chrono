@@ -24,9 +24,8 @@ export const FloatingChatWindow: React.FC<FloatingChatWindowProps> = ({
   currentUserId,
   onClose,
 }) => {
-  const { messages, isLoading, error, refetch } = useMessages(conversationId);
+  const { messages, isLoading, isSending: isSendingMessage, error, sendMessage } = useMessages(conversationId);
   const [messageText, setMessageText] = useState('');
-  const [isSending, setIsSending] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
 
   // Marcar como lido ao abrir
@@ -52,19 +51,12 @@ export const FloatingChatWindow: React.FC<FloatingChatWindowProps> = ({
       return;
     }
 
-    setIsSending(true);
     try {
-      await sendMessage({
-        conversationId,
-        content: trimmed,
-      });
+      await sendMessage(trimmed);
       setMessageText('');
-      await refetch();
     } catch (err) {
       console.error('Erro ao enviar mensagem:', err);
       alert(`Erro ao enviar: ${err instanceof Error ? err.message : 'Tente novamente'}`);
-    } finally {
-      setIsSending(false);
     }
   };
 

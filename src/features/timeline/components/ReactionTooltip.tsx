@@ -4,12 +4,10 @@ import { postService } from '../../../api/post.service';
 import { GlitchIcon, UploadIcon, CorruptIcon, RewindIcon, StaticIcon } from '../../../components/ui/icons';
 import './styles/reaction-tooltip.css';
 
-interface ReactionDetails {
-  [key in CyberpunkReaction]?: {
-    count: number;
-    users: Array<{ id: string; username: string; avatar: string }>;
-  };
-}
+interface ReactionDetails extends Record<CyberpunkReaction, {
+  count: number;
+  users: Array<{ id: string; username: string; avatar: string }>;
+}> {}
 
 interface ReactionTooltipProps {
   postId: string;
@@ -65,7 +63,7 @@ const ReactionTooltip: React.FC<ReactionTooltipProps> = ({ postId, reactions, is
     return null;
   }
 
-  const totalReactions = Object.values(reactions).reduce((sum, count) => sum + count, 0);
+  const totalReactions = (Object.values(reactions) as number[]).reduce((sum, count) => sum + count, 0);
 
   return (
     <div 

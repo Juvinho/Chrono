@@ -508,12 +508,11 @@ export default function ProfilePage({
       <main className="flex-grow overflow-y-auto">
         <div className={`max-w-4xl mx-auto ${borderRadius === 'none' ? '' : 'my-4'} animate-fade-in`}>
           <div className={`relative ${getRadiusClass('container')} shadow-lg`}>
-            <div className={`relative h-48 md:h-64 w-full overflow-hidden ${getRadiusClass('container')}`}>
+            <div className={`relative h-48 md:h-64 w-full overflow-hidden ${getRadiusClass('container')}`} key={`cover-${imageCacheBuster}`}>
                 <Avatar 
                   src={profileUser.coverImage ? `${profileUser.coverImage}${profileUser.coverImage.includes('data:') ? '' : `?t=${imageCacheBuster}`}` : (profileUser.profileSettings?.coverImage ? `${profileUser.profileSettings.coverImage}${profileUser.profileSettings.coverImage.includes('data:') ? '' : `?t=${imageCacheBuster}`}` : 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&h=400&fit=crop&q=80')} 
                   username={profileUser.username}
                   className="w-full h-full object-cover"
-                  key={`cover-${imageCacheBuster}`}
                 />
             </div>
             <div className="absolute -bottom-16 left-4 md:left-8 flex items-end z-10">

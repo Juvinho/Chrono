@@ -135,19 +135,6 @@
     height: auto;
   }
 }
-  }
-
-  .split-layout-left,
-  .split-layout-right {
-    width: 100% !important;
-    border-right: none;
-    border-bottom: 1px solid var(--theme-border-primary);
-  }
-
-  .split-layout-right {
-    border-bottom: none;
-  }
-}
 
 /* Extra small screens */
 @media (max-width: 640px) {
