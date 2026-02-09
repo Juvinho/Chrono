@@ -24,6 +24,7 @@ dotenv.config({ path: envPath });
 // NOW import modules that depend on environment variables
 import { migrate } from './db/migrate.js';
 import { initializeDatabase } from './db/initializeDatabase.js';
+import { runMigrations } from './db/migrations.js';
 import { pool } from './db/connection.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
@@ -496,22 +497,32 @@ const startServer = async () => {
 
     // Run migrations (idempotent)
     console.log('📦 Iniciando migrações do banco de dados...');
-    migrate().then(() => {
-        console.log('✅ Migrações concluídas com sucesso.');
-        const notifSvc = new NotificationService();
-        notifSvc.startQueueWorker();
-        
-        // Initialize automatic tag updates (every 6 hours)
-        console.log('🏷️  Iniciando scheduler de atualização de tags...');
-        scheduleTagUpdates();
-        
-        // Initialize automatic user bio tags update (daily at 3 AM)
-        console.log('🏷️  Iniciando scheduler de tags de usuários...');
-        scheduleTagUpdateJob();
-    }).catch(err => {
-        console.error('❌ Erro nas migrações:', err);
+    try {
+      await migrate();
+      console.log('✅ Migrações do migrate concluídas com sucesso.');
+      
+      // Run additional SQL migrations
+      await runMigrations();
+      console.log('✅ Migrações de SQL concluídas com sucesso.');
+    } catch (err: any) {
+      console.error('⚠️  Erro durante migrações:', err.message);
+    }
+
+    try {
+      const notifSvc = new NotificationService();
+      notifSvc.startQueueWorker();
+      
+      // Initialize automatic tag updates (every 6 hours)
+      console.log('🏷️  Iniciando scheduler de atualização de tags...');
+      scheduleTagUpdates();
+      
+      // Initialize automatic user bio tags update (daily at 3 AM)
+      console.log('🏷️  Iniciando scheduler de tags de usuários...');
+      scheduleTagUpdateJob();
+    } catch (err: any) {
+        console.error('❌ Erro na inicialização:', err.message);
         // We still keep server running, but it might be unstable
-    });
+    }
 
   } catch (err) {
     console.error('Failed to start server:', err);

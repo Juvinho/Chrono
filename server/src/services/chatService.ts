@@ -253,7 +253,7 @@ export class ChatService {
           u.username,
           COALESCE(u.display_name, u.username) as display_name,
           u.avatar as avatar_url,
-          m.content,
+          COALESCE(m.content, '') as content,
           m.image_url,
           m.created_at,
           m.is_read
