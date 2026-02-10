@@ -10,6 +10,7 @@ export const ChatWindow: React.FC = () => {
   const { user: currentUser } = useAuth();
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -26,6 +27,10 @@ export const ChatWindow: React.FC = () => {
     try {
       await sendMessage(newMessage);
       setNewMessage('');
+      // Refocus textarea for next message
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 0);
     } catch (error) {
       console.error('Failed to send', error);
     }
@@ -103,6 +108,7 @@ export const ChatWindow: React.FC = () => {
           </button>
           <div className="flex-1 bg-[var(--theme-bg-tertiary)] rounded-2xl px-4 py-2">
             <textarea
+              ref={textareaRef}
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyDown={handleKeyDown}

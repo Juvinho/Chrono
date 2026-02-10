@@ -27,6 +27,7 @@ export const FloatingChatWindow: React.FC<FloatingChatWindowProps> = ({
   const { messages, isLoading, isSending: isSendingMessage, error, sendMessage } = useMessages(conversationId);
   const [messageText, setMessageText] = useState('');
   const [isMinimized, setIsMinimized] = useState(false);
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
   // Marcar como lido ao abrir
   useEffect(() => {
@@ -54,6 +55,10 @@ export const FloatingChatWindow: React.FC<FloatingChatWindowProps> = ({
     try {
       await sendMessage(trimmed);
       setMessageText('');
+      // Refocus textarea for next message
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 0);
     } catch (err) {
       console.error('Erro ao enviar mensagem:', err);
       alert(`Erro ao enviar: ${err instanceof Error ? err.message : 'Tente novamente'}`);
@@ -136,6 +141,7 @@ export const FloatingChatWindow: React.FC<FloatingChatWindowProps> = ({
           {/* Input */}
           <div className="floating-chat-input-container">
             <textarea
+              ref={textareaRef}
               className="floating-chat-input"
               value={messageText}
               onChange={(e) => setMessageText(e.target.value)}
