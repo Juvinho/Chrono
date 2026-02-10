@@ -1,0 +1,489 @@
+/* ============================================
+   POST INTERACTIONS ANIMATIONS
+   Animações para curtidas, reações e atualizações
+   evita a necessidade de F5 no site
+   ============================================ */
+
+/* ========== LIKE BUTTON ANIMATIONS ========== */
+
+/* Bounce quando clica no botão de curtir */
+@keyframes like-button-bounce {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.2);
+  }
+  50% {
+    transform: scale(1);
+  }
+  75% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Glow effect quando curtido */
+@keyframes like-button-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 10px 5px rgba(255, 0, 0, 0.2);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 0, 0, 0);
+  }
+}
+
+.reaction-button-active {
+  animation: like-button-bounce 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.reaction-button-glow {
+  animation: like-button-glow 0.8s ease-out;
+}
+
+/* ========== REACTION COUNT ANIMATIONS ========== */
+
+/* Número de reações crescendo */
+@keyframes count-increase {
+  0% {
+    transform: scale(0.5) translateY(10px);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Color flash quando número atualiza */
+@keyframes color-burst {
+  0% {
+    color: var(--theme-primary, #8A2BE2);
+    text-shadow: 0 0 0 rgba(138, 43, 226, 0.8);
+  }
+  50% {
+    color: #FF00FF;
+    text-shadow: 0 0 15px #FF00FF;
+  }
+  100% {
+    color: inherit;
+    text-shadow: none;
+  }
+}
+
+.reaction-count-updated {
+  animation: count-increase 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.reaction-count-flash {
+  animation: color-burst 0.4s ease-out;
+}
+
+/* ========== SPARKLE/PARTICLE EFFECTS ========== */
+
+/* Sparkle individual */
+@keyframes sparkle {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--tx), var(--ty)) scale(0);
+  }
+}
+
+/* Sparkle burst (para quando curte) */
+@keyframes sparkle-burst {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--tx), var(--ty)) scale(0.3) rotate(360deg);
+  }
+}
+
+.sparkle {
+  position: absolute;
+  pointer-events: none;
+  animation: sparkle 0.8s ease-out forwards;
+}
+
+.sparkle.burst {
+  animation: sparkle-burst 0.8s ease-out forwards;
+}
+
+/* ========== HEART BEAT FOR LIKES ========== */
+
+@keyframes heartbeat {
+  0% {
+    transform: scale(1);
+  }
+  14% {
+    transform: scale(1.15);
+  }
+  28% {
+    transform: scale(1);
+  }
+  42% {
+    transform: scale(1.15);
+  }
+  70% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.like-heartbeat {
+  animation: heartbeat 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* ========== EXPAND PULSE EFFECT ========== */
+
+@keyframes expand-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+}
+
+.reaction-pulse {
+  position: relative;
+}
+
+.reaction-pulse::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid var(--theme-primary, #8A2BE2);
+  transform: translate(-50%, -50%);
+  animation: expand-pulse 0.6s ease-out;
+  pointer-events: none;
+}
+
+/* ========== COLOR SHIFT ANIMATION ========== */
+
+@keyframes color-shift {
+  0% {
+    filter: hue-rotate(0deg);
+  }
+  25% {
+    filter: hue-rotate(90deg);
+  }
+  50% {
+    filter: hue-rotate(180deg);
+  }
+  75% {
+    filter: hue-rotate(270deg);
+  }
+  100% {
+    filter: hue-rotate(360deg);
+  }
+}
+
+.color-shift {
+  animation: color-shift 0.8s linear;
+}
+
+/* ========== REACTION ICON ANIMATIONS ========== */
+
+/* Ícone de reação aparecendo */
+@keyframes reaction-icon-pop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.reaction-icon-new {
+  animation: reaction-icon-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ========== TEXT ANIMATIONS FOR COUNTS ========== */
+
+@keyframes count-pop-up {
+  0% {
+    opacity: 0;
+    transform: translateY(5px) scale(0.8);
+  }
+  50% {
+    transform: translateY(-5px) scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.count-pop {
+  animation: count-pop-up 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* ========== BACKGROUND COLOR FLASH ========== */
+
+@keyframes bg-color-flash {
+  0% {
+    background-color: var(--theme-bg-tertiary);
+  }
+  20% {
+    background-color: rgba(138, 43, 226, 0.2);
+  }
+  100% {
+    background-color: var(--theme-bg-tertiary);
+  }
+}
+
+.reaction-flash-bg {
+  animation: bg-color-flash 0.6s ease-out;
+}
+
+/* ========== COUNTER INCREMENT ANIMATION ========== */
+
+@keyframes slide-and-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-and-fade-out {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+}
+
+.number-enter {
+  animation: slide-and-fade-in 0.3s ease-out;
+}
+
+.number-exit {
+  animation: slide-and-fade-out 0.3s ease-out;
+  position: absolute;
+  pointer-events: none;
+}
+
+/* ========== NEW REACTION BADGE ========== */
+
+@keyframes badge-pop-in {
+  0% {
+    transform: scale(0) rotate(-180deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2) rotate(0deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+.reaction-badge-new {
+  animation: badge-pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ========== GLOW EFFECT ========== */
+
+@keyframes glow-effect {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(138, 43, 226, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(138, 43, 226, 0.8);
+  }
+}
+
+.reaction-glow {
+  animation: glow-effect 0.8s ease-in-out;
+}
+
+/* ========== RAINBOW EFFECT FOR MULTIPLE REACTIONS ========== */
+
+@keyframes rainbow-border {
+  0% {
+    border-color: #FF0000;
+  }
+  20% {
+    border-color: #FF7F00;
+  }
+  40% {
+    border-color: #FFFF00;
+  }
+  60% {
+    border-color: #00FF00;
+  }
+  80% {
+    border-color: #0000FF;
+  }
+  100% {
+    border-color: #FF0000;
+  }
+}
+
+.reaction-rainbow {
+  animation: rainbow-border 1.5s linear infinite;
+  border-width: 2px;
+  border-style: solid;
+}
+
+/* ========== JITTER EFFECT (bug-like) ========== */
+
+@keyframes jitter {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  10% {
+    transform: translate(-2px, 1px);
+  }
+  20% {
+    transform: translate(1px, -2px);
+  }
+  30% {
+    transform: translate(-1px, 2px);
+  }
+  40% {
+    transform: translate(2px, -1px);
+  }
+  50% {
+    transform: translate(-2px, -2px);
+  }
+  60% {
+    transform: translate(1px, 1px);
+  }
+  70% {
+    transform: translate(-1px, -1px);
+  }
+  80% {
+    transform: translate(2px, 2px);
+  }
+  90% {
+    transform: translate(-2px, 1px);
+  }
+}
+
+.reaction-jitter {
+  animation: jitter 0.4s ease-in-out;
+}
+
+/* ========== WOBBLE EFFECT ========== */
+
+@keyframes wobble {
+  0%, 100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  15% {
+    transform: translateX(-5px) rotate(-5deg);
+  }
+  30% {
+    transform: translateX(5px) rotate(3deg);
+  }
+  45% {
+    transform: translateX(-5px) rotate(-3deg);
+  }
+  60% {
+    transform: translateX(3px) rotate(2deg);
+  }
+  75% {
+    transform: translateX(-2px) rotate(-1deg);
+  }
+}
+
+.reaction-wobble {
+  animation: wobble 0.6s ease-in-out;
+}
+
+/* ========== RESPONSIVE ========== */
+
+@media (max-width: 640px) {
+  .sparkle {
+    animation: sparkle 0.6s ease-out forwards;
+  }
+
+  .sparkle.burst {
+    animation: sparkle-burst 0.6s ease-out forwards;
+  }
+
+  .heartbeat {
+    animation: heartbeat 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+}
+
+/* ========== DARK MODE ADJUSTMENTS ========== */
+
+@media (prefers-color-scheme: dark) {
+  .reaction-count-flash {
+    animation: color-burst 0.4s ease-out;
+    filter: brightness(1.2);
+  }
+
+  .reaction-glow {
+    animation: glow-effect 0.8s ease-in-out;
+    filter: brightness(1.1);
+  }
+}
+
+/* ========== UTILITY CLASSES FOR QUICK USE ========== */
+
+.animate-bounce-once {
+  animation: like-button-bounce 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.animate-glow-once {
+  animation: like-button-glow 0.8s ease-out;
+}
+
+.animate-pop-once {
+  animation: reaction-icon-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.animate-pulse-once {
+  animation: expand-pulse 0.6s ease-out;
+}
+
+.animate-jitter-once {
+  animation: jitter 0.4s ease-in-out;
+}
+
+.animate-wobble-once {
+  animation: wobble 0.6s ease-in-out;
+}
