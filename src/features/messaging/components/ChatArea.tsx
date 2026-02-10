@@ -4,6 +4,7 @@ import { useConversations } from '../hooks/useConversations';
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
 import { useTranslation } from '../../../hooks/useTranslation';
+import { soundsService } from '../../../services/soundsService';
 
 interface ChatAreaProps {
   conversationId: number | string;
@@ -25,6 +26,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({ conversationId }) => {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const previousLengthRef = useRef<number>(0);
+  const currentUserIdRef = useRef<string>(localStorage.getItem('userId') || 'unknown');
 
   // Find current conversation
   const currentConversation = conversations.find(c => c.id === conversationId);
@@ -38,6 +40,13 @@ const ChatArea: React.FC<ChatAreaProps> = ({ conversationId }) => {
     // Only scroll if new messages arrived, not on initial load
     if (messages.length > previousLengthRef.current) {
       console.log(`📬 New messages: ${previousLengthRef.current} -> ${messages.length}`);
+      
+      // Play sound when receiving a message from the other user
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage && lastMessage.senderId !== currentUserIdRef.current) {
+        soundsService.playMessageReceived();
+      }
+      
       scrollToBottom();
     }
     previousLengthRef.current = messages.length;
