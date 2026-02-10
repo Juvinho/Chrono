@@ -261,11 +261,16 @@ router.post('/register', async (req, res) => {
     try {
       const { getEmailService } = await import('../services/emailService.js');
       const emailService = getEmailService();
-      const ipAddress = req.ip || req.connection.remoteAddress;
-      const userAgent = req.get('user-agent');
       
-      await emailService.sendVerificationEmail(user, ipAddress, userAgent);
-      console.log(`✅ Verification email sent to ${email}`);
+      if (emailService) {
+        const ipAddress = req.ip || req.connection.remoteAddress;
+        const userAgent = req.get('user-agent');
+        
+        await emailService.sendVerificationEmail(user, ipAddress, userAgent);
+        console.log(`✅ Verification email sent to ${email}`);
+      } else {
+        console.warn(`⚠️ Email service not available. User ${email} needs manual verification.`);
+      }
     } catch (emailError) {
       console.error('⚠️ Failed to send verification email:', emailError);
       // Don't block registration if email fails, but log it

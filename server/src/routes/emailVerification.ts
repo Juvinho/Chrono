@@ -17,6 +17,13 @@ emailVerificationRouter.get(
       const userId = req.userId;
       const emailService = getEmailService();
       
+      if (!emailService) {
+        return res.status(503).json({
+          error: 'Email service unavailable',
+          message: 'Email verification service is not available at this time.'
+        });
+      }
+      
       const status = await emailService.getVerificationStatus(userId);
       
       res.json({
@@ -45,6 +52,13 @@ emailVerificationRouter.post(
     try {
       const userId = req.userId;
       const emailService = getEmailService();
+      
+      if (!emailService) {
+        return res.status(503).json({
+          error: 'Email service unavailable',
+          message: 'Email verification service is not available at this time.'
+        });
+      }
 
       // Get user details
       const userResult = await pool.query(
@@ -108,6 +122,13 @@ emailVerificationRouter.post(
     try {
       const userId = req.userId;
       const emailService = getEmailService();
+      
+      if (!emailService) {
+        return res.status(503).json({
+          error: 'Email service unavailable',
+          message: 'Email verification service is not available at this time.'
+        });
+      }
 
       // Get client IP and user agent
       const ipAddress = req.ip || req.connection.remoteAddress;
@@ -164,6 +185,13 @@ emailVerificationRouter.get(
       }
 
       const emailService = getEmailService();
+      
+      if (!emailService) {
+        return res.status(503).json({
+          error: 'Email service unavailable',
+          message: 'Email verification service is not available at this time.'
+        });
+      }
       const user = await emailService.verifyToken(token);
 
       if (!user) {
@@ -210,6 +238,14 @@ emailVerificationRouter.post(
       }
 
       const emailService = getEmailService();
+      
+      if (!emailService) {
+        return res.status(503).json({
+          error: 'Email service unavailable',
+          message: 'Email verification service is not available at this time.'
+        });
+      }
+      
       const user = await emailService.verifyToken(token);
 
       if (!user) {

@@ -524,13 +524,19 @@ export class EmailService {
 let emailServiceInstance: EmailService | null = null;
 
 export function initializeEmailService(config: EmailServiceConfig): EmailService {
+  console.log('🔧 Inicializando EmailService com:', {
+    gmailUser: config.gmailUser,
+    frontendUrl: config.frontendUrl,
+    fromEmail: config.fromEmail
+  });
   emailServiceInstance = new EmailService(config);
   return emailServiceInstance;
 }
 
-export function getEmailService(): EmailService {
+export function getEmailService(): EmailService | null {
   if (!emailServiceInstance) {
-    throw new Error('Email service not initialized. Call initializeEmailService first.');
+    console.warn('⚠️ Email service não foi inicializado. Retornando null.');
+    return null;
   }
   return emailServiceInstance;
 }
