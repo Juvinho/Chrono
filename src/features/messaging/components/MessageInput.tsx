@@ -38,11 +38,13 @@ export const MessageInput: React.FC<MessageInputProps> = ({
       setImageUrl(null);
       setShowEmojiPicker(false);
       
-      // Reset textarea height
+      // Reset textarea height and refocus for next message
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
-        // Keep focus on input for next message
-        textareaRef.current.focus();
+        // Use setTimeout to ensure focus happens after state updates
+        setTimeout(() => {
+          textareaRef.current?.focus();
+        }, 0);
       }
     } catch (error: any) {
       const errorMsg = error?.message || 'Erro ao enviar mensagem';
