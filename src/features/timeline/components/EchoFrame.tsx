@@ -155,7 +155,18 @@ export default function EchoFrame({
             return false;
         });
 
-        return visiblePosts.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        // Ordenar posts cronologicamente (antigo → novo) quando for um dia específico
+        // ou do mais novo para o mais antigo para feed (hoje)
+        const isViewingSpecificDay = !isSameDay(selectedDate, new Date());
+        return visiblePosts.sort((a, b) => {
+            if (isViewingSpecificDay) {
+                // Para um dia específico: ordem cronológica (antigo primeiro)
+                return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
+            } else {
+                // Para hoje (feed): ordem reversa (novo primeiro)
+                return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+            }
+        });
     }, [selectedDate, searchQuery, allPosts, currentUser, isGenerating, activeFilter, allKnownPosts]);
 
     const handleStartEdit = useCallback((post: Post) => {
