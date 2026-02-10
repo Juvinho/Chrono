@@ -1,6 +1,7 @@
 import React, { useState, useRef, KeyboardEvent } from 'react';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { CameraIcon } from '../../../components/ui/icons';
+import { soundsService } from '../../../services/soundsService';
 
 interface MessageInputProps {
   onSend: (content: string, imageUrl?: string) => Promise<void>;
@@ -19,6 +20,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const typingSoundTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const emojiSet = ['😀', '😂', '❤️', '👍', '🎉', '🔥', '😍', '🤔', '👏', '💯', '🚀', '⭐'];
 
   const handleSend = async () => {
@@ -34,6 +36,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
       });
       
       await onSend(content.trim(), imageUrl || undefined);
+      soundsService.playMessageSent();
       setContent('');
       setImageUrl(null);
       setShowEmojiPicker(false);
@@ -67,6 +70,12 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
+
+    // Play typing sound with debounce
+    if (typingSoundTimeoutRef.current) {
+      clearTimeout(typingSoundTimeoutRef.current);
+    }
+    soundsService.playTyping();
     
     const textarea = e.target;
     textarea.style.height = 'auto';
