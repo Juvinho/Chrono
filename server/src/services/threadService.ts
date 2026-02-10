@@ -58,10 +58,55 @@ export class ThreadService {
   async getPostsInThread(threadId: string, limit = 50): Promise<any[]> {
     const postService = new PostService();
     const res = await pool.query(
-      `SELECT * FROM posts WHERE thread_id = $1 ORDER BY created_at DESC LIMIT $2`,
+      `SELECT * FROM posts WHERE thread_id = $1 ORDER BY created_at ASC LIMIT $2`,
       [threadId, limit]
     );
     return res.rows.map(postService.mapPostFromDb);
+  }
+
+  /**
+   * Calcula a duração de um thread em formato legível
+   * Ex: "4 dias", "2 horas", "30 minutos"
+   */
+  async calculateThreadDuration(threadId: string): Promise<string> {
+    try {
+      const res = await pool.query(
+        `SELECT 
+          MIN(created_at) as first_post_date,
+          MAX(created_at) as last_post_date
+         FROM posts 
+         WHERE thread_id = $1`,
+        [threadId]
+      );
+
+      if (!res.rows[0] || !res.rows[0].first_post_date) {
+        return 'Aguardando posts';
+      }
+
+      const firstDate = new Date(res.rows[0].first_post_date);
+      const lastDate = new Date(res.rows[0].last_post_date);
+
+      // Calcular diferença em milisegundos
+      const diffMs = lastDate.getTime() - firstDate.getTime();
+      const diffSeconds = Math.floor(diffMs / 1000);
+      const diffMinutes = Math.floor(diffSeconds / 60);
+      const diffHours = Math.floor(diffMinutes / 60);
+      const diffDays = Math.floor(diffHours / 24);
+      const diffMonths = Math.floor(diffDays / 30);
+      const diffYears = Math.floor(diffDays / 365);
+
+      // Retornar formato legível
+      if (diffYears > 0) return diffYears === 1 ? '1 ano' : `${diffYears} anos`;
+      if (diffMonths > 0) return diffMonths === 1 ? '1 mês' : `${diffMonths} meses`;
+      if (diffDays > 0) return diffDays === 1 ? '1 dia' : `${diffDays} dias`;
+      if (diffHours > 0) return diffHours === 1 ? '1 hora' : `${diffHours} horas`;
+      if (diffMinutes > 0) return diffMinutes === 1 ? '1 minuto' : `${diffMinutes} minutos`;
+      
+      return 'Hoje';
+    } catch (error) {
+      console.error(`[Thread Duration] Erro ao calcular duração:`, error);
+      return 'Duração desconhecida';
+    }
   }
 
   async archiveInactiveThreads(cutoffDays = 90): Promise<number> {
