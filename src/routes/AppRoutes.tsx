@@ -17,6 +17,7 @@ const SettingsPage = React.lazy(() => import('../features/profile/components/Set
 const Welcome = React.lazy(() => import('../features/auth/components/Welcome'));
 const Register = React.lazy(() => import('../features/auth/components/Register'));
 const Verify = React.lazy(() => import('../features/auth/components/Verify'));
+const VerifyEmailPage = React.lazy(() => import('../pages/VerifyEmailPage'));
 const ForgotPassword = React.lazy(() => import('../features/auth/components/ForgotPassword'));
 const ResetPassword = React.lazy(() => import('../features/auth/components/ResetPassword'));
 const DataSlicerPage = React.lazy(() => import('../features/analysis/components/DataSlicerPage'));
@@ -112,6 +113,7 @@ export default function AppRoutes(props: AppRoutesProps) {
             <Route path="/login" element={!currentUser ? <LoginScreen onNavigate={handleNavigate} onLogin={handleLogin} /> : <Navigate to="/echoframe" />} />
             <Route path="/register" element={!currentUser ? <Register users={users} setUsers={setUsers} onNavigate={handleNavigate} onLogin={handleLogin} /> : <Navigate to="/echoframe" />} />
             <Route path="/verify" element={<Verify users={users} setUsers={setUsers} onNavigate={handleNavigate} email={users.find(u => u.username === userToVerify)?.email || null} />} />
+            <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
             <Route path="/forgot-password" element={<ForgotPassword users={users} onNavigate={handleNavigate} />} />
             <Route path="/reset-password" element={<ResetPassword emailToReset={emailToReset} onPasswordReset={handlePasswordReset} onNavigate={handleNavigate} />} />
             
