@@ -57,3 +57,11 @@ export const urlSegmentToDate = (segment: string): Date | null => {
     return null;
   }
 };
+
+// Check if a post is within 24 hours from now (for visibility window)
+export const isPostWithin24Hours = (postTimestamp: string | Date, now: Date = new Date()): boolean => {
+  const postDate = typeof postTimestamp === 'string' ? new Date(postTimestamp) : postTimestamp;
+  const timeDiff = now.getTime() - postDate.getTime();
+  const twentyFourHoursInMs = 24 * 60 * 60 * 1000;
+  return timeDiff >= 0 && timeDiff <= twentyFourHoursInMs;
+};
