@@ -26,6 +26,16 @@ export interface TrendingCordao {
  */
 export class SearchService {
   /**
+   * Sanitiza termo de busca removendo caracteres especiais perigosos para regex
+   * @param term - Termo bruto de busca
+   * @returns Termo sanitizado seguro para regex
+   */
+  static sanitizeSearchTerm(term: string): string {
+    // Escapar caracteres especiais de regex
+    return term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').trim();
+  }
+
+  /**
    * Extrai cordões de um texto
    */
   static extractCordoes(text: string): string[] {
@@ -77,8 +87,16 @@ export class SearchService {
   static searchCordoes(term: string, allPosts: Post[]): Post[] {
     if (!term.startsWith('$')) return [];
 
-    const pattern = new RegExp(`\\${term.substring(1)}\\b`, 'i');
-    return allPosts.filter(p => pattern.test(p.content));
+    // Sanitizar termo para regex seguro
+    const sanitized = this.sanitizeSearchTerm(term.substring(1));
+    const pattern = new RegExp(`\\$${sanitized}\\b`, 'i');
+    return allPosts.filter(p => {
+      try {
+        return pattern.test(p.content);
+      } catch {
+        return false; // Se regex falhar, excluir post
+      }
+    });
   }
 
   /**
@@ -86,10 +104,16 @@ export class SearchService {
    */
   static searchPosts(keyword: string, allPosts: Post[]): Post[] {
     const lowerKeyword = keyword.toLowerCase();
-    return allPosts.filter(p =>
-      p.content.toLowerCase().includes(lowerKeyword) ||
-      p.author.username.toLowerCase().includes(lowerKeyword)
-    );
+    return allPosts.filter(p => {
+      try {
+        return (
+          p.content.toLowerCase().includes(lowerKeyword) ||
+          p.author.username.toLowerCase().includes(lowerKeyword)
+        );
+      } catch {
+        return false; // Se busca falhar, excluir post
+      }
+    });
   }
 
   /**
