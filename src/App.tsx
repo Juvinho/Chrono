@@ -654,6 +654,7 @@ function App() {
                                 typingParentIds={typingParentIds}
                                 nextAutoRefresh={nextAutoRefresh}
                                 isAutoRefreshPaused={isAutoRefreshPaused}
+                                lastViewedNotifications={lastViewedNotifications}
                                 handleNavigate={handleNavigate}
                                 handleLogin={handleLogin}
                                 handleLogout={handleLogout}
