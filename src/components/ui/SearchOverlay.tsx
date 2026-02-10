@@ -197,7 +197,9 @@ function SearchResultsSection({
             {results.users.length > 0 && (
                 <ResultSection title="Users" count={results.users.length}>
                     {results.users.map(u => (
-                        <UserCard key={u.username} user={u} onViewProfile={onViewProfile} />
+                        <div key={u.username}>
+                            <UserCard user={u} onViewProfile={onViewProfile} />
+                        </div>
                     ))}
                 </ResultSection>
             )}
@@ -210,12 +212,13 @@ function SearchResultsSection({
                             SearchService.extractCordoes(p.content).includes(tag)
                         ).length;
                         return (
-                            <CordaoCard 
-                                key={c.id} 
-                                cordao={c} 
-                                mentions={mentions}
-                                onClick={() => onSearch(tag || c.content)} 
-                            />
+                            <div key={c.id}>
+                                <CordaoCard 
+                                    cordao={c} 
+                                    mentions={mentions}
+                                    onClick={() => onSearch(tag || c.content)} 
+                                />
+                            </div>
                         );
                     })}
                 </ResultSection>
@@ -224,7 +227,9 @@ function SearchResultsSection({
             {results.posts.length > 0 && (
                 <ResultSection title="Echoes" count={results.posts.length}>
                     {results.posts.map(p => (
-                        <PostCard key={p.id} post={p} onSearch={onSearch} />
+                        <div key={p.id}>
+                            <PostCard post={p} onSearch={onSearch} />
+                        </div>
                     ))}
                 </ResultSection>
             )}
@@ -256,7 +261,9 @@ function RecommendationsSection({
                     <h3 className="text-center font-bold text-[var(--theme-secondary)]">:: SUGGESTED USERS ::</h3>
                     <div className="space-y-2">
                         {recommendations.suggestedUsers.map(u => (
-                            <UserCard key={u.username} user={u} onViewProfile={onViewProfile} />
+                            <div key={u.username}>
+                                <UserCard user={u} onViewProfile={onViewProfile} />
+                            </div>
                         ))}
                     </div>
                 </div>
@@ -268,7 +275,9 @@ function RecommendationsSection({
                         {trendingCordoes.length > 0 ? (
                             // Deduplicate by tag
                             Array.from(new Map(trendingCordoes.map(c => [c.tag, c])).values()).map(c => (
-                                <TrendingCordaoCard key={c.tag} cordao={c} onSearch={onSearch} />
+                                <div key={c.tag}>
+                                    <TrendingCordaoCard cordao={c} onSearch={onSearch} />
+                                </div>
                             ))
                         ) : (
                             // Fallback to popular cordoes if no trending data
@@ -280,12 +289,13 @@ function RecommendationsSection({
                                     SearchService.extractCordoes(p.content).includes(c.tag)
                                 ).length;
                                 return (
-                                    <CordaoCard 
-                                        key={c.tag} 
-                                        cordao={c as any} 
-                                        mentions={mentions}
-                                        onClick={() => onSearch(c.tag || c.content)} 
-                                    />
+                                    <div key={c.tag}>
+                                        <CordaoCard 
+                                            cordao={c as any} 
+                                            mentions={mentions}
+                                            onClick={() => onSearch(c.tag || c.content)} 
+                                        />
+                                    </div>
                                 );
                             })
                         )}
@@ -297,7 +307,9 @@ function RecommendationsSection({
                     <h3 className="text-center font-bold text-[var(--theme-secondary)]">:: POPULAR ECHOES ::</h3>
                     <div className="space-y-2">
                         {recommendations.popularPosts.map(p => (
-                            <PostCard key={p.id} post={p} onSearch={onSearch} />
+                            <div key={p.id}>
+                                <PostCard post={p} onSearch={onSearch} />
+                            </div>
                         ))}
                     </div>
                 </div>

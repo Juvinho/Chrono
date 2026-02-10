@@ -59,9 +59,12 @@ export default function Header({ user, onLogout, onViewProfile, onNavigate, onNo
 
     const unreadMessageCount = useMemo(() => {
         if (!conversations) return 0;
-        return conversations.reduce((total, conv) => {
-            return total + (conv.unreadCount || 0);
-        }, 0);
+        let total = 0;
+        for (const conv of conversations) {
+            const unreadCount = (conv.unreadCount as unknown as number) || 0;
+            total += unreadCount;
+        }
+        return total;
     }, [conversations]);
 
     return (

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Item, User } from '../../../types/index';
 import { apiClient } from '../../../api';
+import { mapApiUserToUser } from '../../../api/mappers';
 import { CloseIcon, SearchIcon } from '../../../components/ui/icons';
 import Avatar from '../../profile/components/Avatar';
 import { useTranslation } from '../../../hooks/useTranslation';
@@ -145,7 +146,7 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
             // Refresh user to get global state update
             const userResult = await apiClient.getMe();
             if (userResult.data) {
-                onUserUpdate(userResult.data);
+                onUserUpdate(mapApiUserToUser(userResult.data));
             }
             
             // Reload inventory to clean up "equipped" state
@@ -167,7 +168,7 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
             // Refresh user to get global state update
             const userResult = await apiClient.getMe();
             if (userResult.data) {
-                onUserUpdate(userResult.data);
+                onUserUpdate(mapApiUserToUser(userResult.data));
             }
             
             // Reload inventory to clean up "equipped" state

@@ -294,7 +294,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Check if conversation already exists in list
-      const exists = Array.isArray(conversations) ? conversations.find(c => c.id === conversation.id) : undefined;
+      const exists = Array.isArray(conversations) ? conversations.find(c => (c as any).id === (conversation as any).id) : undefined;
       if (!exists) {
         setConversations(prev => [conversation, ...(Array.isArray(prev) ? prev : [])]);
       }

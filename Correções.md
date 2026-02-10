@@ -2655,3 +2655,830 @@ Você agora tem:
 ✅ **UX sem fricção** - usuário clica e vai direto para o chat  
 
 ***
+
+# **GUIA DE IMPLEMENTAÇÃO: Sistema de Tags Comportamentais da Chrono**
+
+## **1. Visão Geral do Sistema**
+
+### **Objetivo**
+Criar um sistema automatizado de badges/tags que reconheçam e incentivem comportamentos positivos, alertem sobre padrões de risco, e identifiquem tipos de usuários baseado em métricas de engajamento, tempo de plataforma e estilo de conteúdo.
+
+### **Princípios**
+- **Transparência**: Usuário deve saber como ganha/perde tags
+- **Incentivo Positivo**: Priorizar recompensas sobre punições
+- **Dinamismo**: Tags devem atualizar conforme comportamento muda
+- **Prevenção**: Identificar problemas antes de escalar
+
+***
+
+## **2. Arquitetura Técnica**
+
+### **Estrutura de Dados de Tag**
+```json
+{
+  "tag_id": "string",
+  "nome": "string",
+  "tipo": "enum [positivo, moderacao, tempo, estilo]",
+  "cor_hex": "string",
+  "cor_border": "string",
+  "condicao_aquisicao": "object",
+  "condicao_remocao": "object",
+  "prioridade_exibicao": "int (1-10)",
+  "icone": "string (emoji ou path)",
+  "visibilidade": "enum [publica, privada, admin_only]"
+}
+```
+
+### **Métricas Necessárias no Banco de Dados**
+
+#### **Métricas de Usuário (atualização contínua)**
+```javascript
+user_metrics: {
+  // Identidade
+  data_criacao: timestamp,
+  verificado: boolean,
+  
+  // Engajamento
+  total_posts: int,
+  total_comentarios: int,
+  total_reacoes_recebidas: int,
+  total_compartilhamentos_recebidos: int,
+  total_salvos_recebidos: int,
+  total_respostas_marcadas_uteis: int,
+  
+  // Frequência
+  dias_consecutivos_ativos: int,
+  media_posts_por_semana: float,
+  ultima_atividade: timestamp,
+  
+  // Diversidade
+  comunidades_participadas: array,
+  seguidores_unicos_comunidades: int,
+  tipos_conteudo: array, // [texto, imagem, video, etc]
+  
+  // Moderação
+  denuncias_recebidas: int,
+  avisos_oficiais: int,
+  conteudo_removido: int,
+  tempo_silenciamento_ativo: timestamp,
+  
+  // Tipo de comportamento
+  ratio_lurker: float, // views / posts
+  ratio_ajuda: float, // respostas úteis / comentários
+  ratio_discussao: float, // threads longas / total posts
+  ratio_arte: float, // posts com mídia criativa / total
+}
+```
+
+#### **Métricas de Conteúdo (por post)**
+```javascript
+post_metrics: {
+  trending_score: float,
+  salvamentos: int,
+  compartilhamentos: int,
+  tempo_medio_leitura: float,
+  taxa_conclusao: float, // para vídeos/threads
+}
+```
+
+***
+
+## **3. Definição Completa das Tags**
+
+### **CATEGORIA: COMPORTAMENTO POSITIVO** 
+*(tipo: positivo, visibilidade: publica)*
+
+#### **1. Pioneiro**
+```json
+{
+  "nome": "Pioneiro",
+  "cor_hex": "#FFD700",
+  "cor_border": "#B8860B",
+  "icone": "🚀",
+  "prioridade_exibicao": 9,
+  "condicao_aquisicao": {
+    "data_criacao": "< 30 dias da data_lancamento_chrono",
+    "OU": "participou_beta == true"
+  },
+  "condicao_remocao": "nunca",
+  "descricao_publica": "Membro fundador da Chrono"
+}
+```
+
+#### **2. Colaborador**
+```json
+{
+  "nome": "Colaborador",
+  "cor_hex": "#4A90E2",
+  "cor_border": "#2E5C8A",
+  "icone": "🤝",
+  "prioridade_exibicao": 7,
+  "condicao_aquisicao": {
+    "total_salvos_recebidos": ">= 100",
+    "OU": "total_compartilhamentos_recebidos >= 50"
+  },
+  "condicao_remocao": {
+    "nos_ultimos_90_dias": "salvos < 10 E compartilhamentos < 5"
+  },
+  "descricao_publica": "Cria conteúdo valioso para a comunidade"
+}
+```
+
+#### **3. Mentor**
+```json
+{
+  "nome": "Mentor",
+  "cor_hex": "#2ECC71",
+  "cor_border": "#1E8449",
+  "icone": "🎓",
+  "prioridade_exibicao": 8,
+  "condicao_aquisicao": {
+    "total_respostas_marcadas_uteis": ">= 50",
+    "E": "ratio_ajuda >= 0.3"
+  },
+  "condicao_remocao": {
+    "nos_ultimos_60_dias": "respostas_uteis < 5"
+  },
+  "descricao_publica": "Ajuda consistentemente outros usuários"
+}
+```
+
+#### **4. Criador Constante**
+```json
+{
+  "nome": "Criador Constante",
+  "cor_hex": "#9B59B6",
+  "cor_border": "#6C3483",
+  "icone": "✨",
+  "prioridade_exibicao": 6,
+  "condicao_aquisicao": {
+    "media_posts_por_semana": ">= 3",
+    "por_duracao": "90 dias consecutivos"
+  },
+  "condicao_remocao": {
+    "media_posts_por_semana": "< 1 por 30 dias"
+  },
+  "descricao_publica": "Posta com frequência consistente"
+}
+```
+
+#### **5. Conector**
+```json
+{
+  "nome": "Conector",
+  "cor_hex": "#17D4D9",
+  "cor_border": "#0E8C8F",
+  "icone": "🌐",
+  "prioridade_exibicao": 6,
+  "condicao_aquisicao": {
+    "comunidades_participadas": ">= 10",
+    "E": "seguidores_unicos_comunidades >= 5"
+  },
+  "condicao_remocao": {
+    "comunidades_ativas_ultimos_30_dias": "< 3"
+  },
+  "descricao_publica": "Conecta diferentes comunidades"
+}
+```
+
+#### **6. Popular**
+```json
+{
+  "nome": "Popular",
+  "cor_hex": "#FF6B9D",
+  "cor_border": "#C7385F",
+  "icone": "⭐",
+  "prioridade_exibicao": 5,
+  "condicao_aquisicao": {
+    "total_reacoes_recebidas": ">= 5000"
+  },
+  "condicao_remocao": "nunca (mas pode ser sobreposta)",
+  "descricao_publica": "Conteúdo amplamente apreciado"
+}
+```
+
+#### **7. Verificado**
+```json
+{
+  "nome": "Verificado",
+  "cor_hex": "#E74C3C",
+  "cor_border": "#A93226",
+  "icone": "✓",
+  "prioridade_exibicao": 10,
+  "condicao_aquisicao": {
+    "verificado": "true (manual pela equipe)"
+  },
+  "condicao_remocao": "manual pela equipe",
+  "descricao_publica": "Identidade confirmada pela Chrono"
+}
+```
+
+#### **8. Descoberta do Dia**
+```json
+{
+  "nome": "Descoberta do Dia",
+  "cor_hex": "#FF8C42",
+  "cor_border": "#CC5A00",
+  "icone": "🔥",
+  "prioridade_exibicao": 8,
+  "condicao_aquisicao": {
+    "post_trending_score": "top 10 nas últimas 24h"
+  },
+  "condicao_remocao": {
+    "apos": "7 dias da conquista"
+  },
+  "descricao_publica": "Conteúdo em alta recentemente"
+}
+```
+
+***
+
+### **CATEGORIA: SEGURANÇA E MODERAÇÃO** 
+*(tipo: moderacao)*
+
+#### **9. Observador**
+```json
+{
+  "nome": "Observador",
+  "cor_hex": "#8B0000",
+  "cor_border": "#5C0000",
+  "icone": "👁️",
+  "prioridade_exibicao": 9,
+  "visibilidade": "admin_only",
+  "condicao_aquisicao": {
+    "denuncias_recebidas": "entre 3 e 10",
+    "E": "conteudo_removido <= 2"
+  },
+  "condicao_remocao": {
+    "apos_30_dias_sem_novas_denuncias": "true",
+    "OU": "escalou_para_advertido": "true"
+  },
+  "descricao_interna": "Monitoramento preventivo ativo"
+}
+```
+
+#### **10. Advertido**
+```json
+{
+  "nome": "Advertido",
+  "cor_hex": "#F39C12",
+  "cor_border": "#B8790A",
+  "icone": "⚠️",
+  "prioridade_exibicao": 10,
+  "visibilidade": "publica",
+  "condicao_aquisicao": {
+    "avisos_oficiais": ">= 1"
+  },
+  "condicao_remocao": {
+    "apos_60_dias_sem_infracoes": "true"
+  },
+  "descricao_publica": "Recebeu aviso oficial"
+}
+```
+
+#### **11. Silenciado**
+```json
+{
+  "nome": "Silenciado",
+  "cor_hex": "#34495E",
+  "cor_border": "#1C2833",
+  "icone": "🔇",
+  "prioridade_exibicao": 10,
+  "visibilidade": "publica",
+  "condicao_aquisicao": {
+    "tempo_silenciamento_ativo": "> timestamp_atual"
+  },
+  "condicao_remocao": {
+    "tempo_silenciamento_expirado": "true"
+  },
+  "descricao_publica": "Permissões de postagem temporariamente restritas"
+}
+```
+
+#### **12. Protegido**
+```json
+{
+  "nome": "Protegido",
+  "cor_hex": "#B19CD9",
+  "cor_border": "#7D5BA6",
+  "icone": "🛡️",
+  "prioridade_exibicao": 7,
+  "visibilidade": "privada",
+  "condicao_aquisicao": {
+    "idade": "< 18",
+    "OU": "conta_nova": "< 7 dias",
+    "OU": "marcado_vulneravel": "true"
+  },
+  "condicao_remocao": {
+    "idade": ">= 18 E conta_dias > 7"
+  },
+  "descricao_interna": "Filtros de proteção e anti-spam ativos"
+}
+```
+
+***
+
+### **CATEGORIA: TEMPO E ENGAJAMENTO** 
+*(tipo: tempo, visibilidade: publica)*
+
+#### **13. Veterano**
+```json
+{
+  "nome": "Veterano",
+  "cor_hex": "#1E5631",
+  "cor_border": "#0F2B19",
+  "icone": "🏆",
+  "prioridade_exibicao": 8,
+  "condicao_aquisicao": {
+    "tempo_desde_criacao": ">= 730 dias (2 anos)",
+    "E": "total_posts >= 100"
+  },
+  "condicao_remocao": "nunca",
+  "descricao_publica": "Membro ativo há mais de 2 anos"
+}
+```
+
+#### **14. Recém-chegado**
+```json
+{
+  "nome": "Recém-chegado",
+  "cor_hex": "#AED6F1",
+  "cor_border": "#5DADE2",
+  "icone": "🌱",
+  "prioridade_exibicao": 5,
+  "condicao_aquisicao": {
+    "tempo_desde_criacao": "<= 7 dias"
+  },
+  "condicao_remocao": {
+    "tempo_desde_criacao": "> 7 dias"
+  },
+  "descricao_publica": "Novo na Chrono"
+}
+```
+
+#### **15. Explorador**
+```json
+{
+  "nome": "Explorador",
+  "cor_hex": "#1ABC9C",
+  "cor_border": "#117A65",
+  "icone": "🧭",
+  "prioridade_exibicao": 6,
+  "condicao_aquisicao": {
+    "recursos_diferentes_usados": ">= 8",
+    "exemplos": ["listas", "comunidades", "modo_escuro", "filtros", "etc"]
+  },
+  "condicao_remocao": {
+    "recursos_ativos_ultimos_30_dias": "< 4"
+  },
+  "descricao_publica": "Explora todos os recursos da Chrono"
+}
+```
+
+#### **16. Silencioso**
+```json
+{
+  "nome": "Silencioso",
+  "cor_hex": "#B2BABB",
+  "cor_border": "#7F8C8D",
+  "icone": "👤",
+  "prioridade_exibicao": 3,
+  "condicao_aquisicao": {
+    "ratio_lurker": ">= 10",
+    "E": "dias_consecutivos_ativos >= 30"
+  },
+  "condicao_remocao": {
+    "media_posts_por_semana": "> 1"
+  },
+  "descricao_publica": "Observador frequente"
+}
+```
+
+***
+
+### **CATEGORIA: ESTILO E PERSONALIDADE** 
+*(tipo: estilo, visibilidade: publica)*
+
+#### **17. Artista**
+```json
+{
+  "nome": "Artista",
+  "cor_hex": "#8E44AD",
+  "cor_border": "#5B2C6F",
+  "icone": "🎨",
+  "prioridade_exibicao": 6,
+  "condicao_aquisicao": {
+    "ratio_arte": ">= 0.6",
+    "E": "total_posts >= 30"
+  },
+  "condicao_remocao": {
+    "ratio_arte_ultimos_50_posts": "< 0.4"
+  },
+  "descricao_publica": "Criador de conteúdo visual e artístico"
+}
+```
+
+#### **18. Analista**
+```json
+{
+  "nome": "Analista",
+  "cor_hex": "#1F3A93",
+  "cor_border": "#0E1A47",
+  "icone": "📊",
+  "prioridade_exibicao": 6,
+  "condicao_aquisicao": {
+    "keywords_frequentes": ["dados", "análise", "estatística", "review"],
+    "E": "media_tamanho_posts": "> 500 palavras"
+  },
+  "condicao_remocao": {
+    "perfil_mudou_ultimos_60_dias": "true"
+  },
+  "descricao_publica": "Focado em dados e análises"
+}
+```
+
+#### **19. Narrador**
+```json
+{
+  "nome": "Narrador",
+  "cor_hex": "#7D2348",
+  "cor_border": "#4A1528",
+  "icone": "📖",
+  "prioridade_exibicao": 6,
+  "condicao_aquisicao": {
+    "ratio_discussao": ">= 0.5",
+    "OU": "threads_longas": ">= 20"
+  },
+  "condicao_remocao": {
+    "threads_longas_ultimos_90_dias": "< 3"
+  },
+  "descricao_publica": "Conta histórias e cria threads envolventes"
+}
+```
+
+#### **20. Caótico**
+```json
+{
+  "nome": "Caótico",
+  "cor_hex": "#FF5722",
+  "cor_border": "#BF360C",
+  "icone": "🎭",
+  "prioridade_exibicao": 5,
+  "condicao_aquisicao": {
+    "keywords_frequentes": ["meme", "shitpost", "kkkk"],
+    "E": "denuncias_recebidas <= 1",
+    "E": "total_posts >= 50"
+  },
+  "condicao_remocao": {
+    "perfil_mudou": "true"
+  },
+  "descricao_publica": "Humor caótico, mas respeitoso"
+}
+```
+
+#### **21. Pacificador**
+```json
+{
+  "nome": "Pacificador",
+  "cor_hex": "#A8E6CF",
+  "cor_border": "#5FA87E",
+  "icone": "☮️",
+  "prioridade_exibicao": 7,
+  "condicao_aquisicao": {
+    "deteccao_ia": "mediação de conflitos >= 10 vezes",
+    "E": "reportado_por_agressao == 0"
+  },
+  "condicao_remocao": {
+    "reportado_por_agressao": "> 0"
+  },
+  "descricao_publica": "Ajuda a manter conversas saudáveis"
+}
+```
+
+***
+
+## **4. Sistema de Processamento e Atualização**
+
+### **Frequência de Verificação**
+
+```javascript
+tag_update_schedule: {
+  tempo_real: [
+    "Verificado", // manual
+    "Silenciado", // imediato quando aplicado
+    "Observador", // após cada denúncia
+    "Advertido" // após ação de moderação
+  ],
+  
+  diario: [
+    "Descoberta do Dia", // checagem de trending
+    "Recém-chegado", // idade da conta
+    "Protegido" // idade da conta
+  ],
+  
+  semanal: [
+    "Colaborador",
+    "Popular",
+    "Criador Constante",
+    "Explorador",
+    "Silencioso",
+    "Conector"
+  ],
+  
+  mensal: [
+    "Mentor",
+    "Veterano",
+    "Artista",
+    "Analista",
+    "Narrador",
+    "Caótico",
+    "Pacificador"
+  ],
+  
+  unico: [
+    "Pioneiro" // verificado uma vez na criação
+  ]
+}
+```
+
+### **Algoritmo de Atualização (pseudocódigo)**
+
+```python
+def atualizar_tags_usuario(user_id):
+    # 1. Buscar métricas atuais
+    metricas = obter_metricas_usuario(user_id)
+    tags_atuais = obter_tags_usuario(user_id)
+    
+    # 2. Verificar cada definição de tag
+    for tag_definicao in TODAS_TAGS:
+        possui_atualmente = tag_definicao.nome in tags_atuais
+        
+        # 3. Verificar condição de aquisição
+        deve_ter = verificar_condicao(
+            metricas, 
+            tag_definicao.condicao_aquisicao
+        )
+        
+        # 4. Verificar condição de remoção
+        deve_remover = verificar_condicao(
+            metricas, 
+            tag_definicao.condicao_remocao
+        )
+        
+        # 5. Aplicar mudanças
+        if deve_ter and not possui_atualmente:
+            adicionar_tag(user_id, tag_definicao)
+            notificar_usuario(user_id, "nova_tag", tag_definicao)
+            
+        elif possui_atualmente and deve_remover:
+            remover_tag(user_id, tag_definicao)
+            if tag_definicao.notificar_remocao:
+                notificar_usuario(user_id, "tag_removida", tag_definicao)
+    
+    # 6. Ordenar por prioridade para exibição
+    ordenar_tags_por_prioridade(user_id)
+```
+
+### **Detecção de Padrões com IA (opcional)**
+
+Para tags como **Analista**, **Narrador**, **Caótico**, **Pacificador**, use análise de linguagem natural:
+
+```python
+def classificar_estilo_conteudo(post_text):
+    # Usar modelo de classificação de texto
+    categorias = {
+        "analitico": keywords_count(["dados", "análise", "estatística"]),
+        "narrativo": detectar_estrutura_historia(post_text),
+        "humoristico": sentiment_analysis(post_text, tipo="humor"),
+        "conflituoso": detectar_linguagem_agressiva(post_text),
+        "mediador": detectar_tentativa_apaziguar(post_text)
+    }
+    
+    return max(categorias, key=categorias.get)
+```
+
+***
+
+## **5. Interface e Exibição**
+
+### **Regras de Exibição no Perfil**
+
+```javascript
+regras_exibicao: {
+  maximo_tags_visiveis: 3, // resto fica em "Ver mais"
+  ordem: "por prioridade_exibicao (decrescente)",
+  excecoes: {
+    "Verificado": "sempre primeira posição",
+    "Silenciado": "sempre visível se ativo",
+    "Advertido": "sempre visível se ativo"
+  }
+}
+```
+
+### **Componente Visual (exemplo React)**
+
+```jsx
+<div className="user-tags">
+  {tags.slice(0, 3).map(tag => (
+    <span 
+      key={tag.id}
+      className="tag"
+      style={{
+        backgroundColor: tag.cor_hex,
+        borderColor: tag.cor_border,
+        color: calcularCorTexto(tag.cor_hex)
+      }}
+      title={tag.descricao_publica}
+    >
+      <span className="tag-icon">{tag.icone}</span>
+      <span className="tag-nome">{tag.nome}</span>
+    </span>
+  ))}
+  
+  {tags.length > 3 && (
+    <button className="ver-mais-tags">+{tags.length - 3}</button>
+  )}
+</div>
+```
+
+### **CSS Base**
+
+```css
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  border: 1.5px solid;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transition: transform 0.2s;
+}
+
+.tag:hover {
+  transform: scale(1.05);
+  cursor: pointer;
+}
+
+.tag-icon {
+  font-size: 14px;
+}
+```
+
+***
+
+## **6. Gamificação e Notificações**
+
+### **Quando Notificar**
+
+```javascript
+notificacoes_tags: {
+  nova_tag_positiva: {
+    tipo: "celebração",
+    mensagem: "Parabéns! Você conquistou a tag '{tag_nome}' 🎉",
+    mostrar: "modal + notificação in-app"
+  },
+  
+  tag_removida_positiva: {
+    tipo: "neutra",
+    mensagem: "Você perdeu a tag '{tag_nome}'. Continue ativo para recuperá-la!",
+    mostrar: "notificação in-app"
+  },
+  
+  tag_moderacao_adicionada: {
+    tipo: "aviso",
+    mensagem: "Atenção: você recebeu a tag '{tag_nome}'. Veja detalhes nas regras.",
+    mostrar: "modal bloqueante + email"
+  },
+  
+  tag_moderacao_removida: {
+    tipo: "positiva",
+    mensagem: "A tag '{tag_nome}' foi removida do seu perfil. Continue assim!",
+    mostrar: "notificação in-app"
+  }
+}
+```
+
+### **Sistema de Progresso**
+
+Para tags incrementais (Popular, Mentor, etc.), mostrar progresso:
+
+```javascript
+progresso_tag: {
+  tag: "Popular",
+  progresso_atual: 3500,
+  meta: 5000,
+  percentual: 70,
+  mensagem: "Faltam 1.500 reações para a tag Popular!"
+}
+```
+
+***
+
+## **7. Painel de Administração**
+
+### **Funcionalidades Necessárias**
+
+1. **Visão Geral**
+   - Distribuição de tags ativas na plataforma
+   - Usuários por categoria
+   - Trending tags
+
+2. **Moderação**
+   - Lista de usuários com tag "Observador"
+   - Histórico de advertências
+   - Ferramentas para aplicar/remover tags manualmente
+
+3. **Ajuste de Parâmetros**
+   - Editar thresholds de cada tag
+   - Ativar/desativar tags temporariamente
+   - Criar novas tags customizadas
+
+4. **Analytics**
+   - Impacto das tags no engajamento
+   - Correlação entre tags e retenção
+   - Efetividade do sistema de moderação
+
+***
+
+## **8. Considerações Importantes**
+
+### **Privacidade**
+- Tags de moderação não devem ser publicamente visíveis (exceto Silenciado/Advertido)
+- Usuários devem poder ver suas próprias tags privadas
+- Implementar LGPD/GDPR compliance para dados coletados
+
+### **Balanceamento**
+- Evitar "tag inflation" - não deixar muito fácil conseguir tudo
+- Garantir que tags raras sejam realmente especiais
+- Revisar métricas trimestralmente
+
+### **Acessibilidade**
+- Cores devem ter contraste adequado
+- Emojis devem ter texto alternativo
+- Tags devem funcionar com leitores de tela
+
+### **Performance**
+- Cachear tags atuais para não recalcular sempre
+- Usar jobs assíncronos para atualização em lote
+- Indexar métricas principais no banco
+
+***
+
+## **9. Roadmap de Implementação**
+
+### **Fase 1: MVP (1-2 meses)**
+- Implementar 5 tags básicas:
+  - Verificado (manual)
+  - Recém-chegado (automático)
+  - Popular (automático)
+  - Advertido (moderação)
+  - Silenciado (moderação)
+- Sistema de exibição no perfil
+- Painel admin básico
+
+### **Fase 2: Expansão (2-3 meses)**
+- Adicionar 10 tags comportamentais
+- Sistema de notificações
+- Progresso de tags
+- Analytics básico
+
+### **Fase 3: Refinamento (3-4 meses)**
+- Restante das tags
+- IA para detecção de estilo
+- Gamificação avançada
+- Dashboard completo
+
+***
+
+## **10. Checklist de Implementação**
+
+### **Backend**
+- [ ] Criar tabela `user_tags`
+- [ ] Criar tabela `tag_definitions`
+- [ ] Criar tabela `user_metrics`
+- [ ] Implementar cron jobs de atualização
+- [ ] API endpoints (GET /user/:id/tags, POST /admin/tags)
+- [ ] Sistema de cache
+- [ ] Webhooks para eventos (nova tag, remoção)
+
+### **Frontend**
+- [ ] Componente de exibição de tags
+- [ ] Modal de detalhes da tag
+- [ ] Página "Minhas Tags"
+- [ ] Notificações de conquista
+- [ ] Progresso de tags
+- [ ] Painel admin
+
+### **QA**
+- [ ] Testes unitários das condições
+- [ ] Testes de performance (1M+ usuários)
+- [ ] Testes de moderação
+- [ ] Validação de cores/acessibilidade
+- [ ] Beta test com grupo fechado
+
+***
+
+**Esse guia está pronto para ser passado diretamente para um time de dev ou para uma IA implementadora. Quer que eu refine alguma seção específica ou crie um arquivo de configuração JSON completo com todas as tags?**

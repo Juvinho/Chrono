@@ -4,6 +4,7 @@ import { baseClient } from './client';
 export interface LoginRequest {
   username: string;
   password: string;
+  twoFactorCode?: string;
 }
 
 export interface LoginResponse {
@@ -44,6 +45,7 @@ export interface User {
 
 export interface CheckAvailabilityResponse {
   available: boolean;
+  valid?: boolean;
   error?: string;
   suggestions?: string[];
 }
