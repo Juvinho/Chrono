@@ -22,14 +22,12 @@ export interface TrendingThread {
 
 export class TrendingService {
   /**
-   * Calcula cordões trending apenas do dia atual (00:00 até 23:59)
+   * Calcula cordões trending apenas das últimas 24 horas (não apenas do dia atual)
    * Ordenado por número de menções
    */
   async getTrendingCordoesForToday(): Promise<TrendingCord[]> {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
+    const now = new Date();
+    const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
     const result = await pool.query(
       `SELECT 
@@ -43,7 +41,7 @@ export class TrendingService {
       GROUP BY tag
       ORDER BY mentions DESC
       LIMIT 20`,
-      [todayStart, todayEnd]
+      [last24Hours, now]
     );
 
     return result.rows.map(row => ({
@@ -56,16 +54,14 @@ export class TrendingService {
   }
 
   /**
-   * Calcula threads trending do dia atual baseado em:
+   * Calcula threads trending das últimas 24 horas baseado em:
    * - Número de reações (peso: 1 ponto cada)
    * - Número de replies (peso: 2 pontos cada)
    * - Views (sem implementação atual, pode adicionar depois)
    */
   async getTrendingThreadsForToday(): Promise<TrendingThread[]> {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
+    const now = new Date();
+    const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
     const result = await pool.query(
       `SELECT 
@@ -91,7 +87,7 @@ export class TrendingService {
       HAVING (COALESCE(COUNT(DISTINCT r.id), 0) > 0 OR COALESCE(COUNT(DISTINCT replies.id), 0) > 0)
       ORDER BY score DESC, p.created_at DESC
       LIMIT 20`,
-      [todayStart, todayEnd]
+      [last24Hours, now]
     );
 
     return result.rows.map(row => ({

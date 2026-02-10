@@ -4,7 +4,7 @@ import { Post, User, CyberpunkReaction } from '../../../types/index';
 import PostCard from './PostCard';
 import PostSkeleton from './PostSkeleton';
 import { PostComposer } from './PostComposer';
-import { isSameDay } from '../../../utils/date';
+import { isSameDay, isPostWithin24Hours } from '../../../utils/date';
 import { PlusIcon } from '../../../components/ui/icons';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useHourlyRefresh } from '../../../hooks/useHourlyRefresh';
@@ -131,8 +131,11 @@ export default function EchoFrame({
             // If selected date is today, show all available posts (feed mode)
             // Otherwise filter by specific date (time machine mode)
             if (isSameDay(selectedDate, new Date())) {
-                filteredPosts = allPosts;
+                // Show only posts within last 24 hours (feed mode - 24h visibility window)
+                filteredPosts = allPosts.filter(p => isPostWithin24Hours(p.timestamp));
             } else {
+                // Time machine mode: show posts from that specific day that are still visible
+                // A post is visible on a specific day if it was created on that day
                 filteredPosts = allPosts.filter(p => isSameDay(new Date(p.timestamp), selectedDate));
             }
             
