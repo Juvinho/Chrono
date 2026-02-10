@@ -533,9 +533,20 @@ export function initializeEmailService(config: EmailServiceConfig): EmailService
   return emailServiceInstance;
 }
 
-export function getEmailService(): EmailService | null {
+export async function getEmailService(): Promise<EmailService | any | null> {
   if (!emailServiceInstance) {
-    console.warn('⚠️ Email service não foi inicializado. Retornando null.');
+    // Try to fall back to mock email service
+    try {
+      const { getMockEmailService } = await import('./mockEmailService.js');
+      const mockService = getMockEmailService();
+      if (mockService) {
+        console.log('⚠️ Email service não inicializado. Usando MockEmailService.');
+        return mockService;
+      }
+    } catch (err) {
+      // Mock service not available either
+    }
+    console.warn('⚠️ Nenhum serviço de email disponível.');
     return null;
   }
   return emailServiceInstance;

@@ -517,23 +517,42 @@ const startServer = async () => {
       // Initialize Email Service for email verification
       console.log('📧 Inicializando serviço de email...');
       try {
-        const { initializeEmailService } = await import('./services/emailService.js');
-        const emailService = initializeEmailService({
-          gmailUser: process.env.GMAIL_USER!,
-          gmailAppPassword: process.env.GMAIL_APP_PASSWORD!,
-          frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
-          fromEmail: process.env.SMTP_FROM_EMAIL || 'noreply@chrono.com',
-          fromName: process.env.SMTP_FROM_NAME || 'Chrono'
-        });
+        const hasGmailCredentials = process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD;
         
-        // Test email connection
-        const emailConnected = await emailService.testConnection();
-        if (!emailConnected) {
-          console.warn('⚠️  Email service not configured or credentials invalid. Email verification disabled.');
+        if (hasGmailCredentials) {
+          // Use real Gmail service
+          const { initializeEmailService } = await import('./services/emailService.js');
+          const emailService = initializeEmailService({
+            gmailUser: process.env.GMAIL_USER!,
+            gmailAppPassword: process.env.GMAIL_APP_PASSWORD!,
+            frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+            fromEmail: process.env.SMTP_FROM_EMAIL || 'noreply@chrono.com',
+            fromName: process.env.SMTP_FROM_NAME || 'Chrono'
+          });
+          
+          // Test email connection
+          const emailConnected = await emailService.testConnection();
+          if (!emailConnected) {
+            console.warn('⚠️  Email service not configured or credentials invalid. Falling back to mock service.');
+            // Initialize mock service as fallback
+            const { initializeMockEmailService } = await import('./services/mockEmailService.js');
+            initializeMockEmailService();
+          }
+        } else {
+          // No credentials provided, use mock service
+          console.log('📧 Gmail credentials não configuradas. Usando MockEmailService para testes.');
+          const { initializeMockEmailService } = await import('./services/mockEmailService.js');
+          initializeMockEmailService();
         }
       } catch (emailErr: any) {
         console.warn('⚠️  Email service initialization failed:', emailErr.message);
-        // Don't stop server, email is optional
+        console.log('📧 Usando MockEmailService como fallback...');
+        try {
+          const { initializeMockEmailService } = await import('./services/mockEmailService.js');
+          initializeMockEmailService();
+        } catch (mockErr: any) {
+          console.error('❌ Mock email service também falhou:', mockErr.message);
+        }
       }
       
       // Initialize automatic tag updates (every 6 hours)

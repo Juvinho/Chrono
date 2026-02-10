@@ -260,7 +260,7 @@ router.post('/register', async (req, res) => {
     // Send verification email
     try {
       const { getEmailService } = await import('../services/emailService.js');
-      const emailService = getEmailService();
+      const emailService = await getEmailService();
       
       if (emailService) {
         const ipAddress = req.ip || req.connection.remoteAddress;

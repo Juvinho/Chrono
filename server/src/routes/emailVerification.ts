@@ -15,7 +15,7 @@ emailVerificationRouter.get(
   async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.userId;
-      const emailService = getEmailService();
+      const emailService = await getEmailService();
       
       if (!emailService) {
         return res.status(503).json({
@@ -51,7 +51,7 @@ emailVerificationRouter.post(
   async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.userId;
-      const emailService = getEmailService();
+      const emailService = await getEmailService();
       
       if (!emailService) {
         return res.status(503).json({
@@ -121,7 +121,7 @@ emailVerificationRouter.post(
   async (req: AuthRequest, res: Response) => {
     try {
       const userId = req.userId;
-      const emailService = getEmailService();
+      const emailService = await getEmailService();
       
       if (!emailService) {
         return res.status(503).json({
@@ -184,7 +184,7 @@ emailVerificationRouter.get(
         });
       }
 
-      const emailService = getEmailService();
+      const emailService = await getEmailService();
       
       if (!emailService) {
         return res.status(503).json({
@@ -237,7 +237,7 @@ emailVerificationRouter.post(
         });
       }
 
-      const emailService = getEmailService();
+      const emailService = await getEmailService();
       
       if (!emailService) {
         return res.status(503).json({
