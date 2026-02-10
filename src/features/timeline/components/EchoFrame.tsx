@@ -118,13 +118,13 @@ export default function EchoFrame({
             const sourcePosts = allKnownPosts || allPosts;
             if (lowercasedQuery.startsWith('$')) {
                  filteredPosts = sourcePosts.filter(p => 
-                    p.content.toLowerCase().includes(lowercasedQuery)
+                    p.content.toLowerCase().includes(lowercasedQuery) && isPostWithin24Hours(p.timestamp)
                 );
             } else {
                 filteredPosts = sourcePosts.filter(p => 
                     (p.content.toLowerCase().includes(lowercasedQuery) ||
                     p.author.username.toLowerCase().includes(lowercasedQuery) ||
-                    p.id === searchQuery)
+                    p.id === searchQuery) && isPostWithin24Hours(p.timestamp)
                 );
             }
         } else {
@@ -318,7 +318,7 @@ export default function EchoFrame({
     if (activeCordTag) {
         const cordTagLower = activeCordTag.toLowerCase();
         const cordPopular = allPosts
-            .filter(p => p.content.toLowerCase().includes(cordTagLower))
+            .filter(p => p.content.toLowerCase().includes(cordTagLower) && isPostWithin24Hours(p.timestamp))
             .sort((a, b) => {
                 const scoreA = (a.replies?.length || 0) * 2 + Object.values(a.reactions || {}).reduce((sum, v) => sum + v, 0);
                 const scoreB = (b.replies?.length || 0) * 2 + Object.values(b.reactions || {}).reduce((sum, v) => sum + v, 0);
@@ -326,7 +326,7 @@ export default function EchoFrame({
             })
             .slice(0, 10);
         const cordRecent = allPosts
-            .filter(p => p.content.toLowerCase().includes(cordTagLower))
+            .filter(p => p.content.toLowerCase().includes(cordTagLower) && isPostWithin24Hours(p.timestamp))
             .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
         const handleCordPostSubmit = (postData: Omit<Post, 'id' | 'author' | 'timestamp' | 'replies' | 'repostOf' | 'likes' | 'likedBy'>, existingPostId?: string) => {
