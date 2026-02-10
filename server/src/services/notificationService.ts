@@ -19,13 +19,14 @@ export class NotificationService {
           const actorRes = await pool.query('SELECT username FROM users WHERE id = $1', [job.actorId]);
           const userEmail = userRes.rows[0]?.email || null;
           const actorUsername = actorRes.rows[0]?.username || 'Chrono';
-          if (userEmail && process.env.SMTP_USER) {
-            const emailSvc = new EmailService();
-            const subject = `Chrono: ${job.type}`;
-            const text = `${actorUsername} interagiu com você (${job.type}).`;
-            const html = `<p>${actorUsername} interagiu com você (${job.type}).</p>`;
-            await emailSvc.sendNotificationEmail(userEmail, subject, html, text);
-          }
+          // Email notifications are not implemented yet - reserved for future use
+          // if (userEmail && process.env.SMTP_USER) {
+          //   const emailSvc = new EmailService();
+          //   const subject = `Chrono: ${job.type}`;
+          //   const text = `${actorUsername} interagiu com você (${job.type}).`;
+          //   const html = `<p>${actorUsername} interagiu com você (${job.type}).</p>`;
+          //   await emailSvc.sendNotificationEmail(userEmail, subject, html, text);
+          // }
           // Placeholder: push notifications will be sent when web-push is available
           // We still query subscriptions to keep queue flow consistent
           const subs = await pool.query('SELECT endpoint FROM push_subscriptions WHERE user_id = $1', [job.userId]);

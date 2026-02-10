@@ -36,6 +36,7 @@ import marketplaceRoutes from './routes/marketplace.js';
 import companionRoutes from './routes/companionRoutes.js';
 import tagsRoutes from './routes/tags.js';
 import userBioRoutes from './routes/userBio.js';
+import emailVerificationRouter from './routes/emailVerification.js';
 import adminAuthRoutes from './routes/admin/auth.js';
 import adminTagsRoutes from './routes/admin/tags.js';
 import adminUsersRoutes from './routes/admin/users.js';
@@ -324,6 +325,7 @@ app.get('/api', (_req: express.Request, res: express.Response) => {
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/auth/email-verification', emailVerificationRouter);
 app.use('/api/users', userRoutes);
 app.use('/api/bio', userBioRoutes);
 app.use('/api/posts', postRoutes);
@@ -511,6 +513,28 @@ const startServer = async () => {
     try {
       const notifSvc = new NotificationService();
       notifSvc.startQueueWorker();
+      
+      // Initialize Email Service for email verification
+      console.log('📧 Inicializando serviço de email...');
+      try {
+        const { initializeEmailService } = await import('./services/emailService.js');
+        const emailService = initializeEmailService({
+          gmailUser: process.env.GMAIL_USER!,
+          gmailAppPassword: process.env.GMAIL_APP_PASSWORD!,
+          frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+          fromEmail: process.env.SMTP_FROM_EMAIL || 'noreply@chrono.com',
+          fromName: process.env.SMTP_FROM_NAME || 'Chrono'
+        });
+        
+        // Test email connection
+        const emailConnected = await emailService.testConnection();
+        if (!emailConnected) {
+          console.warn('⚠️  Email service not configured or credentials invalid. Email verification disabled.');
+        }
+      } catch (emailErr: any) {
+        console.warn('⚠️  Email service initialization failed:', emailErr.message);
+        // Don't stop server, email is optional
+      }
       
       // Initialize automatic tag updates (every 6 hours)
       console.log('🏷️  Iniciando scheduler de atualização de tags...');

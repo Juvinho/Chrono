@@ -254,16 +254,32 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Email already registered' });
     }
 
-    // For Alpha/Development: Auto-verify all new accounts
+    // Create user (email_verified = false by default)
     const user = await userService.createUser(username, email, password, avatar);
-    await pool.query('UPDATE users SET is_verified = TRUE WHERE id = $1', [user.id]);
+
+    // Send verification email
+    try {
+      const { getEmailService } = await import('../services/emailService.js');
+      const emailService = getEmailService();
+      const ipAddress = req.ip || req.connection.remoteAddress;
+      const userAgent = req.get('user-agent');
+      
+      await emailService.sendVerificationEmail(user, ipAddress, userAgent);
+      console.log(`✅ Verification email sent to ${email}`);
+    } catch (emailError) {
+      console.error('⚠️ Failed to send verification email:', emailError);
+      // Don't block registration if email fails, but log it
+    }
 
     res.status(201).json({
-      message: 'Registration successful. Welcome to Chrono Alpha!',
+      message: 'Registration successful! Please verify your email to continue.',
       user: {
+        id: user.id,
         username: user.username,
-        email: user.email 
-      }
+        email: user.email,
+        email_verified: false
+      },
+      nextStep: 'verify_email'
     });
   } catch (error: any) {
     console.error('Register error:', error);
