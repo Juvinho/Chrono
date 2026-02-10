@@ -11,6 +11,7 @@ import ReactionTooltip from './ReactionTooltip';
 import { postIdMapper } from '../../../utils/postIdMapper';
 import { ImageViewer } from '../../../components/ImageViewer';
 import '../../../styles/post-glitch-animation.css';
+import '../../../styles/post-interactions-animations.css';
 
 interface PostCardProps {
     post: Post;
@@ -90,6 +91,10 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
     const [isReplying, setIsReplying] = useState(false);
     const [replyContent, setReplyContent] = useState('');
     const [showImageViewer, setShowImageViewer] = useState(false);
+    const [lastReactionAdded, setLastReactionAdded] = useState<CyberpunkReaction | null>(null);
+    const [sparkles, setSparkles] = useState<Array<{ id: number; x: number; y: number }>>([]);
+    const [animatingReactions, setAnimatingReactions] = useState<Set<CyberpunkReaction>>(new Set());
+    const reactionCounterRef = useRef<HTMLDivElement>(null);
 
     // Helper para navegar para o post com ID randômico
     const handleNavigateToPost = (postId: string) => {
@@ -137,8 +142,47 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
 
     const handleReact = (reaction: CyberpunkReaction) => {
         playSound('like');
+        
+        // Aplicar animação ao botão de reação
+        setLastReactionAdded(reaction);
+        setAnimatingReactions(prev => new Set([...prev, reaction]));
+        
+        // Criar sparkles
+        createSparkles(10);
+        
+        // Remover animação depois de 600ms
+        setTimeout(() => {
+            setAnimatingReactions(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(reaction);
+                return newSet;
+            });
+        }, 600);
+        
+        // Limpar lastReactionAdded
+        setTimeout(() => {
+            setLastReactionAdded(null);
+        }, 1000);
+        
         onUpdateReaction(post.id, reaction);
         setShowReactions(false);
+    };
+
+    const createSparkles = (count: number) => {
+        const newSparkles: Array<{ id: number; x: number; y: number }> = [];
+        for (let i = 0; i < count; i++) {
+            newSparkles.push({
+                id: Math.random(),
+                x: Math.random() * 100 - 50,
+                y: Math.random() * 100 - 50,
+            });
+        }
+        setSparkles(prev => [...prev, ...newSparkles]);
+        
+        // Limpar sparkles depois da animação
+        setTimeout(() => {
+            setSparkles(prev => prev.filter(s => !newSparkles.find(ns => ns.id === s.id)));
+        }, 800);
     };
 
     const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -569,18 +613,41 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
                     className="flex items-center space-x-3 overflow-x-auto relative"
                     onMouseEnter={() => setShowReactionTooltip(true)}
                     onMouseLeave={() => setShowReactionTooltip(false)}
+                    ref={reactionCounterRef}
                 >
                     {post.reactions && Object.entries(post.reactions).map(([reaction, count]) => (
-                        <span 
-                            key={reaction} 
-                            className="text-xs flex items-center space-x-1 flex-shrink-0 cursor-pointer hover:text-[var(--theme-primary)] transition-colors" 
-                            title={reaction}
-                            aria-label={`${count} ${reaction} reactions`}
-                        >
-                           {reactionIcons[reaction as CyberpunkReaction]}
-                           <span className="text-[var(--theme-primary)] font-bold">{count}</span>
-                        </span>
+                        <div key={reaction} className="relative">
+                            <span 
+                                className={`text-xs flex items-center space-x-1 flex-shrink-0 cursor-pointer hover:text-[var(--theme-primary)] transition-colors ${
+                                    lastReactionAdded === reaction ? 'reaction-flash-bg' : ''
+                                } ${
+                                    animatingReactions.has(reaction as CyberpunkReaction) ? 'animate-bounce-once' : ''
+                                } px-2 py-1 rounded`}
+                                title={reaction}
+                                aria-label={`${count} ${reaction} reactions`}
+                            >
+                               {reactionIcons[reaction as CyberpunkReaction]}
+                               <span className={`text-[var(--theme-primary)] font-bold ${
+                                   lastReactionAdded === reaction ? 'count-pop' : ''
+                               }`}>{count}</span>
+                            </span>
+                        </div>
                     ))}
+                    
+                    {/* Sparkles container */}
+                    {sparkles.map(sparkle => (
+                        <div
+                            key={sparkle.id}
+                            className="sparkle"
+                            style={{
+                                '--tx': `${sparkle.x}px`,
+                                '--ty': `${sparkle.y}px`,
+                            } as React.CSSProperties}
+                        >
+                            ✨
+                        </div>
+                    ))}
+                    
                     <ReactionTooltip 
                         postId={post.id}
                         reactions={post.reactions || {}}
@@ -607,11 +674,13 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
                     <div className="relative">
                         <button 
                             onClick={() => setShowReactions(!showReactions)} 
-                            className="flex items-center space-x-1 hover:text-[var(--theme-secondary)] transition-colors" 
+                            className={`flex items-center space-x-1 hover:text-[var(--theme-secondary)] transition-colors ${
+                                lastReactionAdded ? 'reaction-button-glow' : ''
+                            }`}
                             title={t('postReact')}
                             aria-label={t('postReact') || 'React to post'}
                         >
-                            <ReactIcon className="w-5 h-5" />
+                            <ReactIcon className={`w-5 h-5 ${lastReactionAdded ? 'like-heartbeat' : ''}`} />
                         </button>
                         {showReactions && (
                             <div className="absolute bottom-full right-0 mb-2 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] rounded-sm p-1 flex space-x-1 z-10 animate-[fadeIn_0.2s_ease-in-out]">
@@ -619,7 +688,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
                                     <button 
                                         key={reaction} 
                                         onClick={() => handleReact(reaction)} 
-                                        className="reaction-button" 
+                                        className={`reaction-button hover:scale-125 transition-transform ${
+                                            animatingReactions.has(reaction) ? 'reaction-button-active' : ''
+                                        }`}
                                         title={reaction}
                                         aria-label={reaction}
                                     >
