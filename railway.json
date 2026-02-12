@@ -5,9 +5,8 @@
     "buildCommand": "npm install && npm run build"
   },
   "deploy": {
-    "preDeploy": "echo 'Pre-deploy: Ready to start'",
     "startCommand": "npm start",
     "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 10
+    "restartPolicyMaxRetries": 5
   }
 }
