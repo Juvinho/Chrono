@@ -19,7 +19,6 @@ import { FloatingChatContainer } from './components/FloatingChatContainer';
 import { FloatingChatManager } from './features/messaging/components/FloatingChatManager';
 import { MessagesSidebar } from './features/messaging/components/MessagesSidebar';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { ToastContainer } from './components/ToastNotification';
 import './styles/floating-chats.css';
 import './styles/animations.css';
 
@@ -710,7 +709,6 @@ function App() {
 export default function AppWithErrorBoundary() {
     return (
         <ErrorBoundary>
-            <ToastContainer />
             <App />
         </ErrorBoundary>
     );
