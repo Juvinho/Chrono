@@ -7,6 +7,7 @@ import { UserService } from '../services/userService.js';
 import { ModerationService } from '../services/moderationService.js';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import { validateNoEmojis, extractMentions } from '../utils/validation.js';
+import { pool } from '../db/connection.js';
 
 const router = express.Router();
 const postService = new PostService();
@@ -297,10 +298,44 @@ router.post('/:id/echo', authenticateToken, async (req: AuthRequest, res: Respon
     if (!req.userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
+
+    // Daily echo limit: 5 per user per day
+    const DAILY_ECHO_LIMIT = 5;
+    const echoCountResult = await pool.query(
+      `SELECT COUNT(*) as count FROM posts 
+       WHERE author_id = $1 
+       AND repost_of_id IS NOT NULL 
+       AND created_at >= NOW() - INTERVAL '24 hours'`,
+      [req.userId]
+    );
+    const echosToday = parseInt(echoCountResult.rows[0].count, 10);
+    if (echosToday >= DAILY_ECHO_LIMIT) {
+      return res.status(429).json({ 
+        error: `Você atingiu o limite de ${DAILY_ECHO_LIMIT} ecos por dia. Tente novamente amanhã!`,
+        limit: DAILY_ECHO_LIMIT,
+        used: echosToday
+      });
+    }
+
     const originalPost = await postService.getPostById(id);
     if (!originalPost) {
       return res.status(404).json({ error: 'Post not found' });
     }
+
+    // Prevent echoing the same post twice
+    const alreadyEchoed = await pool.query(
+      `SELECT id FROM posts WHERE author_id = $1 AND repost_of_id = $2`,
+      [req.userId, id]
+    );
+    if (alreadyEchoed.rows.length > 0) {
+      return res.status(400).json({ error: 'Você já ecoou este post.' });
+    }
+
+    // Prevent echoing your own posts
+    if (originalPost.authorId === req.userId) {
+      return res.status(400).json({ error: 'Você não pode ecoar seu próprio post.' });
+    }
+
     const newPost = await postService.createPost(req.userId, '', {
       repostOfId: id,
       isPrivate: false,
