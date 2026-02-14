@@ -453,12 +453,15 @@ function App() {
             
             if (echoer.username === currentUser.username) {
                 playSound('notification');
-                showToast('Post ecoado!', 'success');
+                showToast('Post ecoado! 🔊', 'success');
             }
             await reloadBackendData();
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to echo post via API:", error);
-            if (echoer.username === currentUser?.username) showToast('Falha ao ecoar post.', 'error');
+            const errorMsg = error?.message || 'Falha ao ecoar post.';
+            if (echoer.username === currentUser?.username) {
+                showToast(errorMsg, 'error');
+            }
         }
     };
 

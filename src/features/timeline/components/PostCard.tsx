@@ -366,8 +366,34 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
     }
 
     if (post.repostOf) {
+        // Prevent deep nesting of echoes (max 2 levels)
+        const echoContent = nestingLevel < 2 ? (
+            <div className="border border-[var(--theme-border-secondary)] p-0 overflow-hidden max-h-[500px]">
+                 <PostCard 
+                    post={post.repostOf} 
+                    currentUser={currentUser}
+                    onViewProfile={onViewProfile} 
+                    onUpdateReaction={onUpdateReaction}
+                    onReply={onReply}
+                    onEcho={onEcho}
+                    onDelete={onDelete}
+                    onEdit={onEdit}
+                    onTagClick={onTagClick}
+                    onPollVote={onPollVote}
+                    typingParentIds={typingParentIds}
+                    nestingLevel={nestingLevel + 1}
+                    isContextualView={true}
+                 />
+            </div>
+        ) : (
+            <div className="border border-[var(--theme-border-secondary)] p-3 bg-[var(--theme-bg-tertiary)] text-sm text-[var(--theme-text-secondary)] italic overflow-hidden">
+                <EchoIcon className="w-4 h-4 inline mr-1" />
+                {t('postEchoed')} @{post.repostOf.author?.username || '...'}
+            </div>
+        );
+
         return (
-            <div className={`p-4 ${rootClasses} ${isDeleting ? 'post-disintegrate' : ''}`}>
+            <div className={`p-4 ${rootClasses} ${isDeleting ? 'post-disintegrate' : ''} overflow-hidden`}>
                 <div className="flex justify-between items-start mb-2">
                     <div className="text-xs text-[var(--theme-text-secondary)] flex items-center">
                         <EchoIcon className="w-4 h-4 mr-2"/>
@@ -390,24 +416,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
                         </div>
                     )}
                 </div>
-                {post.content && <p className="mb-2 italic">"{post.content}"</p>}
-                <div className="border border-[var(--theme-border-secondary)] p-0">
-                     <PostCard 
-                        post={post.repostOf} 
-                        currentUser={currentUser}
-                        onViewProfile={onViewProfile} 
-                        onUpdateReaction={onUpdateReaction}
-                        onReply={onReply}
-                        onEcho={onEcho}
-                        onDelete={onDelete}
-                        onEdit={onEdit}
-                        onTagClick={onTagClick}
-                        onPollVote={onPollVote}
-                        typingParentIds={typingParentIds}
-                        nestingLevel={nestingLevel + 1}
-                        isContextualView={true}
-                     />
-                </div>
+                {post.content && <p className="mb-2 italic overflow-hidden text-ellipsis">"{post.content}"</p>}
+                {echoContent}
             </div>
         )
     }
