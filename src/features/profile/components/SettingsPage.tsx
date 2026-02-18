@@ -113,6 +113,11 @@ export default function SettingsPage({
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  // Delete account state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isGeneratingBio, setIsGeneratingBio] = useState(false);
   const [isAnalyzingProfile, setIsAnalyzingProfile] = useState(false);
   const [profileAnalysis, setProfileAnalysis] = useState<{ bio: string; analysis: string } | null>(null);
@@ -376,6 +381,27 @@ export default function SettingsPage({
       }
   };
 
+  const handleDeleteAccount = async () => {
+      setDeleteError(null);
+      setIsDeletingAccount(true);
+      try {
+          const response = await apiClient.request('/auth/delete-account', {
+              method: 'DELETE',
+              body: JSON.stringify({ password: deletePassword }),
+          });
+          if (response.error) {
+              setDeleteError(response.error);
+          } else {
+              // Account deleted - log out
+              onLogout();
+          }
+      } catch (err) {
+          setDeleteError('Erro inesperado ao excluir conta.');
+      } finally {
+          setIsDeletingAccount(false);
+      }
+  };
+
   const handleSearch = (query: string) => {
     sessionStorage.setItem('chrono_search_query', query);
     onNavigate(Page.Dashboard);
@@ -533,6 +559,49 @@ export default function SettingsPage({
                                 {isChangingPassword ? 'Updating...' : t('updatePassword')}
                             </button>
                         </div>
+                    </div>
+
+                    {/* Danger Zone: Delete Account */}
+                    <div className="space-y-4 border-t border-red-900/50 pt-6 mt-6">
+                        <h3 className="text-lg font-bold text-red-500">⚠️ Zona de Perigo</h3>
+                        <p className="text-sm text-[var(--theme-text-secondary)]">
+                            Ao excluir sua conta, todos os seus dados serão permanentemente removidos, incluindo posts, mensagens, seguidores e configurações. Esta ação não pode ser desfeita.
+                        </p>
+                        {!showDeleteConfirm ? (
+                            <button 
+                                onClick={() => setShowDeleteConfirm(true)}
+                                className="px-4 py-2 bg-red-900/20 border border-red-500 text-red-500 rounded hover:bg-red-900/40 transition-colors"
+                            >
+                                Excluir minha conta
+                            </button>
+                        ) : (
+                            <div className="p-4 bg-red-900/10 border border-red-500 rounded space-y-3">
+                                <p className="text-sm text-red-400 font-bold">Digite sua senha para confirmar:</p>
+                                {deleteError && <div className="text-red-400 text-sm bg-red-900/20 p-2 rounded">{deleteError}</div>}
+                                <input
+                                    type="password"
+                                    value={deletePassword}
+                                    onChange={(e) => setDeletePassword(e.target.value)}
+                                    placeholder="Sua senha"
+                                    className="w-full bg-black/30 border border-red-500/50 rounded p-2 focus:border-red-500 focus:outline-none text-[var(--theme-text-primary)]"
+                                />
+                                <div className="flex space-x-3">
+                                    <button 
+                                        onClick={() => { setShowDeleteConfirm(false); setDeletePassword(''); setDeleteError(null); }}
+                                        className="px-4 py-2 text-sm text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-light)]"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button 
+                                        onClick={handleDeleteAccount}
+                                        disabled={isDeletingAccount || !deletePassword}
+                                        className="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+                                    >
+                                        {isDeletingAccount ? 'Excluindo...' : 'Confirmar exclusão permanente'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

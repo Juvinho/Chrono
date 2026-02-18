@@ -37,6 +37,8 @@ import companionRoutes from './routes/companionRoutes.js';
 import tagsRoutes from './routes/tags.js';
 import userBioRoutes from './routes/userBio.js';
 import emailVerificationRouter from './routes/emailVerification.js';
+import bookmarkRoutes from './routes/bookmarks.js';
+import reportRoutes from './routes/reports.js';
 import adminAuthRoutes from './routes/admin/auth.js';
 import adminTagsRoutes from './routes/admin/tags.js';
 import adminUsersRoutes from './routes/admin/users.js';
@@ -334,6 +336,8 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
 app.use('/api/tags', tagsRoutes);
+app.use('/api/bookmarks', bookmarkRoutes);
+app.use('/api/reports', reportRoutes);
 
 // 🔐 ADMIN ROUTES (com autenticação especial)
 app.use('/api/admin/auth', adminAuthRoutes);

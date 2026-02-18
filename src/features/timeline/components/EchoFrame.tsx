@@ -10,6 +10,8 @@ import { useTranslation } from '../../../hooks/useTranslation';
 import { useHourlyRefresh } from '../../../hooks/useHourlyRefresh';
 import ConfirmationModal from '../../../components/ui/ConfirmationModal';
 import { apiClient, mapApiPostToPost } from '../../../api';
+import { postService } from '../../../api/post.service';
+import { useToast } from '../../../contexts/ToastContext';
 import '../../../styles/post-glitch-animation.css';
 
 import FramePreview, { getFrameShape } from '../../profile/components/FramePreview';
@@ -50,6 +52,7 @@ export default function EchoFrame({
     nextAutoRefresh, isAutoRefreshPaused, onPostClick, navigate, newPostIds
 }: EchoFrameProps) {
     const { t } = useTranslation();
+    const { showToast } = useToast();
     const [isComposerOpen, setIsComposerOpen] = useState(false);
     const [postToEdit, setPostToEdit] = useState<Post | null>(null);
     const [isCordModalOpen, setIsCordModalOpen] = useState(false);
@@ -59,6 +62,12 @@ export default function EchoFrame({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [trendingCordoes, setTrendingCordoes] = useState<Array<{ tag: string; mentions: number; displayName: string }>>([]);
     const [currentDay, setCurrentDay] = useState(new Date().getDate());
+    // Bookmark state
+    const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
+    // Report modal state
+    const [reportPostId, setReportPostId] = useState<string | null>(null);
+    const [reportReason, setReportReason] = useState('');
+    const [reportDescription, setReportDescription] = useState('');
     // Removed local timeToRefresh state to prevent re-renders
     // Direct Chat removed from EchoFrame to avoid duplication with Messages module
 
@@ -96,6 +105,72 @@ export default function EchoFrame({
             setIsComposerOpen(true);
         }
     }, [composerDate]);
+
+    // Load bookmarked post IDs
+    useEffect(() => {
+        postService.getBookmarkIds().then(res => {
+            if (res.data) {
+                setBookmarkedIds(new Set(res.data));
+            }
+        }).catch(() => {});
+    }, []);
+
+    const handleBookmark = useCallback(async (postId: string) => {
+        const isCurrentlyBookmarked = bookmarkedIds.has(postId);
+        // Optimistic update
+        setBookmarkedIds(prev => {
+            const next = new Set(prev);
+            if (isCurrentlyBookmarked) {
+                next.delete(postId);
+            } else {
+                next.add(postId);
+            }
+            return next;
+        });
+
+        try {
+            if (isCurrentlyBookmarked) {
+                await postService.removeBookmark(postId);
+                showToast('Bookmark removido', 'info');
+            } else {
+                await postService.bookmarkPost(postId);
+                showToast('Post salvo!', 'success');
+            }
+        } catch {
+            // Revert on failure
+            setBookmarkedIds(prev => {
+                const next = new Set(prev);
+                if (isCurrentlyBookmarked) {
+                    next.add(postId);
+                } else {
+                    next.delete(postId);
+                }
+                return next;
+            });
+            showToast('Erro ao salvar post', 'error');
+        }
+    }, [bookmarkedIds, showToast]);
+
+    const handleReport = useCallback((postId: string) => {
+        setReportPostId(postId);
+        setReportReason('');
+        setReportDescription('');
+    }, []);
+
+    const handleSubmitReport = useCallback(async () => {
+        if (!reportPostId || !reportReason) return;
+        try {
+            const res = await postService.reportPost(reportPostId, reportReason, reportDescription);
+            if (res.error) {
+                showToast(res.error, 'error');
+            } else {
+                showToast('Denúncia enviada com sucesso!', 'success');
+            }
+        } catch {
+            showToast('Erro ao enviar denúncia', 'error');
+        }
+        setReportPostId(null);
+    }, [reportPostId, reportReason, reportDescription, showToast]);
 
     // Direct Chat boot removed
 
@@ -551,6 +626,9 @@ export default function EchoFrame({
                                 onDelete={onDeletePost}
                                 onEdit={handleStartEdit}
                                 onPollVote={onPollVote}
+                                onBookmark={handleBookmark}
+                                onReport={handleReport}
+                                isBookmarked={bookmarkedIds.has(post.id)}
                                 searchQuery={searchQuery}
                                 typingParentIds={typingParentIds}
                                 onPostClick={onPostClick}
@@ -668,6 +746,44 @@ export default function EchoFrame({
                         disabled={isSubmitting}
                     />
                 </ConfirmationModal>
+            )}
+
+            {/* Report Modal */}
+            {reportPostId && (
+                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={() => setReportPostId(null)}>
+                    <div className="bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] rounded-lg p-6 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
+                        <h3 className="text-lg font-bold text-[var(--theme-text-light)] mb-4">🚩 Denunciar Post</h3>
+                        <p className="text-sm text-[var(--theme-text-secondary)] mb-4">Selecione o motivo da denúncia:</p>
+                        <div className="space-y-2 mb-4">
+                            {[
+                                { value: 'spam', label: 'Spam' },
+                                { value: 'harassment', label: 'Assédio / Bullying' },
+                                { value: 'hate_speech', label: 'Discurso de ódio' },
+                                { value: 'violence', label: 'Violência' },
+                                { value: 'nudity', label: 'Nudez / Conteúdo sexual' },
+                                { value: 'misinformation', label: 'Desinformação' },
+                                { value: 'impersonation', label: 'Falsidade ideológica' },
+                                { value: 'other', label: 'Outro' },
+                            ].map(opt => (
+                                <label key={opt.value} className={`flex items-center space-x-2 p-2 rounded cursor-pointer border transition-colors ${reportReason === opt.value ? 'border-[var(--theme-primary)] bg-[var(--theme-primary)]/10' : 'border-transparent hover:bg-[var(--theme-bg-tertiary)]'}`}>
+                                    <input type="radio" name="report-reason" value={opt.value} checked={reportReason === opt.value} onChange={() => setReportReason(opt.value)} className="accent-[var(--theme-primary)]" />
+                                    <span className="text-sm text-[var(--theme-text-light)]">{opt.label}</span>
+                                </label>
+                            ))}
+                        </div>
+                        <textarea
+                            placeholder="Detalhes adicionais (opcional)"
+                            value={reportDescription}
+                            onChange={e => setReportDescription(e.target.value)}
+                            className="w-full bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] rounded p-2 text-sm text-[var(--theme-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--theme-primary)] resize-none mb-4"
+                            rows={3}
+                        />
+                        <div className="flex justify-end space-x-3">
+                            <button onClick={() => setReportPostId(null)} className="px-4 py-2 text-sm text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-light)]">Cancelar</button>
+                            <button onClick={handleSubmitReport} disabled={!reportReason} className="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed">Enviar Denúncia</button>
+                        </div>
+                    </div>
+                </div>
             )}
 
         </main>

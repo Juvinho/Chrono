@@ -42,4 +42,16 @@ export const userService = {
       body: JSON.stringify({ text, ...media }),
     });
   },
+
+  async blockUser(username: string) {
+    return baseClient.request<any>(`/users/${username}/block`, {
+      method: 'POST',
+    });
+  },
+
+  async unblockUser(username: string) {
+    return baseClient.request<any>(`/users/${username}/block`, {
+      method: 'DELETE',
+    });
+  },
 };

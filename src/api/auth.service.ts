@@ -122,5 +122,12 @@ export const authService = {
       body: JSON.stringify({ currentPassword, newPassword }),
     });
   },
+
+  async deleteAccount(password: string) {
+    return baseClient.request<{ success: boolean }>('/auth/delete-account', {
+      method: 'DELETE',
+      body: JSON.stringify({ password }),
+    });
+  },
 };
 

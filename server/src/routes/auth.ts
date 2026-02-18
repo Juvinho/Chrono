@@ -442,6 +442,84 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
+// Change password
+router.post('/change-password', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Senha atual e nova senha são obrigatórias.' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'A nova senha deve ter pelo menos 6 caracteres.' });
+    }
+
+    // Verify current password
+    const dbUser = await pool.query('SELECT password_hash FROM users WHERE id = $1', [req.userId]);
+    if (!dbUser.rows[0] || !dbUser.rows[0].password_hash) {
+      return res.status(400).json({ error: 'Conta sem senha definida.' });
+    }
+
+    const isValid = await userService.verifyPassword(currentPassword, dbUser.rows[0].password_hash);
+    if (!isValid) {
+      return res.status(401).json({ error: 'Senha atual incorreta.' });
+    }
+
+    await userService.updatePassword(req.userId, newPassword);
+    await securityService.logAction(req.userId, 'change_password', 'user', req.userId, 'success', {}, req);
+
+    res.json({ success: true, message: 'Senha alterada com sucesso!' });
+  } catch (error: any) {
+    console.error('Change password error:', error);
+    res.status(500).json({ error: error.message || 'Falha ao alterar senha.' });
+  }
+});
+
+// Delete own account
+router.delete('/delete-account', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({ error: 'Senha é obrigatória para excluir a conta.' });
+    }
+
+    // Verify password
+    const dbUser = await pool.query('SELECT password_hash, username FROM users WHERE id = $1', [req.userId]);
+    if (!dbUser.rows[0] || !dbUser.rows[0].password_hash) {
+      return res.status(400).json({ error: 'Conta sem senha definida.' });
+    }
+
+    const isValid = await userService.verifyPassword(password, dbUser.rows[0].password_hash);
+    if (!isValid) {
+      return res.status(401).json({ error: 'Senha incorreta.' });
+    }
+
+    const username = dbUser.rows[0].username;
+
+    // Log the deletion before actually deleting
+    await securityService.logAction(req.userId, 'delete_account', 'user', req.userId, 'success', { username }, req);
+
+    // Delete user (CASCADE will handle posts, bookmarks, etc.)
+    await pool.query('DELETE FROM users WHERE id = $1', [req.userId]);
+
+    console.log(`🗑️ User @${username} deleted their own account.`);
+    res.json({ success: true, message: 'Conta excluída com sucesso.' });
+  } catch (error: any) {
+    console.error('Delete account error:', error);
+    res.status(500).json({ error: error.message || 'Falha ao excluir conta.' });
+  }
+});
+
 // Health check for auth routes
 router.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'auth', timestamp: new Date().toISOString() });

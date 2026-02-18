@@ -272,6 +272,74 @@ router.post('/:username/unfollow', authenticateToken, async (req: AuthRequest, r
   }
 });
 
+// Block a user
+router.post('/:username/block', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { username } = req.params;
+    const targetUser = await userService.getUserByUsername(username);
+    if (!targetUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (targetUser.id === req.userId) {
+      return res.status(400).json({ error: 'Você não pode bloquear a si mesmo.' });
+    }
+
+    // Add to blocked_users array
+    await pool.query(
+      `UPDATE users SET blocked_users = array_append(
+        COALESCE(blocked_users, '{}'), $1
+      ) WHERE id = $2 AND NOT ($1 = ANY(COALESCE(blocked_users, '{}')))`,
+      [targetUser.id, req.userId]
+    );
+
+    // Also unfollow bidirectionally
+    try {
+      await followService.unfollow(req.userId, targetUser.id);
+      await followService.unfollow(targetUser.id, req.userId);
+    } catch (e) {
+      // Ignore if not following
+    }
+
+    res.json({ message: `@${username} foi bloqueado.`, blocked: true });
+  } catch (error: any) {
+    console.error('Block user error:', error);
+    res.status(500).json({ error: error.message || 'Failed to block user' });
+  }
+});
+
+// Unblock a user
+router.delete('/:username/block', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { username } = req.params;
+    const targetUser = await userService.getUserByUsername(username);
+    if (!targetUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Remove from blocked_users array
+    await pool.query(
+      `UPDATE users SET blocked_users = array_remove(
+        COALESCE(blocked_users, '{}'), $1
+      ) WHERE id = $2`,
+      [targetUser.id, req.userId]
+    );
+
+    res.json({ message: `@${username} foi desbloqueado.`, blocked: false });
+  } catch (error: any) {
+    console.error('Unblock user error:', error);
+    res.status(500).json({ error: error.message || 'Failed to unblock user' });
+  }
+});
+
 // Get user online/offline status
 router.get('/:username/status', optionalAuthenticateToken, async (req: AuthRequest, res: Response) => {
   try {

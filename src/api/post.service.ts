@@ -71,4 +71,43 @@ export const postService = {
   async getReactionDetails(postId: string) {
     return baseClient.request<any>(`/posts/${postId}/reactions/details`);
   },
+
+  // Bookmarks
+  async getBookmarks(options: { limit?: number; offset?: number } = {}) {
+    const params = new URLSearchParams();
+    if (options.limit) params.append('limit', options.limit.toString());
+    if (options.offset) params.append('offset', options.offset.toString());
+    return baseClient.request<any[]>(`/bookmarks?${params.toString()}`);
+  },
+
+  async getBookmarkIds() {
+    return baseClient.request<string[]>('/bookmarks/ids');
+  },
+
+  async bookmarkPost(postId: string) {
+    return baseClient.request<any>(`/bookmarks/${postId}`, {
+      method: 'POST',
+    });
+  },
+
+  async removeBookmark(postId: string) {
+    return baseClient.request<any>(`/bookmarks/${postId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // Reports
+  async reportPost(postId: string, reason: string, description?: string) {
+    return baseClient.request<any>('/reports', {
+      method: 'POST',
+      body: JSON.stringify({ reportedPostId: postId, reason, description }),
+    });
+  },
+
+  async reportUser(userId: string, reason: string, description?: string) {
+    return baseClient.request<any>('/reports', {
+      method: 'POST',
+      body: JSON.stringify({ reportedUserId: userId, reason, description }),
+    });
+  },
 };

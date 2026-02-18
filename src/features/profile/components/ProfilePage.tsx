@@ -82,7 +82,13 @@ export default function ProfilePage({
   const [visiblePostsCount, setVisiblePostsCount] = useState(10);
   
   const followButtonRef = useRef<HTMLButtonElement>(null);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
   const [imageCacheBuster, setImageCacheBuster] = useState(Date.now());
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [showReportUserModal, setShowReportUserModal] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportDescription, setReportDescription] = useState('');
   
   // Memoize foundUser to avoid unnecessary recalculations
   const foundUser = useMemo(() => {
@@ -158,6 +164,26 @@ export default function ProfilePage({
   useEffect(() => {
     setImageCacheBuster(Date.now());
   }, [profileUser?.avatar, profileUser?.coverImage, profileUser?.profileSettings?.coverImage]);
+
+  // Initialize isBlocked from currentUser's blockedUsers
+  useEffect(() => {
+    if (profileUser && !isOwnProfile && (currentUser as any).blockedUsers) {
+      setIsBlocked((currentUser as any).blockedUsers.includes(profileUser.id));
+    }
+  }, [profileUser, currentUser, isOwnProfile]);
+
+  // Close profile menu on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+    if (showProfileMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showProfileMenu]);
 
   useEffect(() => {
       if (typeof window === 'undefined' || !profileUser) return;
@@ -356,6 +382,52 @@ export default function ProfilePage({
       console.error('❌ Erro ao abrir mini-chat:', error);
       showToast('Erro ao abrir chat: ' + (error instanceof Error ? error.message : String(error)), 'error');
     }
+  };
+
+  const handleBlockUser = async () => {
+    if (!profileUser) return;
+    setShowProfileMenu(false);
+    try {
+      if (isBlocked) {
+        const res = await apiClient.request(`/users/${profileUser.username}/block`, { method: 'DELETE' });
+        if (res.error) {
+          showToast(res.error, 'error');
+        } else {
+          setIsBlocked(false);
+          showToast(`@${profileUser.username} desbloqueado.`, 'info');
+        }
+      } else {
+        const res = await apiClient.request(`/users/${profileUser.username}/block`, { method: 'POST' });
+        if (res.error) {
+          showToast(res.error, 'error');
+        } else {
+          setIsBlocked(true);
+          showToast(`@${profileUser.username} bloqueado.`, 'success');
+        }
+      }
+    } catch {
+      showToast('Erro ao bloquear/desbloquear usuário.', 'error');
+    }
+  };
+
+  const handleReportUser = async () => {
+    if (!profileUser || !reportReason) return;
+    try {
+      const res = await apiClient.request('/reports', {
+        method: 'POST',
+        body: JSON.stringify({ reportedUserId: profileUser.id, reason: reportReason, description: reportDescription }),
+      });
+      if (res.error) {
+        showToast(res.error, 'error');
+      } else {
+        showToast('Denúncia enviada com sucesso!', 'success');
+      }
+    } catch {
+      showToast('Erro ao enviar denúncia.', 'error');
+    }
+    setShowReportUserModal(false);
+    setReportReason('');
+    setReportDescription('');
   };
 
     const handlePostSubmit = (postData: Omit<Post, 'id' | 'author' | 'timestamp' | 'replies' | 'repostOf'>, existingPostId?: string) => {
@@ -664,6 +736,31 @@ export default function ProfilePage({
                       <button ref={followButtonRef} onClick={handleFollowClick} className={`${isFollowing ? 'following-btn' : 'follow-btn'} px-4 py-1 rounded-sm transition-colors`}>
                         {isFollowing ? t('profileFollowing') : t('profileFollow')}
                       </button>
+                      <div className="relative" ref={profileMenuRef}>
+                        <button 
+                          onClick={() => setShowProfileMenu(prev => !prev)}
+                          className="p-1 text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)] transition-colors"
+                          title="Opções"
+                        >
+                          ⋯
+                        </button>
+                        {showProfileMenu && (
+                          <div className="absolute top-full right-0 mt-1 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] rounded z-20 w-44 animate-[fadeIn_0.15s_ease-in-out]">
+                            <button 
+                              onClick={handleBlockUser}
+                              className="flex items-center space-x-2 w-full text-left px-3 py-2 text-sm text-orange-400 hover:bg-[var(--theme-border-primary)]"
+                            >
+                              <span>{isBlocked ? '✅ Desbloquear' : '🚫 Bloquear'}</span>
+                            </button>
+                            <button 
+                              onClick={() => { setShowReportUserModal(true); setShowProfileMenu(false); }}
+                              className="flex items-center space-x-2 w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-[var(--theme-border-primary)]"
+                            >
+                              <span>🚩 Denunciar</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </>
                   )}
               </div>
@@ -876,6 +973,61 @@ export default function ProfilePage({
                 }} 
             />
         </React.Suspense>
+      )}
+
+      {/* Report User Modal */}
+      {showReportUserModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowReportUserModal(false)}>
+          <div className="bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] rounded-lg w-full max-w-md p-6 space-y-4 animate-[fadeIn_0.2s_ease-in-out]" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-mono text-[var(--theme-primary)]">🚩 Denunciar @{profileUser?.username}</h3>
+            <p className="text-sm text-[var(--theme-text-secondary)]">Selecione o motivo da denúncia:</p>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {[
+                { value: 'spam', label: 'Spam' },
+                { value: 'harassment', label: 'Assédio ou bullying' },
+                { value: 'hate_speech', label: 'Discurso de ódio' },
+                { value: 'violence', label: 'Violência ou ameaças' },
+                { value: 'nudity', label: 'Nudez ou conteúdo sexual' },
+                { value: 'misinformation', label: 'Desinformação' },
+                { value: 'impersonation', label: 'Falsidade ideológica' },
+                { value: 'other', label: 'Outro' },
+              ].map((opt) => (
+                <label key={opt.value} className="flex items-center gap-2 p-2 rounded hover:bg-[var(--theme-bg-tertiary)] cursor-pointer text-sm">
+                  <input
+                    type="radio"
+                    name="reportUserReason"
+                    value={opt.value}
+                    checked={reportReason === opt.value}
+                    onChange={() => setReportReason(opt.value)}
+                    className="accent-[var(--theme-primary)]"
+                  />
+                  <span className="text-[var(--theme-text-primary)]">{opt.label}</span>
+                </label>
+              ))}
+            </div>
+            <textarea
+              value={reportDescription}
+              onChange={(e) => setReportDescription(e.target.value)}
+              placeholder="Detalhes adicionais (opcional)..."
+              className="w-full p-2 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] rounded text-sm text-[var(--theme-text-primary)] resize-none h-20 focus:outline-none focus:border-[var(--theme-primary)]"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => { setShowReportUserModal(false); setReportReason(''); setReportDescription(''); }}
+                className="px-4 py-2 text-sm border border-[var(--theme-border-primary)] text-[var(--theme-text-secondary)] rounded hover:bg-[var(--theme-bg-tertiary)]"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleReportUser}
+                disabled={!reportReason}
+                className="px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Enviar Denúncia
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

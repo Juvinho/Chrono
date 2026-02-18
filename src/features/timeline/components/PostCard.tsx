@@ -1,9 +1,10 @@
 import React, { useState, ReactNode, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Post, CyberpunkReaction, User } from '../../../types/index';
-import { ReactIcon, GlitchIcon, UploadIcon, CorruptIcon, RewindIcon, StaticIcon, ReplyIcon, EchoIcon, EditIcon, VerifiedIcon, CheckCircleIcon, LockClosedIcon, DotsHorizontalIcon, TrashIcon } from '../../../components/ui/icons';
+import { ReactIcon, GlitchIcon, UploadIcon, CorruptIcon, RewindIcon, StaticIcon, ReplyIcon, EchoIcon, EditIcon, VerifiedIcon, CheckCircleIcon, LockClosedIcon, DotsHorizontalIcon, TrashIcon, BookmarkIcon, ShareIcon, FlagIcon } from '../../../components/ui/icons';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useSound } from '../../../contexts/SoundContext';
+import { useToast } from '../../../contexts/ToastContext';
 import Avatar from '../../profile/components/Avatar';
 import TypingIndicatorCard from './TypingIndicatorCard';
 import FramePreview, { getFrameShape } from '../../profile/components/FramePreview';
@@ -24,6 +25,9 @@ interface PostCardProps {
     onEdit: (postToEdit: Post) => void;
     onTagClick: (tag: string) => void;
     onPollVote: (postId: string, optionIndex: number) => void;
+    onBookmark?: (postId: string) => void;
+    onReport?: (postId: string) => void;
+    isBookmarked?: boolean;
     typingParentIds: Set<string>;
     compact?: boolean;
     nestingLevel?: number;
@@ -81,10 +85,11 @@ const formatRelativeTime = (date: Date): string => {
     return date.toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' });
 };
 
-const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, onUpdateReaction, onReply, onEcho, onDelete, onEdit, onTagClick, onPollVote, typingParentIds, compact = false, nestingLevel = 0, isThreadedReply = false, isContextualView = false, onPostClick, isNew = false }) => {
+const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, onUpdateReaction, onReply, onEcho, onDelete, onEdit, onTagClick, onPollVote, onBookmark, onReport, isBookmarked = false, typingParentIds, compact = false, nestingLevel = 0, isThreadedReply = false, isContextualView = false, onPostClick, isNew = false }) => {
     const { t } = useTranslation();
     const navigate = useNavigate();
     const { playSound } = useSound();
+    const { showToast } = useToast();
     const [showReactions, setShowReactions] = useState(false);
     const [showReactionTooltip, setShowReactionTooltip] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
@@ -474,7 +479,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
                         </button>
                     )}
                     {showMenu && (
-                        <div className="absolute top-full right-0 mt-1 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] rounded-sm z-10 animate-[fadeIn_0.2s_ease-in-out] w-36">
+                        <div className="absolute top-full right-0 mt-1 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] rounded-sm z-10 animate-[fadeIn_0.2s_ease-in-out] w-44">
                             {isAuthor && (
                                 <>
                                     <button 
@@ -492,6 +497,15 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
                                         <span>{t('postDelete')}</span>
                                     </button>
                                 </>
+                            )}
+                            {!isAuthor && onReport && (
+                                <button 
+                                    onClick={() => { onReport(post.id); setShowMenu(false); }}
+                                    className="flex items-center space-x-2 w-full text-left px-3 py-2 text-sm text-orange-400 hover:bg-[var(--theme-border-primary)]"
+                                >
+                                    <FlagIcon className="w-4 h-4" />
+                                    <span>Denunciar</span>
+                                </button>
                             )}
                         </div>
                     )}
@@ -710,6 +724,31 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
                             </div>
                         )}
                     </div>
+                    <button 
+                        onClick={() => {
+                            const url = `${window.location.origin}/post/${postIdMapper.getRandomId(post.id)}`;
+                            navigator.clipboard.writeText(url).then(() => {
+                                showToast('Link copiado!', 'success');
+                            }).catch(() => {
+                                showToast('Erro ao copiar link', 'error');
+                            });
+                        }}
+                        className="flex items-center space-x-1 hover:text-[var(--theme-secondary)] transition-colors"
+                        title="Compartilhar"
+                        aria-label="Compartilhar post"
+                    >
+                        <ShareIcon className="w-5 h-5" />
+                    </button>
+                    {onBookmark && (
+                        <button 
+                            onClick={() => onBookmark(post.id)}
+                            className={`flex items-center space-x-1 hover:text-[var(--theme-secondary)] transition-colors ${isBookmarked ? 'text-[var(--theme-primary)]' : ''}`}
+                            title={isBookmarked ? 'Remover dos salvos' : 'Salvar post'}
+                            aria-label={isBookmarked ? 'Remover dos salvos' : 'Salvar post'}
+                        >
+                            <BookmarkIcon className="w-5 h-5" filled={isBookmarked} />
+                        </button>
+                    )}
                 </div>
             </div>
             {isReplying && (
@@ -798,6 +837,8 @@ export default React.memo(PostCard, (prevProps, nextProps) => {
     if (prevProps.post.id !== nextProps.post.id) return false;
     // Re-render if reactions changed
     if (JSON.stringify(prevProps.post.reactions) !== JSON.stringify(nextProps.post.reactions)) return false;
+    // Re-render if bookmark status changed
+    if (prevProps.isBookmarked !== nextProps.isBookmarked) return false;
     // Otherwise skip re-render
     return true;
 });
