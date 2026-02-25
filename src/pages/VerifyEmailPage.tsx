@@ -22,7 +22,7 @@ const VerifyEmailPage: React.FC = () => {
   useEffect(() => {
     if (!token) {
       setStatus('error');
-      setMessage('❌ Token de verificação não encontrado');
+      setMessage('Token de verificação não encontrado');
       return;
     }
 
@@ -43,132 +43,138 @@ const VerifyEmailPage: React.FC = () => {
 
       if (data?.success) {
         setStatus('success');
-        setMessage(`✅ ${data.message}`);
+        setMessage(data.message || 'Seu email foi verificado com sucesso!');
         setUser(data.user);
-
-        // Redirect to login after 3 seconds
-        setTimeout(() => {
-          navigate('/login', {
-            state: {
-              message: 'Email verificado! Faça login para continuar.',
-              email: data.user?.email
-            }
-          });
-        }, 3000);
       } else {
         setStatus('error');
         setMessage('Erro ao verificar email');
       }
     } catch (error: any) {
       setStatus('error');
-      setMessage(`❌ ${error?.message || 'Erro ao verificar email'}`);
+      setMessage(error?.message || 'Erro ao verificar email');
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#050505] to-[#1a1a1a] flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
-        {/* Card */}
-        <div className="bg-[#0a0a0a] border border-[#333] rounded-2xl p-8 text-center">
+    <div className="min-h-screen bg-gradient-to-br from-[#050508] via-[#0a0a1a] to-[#12121f] flex items-center justify-center p-4">
+      {/* Background glow effects */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-[var(--theme-primary,#7c3aed)]/5 rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-cyan-500/3 rounded-full blur-[100px]" />
+      </div>
+
+      <div className="relative max-w-lg w-full">
+        {/* Main Card */}
+        <div className="bg-[#0c0c14]/90 backdrop-blur-xl border border-[#1a1a2e] rounded-sm p-10 text-center shadow-[0_0_60px_rgba(124,58,237,0.1)]">
+          
           {/* Logo */}
           <div className="mb-8">
-            <h1 className="text-4xl font-bold text-[#0084ff] mb-2">⏱️ CHRONO</h1>
-            <p className="text-[#666] text-sm">Rede Social Temporal</p>
+            <h1 className="text-3xl font-black tracking-[0.3em] text-transparent bg-clip-text bg-gradient-to-r from-[var(--theme-primary,#7c3aed)] to-cyan-400 mb-1">
+              CHRONO
+            </h1>
+            <div className="w-16 h-[2px] bg-gradient-to-r from-transparent via-[var(--theme-primary,#7c3aed)] to-transparent mx-auto" />
           </div>
 
-          {/* Status Indicator */}
-          <div className="mb-8">
-            {status === 'loading' && (
-              <div className="flex justify-center">
-                <div className="animate-spin text-4xl">⌛</div>
+          {/* Loading State */}
+          {status === 'loading' && (
+            <div className="py-12">
+              <div className="relative w-16 h-16 mx-auto mb-6">
+                <div className="absolute inset-0 border-2 border-[var(--theme-primary,#7c3aed)]/20 rounded-full" />
+                <div className="absolute inset-0 border-2 border-transparent border-t-[var(--theme-primary,#7c3aed)] rounded-full animate-spin" />
               </div>
-            )}
-            {status === 'success' && (
-              <div className="text-5xl">✅</div>
-            )}
-            {status === 'error' && (
-              <div className="text-5xl">❌</div>
-            )}
-          </div>
-
-          {/* Message */}
-          <h2 className={`text-2xl font-bold mb-4 ${
-            status === 'success' ? 'text-green-500' :
-            status === 'error' ? 'text-red-500' :
-            'text-[#0084ff]'
-          }`}>
-            {status === 'loading' ? 'Verificando...' :
-             status === 'success' ? 'Email Verificado!' :
-             'Erro na Verificação'}
-          </h2>
-
-          <p className="text-[#999] mb-6 leading-relaxed">
-            {message}
-          </p>
-
-          {/* User Info */}
-          {user && status === 'success' && (
-            <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-4 mb-6 text-left">
-              <p className="text-[#666] text-sm mb-2">Usuário Verificado:</p>
-              <p className="text-[#0084ff] font-semibold">@{user.username}</p>
-              <p className="text-[#666] text-sm">{user.email}</p>
+              <p className="text-[#666] text-sm font-mono tracking-wider animate-pulse">
+                VERIFICANDO...
+              </p>
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="space-y-3">
-            {status === 'success' && (
-              <>
-                <p className="text-[#666] text-sm mb-4">
-                  🎉 Redirecionando para login em alguns segundos...
-                </p>
-                <button
-                  onClick={() => navigate('/login')}
-                  className="w-full bg-[#0084ff] hover:bg-[#0073e6] text-white font-semibold py-3 rounded-lg transition-colors"
-                >
-                  → Ir para Login Agora
-                </button>
-              </>
-            )}
-            
-            {status === 'error' && (
-              <>
-                <p className="text-[#666] text-sm mb-4">
-                  O link de verificação pode estar expirado ou inválido.
-                </p>
+          {/* Success State */}
+          {status === 'success' && (
+            <div className="py-6">
+              {/* Check icon */}
+              <div className="relative w-20 h-20 mx-auto mb-8">
+                <div className="absolute inset-0 bg-green-500/10 rounded-full animate-ping" style={{ animationDuration: '2s' }} />
+                <div className="absolute inset-0 border-2 border-green-500/30 rounded-full" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <svg className="w-10 h-10 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              </div>
+
+              <h2 className="text-3xl font-black text-white mb-2">
+                Email Verificado
+              </h2>
+              <p className="text-xl text-green-400 font-bold mb-6">
+                Bem-vindo ao Chrono! 🎉
+              </p>
+
+              {user && (
+                <div className="bg-[#111118] border border-[#1e1e30] rounded-sm p-4 mb-8 text-left">
+                  <p className="text-[#555] text-xs font-mono uppercase tracking-widest mb-2">Conta Verificada</p>
+                  <p className="text-[var(--theme-primary,#7c3aed)] font-bold text-lg">@{user.username}</p>
+                  <p className="text-[#666] text-sm">{user.email}</p>
+                </div>
+              )}
+
+              <button
+                onClick={() => navigate('/login', {
+                  state: {
+                    message: 'Email verificado! Faça login para continuar.',
+                    email: user?.email
+                  }
+                })}
+                className="w-full relative group py-4 px-6 bg-gradient-to-r from-[var(--theme-primary,#7c3aed)] to-[var(--theme-secondary,#6d28d9)] text-white font-black text-lg tracking-wider rounded-sm transition-all hover:shadow-[0_0_30px_rgba(124,58,237,0.4)] hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <span className="relative z-10">ENTRAR NO CHRONO →</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-[var(--theme-primary,#7c3aed)] to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity rounded-sm" />
+                <span className="absolute inset-0 flex items-center justify-center text-white font-black text-lg tracking-wider opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                  ENTRAR NO CHRONO →
+                </span>
+              </button>
+            </div>
+          )}
+
+          {/* Error State */}
+          {status === 'error' && (
+            <div className="py-6">
+              <div className="relative w-20 h-20 mx-auto mb-8">
+                <div className="absolute inset-0 border-2 border-red-500/30 rounded-full" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <svg className="w-10 h-10 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </div>
+              </div>
+
+              <h2 className="text-2xl font-black text-red-400 mb-3">
+                Erro na Verificação
+              </h2>
+              <p className="text-[#888] mb-8 text-sm leading-relaxed">
+                {message || 'O link de verificação pode estar expirado ou inválido.'}
+              </p>
+
+              <div className="space-y-3">
                 <button
                   onClick={() => navigate('/register')}
-                  className="w-full bg-[#0084ff] hover:bg-[#0073e6] text-white font-semibold py-3 rounded-lg transition-colors"
+                  className="w-full py-3 px-6 bg-[var(--theme-primary,#7c3aed)] text-white font-bold tracking-wider rounded-sm hover:bg-[var(--theme-secondary,#6d28d9)] transition-colors"
                 >
-                  → Registrar Novamente
+                  REGISTRAR NOVAMENTE
                 </button>
                 <button
                   onClick={() => navigate('/login')}
-                  className="w-full bg-[#1a1a1a] hover:bg-[#2a2a2a] text-[#0084ff] font-semibold py-3 rounded-lg transition-colors border border-[#333]"
+                  className="w-full py-3 px-6 bg-transparent text-[var(--theme-primary,#7c3aed)] font-bold tracking-wider rounded-sm border border-[var(--theme-primary,#7c3aed)]/30 hover:bg-[var(--theme-primary,#7c3aed)]/10 transition-colors"
                 >
-                  ← Voltar para Login
+                  ← VOLTAR AO LOGIN
                 </button>
-              </>
-            )}
-          </div>
-
-          {/* Help Text */}
-          {status === 'error' && (
-            <div className="mt-6 pt-6 border-t border-[#333]">
-              <p className="text-[#666] text-sm mb-3">Precisa de ajuda?</p>
-              <a
-                href="mailto:support@chrono.com"
-                className="text-[#0084ff] hover:underline text-sm"
-              >
-                📧 Contate nosso suporte
-              </a>
+              </div>
             </div>
           )}
         </div>
 
-        {/* Footer Info */}
-        <div className="text-center mt-8 text-[#666] text-xs">
-          <p>© 2026 Chrono - Rede Social Temporal</p>
+        {/* Footer */}
+        <div className="text-center mt-6 text-[#444] text-xs font-mono tracking-widest">
+          <p>© 2026 CHRONO</p>
         </div>
       </div>
     </div>
