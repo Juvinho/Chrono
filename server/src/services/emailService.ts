@@ -181,10 +181,11 @@ export class EmailService {
 
       const user = result.rows[0];
 
-      // Mark email as verified
+      // Mark email as verified (sync both verification columns)
       await pool.query(
         `UPDATE users 
          SET email_verified = true,
+             is_verified = TRUE,
              verification_token = NULL,
              verification_token_expires_at = NULL,
              verification_attempts = 0

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { User } from '../../../types/index';
-import { AlertIcon, CheckIcon, XIcon } from '../../../components/ui/icons';
-import { apiClient } from '../../../api';
+import { User } from '../types/index';
+import { apiClient } from '../api';
 
 interface EmailVerificationBannerProps {
   user: User;
@@ -35,8 +34,8 @@ export const EmailVerificationBanner: React.FC<EmailVerificationBannerProps> = (
 
   const checkVerificationStatus = async () => {
     try {
-      const response = await apiClient.get('/auth/email-verification/status');
-      const { email_verified } = response.data;
+      const response = await apiClient.get<{ email_verified: boolean }>('/auth/email-verification/status');
+      const email_verified = (response.data as any)?.email_verified;
 
       if (email_verified) {
         setStatus('verified');
@@ -57,13 +56,13 @@ export const EmailVerificationBanner: React.FC<EmailVerificationBannerProps> = (
   const handleResendEmail = async () => {
     try {
       setIsSending(true);
-      await apiClient.post('/auth/email-verification/send');
+      await apiClient.post('/auth/email-verification/send', {});
       
       setMessage('✉️ Email de verificação reenviado!');
       setCanResend(false);
-      setResendCountdown(60); // 60 seconds countdown
+      setResendCountdown(60);
     } catch (error: any) {
-      const errorMsg = error.response?.data?.message || 'Erro ao reenviar email';
+      const errorMsg = error?.message || 'Erro ao reenviar email';
       setMessage(`❌ ${errorMsg}`);
     } finally {
       setIsSending(false);
@@ -73,7 +72,7 @@ export const EmailVerificationBanner: React.FC<EmailVerificationBannerProps> = (
   if (status === 'verified') {
     return (
       <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 mb-4 flex items-center gap-3">
-        <CheckIcon className="w-5 h-5 text-green-500" />
+        <span className="text-green-500 text-lg">✓</span>
         <div className="flex-1">
           <p className="text-green-500 font-medium">{message}</p>
           <p className="text-green-500/70 text-sm">Sua conta está totalmente verificada</p>
@@ -86,7 +85,7 @@ export const EmailVerificationBanner: React.FC<EmailVerificationBannerProps> = (
     return (
       <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-4">
         <div className="flex items-center gap-3 mb-3">
-          <AlertIcon className="w-5 h-5 text-blue-500" />
+          <span className="text-blue-500 text-lg">⚠</span>
           <p className="text-blue-500 font-medium">{message}</p>
         </div>
 

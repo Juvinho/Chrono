@@ -313,10 +313,14 @@ router.post('/login', async (req, res) => {
     }
 
     // Check verification status
-    const verificationCheck = await pool.query('SELECT is_verified FROM users WHERE id = $1', [user.id]);
+    const verificationCheck = await pool.query('SELECT is_verified, email FROM users WHERE id = $1', [user.id]);
     if (verificationCheck.rows.length > 0 && !verificationCheck.rows[0].is_verified) {
          await securityService.logAction(user.id, 'login', 'user', user.id, 'failure', { username, reason: 'email_not_verified' }, req);
-         return res.status(403).json({ error: 'Email not verified. Please check your inbox.' });
+         return res.status(403).json({ 
+           error: 'email_not_verified',
+           message: 'Seu email ainda não foi verificado. Verifique sua caixa de entrada.',
+           email: verificationCheck.rows[0].email
+         });
     }
 
     // Get password hash from database
@@ -376,7 +380,7 @@ router.post('/verify-email', async (req, res) => {
     if (!token) return res.status(400).json({ error: 'Token required' });
 
     const result = await pool.query(
-      'UPDATE users SET is_verified = TRUE, email_verification_token = NULL WHERE email_verification_token = $1 RETURNING id, username, email',
+      'UPDATE users SET is_verified = TRUE, email_verified = TRUE, email_verification_token = NULL WHERE email_verification_token = $1 RETURNING id, username, email',
       [token]
     );
 
@@ -388,6 +392,57 @@ router.post('/verify-email', async (req, res) => {
   } catch (error: any) {
     console.error('Verification error:', error);
     res.status(500).json({ error: 'Verification failed' });
+  }
+});
+
+// Resend verification email (no auth required - for users who can't login)
+router.post('/resend-verification', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email é obrigatório' });
+    }
+
+    // Find user by email
+    const user = await userService.getUserByEmail(email);
+    if (!user) {
+      // Don't reveal if email exists for security
+      return res.json({ success: true, message: 'Se o email existir, um link de verificação será enviado.' });
+    }
+
+    // Check if already verified
+    const verCheck = await pool.query('SELECT is_verified, email_verified FROM users WHERE id = $1', [user.id]);
+    if (verCheck.rows.length > 0 && (verCheck.rows[0].is_verified || verCheck.rows[0].email_verified)) {
+      return res.status(400).json({ error: 'Este email já está verificado. Faça login normalmente.' });
+    }
+
+    // Send verification email
+    try {
+      const { getEmailService } = await import('../services/emailService.js');
+      const emailService = await getEmailService();
+      
+      if (emailService) {
+        const ipAddress = req.ip || req.connection.remoteAddress;
+        const userAgent = req.get('user-agent');
+        
+        await emailService.sendVerificationEmail(user, ipAddress, userAgent);
+        console.log(`✅ Verification email resent to ${email}`);
+      } else {
+        console.warn(`⚠️ Email service not available for resend to ${email}`);
+      }
+    } catch (emailError: any) {
+      // Rate limit error
+      if (emailError.message && emailError.message.includes('Too many')) {
+        return res.status(429).json({ error: 'Muitos emails enviados. Aguarde 1 hora.' });
+      }
+      console.error('⚠️ Failed to resend verification email:', emailError);
+    }
+
+    res.json({ success: true, message: 'Se o email existir, um link de verificação será enviado.' });
+  } catch (error: any) {
+    console.error('Resend verification error:', error);
+    res.status(500).json({ error: 'Erro ao reenviar email de verificação' });
   }
 });
 

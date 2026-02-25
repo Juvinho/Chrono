@@ -33,10 +33,10 @@ export class UserService {
     try {
       await client.query('BEGIN');
 
-      // 1. Insert into users
+      // 1. Insert into users (is_verified = FALSE until email verification)
       const userResult = await client.query(
-        `INSERT INTO users (username, email, password_hash, avatar, is_verified)
-         VALUES ($1, $2, $3, $4, TRUE)
+        `INSERT INTO users (username, email, password_hash, avatar, is_verified, email_verified)
+         VALUES ($1, $2, $3, $4, FALSE, FALSE)
          RETURNING id, username, email, avatar, is_verified, created_at, updated_at`,
         [
           username,

@@ -111,8 +111,15 @@ export const authService = {
   },
 
   async verifyEmail(token: string) {
-    return baseClient.request<{ success: boolean }>(`/auth/verify-email?token=${token}`, {
+    return baseClient.request<{ success: boolean; message: string }>(`/auth/email-verification/verify/${token}`, {
       method: 'GET',
+    });
+  },
+
+  async resendVerification(email: string) {
+    return baseClient.request<{ success: boolean; message: string }>('/auth/resend-verification', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
     });
   },
 

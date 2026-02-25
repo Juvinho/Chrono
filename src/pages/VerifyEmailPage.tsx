@@ -2,15 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { apiClient } from '../api';
 
-interface VerificationStatus {
+interface VerificationResult {
   success: boolean;
   message: string;
   user?: {
-    id: number;
+    id: string;
     username: string;
     email: string;
   };
-  error?: string;
 }
 
 const VerifyEmailPage: React.FC = () => {
@@ -32,10 +31,17 @@ const VerifyEmailPage: React.FC = () => {
 
   const verifyEmail = async () => {
     try {
-      const response = await apiClient.get(`/auth/email-verification/verify/${token}`);
-      const data: VerificationStatus = response.data;
+      const response = await apiClient.get<VerificationResult>(`/auth/email-verification/verify/${token}`);
 
-      if (data.success) {
+      if (response.error) {
+        setStatus('error');
+        setMessage(response.error);
+        return;
+      }
+
+      const data = response.data;
+
+      if (data?.success) {
         setStatus('success');
         setMessage(`✅ ${data.message}`);
         setUser(data.user);
@@ -51,12 +57,11 @@ const VerifyEmailPage: React.FC = () => {
         }, 3000);
       } else {
         setStatus('error');
-        setMessage(data.error || 'Erro ao verificar email');
+        setMessage('Erro ao verificar email');
       }
     } catch (error: any) {
       setStatus('error');
-      const errorMsg = error.response?.data?.message || 'Erro ao verificar email';
-      setMessage(`❌ ${errorMsg}`);
+      setMessage(`❌ ${error?.message || 'Erro ao verificar email'}`);
     }
   };
 

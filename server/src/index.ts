@@ -521,15 +521,17 @@ const startServer = async () => {
       // Initialize Email Service for email verification
       console.log('📧 Inicializando serviço de email...');
       try {
-        const hasGmailCredentials = process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD;
+        const gmailUser = process.env.GMAIL_USER || process.env.SMTP_USER;
+        const gmailPass = process.env.GMAIL_APP_PASSWORD || process.env.SMTP_PASS;
+        const hasGmailCredentials = gmailUser && gmailPass;
         
         if (hasGmailCredentials) {
           // Use real Gmail service
           const { initializeEmailService } = await import('./services/emailService.js');
           const emailService = initializeEmailService({
-            gmailUser: process.env.GMAIL_USER!,
-            gmailAppPassword: process.env.GMAIL_APP_PASSWORD!,
-            frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+            gmailUser: gmailUser!,
+            gmailAppPassword: gmailPass!,
+            frontendUrl: process.env.FRONTEND_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'http://localhost:3000'),
             fromEmail: process.env.SMTP_FROM_EMAIL || 'noreply@chrono.com',
             fromName: process.env.SMTP_FROM_NAME || 'Chrono'
           });

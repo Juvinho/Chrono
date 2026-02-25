@@ -16,6 +16,8 @@ export default function Verify({ email, onNavigate }: VerifyProps) {
     const { t } = useTranslation();
     const [status, setStatus] = useState<'idle' | 'verifying' | 'success' | 'error'>('idle');
     const [message, setMessage] = useState('');
+    const [isResending, setIsResending] = useState(false);
+    const [resendMsg, setResendMsg] = useState('');
 
     useEffect(() => {
         // Check for token in URL
@@ -55,6 +57,27 @@ export default function Verify({ email, onNavigate }: VerifyProps) {
         onNavigate(Page.Login);
     };
 
+    const handleResendEmail = async () => {
+        if (!email || isResending) return;
+        setIsResending(true);
+        setResendMsg('');
+        try {
+            const response = await apiClient.request<{ success: boolean; message: string }>('/auth/resend-verification', {
+                method: 'POST',
+                body: JSON.stringify({ email }),
+            });
+            if (response.error) {
+                setResendMsg(`❌ ${response.error}`);
+            } else {
+                setResendMsg('✅ Email reenviado! Verifique sua caixa de entrada.');
+            }
+        } catch {
+            setResendMsg('❌ Erro ao reenviar email.');
+        } finally {
+            setIsResending(false);
+        }
+    };
+
     return (
         <div className="flex items-center justify-center min-h-screen bg-[var(--theme-bg-primary)] transition-colors duration-300">
             <div className="w-full max-w-lg p-8 text-center space-y-8 border-2 border-[var(--theme-border-primary)] bg-[var(--theme-bg-primary)]">
@@ -62,20 +85,45 @@ export default function Verify({ email, onNavigate }: VerifyProps) {
                 
                 {status === 'idle' && (
                     <div className="space-y-4">
+                        <div className="text-6xl">📧</div>
                         <p className="text-[var(--theme-text-primary)]">
                             {t('verifyMessage', { email: email || 'seu email' })}
                         </p>
-                        <div className="p-4 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] rounded">
+                        <div className="p-4 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] rounded space-y-3">
                             <p className="text-sm text-[var(--theme-text-secondary)]">
-                                Enviamos um link de confirmação para sua caixa de entrada. Por favor, clique no link para ativar sua conta.
+                                Enviamos um link de confirmação para <strong className="text-[var(--theme-primary)]">{email || 'seu email'}</strong>. 
+                                Por favor, clique no link para ativar sua conta.
+                            </p>
+                            <p className="text-xs text-[var(--theme-text-secondary)] opacity-70">
+                                💡 Verifique sua pasta de spam se não encontrar o email.
                             </p>
                         </div>
-                        <button
-                            onClick={handleLoginRedirect}
-                            className="w-full max-w-xs mx-auto py-2 px-4 bg-[var(--theme-bg-secondary)] text-[var(--theme-text-primary)] border border-[var(--theme-border-primary)] hover:border-[var(--theme-primary)] transition-colors"
-                        >
-                            Voltar para Login
-                        </button>
+
+                        {resendMsg && (
+                            <p className={`text-sm ${resendMsg.startsWith('✅') ? 'text-green-400' : 'text-red-400'}`}>
+                                {resendMsg}
+                            </p>
+                        )}
+
+                        <div className="flex flex-col gap-2">
+                            <button
+                                onClick={handleResendEmail}
+                                disabled={isResending || !email}
+                                className={`w-full max-w-xs mx-auto py-2 px-4 transition-colors border ${
+                                    isResending
+                                        ? 'bg-[var(--theme-bg-tertiary)] text-[var(--theme-text-secondary)] border-[var(--theme-border-primary)] cursor-wait'
+                                        : 'bg-[var(--theme-primary)]/10 text-[var(--theme-primary)] border-[var(--theme-primary)] hover:bg-[var(--theme-primary)] hover:text-white'
+                                }`}
+                            >
+                                {isResending ? '⌛ Reenviando...' : '📨 Reenviar Email de Verificação'}
+                            </button>
+                            <button
+                                onClick={handleLoginRedirect}
+                                className="w-full max-w-xs mx-auto py-2 px-4 bg-[var(--theme-bg-secondary)] text-[var(--theme-text-primary)] border border-[var(--theme-border-primary)] hover:border-[var(--theme-primary)] transition-colors"
+                            >
+                                ← Voltar para Login
+                            </button>
+                        </div>
                     </div>
                 )}
 

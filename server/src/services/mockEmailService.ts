@@ -47,7 +47,8 @@ export class MockEmailService {
       );
 
       // Log to console (simulating email send)
-      const verificationLink = `https://chrono-production-3214.up.railway.app/verify-email/${token}`;
+      const frontendUrl = process.env.FRONTEND_URL || 'https://chrono-production-3214.up.railway.app';
+      const verificationLink = `${frontendUrl}/verify-email/${token}`;
       console.log(`
 ╔════════════════════════════════════════════════════════════════╗
 ║           📧 MOCK EMAIL SERVICE - VERIFICATION TOKEN           ║
@@ -103,10 +104,11 @@ export class MockEmailService {
         return null;
       }
 
-      // Mark as verified
+      // Mark as verified (sync both verification columns)
       await pool.query(
         `UPDATE users 
          SET email_verified = TRUE,
+             is_verified = TRUE,
              verification_token = NULL,
              verification_token_expires_at = NULL
          WHERE id = $1`,

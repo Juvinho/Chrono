@@ -22,6 +22,9 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
     const [message, setMessage] = useState('');
     const [captchaVerified, setCaptchaVerified] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+    const [isResending, setIsResending] = useState(false);
+    const [resendSuccess, setResendSuccess] = useState(false);
 
     useEffect(() => {
         const msg = sessionStorage.getItem('chrono_login_message');
@@ -108,6 +111,13 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
                     setIsLoading(false);
                     return;
                 }
+                if (response.error === 'email_not_verified') {
+                    setUnverifiedEmail((response as any).data?.email || null);
+                    setError('Seu email ainda não foi verificado. Verifique sua caixa de entrada.');
+                    setIsLoading(false);
+                    return;
+                }
+                setUnverifiedEmail(null);
                 setError(response.error);
                 setIsLoading(false);
                 return;
@@ -137,6 +147,29 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
             console.error('Login error:', err);
             setError(err.message || t('errorInvalidCredentials'));
             setIsLoading(false);
+        }
+    };
+
+    const handleResendVerification = async () => {
+        if (!unverifiedEmail || isResending) return;
+        setIsResending(true);
+        setResendSuccess(false);
+        try {
+            const response = await apiClient.request<{ success: boolean; message: string }>('/auth/resend-verification', {
+                method: 'POST',
+                body: JSON.stringify({ email: unverifiedEmail }),
+            });
+            if (response.error) {
+                setError(response.error);
+            } else {
+                setResendSuccess(true);
+                setError('');
+                setMessage('📨 Email de verificação reenviado! Verifique sua caixa de entrada.');
+            }
+        } catch (err: any) {
+            setError(err.message || 'Erro ao reenviar email');
+        } finally {
+            setIsResending(false);
         }
     };
 
@@ -212,7 +245,34 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
                         </div>
                     )}
 
-                    {error && <p className="text-red-500 text-sm text-center glitch-effect" data-text={error}>{error}</p>}
+                    {error && !unverifiedEmail && <p className="text-red-500 text-sm text-center glitch-effect" data-text={error}>{error}</p>}
+                    
+                    {unverifiedEmail && (
+                        <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg space-y-3">
+                            <p className="text-amber-400 text-sm font-medium">
+                                ⚠️ Seu email ainda não foi verificado.
+                            </p>
+                            <p className="text-amber-400/70 text-xs">
+                                Verifique sua caixa de entrada ({unverifiedEmail}) e clique no link de ativação. 
+                                Verifique também a pasta de spam.
+                            </p>
+                            <button
+                                type="button"
+                                onClick={handleResendVerification}
+                                disabled={isResending || resendSuccess}
+                                className={`w-full py-2 text-sm rounded transition-colors ${
+                                    resendSuccess 
+                                        ? 'bg-green-500/20 text-green-400 cursor-default'
+                                        : isResending
+                                        ? 'bg-amber-500/10 text-amber-400/50 cursor-wait'
+                                        : 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 cursor-pointer'
+                                }`}
+                            >
+                                {isResending ? '⌛ Reenviando...' : resendSuccess ? '✅ Email reenviado!' : '📨 Reenviar email de verificação'}
+                            </button>
+                        </div>
+                    )}
+
                     {message && <p className="text-green-400 text-sm text-center">{message}</p>}
                     
                     <div className="flex items-center space-x-2 p-3 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)]">

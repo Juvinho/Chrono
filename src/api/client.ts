@@ -105,7 +105,7 @@ export class ApiClient {
         }
         const data = await response.json().catch(() => ({}));
         const errorMessage = data.error || data.details || `Request failed with status ${response.status}`;
-        return { error: errorMessage };
+        return { error: errorMessage, data: data as T };
       }
 
       const text = await response.text();
