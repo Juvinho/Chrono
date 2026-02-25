@@ -17,6 +17,9 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
     const [password, setPassword] = useState('');
     const [twoFactorCode, setTwoFactorCode] = useState('');
     const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
+    const [twoFactorTempToken, setTwoFactorTempToken] = useState<string | null>(null);
+    const [useRecoveryCode, setUseRecoveryCode] = useState(false);
+    const [recoveryCode, setRecoveryCode] = useState('');
     const [error, setError] = useState('');
     const [dbError, setDbError] = useState('');
     const [message, setMessage] = useState('');
@@ -101,16 +104,10 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
             const response = await apiClient.login({ 
                 username, 
                 password,
-                twoFactorCode: requiresTwoFactor ? twoFactorCode : undefined
             });
             console.log('API response:', response);
             
             if (response.error) {
-                if (response.error === '2fa_required') {
-                    setRequiresTwoFactor(true);
-                    setIsLoading(false);
-                    return;
-                }
                 if (response.error === 'email_not_verified') {
                     setUnverifiedEmail((response as any).data?.email || null);
                     setError('Seu email ainda não foi verificado. Verifique sua caixa de entrada.');
@@ -123,16 +120,20 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
                 return;
             }
 
-            if (response.data?.token && response.data?.user) {
-                console.log('Login successful, setting token...');
-                apiClient.setToken(response.data.token);
+            // Check if 2FA is required
+            if (response.data?.requires_2fa && response.data?.temp_token) {
+                setRequiresTwoFactor(true);
+                setTwoFactorTempToken(response.data.temp_token);
+                setIsLoading(false);
+                return;
+            }
+
+            if (response.data?.user) {
+                console.log('Login successful (httpOnly cookie set by server)');
                 const user = mapApiUserToUser(response.data.user);
-                console.log('User mapped:', user);
-                console.log('Calling onLogin prop type:', typeof onLogin);
                 
                 try {
                     onLogin(user);
-                    console.log('onLogin executed successfully');
                 } catch (e) {
                     console.error('Error executing onLogin:', e);
                     setError('Erro ao processar login na aplicação.');
@@ -170,6 +171,41 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
             setError(err.message || 'Erro ao reenviar email');
         } finally {
             setIsResending(false);
+        }
+    };
+
+    const handle2FAVerify = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!twoFactorTempToken || isLoading) return;
+        setIsLoading(true);
+        setError('');
+
+        try {
+            const response = await apiClient.request<{ user?: any; requires_2fa?: boolean }>('/auth/verify-2fa', {
+                method: 'POST',
+                body: JSON.stringify({
+                    temp_token: twoFactorTempToken,
+                    code: useRecoveryCode ? undefined : twoFactorCode || undefined,
+                    recovery_code: useRecoveryCode ? recoveryCode || undefined : undefined,
+                }),
+            });
+
+            if (response.error) {
+                setError(response.error);
+                setIsLoading(false);
+                return;
+            }
+
+            if (response.data?.user) {
+                const user = mapApiUserToUser(response.data.user);
+                onLogin(user);
+            } else {
+                setError('Resposta inválida do servidor');
+                setIsLoading(false);
+            }
+        } catch (err: any) {
+            setError(err.message || 'Erro na verificação 2FA');
+            setIsLoading(false);
         }
     };
 
@@ -226,22 +262,67 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
                     </div>
 
                     {requiresTwoFactor && (
-                        <div className="animate-fade-in">
-                            <label htmlFor="2fa" className="text-sm font-bold text-[var(--theme-primary)] block uppercase tracking-widest">
-                                Digite o código de 6 dígitos
-                            </label>
-                            <input
-                                id="2fa"
-                                type="text"
-                                value={twoFactorCode}
-                                onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                                required
-                                placeholder="000000"
-                                className="w-full px-3 py-3 mt-1 text-center text-2xl font-mono tracking-[0.5em] text-[var(--theme-primary)] bg-black/50 border-2 border-[var(--theme-primary)] focus:outline-none shadow-[0_0_10px_rgba(var(--theme-primary-rgb),0.3)]"
-                            />
-                            <p className="text-[10px] text-[var(--theme-text-secondary)] mt-2 text-center">
-                                VERIFICAÇÃO DE IDENTIDADE NECESSÁRIA
+                        <div className="animate-fade-in space-y-3 p-4 border-2 border-[var(--theme-primary)] bg-black/30">
+                            <p className="text-[10px] text-[var(--theme-primary)] text-center uppercase tracking-[0.3em] font-bold">
+                                ◈ VERIFICAÇÃO 2FA NECESSÁRIA ◈
                             </p>
+
+                            {!useRecoveryCode ? (
+                                <>
+                                    <label htmlFor="2fa" className="text-sm font-bold text-[var(--theme-text-secondary)] block">
+                                        Código do autenticador (6 dígitos)
+                                    </label>
+                                    <input
+                                        id="2fa"
+                                        type="text"
+                                        value={twoFactorCode}
+                                        onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                        placeholder="000000"
+                                        autoFocus
+                                        className="w-full px-3 py-3 text-center text-2xl font-mono tracking-[0.5em] text-[var(--theme-primary)] bg-black/50 border-2 border-[var(--theme-primary)] focus:outline-none shadow-[0_0_10px_rgba(var(--theme-primary-rgb),0.3)]"
+                                    />
+                                </>
+                            ) : (
+                                <>
+                                    <label htmlFor="recovery" className="text-sm font-bold text-[var(--theme-text-secondary)] block">
+                                        Código de recuperação (XXXX-XXXX)
+                                    </label>
+                                    <input
+                                        id="recovery"
+                                        type="text"
+                                        value={recoveryCode}
+                                        onChange={(e) => setRecoveryCode(e.target.value.toUpperCase())}
+                                        placeholder="XXXX-XXXX"
+                                        autoFocus
+                                        className="w-full px-3 py-3 text-center text-xl font-mono tracking-widest text-amber-400 bg-black/50 border-2 border-amber-500/50 focus:outline-none"
+                                    />
+                                </>
+                            )}
+
+                            <button
+                                type="button"
+                                onClick={() => { setUseRecoveryCode(!useRecoveryCode); setError(''); }}
+                                className="text-xs text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)] transition-colors w-full text-center"
+                            >
+                                {useRecoveryCode ? '← Usar código do autenticador' : 'Usar código de recuperação →'}
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={handle2FAVerify}
+                                disabled={isLoading || (!twoFactorCode && !recoveryCode)}
+                                className="w-full py-2 px-4 bg-[var(--theme-primary)] text-white font-bold hover:bg-[var(--theme-secondary)] transition-colors border border-[var(--theme-secondary)] disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isLoading ? '[ VERIFICANDO... ]' : '[ VERIFICAR ]'}
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => { setRequiresTwoFactor(false); setTwoFactorTempToken(null); setTwoFactorCode(''); setRecoveryCode(''); setError(''); }}
+                                className="text-xs text-[var(--theme-text-secondary)] hover:text-red-400 transition-colors w-full text-center"
+                            >
+                                Cancelar e voltar ao login
+                            </button>
                         </div>
                     )}
 

@@ -12,9 +12,26 @@ export interface AuthRequest extends Request {
   username?: string;
 }
 
-export const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
+/**
+ * Extract JWT from request:
+ * 1. httpOnly cookie 'token' (primary — secure)
+ * 2. Authorization: Bearer header (fallback — for mobile/external clients)
+ */
+function extractToken(req: Request): string | null {
+  // 1. httpOnly cookie (set by login)
+  if (req.cookies?.token) {
+    return req.cookies.token;
+  }
+  // 2. Authorization header fallback
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authHeader.split(' ')[1];
+  }
+  return null;
+}
+
+export const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
+  const token = extractToken(req);
 
   if (!token) {
     return res.status(401).json({ error: 'Access token required' });
@@ -31,8 +48,7 @@ export const authenticateToken = (req: AuthRequest, res: Response, next: NextFun
 };
 
 export const optionalAuthenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+  const token = extractToken(req);
 
   if (!token) {
     return next();

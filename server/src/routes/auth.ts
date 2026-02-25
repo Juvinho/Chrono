@@ -10,6 +10,7 @@ import { promisify } from 'util';
 
 import { validateNoEmojis } from '../utils/validation.js';
 import { SecurityService } from '../services/securityService.js';
+import { get2FAStatus, verify2FACode, verifyRecoveryCode } from '../services/twoFactorService.js';
 
 // Validate JWT_SECRET - must match the one in middleware/auth.ts
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -339,6 +340,24 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    // ─── 2FA check ───────────────────────────────────────────
+    const twoFAStatus = await get2FAStatus(user.id);
+    if (twoFAStatus.enabled) {
+      // If 2FA is enabled, don't issue the final JWT yet.
+      // Issue a short-lived temp token that only permits /auth/verify-2fa
+      const tempToken = jwt.sign(
+        { id: user.id, username: user.username, purpose: '2fa_pending' },
+        JWT_SECRET,
+        { expiresIn: '5m' } // 5 minutes to enter 2FA code
+      );
+
+      return res.json({
+        requires_2fa: true,
+        temp_token: tempToken,
+      });
+    }
+    // ─── End 2FA check ───────────────────────────────────────
+
     await securityService.logAction(user.id, 'login', 'user', user.id, 'success', { username }, req);
 
     // Update last_seen timestamp
@@ -350,12 +369,22 @@ router.post('/login', async (req, res) => {
       { expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as any }
     );
 
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    // Set JWT as httpOnly cookie — browser sends it automatically, JS cannot read it
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'strict' : 'lax',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
     res.json({
       user: {
         ...user,
         email: undefined,
       },
-      token,
     });
   } catch (error: any) {
     console.error('Login error:', error);
@@ -370,6 +399,89 @@ router.post('/login', async (req, res) => {
       details: errorDetails,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
+  }
+});
+
+// ─── 2FA Verification (during login) ─────────────────────
+// Called after login returns requires_2fa: true
+router.post('/verify-2fa', async (req, res) => {
+  try {
+    const { temp_token, code, recovery_code } = req.body;
+
+    if (!temp_token) {
+      return res.status(400).json({ error: 'Token temporário é obrigatório' });
+    }
+    if (!code && !recovery_code) {
+      return res.status(400).json({ error: 'Código 2FA ou código de recuperação é obrigatório' });
+    }
+
+    // Verify the temp token
+    let decoded: any;
+    try {
+      decoded = jwt.verify(temp_token, JWT_SECRET);
+    } catch (err: any) {
+      return res.status(401).json({ error: 'Token temporário expirado. Faça login novamente.' });
+    }
+
+    if (decoded.purpose !== '2fa_pending') {
+      return res.status(401).json({ error: 'Token inválido para verificação 2FA' });
+    }
+
+    const userId = decoded.id;
+    const username = decoded.username;
+
+    let verified = false;
+
+    if (code) {
+      // Verify TOTP code
+      const twoFAStatus = await get2FAStatus(userId);
+      if (!twoFAStatus.secret) {
+        return res.status(500).json({ error: 'Erro interno: secret 2FA não encontrado' });
+      }
+      verified = verify2FACode(code, twoFAStatus.secret);
+    } else if (recovery_code) {
+      // Verify recovery code (one-time use)
+      verified = await verifyRecoveryCode(userId, recovery_code);
+    }
+
+    if (!verified) {
+      return res.status(401).json({ error: 'Código inválido. Tente novamente.' });
+    }
+
+    // 2FA verified — issue the real JWT
+    await securityService.logAction(userId, 'login', 'user', userId, 'success', { username, method: '2fa' }, req);
+    await userService.updateLastSeen(userId);
+
+    const user = await userService.getUserByUsername(username);
+    if (!user) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    const token = jwt.sign(
+      { id: userId, username },
+      JWT_SECRET,
+      { expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as any }
+    );
+
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'strict' : 'lax',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.json({
+      user: {
+        ...user,
+        email: undefined,
+      },
+    });
+  } catch (error: any) {
+    console.error('2FA verification error:', error);
+    res.status(500).json({ error: 'Falha na verificação 2FA' });
   }
 });
 
@@ -573,6 +685,18 @@ router.delete('/delete-account', authenticateToken, async (req: AuthRequest, res
     console.error('Delete account error:', error);
     res.status(500).json({ error: error.message || 'Falha ao excluir conta.' });
   }
+});
+
+// Logout — clear httpOnly cookie
+router.post('/logout', (_req, res) => {
+  const isProduction = process.env.NODE_ENV === 'production';
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'strict' : 'lax',
+    path: '/',
+  });
+  res.json({ success: true });
 });
 
 // Health check for auth routes

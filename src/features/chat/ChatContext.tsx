@@ -77,17 +77,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    // Get token from sessionStorage or localStorage
-    const token = sessionStorage.getItem('chrono_token') || localStorage.getItem('chrono_token');
-    
-    if (!token) {
-      console.warn('[Chat] No auth token available for Socket.io connection');
-      return;
-    }
+    // Token is now in httpOnly cookie — no need to read it from storage.
+    // Socket.io with withCredentials: true sends cookies automatically.
+    // The server extracts the JWT from the cookie in the handshake headers.
 
     const newSocket = io(import.meta.env.VITE_API_URL || 'http://localhost:3001', {
       withCredentials: true,
-      auth: { token },
+      // Auth token is sent via httpOnly cookie automatically
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,

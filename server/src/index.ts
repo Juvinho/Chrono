@@ -2,12 +2,14 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
+import { csrfCookieSetter, csrfProtection, csrfTokenEndpoint } from './middleware/csrf.js';
 
 // Define __dirname for ES modules FIRST (needed for dotenv path)
 const __filename = fileURLToPath(import.meta.url);
@@ -39,6 +41,7 @@ import userBioRoutes from './routes/userBio.js';
 import emailVerificationRouter from './routes/emailVerification.js';
 import bookmarkRoutes from './routes/bookmarks.js';
 import reportRoutes from './routes/reports.js';
+import twoFactorRoutes from './routes/twoFactor.js';
 import adminAuthRoutes from './routes/admin/auth.js';
 import adminTagsRoutes from './routes/admin/tags.js';
 import adminUsersRoutes from './routes/admin/users.js';
@@ -102,8 +105,14 @@ app.use(cors({
   },
   credentials: true,
 }));
+app.use(cookieParser());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// CSRF Protection (Double Submit Cookie)
+app.use(csrfCookieSetter);  // Sets csrf_token cookie on every response
+app.get('/api/auth/csrf-token', csrfTokenEndpoint);  // Endpoint to fetch CSRF token
+app.use('/api', csrfProtection);  // Validates CSRF on mutation requests (POST/PUT/DELETE/PATCH)
 
 // Socket.io Setup - com CORS agressivo para desenvolvimento
 const io = new Server(httpServer, {
@@ -140,8 +149,19 @@ io.use((socket, next) => {
   });
 
   try {
-    // Extract token from handshake auth
-    const token = socket.handshake.auth.token;
+    // Extract token: 1) handshake auth (legacy), 2) httpOnly cookie
+    let token = socket.handshake.auth.token;
+    
+    if (!token) {
+      // Parse token from httpOnly cookie in upgrade request headers
+      const cookieHeader = socket.handshake.headers.cookie;
+      if (cookieHeader) {
+        const match = cookieHeader.match(/(?:^|;\s*)token=([^;]+)/);
+        if (match) {
+          token = match[1];
+        }
+      }
+    }
     
     if (!token) {
       console.error('[🔌 Socket.io Middleware] ❌ Nenhum token fornecido');
@@ -338,6 +358,7 @@ app.use('/api/marketplace', marketplaceRoutes);
 app.use('/api/tags', tagsRoutes);
 app.use('/api/bookmarks', bookmarkRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/auth/2fa', twoFactorRoutes);
 
 // 🔐 ADMIN ROUTES (com autenticação especial)
 app.use('/api/admin/auth', adminAuthRoutes);

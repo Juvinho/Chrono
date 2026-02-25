@@ -8,6 +8,7 @@ import { ImageCropper } from '../../../components/ui/ImageCropper';
 import FramePreview, { getFrameShape } from './FramePreview';
 import { apiClient } from '../../../api';
 import { generateBio, analyzeProfileWithAI } from '../../../utils/geminiService';
+import TwoFactorSetup from '../../auth/components/TwoFactorSetup';
 
 // FIX: Add a default settings object to fall back on.
 const defaultSettings: Omit<ProfileSettings, 'coverImage'> = {
@@ -561,6 +562,11 @@ export default function SettingsPage({
                         </div>
                     </div>
 
+                    {/* 2FA Section */}
+                    <div className="space-y-4 border-t border-[var(--theme-border)] pt-6 mt-6">
+                        <TwoFactorSetup onClose={() => {}} />
+                    </div>
+
                     {/* Danger Zone: Delete Account */}
                     <div className="space-y-4 border-t border-red-900/50 pt-6 mt-6">
                         <h3 className="text-lg font-bold text-red-500">⚠️ Zona de Perigo</h3>
@@ -802,18 +808,7 @@ export default function SettingsPage({
                             </div>
                          </div>
 
-                         <div className="flex items-center justify-between p-4 bg-black/20 rounded border border-[var(--theme-border)]">
-                            <div>
-                                <h3 className="font-bold">2FA (Autenticação de Dois Fatores)</h3>
-                                <p className="text-sm text-[var(--theme-text-secondary)]">Adicionar uma camada extra de segurança à sua conta</p>
-                            </div>
-                            <button 
-                                className={`px-4 py-2 rounded font-bold transition-all ${draftUser.twoFactorEnabled ? 'bg-red-500/20 text-red-500 border border-red-500' : 'bg-green-500/20 text-green-500 border border-green-500'}`}
-                                onClick={() => {/* TODO: Implement 2FA setup flow */}}
-                            >
-                                {draftUser.twoFactorEnabled ? 'Desativar 2FA' : 'Ativar 2FA'}
-                            </button>
-                         </div>
+                         {/* 2FA moved to Account tab */}
 
                          <div className="flex items-center justify-between p-4 bg-black/20 rounded border border-[var(--theme-border)]">
                             <div>

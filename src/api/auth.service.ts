@@ -8,13 +8,15 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
-  token: string;
-  user: {
+  token?: string;
+  user?: {
     id: string;
     username: string;
     email: string;
     avatar?: string;
   };
+  requires_2fa?: boolean;
+  temp_token?: string;
 }
 
 export interface RegisterRequest {
@@ -77,6 +79,8 @@ export const authService = {
   },
 
   async logout() {
+    // Call server to clear httpOnly cookie
+    await baseClient.request('/auth/logout', { method: 'POST' });
     baseClient.setToken(null);
     return { data: { success: true } };
   },
@@ -134,6 +138,30 @@ export const authService = {
     return baseClient.request<{ success: boolean }>('/auth/delete-account', {
       method: 'DELETE',
       body: JSON.stringify({ password }),
+    });
+  },
+
+  // ─── 2FA Methods ─────────────────────────────────────
+  async get2FAStatus() {
+    return baseClient.get<{ enabled: boolean }>('/auth/2fa/status');
+  },
+
+  async setup2FA() {
+    return baseClient.post<{ qrCodeDataUrl: string; secret: string; otpauthUrl: string }>('/auth/2fa/setup', {});
+  },
+
+  async confirm2FA(secret: string, code: string) {
+    return baseClient.post<{ success: boolean; recoveryCodes: string[] }>('/auth/2fa/confirm', { secret, code });
+  },
+
+  async disable2FA(password: string) {
+    return baseClient.post<{ success: boolean }>('/auth/2fa/disable', { password });
+  },
+
+  async verify2FA(tempToken: string, code?: string, recoveryCode?: string) {
+    return baseClient.request<LoginResponse>('/auth/verify-2fa', {
+      method: 'POST',
+      body: JSON.stringify({ temp_token: tempToken, code, recovery_code: recoveryCode }),
     });
   },
 };

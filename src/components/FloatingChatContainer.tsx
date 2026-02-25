@@ -23,7 +23,7 @@ interface FloatingChatContainerProps {
 export const FloatingChatContainer: React.FC<FloatingChatContainerProps> = ({ currentUser }) => {
   const { openChats, closeChat } = useFloatingChat();
   const [conversations, setConversations] = useState<{ [key: string]: ConversationData }>({});
-  const [isAuthenticated, setIsAuthenticated] = useState(!!baseClient.getToken());
+  const [isAuthenticated, setIsAuthenticated] = useState(!!currentUser);
 
   // Clear all open chats when user changes or logs out
   useEffect(() => {
@@ -32,20 +32,15 @@ export const FloatingChatContainer: React.FC<FloatingChatContainerProps> = ({ cu
       openChats.forEach(chat => closeChat(chat.userId));
       setConversations({});
       setIsAuthenticated(false);
+    } else {
+      setIsAuthenticated(true);
     }
   }, [currentUser?.id]); // Only depend on user ID changes
-
-  // Verificar se está autenticado
-  useEffect(() => {
-    const token = baseClient.getToken();
-    setIsAuthenticated(!!token);
-  }, [openChats]);
 
   // Debug: Log quando chats abrem
   useEffect(() => {
     if (openChats.length > 0) {
       console.log('📱 FloatingChatContainer - openChats:', openChats);
-      console.log('📱 Token present:', !!baseClient.getToken());
     }
   }, [openChats]);
 

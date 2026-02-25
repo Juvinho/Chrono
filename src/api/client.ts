@@ -1,4 +1,14 @@
 // src/api/client.ts
+
+/**
+ * Read a cookie value by name from document.cookie
+ */
+function getCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
 const getBaseUrl = () => {
   if (typeof window !== 'undefined') {
     const envBase = (import.meta as any)?.env?.VITE_API_URL as string | undefined;
@@ -33,32 +43,24 @@ export interface ApiResponse<T> {
 let globalRateLimitUntil = 0;
 
 export class ApiClient {
-  private token: string | null = null;
-  private readonly STORAGE_KEY = 'chrono_token';
-  private readonly USE_SESSION_STORAGE = true; // More secure than localStorage for tokens
-
-  setToken(token: string | null) {
-    this.token = token;
-    const storage = this.USE_SESSION_STORAGE ? sessionStorage : localStorage;
-    
-    if (token) {
-      // Validate token format before storing (should be JWT)
-      if (!/^[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.[A-Za-z0-9-_.+/=]*$/.test(token)) {
-        console.warn('[Security] Invalid token format');
-        return;
-      }
-      storage.setItem(this.STORAGE_KEY, token);
-    } else {
-      storage.removeItem(this.STORAGE_KEY);
-    }
+  /**
+   * With httpOnly cookies, the client never touches the JWT directly.
+   * Authentication is handled automatically by the browser sending cookies.
+   * These methods are kept for backward compatibility.
+   */
+  setToken(_token: string | null) {
+    // No-op: JWT is now in httpOnly cookie, managed by the server.
+    // Clear legacy storage if present
+    try {
+      sessionStorage.removeItem('chrono_token');
+      localStorage.removeItem('chrono_token');
+    } catch (_e) { /* ignore */ }
   }
 
   getToken(): string | null {
-    if (!this.token) {
-      const storage = this.USE_SESSION_STORAGE ? sessionStorage : localStorage;
-      this.token = storage.getItem(this.STORAGE_KEY);
-    }
-    return this.token;
+    // Cannot read httpOnly cookie from JS (by design).
+    // Return a sentinel if csrf_token cookie exists (set alongside auth cookie)
+    return getCookie('csrf_token') ? '__httpOnly__' : null;
   }
 
   public async request<T>(
@@ -69,14 +71,20 @@ export class ApiClient {
     if (now < globalRateLimitUntil) {
       return { error: 'rateLimitError', retryAfter: globalRateLimitUntil - now };
     }
-    const token = this.getToken();
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...options.headers,
     };
 
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    // No Authorization header needed — httpOnly cookie is sent automatically via credentials: 'include'
+
+    // CSRF Protection: attach token from cookie to header on mutation requests
+    const method = (options.method || 'GET').toUpperCase();
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+      const csrfToken = getCookie('csrf_token');
+      if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+      }
     }
     const apiKey = ((import.meta as any)?.env?.VITE_API_KEY as string | undefined) || (process.env as any)?.API_KEY;
     if (apiKey) {
@@ -90,6 +98,7 @@ export class ApiClient {
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         ...options,
         headers,
+        credentials: 'include', // Send cookies with every request (CSRF + future httpOnly JWT)
         signal: controller.signal,
       });
 

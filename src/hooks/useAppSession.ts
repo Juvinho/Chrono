@@ -198,50 +198,35 @@ export const useAppSession = ({
     // Validate Session on Mount
     useEffect(() => {
         const validateSession = async () => {
-            const token = apiClient.getToken();
-            if (token) {
-                try {
-                    // Check if getCurrentUser exists (for compatibility)
-                    let result;
-                    if (!apiClient.getCurrentUser || typeof apiClient.getCurrentUser !== 'function') {
-                        console.error('apiClient.getCurrentUser is not a function. Using getMe instead.');
-                        result = await apiClient.getMe();
-                    } else {
-                        result = await apiClient.getCurrentUser();
-                    }
-                    
-                    if (result.data) {
-                        const mappedUser = mapApiUserToUser(result.data);
-                        setCurrentUser(mappedUser);
-
-                        // Stories feature removed
-
-                        // Load initial users (recommended/popular)
-                        const usersRes = await apiClient.searchUsers('');
-                        if (usersRes.data) {
-                            setUsers(usersRes.data);
-                        }
-                    } else {
-                        console.warn("Session expired or invalid, logging out.");
-                        // Only force logout if we don't have a user, or if the server explicitly rejected the token
-                        // But if we have a user locally, maybe we should just keep it and let the user re-login when they try an action?
-                        // For now, let's keep the logout behavior but ensure it doesn't happen on transient network errors.
-                        // However, validateSession failures usually mean 401/403 or invalid token format.
-                        setCurrentUser(null);
-                        apiClient.setToken(null);
-                    }
-                } catch (error) {
-                    console.error("Session validation failed:", error);
-                    // Don't logout on generic network errors if we have a user
-                    // Only logout if it's clearly a token issue
-                    if (currentUser === null) {
-                        setCurrentUser(null);
-                        apiClient.setToken(null);
-                    }
+            // With httpOnly cookies, we can't check for a token client-side.
+            // Instead, call /api/auth/me — if the cookie is valid, we get user data.
+            try {
+                let result;
+                if (!apiClient.getCurrentUser || typeof apiClient.getCurrentUser !== 'function') {
+                    result = await apiClient.getMe();
+                } else {
+                    result = await apiClient.getCurrentUser();
                 }
-            } else {
-                // No token, ensure no user
-                if (currentUser) setCurrentUser(null);
+                
+                if (result.data) {
+                    const mappedUser = mapApiUserToUser(result.data);
+                    setCurrentUser(mappedUser);
+
+                    // Load initial users (recommended/popular)
+                    const usersRes = await apiClient.searchUsers('');
+                    if (usersRes.data) {
+                        setUsers(usersRes.data);
+                    }
+                } else {
+                    // No valid session — user is not logged in
+                    if (currentUser) setCurrentUser(null);
+                }
+            } catch (error) {
+                console.error("Session validation failed:", error);
+                // Don't logout on generic network errors if we have a user
+                if (currentUser === null) {
+                    setCurrentUser(null);
+                }
             }
             setIsSessionLoading(false);
         };
@@ -265,11 +250,15 @@ export const useAppSession = ({
         navigate('/echoframe');
     };
     
-    const handleLogout = () => { 
+    const handleLogout = async () => { 
         setCurrentUser(null); 
         setPosts([]); 
         setConversations([]);
         sessionStorage.removeItem('chrono_currentPage');
+        // Call server to clear httpOnly auth cookie
+        try {
+            await apiClient.request('/auth/logout', { method: 'POST' });
+        } catch (_) { /* ignore logout errors */ }
         apiClient.setToken(null);
         navigate('/welcome');
     };

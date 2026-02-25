@@ -30,48 +30,48 @@ interface ApiResponse<T> {
   error?: string;
 }
 
-class ApiClient {
-  private token: string | null = null;
-  private readonly STORAGE_KEY = 'chrono_token';
-  private readonly USE_SESSION_STORAGE = true; // More secure than localStorage for tokens
+/**
+ * Read a cookie value by name
+ */
+function getCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? decodeURIComponent(match[2]) : null;
+}
 
-  setToken(token: string | null) {
-    this.token = token;
-    const storage = this.USE_SESSION_STORAGE ? sessionStorage : localStorage;
-    
-    if (token) {
-      // Validate token format before storing (should be JWT)
-      if (!/^[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.[A-Za-z0-9-_.+/=]*$/.test(token)) {
-        console.warn('[Security] Invalid token format');
-        return;
-      }
-      storage.setItem(this.STORAGE_KEY, token);
-    } else {
-      storage.removeItem(this.STORAGE_KEY);
-    }
+class ApiClient {
+  setToken(_token: string | null) {
+    // No-op: JWT is now in httpOnly cookie
+    try {
+      sessionStorage.removeItem('chrono_token');
+      localStorage.removeItem('chrono_token');
+    } catch (_e) { /* ignore */ }
   }
 
   getToken(): string | null {
-    if (!this.token) {
-      const storage = this.USE_SESSION_STORAGE ? sessionStorage : localStorage;
-      this.token = storage.getItem(this.STORAGE_KEY);
-    }
-    return this.token;
+    return getCookie('csrf_token') ? '__httpOnly__' : null;
   }
 
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
-    const token = this.getToken();
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...options.headers,
     };
 
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    // No Authorization header needed — httpOnly cookie sent via credentials: 'include'
+
+    // CSRF Protection
+    const method = (options.method || 'GET').toUpperCase();
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+      const csrfToken = getCookie('csrf_token');
+      if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+      }
     }
+
     const apiKey = ((import.meta as any)?.env?.VITE_API_KEY as string | undefined) || (process.env as any)?.API_KEY;
     if (apiKey) {
       headers['X-API-Key'] = apiKey;
@@ -85,6 +85,7 @@ class ApiClient {
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         ...options,
         headers,
+        credentials: 'include',
         signal: controller.signal,
       });
 
@@ -134,6 +135,7 @@ class ApiClient {
   }
 
   async logout() {
+    await this.request('/auth/logout', { method: 'POST' });
     this.setToken(null);
     return { data: { success: true } };
   }

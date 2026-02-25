@@ -26,14 +26,10 @@ export async function getConversations(): Promise<Conversation[]> {
 
 // Inicializa conversa com outro usuário (Find or Create)
 export async function initConversation(targetUserId: number | string): Promise<Conversation> {
-  const token = baseClient.getToken();
-  if (!token) {
-    throw new Error('Não autenticado: token não encontrado');
-  }
+  // Auth is handled via httpOnly cookie — no need to check token
 
   console.log('🔗 initConversation API call with targetUserId:', targetUserId);
   console.log('🔗 Using endpoint:', `${API_BASE}/init`);
-  console.log('🔗 Token available:', !!token, token?.substring(0, 20) + '...');
   
   const response = await baseClient.post<Conversation>(`${API_BASE}/init`, {
     targetUserId,
