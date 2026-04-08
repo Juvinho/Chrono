@@ -491,7 +491,7 @@ INSERT INTO user_profiles (user_id, bio, birthday, location, website, cover_imag
 SELECT id, bio, birthday, location, website, cover_image, pronouns
 FROM users
 WHERE id NOT IN (SELECT user_id FROM user_profiles)
-ON CONFLICT DO NOTHING;
+ON CONFLICT (user_id) DO NOTHING;
 
 -- Migrate Settings from users table
 INSERT INTO user_settings (user_id, theme, accent_color, effect, animations_enabled, is_private)
@@ -504,7 +504,7 @@ SELECT
     is_private
 FROM users
 WHERE id NOT IN (SELECT user_id FROM user_settings)
-ON CONFLICT DO NOTHING;
+ON CONFLICT (user_id) DO NOTHING;
 
 -- Clean up duplicate notifications (keep only the most recent)
 DELETE FROM notifications n1

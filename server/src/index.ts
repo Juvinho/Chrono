@@ -58,19 +58,57 @@ import { NotificationService } from './services/notificationService.js';
 import { scheduleTagUpdates } from './services/tagService.js';
 import { scheduleTagUpdateJob } from './jobs/updateUserTags.js';
 
-// Get JWT_SECRET - must be defined
+// ============================================================================
+// JWT_SECRET VALIDATION - CRITICAL FOR SECURITY
+// ============================================================================
 const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
-  throw new Error('CRITICAL: JWT_SECRET environment variable is not set. Cannot start server.');
+
+// Helper function for JWT_SECRET validation
+function validateJWTSecret(): void {
+  // 1. Check if JWT_SECRET is defined
+  if (!JWT_SECRET || JWT_SECRET.trim() === '') {
+    const errorMsg = 'CRITICAL: JWT_SECRET environment variable is not set or is empty.';
+    console.error(`❌ ${errorMsg}`);
+    console.error('   Server cannot start without JWT_SECRET.');
+    console.error('   Please set JWT_SECRET in your environment variables.');
+    console.error('   For Railway: Add JWT_SECRET variable in Variables section.');
+    console.error('   For local: Set JWT_SECRET in server/.env file.');
+    throw new Error(errorMsg);
+  }
+
+  // 2. Check minimum length (32 characters = 128 bits of entropy)
+  if (JWT_SECRET.length < 32) {
+    const errorMsg = `CRITICAL: JWT_SECRET is too short (${JWT_SECRET.length} chars). Minimum 32 characters required.`;
+    console.error(`❌ ${errorMsg}`);
+    console.error('   Recommended: Use a 64+ character random secret.');
+    console.error('   Generate with: openssl rand -hex 32');
+    throw new Error(errorMsg);
+  }
+
+  // 3. Check for obvious default/insecure values
+  const insecureValues = [
+    'your-super-secret-jwt-key-change-this-in-production-12345',
+    'secret',
+    'test',
+    'password',
+    'jwt_secret',
+    'demo'
+  ];
+  
+  if (insecureValues.some(val => JWT_SECRET.toLowerCase() === val.toLowerCase())) {
+    const errorMsg = 'CRITICAL: JWT_SECRET is using an insecure default value.';
+    console.error(`❌ ${errorMsg}`);
+    console.error('   Change it to a strong, random secret immediately.');
+    throw new Error(errorMsg);
+  }
+
+  // 4. Log success with safe mask
+  const maskedSecret = JWT_SECRET.substring(0, 8) + '...' + JWT_SECRET.substring(JWT_SECRET.length - 4);
+  console.log(`✅ JWT_SECRET validated (length: ${JWT_SECRET.length}, sample: ${maskedSecret})`);
 }
 
-// Validate JWT_SECRET strength
-if (JWT_SECRET.length < 32) {
-  throw new Error('CRITICAL: JWT_SECRET too short. Minimum 32 characters required.');
-}
-if (JWT_SECRET === 'your-super-secret-jwt-key-change-this-in-production-12345') {
-  throw new Error('CRITICAL: JWT_SECRET is using default insecure value. Change it immediately.');
-}
+// Execute validation
+validateJWTSecret();
 
 const app = express();
 const httpServer = createServer(app);
