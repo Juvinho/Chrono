@@ -283,7 +283,7 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
                         <div className="mt-1 flex items-center space-x-4">
                             <div className={`w-16 h-16 ${avatarShape} bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] flex items-center justify-center overflow-hidden`}>
                                 {avatar ? (
-                                    <img src={avatar} alt={t('registerAvatar')} className={`w-full h-full ${avatarShape} object-cover`}/>
+                                    <img src={avatar} alt={t('registerAvatar')} className={`w-full h-full ${avatarShape} object-cover`} width={64} height={64} />
                                 ) : (
                                     <UserIcon className="w-8 h-8 text-[var(--theme-text-secondary)]" />
                                 )}

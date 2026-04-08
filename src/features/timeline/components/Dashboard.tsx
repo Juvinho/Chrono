@@ -165,14 +165,14 @@ export default function Dashboard({
         if (activeCordTag) {
             filtered = filtered.filter(p => 
                 p.content.includes(activeCordTag) || 
-                (p.tags && p.tags.includes(activeCordTag))
+                ((p as any).tags && (p as any).tags.includes(activeCordTag))
             );
         } else if (searchQuery) {
             const query = searchQuery.toLowerCase();
             filtered = filtered.filter(p => 
                 p.content.toLowerCase().includes(query) || 
                 p.author.username.toLowerCase().includes(query) ||
-                p.author.displayName.toLowerCase().includes(query)
+                p.author.username.toLowerCase().includes(query)
             );
         } else {
             // Show posts from selectedDate back to 60+ days ago

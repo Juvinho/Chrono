@@ -65,13 +65,19 @@ export default function EchoDetailModal({ postId, onClose, currentUser, onReply,
                         <div className="space-y-6">
                             {/* Main Post */}
                             <div className="border-b border-[var(--theme-border-primary)] pb-6">
-                                <PostCard 
-                                    post={post} 
+                                <PostCard
+                                    post={post}
                                     currentUser={currentUser}
                                     onReply={onReply}
                                     onEcho={onEcho}
                                     onUpdateReaction={onReaction}
-                                    isDetailView={true}
+                                    onViewProfile={() => {}}
+                                    onDelete={() => {}}
+                                    onEdit={() => {}}
+                                    onTagClick={() => {}}
+                                    onPollVote={() => {}}
+                                    typingParentIds={new Set()}
+                                    isContextualView={true}
                                 />
                             </div>
 
@@ -83,24 +89,36 @@ export default function EchoDetailModal({ postId, onClose, currentUser, onReply,
                                     </h3>
                                     {post.replies.map(reply => (
                                         <div key={reply.id} className="relative">
-                                            <PostCard 
-                                                post={reply} 
+                                            <PostCard
+                                                post={reply}
                                                 currentUser={currentUser}
                                                 onReply={onReply}
                                                 onEcho={onEcho}
                                                 onUpdateReaction={onReaction}
+                                                onViewProfile={() => {}}
+                                                onDelete={() => {}}
+                                                onEdit={() => {}}
+                                                onTagClick={() => {}}
+                                                onPollVote={() => {}}
+                                                typingParentIds={new Set()}
                                             />
                                             {/* Nested replies (level 2) */}
                                             {reply.replies && reply.replies.length > 0 && (
                                                 <div className="mt-4 ml-6 space-y-4 pl-4 border-l border-[var(--theme-border-secondary)]">
                                                      {reply.replies.map(subReply => (
-                                                        <PostCard 
+                                                        <PostCard
                                                             key={subReply.id}
-                                                            post={subReply} 
+                                                            post={subReply}
                                                             currentUser={currentUser}
                                                             onReply={onReply}
                                                             onEcho={onEcho}
                                                             onUpdateReaction={onReaction}
+                                                            onViewProfile={() => {}}
+                                                            onDelete={() => {}}
+                                                            onEdit={() => {}}
+                                                            onTagClick={() => {}}
+                                                            onPollVote={() => {}}
+                                                            typingParentIds={new Set()}
                                                         />
                                                      ))}
                                                 </div>

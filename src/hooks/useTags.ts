@@ -19,8 +19,8 @@ export function useUserTags(userId: string | null) {
     const fetchTags = async () => {
       try {
         setLoading(true);
-        const response = await apiClient.get(`/tags/user/${userId}`);
-        setTags(response.data || []);
+        const response = await apiClient.get<UserTag[]>(`/tags/user/${userId}`);
+        setTags((response.data as UserTag[]) || []);
         setError(null);
       } catch (err) {
         console.error('Error fetching user tags:', err);
@@ -49,8 +49,8 @@ export function useTagDefinitions() {
     const fetchDefinitions = async () => {
       try {
         setLoading(true);
-        const response = await apiClient.get('/tags/definitions');
-        setDefinitions(response.data || []);
+        const response = await apiClient.get<any[]>('/tags/definitions');
+        setDefinitions((response.data as any[]) || []);
         setError(null);
       } catch (err) {
         console.error('Error fetching tag definitions:', err);
@@ -84,8 +84,8 @@ export function useTagsByCategory(categoria: string) {
     const fetchTags = async () => {
       try {
         setLoading(true);
-        const response = await apiClient.get(`/tags/definitions/category/${categoria}`);
-        setTags(response.data || []);
+        const response = await apiClient.get<any[]>(`/tags/definitions/category/${categoria}`);
+        setTags((response.data as any[]) || []);
         setError(null);
       } catch (err) {
         console.error('Error fetching tags by category:', err);

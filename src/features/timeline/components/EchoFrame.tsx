@@ -577,13 +577,15 @@ export default function EchoFrame({
                             const avatarShape = currentUser.equippedFrame ? getFrameShape(currentUser.equippedFrame.name) : 'rounded-full';
                             return (
                                 <div className="relative w-10 h-10 flex-shrink-0">
-                                    <img src={currentUser.avatar || 'https://via.placeholder.com/150'} alt={currentUser.username} className={`w-full h-full ${avatarShape} object-cover`} />
+                                    <img src={currentUser.avatar || 'https://via.placeholder.com/150'} alt={currentUser.username} className={`w-full h-full ${avatarShape} object-cover`} width={40} height={40} />
                                     {currentUser.equippedEffect && (
                                         <div className={`absolute inset-0 pointer-events-none z-10 mix-blend-screen opacity-60 ${avatarShape} overflow-hidden`}>
                                             <img 
                                                 src={currentUser.equippedEffect.imageUrl} 
                                                 alt="" 
                                                 className="w-full h-full object-cover"
+                                                width={40}
+                                                height={40}
                                             />
                                         </div>
                                     )}
@@ -629,7 +631,6 @@ export default function EchoFrame({
                                 onBookmark={handleBookmark}
                                 onReport={handleReport}
                                 isBookmarked={bookmarkedIds.has(post.id)}
-                                searchQuery={searchQuery}
                                 typingParentIds={typingParentIds}
                                 onPostClick={onPostClick}
                                 isNew={newPostIds.has(post.id)}

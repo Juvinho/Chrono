@@ -338,7 +338,7 @@ export default function ProfilePage({
     
     try {
       console.log('📨 Abrindo mini-chat para:', {
-        profileUserName: profileUser.displayName,
+        profileUserName: profileUser.username,
         profileUserId: profileUser.id,
         currentUserId: currentUser.id
       });
@@ -363,9 +363,8 @@ export default function ProfilePage({
         otherUser: conversation.otherUser || {
           id: profileUser.id,
           username: profileUser.username,
-          displayName: profileUser.displayName || profileUser.username,
-          avatarUrl: profileUser.profilePicture || null,
-          isOnline: profileUser.isOnline
+          displayName: profileUser.username,
+          avatarUrl: profileUser.avatar || null,
         },
         lastMessage: conversation.lastMessage || null,
         unreadCount: conversation.unreadCount || 0,
@@ -464,7 +463,7 @@ export default function ProfilePage({
     // 1. If we have a list of objects, use it directly
     if (Array.isArray(rawList) && rawList.length > 0 && typeof rawList[0] !== 'string') {
         console.log('[ProfilePage] Using existing full user objects');
-        setUserListModal({ title, users: rawList as User[] });
+        setUserListModal({ title, users: rawList as unknown as User[] });
         return;
     }
 
@@ -611,6 +610,8 @@ export default function ProfilePage({
                                 src={profileUser.equippedEffect.imageUrl} 
                                 alt="" 
                                 className="w-full h-full object-cover"
+                                width={96}
+                                height={96}
                             />
                         </div>
                     )}

@@ -101,6 +101,8 @@ const ReactionTooltip: React.FC<ReactionTooltipProps> = ({ postId, reactions, is
                         src={user.avatar} 
                         alt={user.username}
                         className="reaction-user-avatar"
+                        width={24}
+                        height={24}
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = 'https://via.placeholder.com/24?text=?';
                         }}

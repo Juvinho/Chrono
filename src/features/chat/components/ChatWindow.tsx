@@ -6,7 +6,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export const ChatWindow: React.FC = () => {
-  const { activeConversation, messages, sendMessage, user } = useChat(); // Assuming user is available in context or passed down
+  const { activeConversation, messages, sendMessage } = useChat();
   const { user: currentUser } = useAuth();
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -59,6 +59,8 @@ export const ChatWindow: React.FC = () => {
           src={activeConversation.other_avatar || 'https://via.placeholder.com/40'} 
           alt={activeConversation.other_username}
           className="w-10 h-10 rounded-full object-cover"
+          width={40}
+          height={40}
         />
         <div>
           <h3 className="font-semibold text-[var(--theme-text-primary)]">

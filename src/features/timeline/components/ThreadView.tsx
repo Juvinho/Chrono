@@ -121,7 +121,7 @@ export const ThreadView: React.FC<ThreadViewProps> = ({
                     onReply={onReply}
                     onEcho={onEcho}
                     onDelete={onDeletePost}
-                    onEdit={onEditPost}
+                    onEdit={(post) => onEditPost(post.id, post)}
                     onTagClick={() => {}}
                     onPollVote={onPollVote}
                     typingParentIds={typingParentIds}

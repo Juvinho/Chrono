@@ -292,10 +292,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Check if conversation already exists in list
       const exists = Array.isArray(conversations) ? conversations.find(c => (c as any).id === (conversation as any).id) : undefined;
       if (!exists) {
-        setConversations(prev => [conversation, ...(Array.isArray(prev) ? prev : [])]);
+        setConversations(prev => [conversation as Conversation, ...(Array.isArray(prev) ? prev : [])]);
       }
-      
-      setActiveConversation(conversation);
+
+      setActiveConversation(conversation as Conversation);
     } catch (error) {
       console.error('Failed to init conversation', error);
       throw error;

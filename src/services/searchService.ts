@@ -1,5 +1,5 @@
 import { Post, User } from '../types/index';
-import { apiClient } from '../utils/api';
+import { apiClient } from '../api';
 
 export interface SearchQuery {
   term: string;

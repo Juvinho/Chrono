@@ -27,7 +27,7 @@ export function MessagesSidebar() {
   }, [selectedConversationId]);
 
   const handleSelectConversation = (id: number | string) => {
-    setSelectedConversation(id);
+    setSelectedConversation(typeof id === 'string' ? parseInt(id, 10) : id);
     setShowChatArea(true);
   };
 

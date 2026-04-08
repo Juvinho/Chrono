@@ -181,7 +181,7 @@ export default function TwoFactorSetup({ onClose }: TwoFactorSetupProps) {
 
           <div className="flex justify-center">
             <div className="p-3 bg-white rounded-sm border-2 border-[var(--theme-primary)] shadow-[0_0_15px_rgba(124,58,237,0.3)]">
-              <img src={qrCodeDataUrl} alt="QR Code 2FA" className="w-48 h-48" />
+              <img src={qrCodeDataUrl} alt="QR Code 2FA" className="w-48 h-48" width={192} height={192} />
             </div>
           </div>
 

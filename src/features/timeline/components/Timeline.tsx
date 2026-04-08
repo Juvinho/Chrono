@@ -164,6 +164,8 @@ export default function Timeline({ selectedDate, setSelectedDate, onNavigate, al
                                                         src={author.equippedEffect.imageUrl} 
                                                         alt="" 
                                                         className="w-full h-full object-cover animate-pulse-soft"
+                                                        width={24}
+                                                        height={24}
                                                     />
                                                 </div>
                                             )}

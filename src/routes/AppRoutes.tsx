@@ -238,6 +238,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     selectedDate={selectedDate}
                     setSelectedDate={setSelectedDate}
                     typingParentIds={typingParentIds}
+                    conversations={conversations}
                     onOpenMarketplace={() => setIsMarketplaceOpen(true)}
                     onUpdateUser={handleUpdateUser}
                     onBack={handleBack}
@@ -425,7 +426,7 @@ export default function AppRoutes(props: AppRoutesProps) {
             <Route path="/" element={<Navigate to={currentUser ? "/echoframe" : "/welcome"} replace />} />
             
             {/* 404 - Catch all unmatched routes */}
-            <Route path="*" element={<Error404 onNavigate={handleNavigate} />} />
+            <Route path="*" element={<Error404 onNavigate={() => handleNavigate(Page.Dashboard)} />} />
         </Routes>
     );
 }

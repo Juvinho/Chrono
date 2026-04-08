@@ -429,7 +429,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
                             )}
                             {post.isPrivate && <LockClosedIcon className="w-3 h-3 text-[var(--theme-text-secondary)]" title={t('postPrivate')} />}
                         </div>
-                        <p className={`text-[var(--theme-text-secondary)] ${compact ? 'text-xs' : 'text-sm'}`}>{formatRelativeTime(post.timestamp)}</p>
+                        <p className={`text-[var(--theme-text-secondary)] ${compact ? 'text-xs' : 'text-sm'}`}>{formatRelativeTime(new Date(post.timestamp))}</p>
                     </div>
                 </div>
                 <div className="relative" ref={menuRef}>

@@ -307,6 +307,8 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
                                     src={currentUser.avatar} 
                                     alt={currentUser.username} 
                                     className={`w-full h-full ${avatarShape} object-cover`} 
+                                    width={40}
+                                    height={40}
                                 />
                                 {currentUser.equippedEffect && (
                                      <div className={`absolute inset-0 pointer-events-none z-10 mix-blend-screen opacity-60 ${avatarShape} overflow-hidden`}>
@@ -314,6 +316,8 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
                                             src={currentUser.equippedEffect.imageUrl} 
                                             alt="" 
                                             className="w-full h-full object-cover animate-pulse-soft"
+                                            width={40}
+                                            height={40}
                                          />
                                      </div>
                                 )}
@@ -348,7 +352,7 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
                          </div>
                     ) : generatedImageUrl ? (
                         <div className="relative">
-                            <img src={generatedImageUrl} alt="Generated" className="w-full max-h-72 object-contain rounded-sm" />
+                            <img src={generatedImageUrl} alt="Generated" className="w-full max-h-72 object-contain rounded-sm" width={512} height={512} />
                              <button onClick={() => setGeneratedImageUrl(null)} className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1">&times;</button>
                         </div>
                     ) : videoUrl ? (

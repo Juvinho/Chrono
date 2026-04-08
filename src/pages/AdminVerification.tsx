@@ -123,7 +123,7 @@ export const AdminVerification: React.FC<AdminVerificationProps> = ({ token }) =
                   <strong>@{user.username}</strong>
                   <p>{user.display_name}</p>
                   {user.verification_badge_label && (
-                    <span className="badge" style={{ backgroundColor: `var(--${user.badge_color})` }}>
+                    <span className="badge" style={{ backgroundColor: `var(--${user.verification_badge_color})` }}>
                       {user.verification_badge_label}
                     </span>
                   )}

@@ -134,7 +134,7 @@ export const PostDetail: React.FC<PostDetailProps> = ({
           }}
           onEcho={onEcho}
           onDelete={onDeletePost}
-          onEdit={onEditPost}
+          onEdit={(post) => onEditPost(post.id, post)}
           onTagClick={() => {}}
           onPollVote={onPollVote}
           typingParentIds={typingParentIds}
@@ -233,10 +233,12 @@ export const PostDetail: React.FC<PostDetailProps> = ({
                 src={currentUser.avatar}
                 alt={currentUser.username}
                 className="w-12 h-12 rounded-full object-cover"
+                width={48}
+                height={48}
               />
               <div className="flex-1">
                 <p className="font-semibold text-[var(--theme-text-primary)]">
-                  Respondendo para {replyingTo?.author?.display_name || 'usuário'}
+                  Respondendo para {replyingTo?.author?.username || 'usuário'}
                 </p>
                 {replyingTo && (
                   <p className="text-sm text-[var(--theme-text-secondary)] truncate">
@@ -260,7 +262,7 @@ export const PostDetail: React.FC<PostDetailProps> = ({
                 setIsComposerOpen(false);
                 setReplyingTo(null);
               }}
-              onSubmit={handleReplySubmit}
+              onSubmit={(postData) => handleReplySubmit(postData.content, postData.isPrivate ?? false, postData.imageUrl ? { imageUrl: postData.imageUrl, videoUrl: postData.videoUrl } : undefined)}
               inline
               initialContent={`@${replyingTo?.author?.username || ''} `}
             />

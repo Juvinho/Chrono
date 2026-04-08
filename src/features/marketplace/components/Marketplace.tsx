@@ -214,7 +214,7 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                         <div className="flex items-center space-x-4 p-4 bg-[var(--theme-bg-primary)] rounded-lg border border-[var(--theme-border-secondary)]">
                             <div className="w-16 h-16 bg-[var(--theme-bg-tertiary)] rounded flex items-center justify-center">
                                 {selectedItem ? (
-                                    <img src={selectedItem.imageUrl} alt="" className="w-10 h-10 object-contain" onError={(e) => e.currentTarget.style.display = 'none'} />
+                                    <img src={selectedItem.imageUrl} alt="" className="w-10 h-10 object-contain" width={40} height={40} onError={(e) => e.currentTarget.style.display = 'none'} />
                                 ) : (
                                     <span className="text-2xl font-black text-[var(--theme-primary)]">
                                         {selectedSubscription === 'pro' ? 'P' : 'P+'}
@@ -496,7 +496,7 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                                                             return (
                                                                 <>
                                                                     {/* Avatar Base */}
-                                                                    <img src={currentUser.avatar || 'https://via.placeholder.com/150'} alt="Preview" className={`w-full h-full ${avatarShape} object-cover`} />
+                                                                    <img src={currentUser.avatar || 'https://via.placeholder.com/150'} alt="Preview" className={`w-full h-full ${avatarShape} object-cover`} width={96} height={96} />
                                                                     
                                                                     {/* Frame Overlay */}
                                                                     {item.type === 'frame' ? (
@@ -600,7 +600,7 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                                     
                                     return (
                                         <div className={`relative w-64 h-64 md:w-80 md:h-80 ${avatarShape} border-4 border-[var(--theme-border-primary)] shadow-2xl overflow-hidden bg-[var(--theme-bg-secondary)]`}>
-                                            <img src={currentUser.avatar || 'https://via.placeholder.com/150'} alt="You" className={`w-full h-full ${avatarShape} object-cover`} />
+                                            <img src={currentUser.avatar || 'https://via.placeholder.com/150'} alt="You" className={`w-full h-full ${avatarShape} object-cover`} width={320} height={320} />
                                             
                                             {/* Preview Item Overlay */}
                                             {previewItem.type === 'frame' && (
@@ -615,6 +615,8 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                                                         src={previewItem.imageUrl} 
                                                         alt="" 
                                                         className="w-full h-full object-cover animate-pulse-soft"
+                                                        width={320}
+                                                        height={320}
                                                     />
                                                 </div>
                                             )}

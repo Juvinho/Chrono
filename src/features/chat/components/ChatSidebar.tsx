@@ -30,6 +30,8 @@ export const ChatSidebar: React.FC = () => {
                 src={conv.other_avatar || 'https://via.placeholder.com/40'} 
                 alt={conv.other_username}
                 className="w-12 h-12 rounded-full object-cover"
+                width={48}
+                height={48}
               />
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-baseline">

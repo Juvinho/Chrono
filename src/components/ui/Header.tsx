@@ -186,6 +186,8 @@ export default function Header({ user, onLogout, onViewProfile, onNavigate, onNo
                                                 src={user.equippedEffect.imageUrl} 
                                                 alt="" 
                                                 className="w-full h-full object-cover animate-pulse-soft"
+                                                width={32}
+                                                height={32}
                                             />
                                         </div>
                                     )}
