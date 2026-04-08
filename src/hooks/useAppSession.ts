@@ -87,13 +87,13 @@ export const useAppSession = ({
                 
                 // Reload notifications specifically for this update
                 const notificationsResult = await apiClient.getNotifications();
-                let finalNotifications = [];
+                let finalNotifications: Notification[] = [];
                 if (notificationsResult.data) {
-                    finalNotifications = notificationsResult.data.map((n: any) => ({
+                    finalNotifications = notificationsResult.data.map((n: Notification) => ({
                         ...n,
                         timestamp: new Date(n.timestamp || Date.now())
                     }));
-                    finalNotifications.forEach((n: any) => {
+                    finalNotifications.forEach((n: Notification) => {
                         knownNotificationIds.current.add(n.id);
                     });
                 }
@@ -115,8 +115,8 @@ export const useAppSession = ({
             const postsResult = await apiClient.getPosts();
             if (postsResult.data) {
                 // Deduplicate posts based on ID
-                const uniquePosts = postsResult.data.reduce((acc: any[], current: any) => {
-                    const x = acc.find((item: any) => item.id === current.id);
+                const uniquePosts = postsResult.data.reduce((acc: Post[], current: Post) => {
+                    const x = acc.find((item: Post) => item.id === current.id);
                     if (!x) {
                         return acc.concat([current]);
                     } else {
@@ -124,7 +124,7 @@ export const useAppSession = ({
                     }
                 }, []);
 
-                const mappedPosts = uniquePosts.map((p: any) => {
+                const mappedPosts = uniquePosts.map((p: Post) => {
                     const mapped = mapApiPostToPost(p);
                     // Ensure timestamp is a Date object
                     if (mapped.timestamp && typeof mapped.timestamp === 'string') {
@@ -152,9 +152,9 @@ export const useAppSession = ({
             // Reload conversations
             const conversationsResult = await apiClient.getConversations();
             if (conversationsResult.data) {
-                const mappedConversations = conversationsResult.data.map((conv: any) => {
+                const mappedConversations = conversationsResult.data.map((conv: Conversation) => {
                     const participantsList = Array.isArray(conv.participants)
-                        ? conv.participants.map((p: any) => typeof p === 'string' ? p : (p.username || p))
+                        ? conv.participants.map((p: string | { username?: string }) => typeof p === 'string' ? p : (p.username || p))
                         : (conv.other_username ? [currentUser?.username, conv.other_username] : []);
                     const msgs = Array.isArray(conv.messages) ? conv.messages : [];
                     const mappedMsgs = msgs.map((msg: any) => ({
@@ -165,7 +165,7 @@ export const useAppSession = ({
                         videoUrl: msg.videoUrl,
                         status: msg.status,
                         timestamp: new Date(msg.createdAt || msg.created_at || Date.now()),
-                    })).sort((a: any, b: any) => a.timestamp.getTime() - b.timestamp.getTime());
+                    })).sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
                     return {
                         id: conv.id,
                         participants: participantsList,
