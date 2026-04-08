@@ -32,7 +32,7 @@ export const AdminVerification: React.FC<AdminVerificationProps> = ({ token }) =
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://127.0.0.1:3001/api/admin/users', {
+      const response = await fetch(`${API_BASE_URL}/admin/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) throw new Error('Erro ao carregar usuários');
@@ -55,7 +55,7 @@ export const AdminVerification: React.FC<AdminVerificationProps> = ({ token }) =
   const handleVerify = async () => {
     if (!selectedUser) return;
     try {
-      const response = await fetch(`http://127.0.0.1:3001/api/admin/verification/${selectedUser.id}/verify`, {
+      const response = await fetch(`${API_BASE_URL}/admin/verification/${selectedUser.id}/verify`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -74,7 +74,7 @@ export const AdminVerification: React.FC<AdminVerificationProps> = ({ token }) =
 
   const handleUnverify = async (userId: string) => {
     try {
-      const response = await fetch(`http://127.0.0.1:3001/api/admin/verification/${userId}/unverify`, {
+      const response = await fetch(`${API_BASE_URL}/admin/verification/${userId}/unverify`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
