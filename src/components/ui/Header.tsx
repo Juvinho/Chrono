@@ -9,6 +9,7 @@ import { useTranslation } from '../../hooks/useTranslation';
 import { useMessagesSidebar } from '../../contexts/MessagesSidebarContext';
 import FramePreview, { getFrameShape } from '../../features/profile/components/FramePreview';
 import Avatar from '../../features/profile/components/Avatar';
+import { apiClient } from '../../api';
 
 interface HeaderProps {
     user: User;
@@ -48,17 +49,37 @@ export default function Header({ user, onLogout, onViewProfile, onNavigate, onNo
     };
 
     // U-11: Mark all notifications as read
-    const handleMarkAllAsRead = () => {
-        if (!user.notifications) return;
+    const handleMarkAllAsRead = async () => {
+        if (!user.notifications || user.notifications.length === 0) return;
         
-        const updatedNotifications = user.notifications.map(n => ({
-            ...n,
-            read: true
-        }));
-        
-        // Update user notifications locally
-        // Note: This should also trigger an API call to persist the changes
-        console.log('📌 Marking all notifications as read:', updatedNotifications.length);
+        try {
+            const response = await apiClient.notifications.markAllNotificationsRead();
+            if (response.error) {
+                console.error('❌ Error marking all as read:', response.error);
+                return;
+            }
+            
+            // Update local state - mark all as read
+            const updatedNotifications = user.notifications.map(n => ({
+                ...n,
+                read: true
+            }));
+            
+            // Create updated user object
+            const updatedUser = {
+                ...user,
+                notifications: updatedNotifications
+            };
+            
+            // Dispatch event to update user in parent component
+            window.dispatchEvent(new CustomEvent('notificationsUpdated', { 
+                detail: { updatedNotifications } 
+            }));
+            
+            console.log('✅ All notifications marked as read');
+        } catch (error) {
+            console.error('Error marking all notifications as read:', error);
+        }
     };
 
     const handleOpenChatSidebar = () => {

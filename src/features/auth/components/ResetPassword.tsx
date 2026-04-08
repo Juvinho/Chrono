@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import GlitchText from '../../../components/ui/GlitchText';
 import { Page } from '../../../types/index';
 import { useTranslation } from '../../../hooks/useTranslation';
+import { useFormNavigation } from '../../../hooks/useFormNavigation';
 
 interface ResetPasswordProps {
     emailToReset: string | null;
@@ -15,6 +16,27 @@ export default function ResetPassword({ emailToReset, onPasswordReset, onNavigat
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
+
+    // Form navigation refs (for Enter key navigation)
+    const codeRef = useRef<HTMLInputElement>(null);
+    const passwordRef = useRef<HTMLInputElement>(null);
+    const confirmRef = useRef<HTMLInputElement>(null);
+
+    // Form navigation: Allow Enter key to move between fields
+    useFormNavigation({
+        fields: [
+            { current: codeRef.current, id: 'code' },
+            { current: passwordRef.current, id: 'password' },
+            { current: confirmRef.current, id: 'confirm' },
+        ],
+        onSubmit: () => {
+            const form = document.querySelector('form');
+            if (form) {
+                form.dispatchEvent(new Event('submit', { bubbles: true }));
+            }
+        },
+        submitOnLastField: true,
+    });
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -64,15 +86,36 @@ export default function ResetPassword({ emailToReset, onPasswordReset, onNavigat
                 <form className="space-y-4" onSubmit={handleSubmit}>
                     <div>
                         <label className="text-sm font-bold text-[var(--theme-text-secondary)] block">{t('resetPasswordSecurityCode')}</label>
-                        <input type="text" value={securityCode} onChange={(e) => setSecurityCode(e.target.value)} required className="w-full px-3 py-2 mt-1 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)]" />
+                        <input 
+                            ref={codeRef}
+                            type="text" 
+                            value={securityCode} 
+                            onChange={(e) => setSecurityCode(e.target.value)} 
+                            required 
+                            className="w-full px-3 py-2 mt-1 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)]" 
+                        />
                     </div>
                     <div>
                         <label className="text-sm font-bold text-[var(--theme-text-secondary)] block">{t('resetPasswordNew')}</label>
-                        <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required className="w-full px-3 py-2 mt-1 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)]" />
+                        <input 
+                            ref={passwordRef}
+                            type="password" 
+                            value={newPassword} 
+                            onChange={(e) => setNewPassword(e.target.value)} 
+                            required 
+                            className="w-full px-3 py-2 mt-1 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)]" 
+                        />
                     </div>
                     <div>
                         <label className="text-sm font-bold text-[var(--theme-text-secondary)] block">{t('resetPasswordConfirm')}</label>
-                        <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="w-full px-3 py-2 mt-1 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)]" />
+                        <input 
+                            ref={confirmRef}
+                            type="password" 
+                            value={confirmPassword} 
+                            onChange={(e) => setConfirmPassword(e.target.value)} 
+                            required 
+                            className="w-full px-3 py-2 mt-1 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)]" 
+                        />
                     </div>
                     
                     {error && <p className="text-red-500 text-sm text-center glitch-effect" data-text={error}>{error}</p>}

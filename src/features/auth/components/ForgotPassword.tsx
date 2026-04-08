@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import GlitchText from '../../../components/ui/GlitchText';
 import { User, Page } from '../../../types/index';
 import { useTranslation } from '../../../hooks/useTranslation';
+import { useFormNavigation } from '../../../hooks/useFormNavigation';
 import { api } from '../../../api';
 
 interface ForgotPasswordProps {
@@ -17,6 +18,24 @@ export default function ForgotPassword({ users, onNavigate }: ForgotPasswordProp
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [success, setSuccess] = useState(false);
+
+    // Form navigation refs (for Enter key navigation)
+    const emailRef = useRef<HTMLInputElement>(null);
+    const phoneRef = useRef<HTMLInputElement>(null);
+
+    // Form navigation: Allow Enter key to submit
+    useFormNavigation({
+        fields: [
+            { current: method === 'email' ? emailRef.current : phoneRef.current, id: 'contact' }
+        ],
+        onSubmit: () => {
+            const form = document.querySelector('form');
+            if (form) {
+                form.dispatchEvent(new Event('submit', { bubbles: true }));
+            }
+        },
+        submitOnLastField: true,
+    });
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -92,6 +111,7 @@ export default function ForgotPassword({ users, onNavigate }: ForgotPasswordProp
                                 {t('registerEmail')}
                             </label>
                             <input
+                                ref={emailRef}
                                 id="email"
                                 type="email"
                                 value={email}
@@ -106,6 +126,7 @@ export default function ForgotPassword({ users, onNavigate }: ForgotPasswordProp
                                 Telefone (com DDD)
                             </label>
                             <input
+                                ref={phoneRef}
                                 id="phone"
                                 type="tel"
                                 value={phone}
