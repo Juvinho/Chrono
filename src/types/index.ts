@@ -148,6 +148,32 @@ export interface UserItem {
     item?: Item;
 }
 
+// Media object for posts and messages (A-06: Typed alternative to `any`)
+export interface MediaObject {
+  imageUrl?: string;
+  videoUrl?: string;
+  metadata?: Record<string, unknown>;
+}
+
+// Post update data for edit operations (A-06: Typed alternative to `any`)
+export interface PostUpdateData {
+  content?: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  mood?: Post['mood'];
+  isPrivate?: boolean;
+  poll?: Post['poll'];
+  tags?: string[];
+  [key: string]: unknown;
+}
+
+// Reaction data structure (A-06: Typed alternative to `any`)
+export interface ReactionData {
+  type: CyberpunkReaction;
+  count?: number;
+  timestamp?: Date;
+}
+
 export interface Post {
   id: string;
   tempId?: string; // Para posts temporários antes de serem salvo no servidor

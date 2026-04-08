@@ -1,9 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { pool } from '../../db/connection.js';
 import { requireAdmin } from '../../middleware/adminAuth.js';
+import { AdminAuditService } from '../../services/auditService.js';
 import bcrypt from 'bcryptjs';
 
 const router = Router();
+
+// A-09: Initialize audit service
+const auditService = new AdminAuditService(pool);
 
 // Aplicar middleware de verificação admin em todas as rotas
 router.use(requireAdmin);
@@ -219,6 +223,8 @@ router.delete('/:id', async (req: Request, res: Response) => {
 router.post('/:id/ban', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const adminId = (req as any).user?.id;
+    const reason = (req.body as any)?.reason || 'Administrative action';
 
     const result = await pool.query(
       'UPDATE users SET is_banned = true, updated_at = NOW() WHERE id = $1 RETURNING id, username, is_banned',
@@ -229,6 +235,22 @@ router.post('/:id/ban', async (req: Request, res: Response) => {
       return res.status(404).json({
         error: 'User not found',
       });
+    }
+
+    // A-09: Log the ban action
+    if (adminId) {
+      await auditService.logAction({
+        admin_id: adminId,
+        action_type: 'ban_user',
+        resource_type: 'user',
+        resource_id: String(id),
+        resource_name: result.rows[0].username,
+        new_value: { is_banned: true },
+        reason: reason,
+        status: 'success',
+        ip_address: req.ip || req.socket.remoteAddress,
+        user_agent: req.headers['user-agent'],
+      }).catch(err => console.error('[AuditService] Failed to log ban action:', err));
     }
 
     console.log(`🚫 [ADMIN] User banned`, {
@@ -255,6 +277,8 @@ router.post('/:id/ban', async (req: Request, res: Response) => {
 router.post('/:id/unban', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const adminId = (req as any).user?.id;
+    const reason = (req.body as any)?.reason || 'Administrative action';
 
     const result = await pool.query(
       'UPDATE users SET is_banned = false, updated_at = NOW() WHERE id = $1 RETURNING id, username, is_banned',
@@ -265,6 +289,22 @@ router.post('/:id/unban', async (req: Request, res: Response) => {
       return res.status(404).json({
         error: 'User not found',
       });
+    }
+
+    // A-09: Log the unban action
+    if (adminId) {
+      await auditService.logAction({
+        admin_id: adminId,
+        action_type: 'unban_user',
+        resource_type: 'user',
+        resource_id: String(id),
+        resource_name: result.rows[0].username,
+        new_value: { is_banned: false },
+        reason: reason,
+        status: 'success',
+        ip_address: req.ip || req.socket.remoteAddress,
+        user_agent: req.headers['user-agent'],
+      }).catch(err => console.error('[AuditService] Failed to log unban action:', err));
     }
 
     console.log(`✅ [ADMIN] User unbanned`, {

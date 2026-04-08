@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
-import { User, Page, Post, Conversation } from '../types';
+import { User, Page, Post, Conversation, Notification, MediaObject, PostUpdateData, ReactionData, CyberpunkReaction } from '../types';
 import { SplitLayout } from '../layouts/SplitLayout';
 import { FeedContent } from '../components/FeedContent';
 import { Error404, Error500, Error403, Error429, Error503, ErrorTimeout } from '../components/ErrorPages';
@@ -61,14 +61,14 @@ interface AppRoutesProps {
     handleNavigate: (page: Page, data?: string) => void;
     handleLogin: (user: User) => void;
     handleLogout: () => void;
-    handleNotificationClick: (notification: any) => void;
+    handleNotificationClick: (notification: Notification) => void;
     onViewNotifications: () => void;
     handleNewPost: (post: Post) => void;
-    handleUpdateReaction: (postId: string, reaction: any, actor?: User) => void;
-    handleReply: (parentId: string, content: string, isPrivate: boolean, media?: any, actor?: User) => void;
+    handleUpdateReaction: (postId: string, reaction: CyberpunkReaction, actor?: User) => void;
+    handleReply: (parentId: string, content: string, isPrivate: boolean, media?: MediaObject, actor?: User) => void;
     handleEcho: (post: Post, actor?: User) => void;
     handleDeletePost: (postId: string) => void;
-    handleEditPost: (postId: string, data: any) => void;
+    handleEditPost: (postId: string, data: PostUpdateData) => void;
     handlePollVote: (postId: string, optionIndex: number, actor?: User) => void;
     handleShowNewPosts: () => void;
     
