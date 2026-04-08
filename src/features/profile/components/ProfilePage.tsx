@@ -16,6 +16,7 @@ import { VerifiedIcon, MessageIcon, PaperPlaneIcon } from '../../../components/u
 import FramePreview, { getFrameShape } from './FramePreview';
 import Avatar from './Avatar';
 import LoadingSpinner from '../../../components/ui/LoadingSpinner';
+import { Error404 } from '../../../components/ErrorPages';
 import { apiClient } from '../../../api';
 import { TagBadgeGroup } from '../../../components/ui/TagBadge';
 import { useUserTags } from '../../../hooks/useTags';
@@ -274,15 +275,7 @@ export default function ProfilePage({
           );
       }
       if (fetchError) {
-           return (
-              <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--theme-bg-primary)] text-[var(--theme-text-primary)]">
-                  <div className="text-red-500 text-6xl mb-4">404</div>
-                  <p className="text-xl font-mono">{fetchError}</p>
-                  <button onClick={() => onNavigate(Page.Dashboard)} className="mt-8 px-6 py-2 bg-[var(--theme-primary)] text-white rounded-sm hover:brightness-110">
-                      {t('returnHome') || 'RETURN TO BASE'}
-                  </button>
-              </div>
-          );
+           return <Error404 onNavigate={() => onNavigate(Page.Dashboard)} />;
       }
       // Fallback loading
       return <LoadingSpinner />;

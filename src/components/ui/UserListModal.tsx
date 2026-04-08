@@ -45,14 +45,18 @@ export default function UserListModal({ title, users, currentUser, onFollowToggl
                                                 <img 
                                                     src={user.avatar} 
                                                     alt={user.username} 
-                                                    className={`w-full h-full ${avatarShape} object-cover`}
+                                                    className={`w-full h-full ${avatarShape} object-cover aspect-square`}
+                                                    width={40}
+                                                    height={40}
                                                 />
                                                 {user.equippedEffect && (
                                                     <div className={`absolute inset-0 pointer-events-none z-10 mix-blend-screen opacity-60 ${avatarShape} overflow-hidden`}>
                                                         <img 
                                                             src={user.equippedEffect.imageUrl} 
                                                             alt="" 
-                                                            className="w-full h-full object-cover animate-pulse-soft"
+                                                            className="w-full h-full object-cover animate-pulse-soft aspect-square"
+                                                            width={40}
+                                                            height={40}
                                                         />
                                                     </div>
                                                 )}

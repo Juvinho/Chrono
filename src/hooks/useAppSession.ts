@@ -20,7 +20,8 @@ export const useAppSession = ({
     const navigate = useNavigate();
     
     // 1. Basic User State
-    const [users, setUsers] = useLocalStorage<User[]>('chrono_users_v4', []); 
+    // I-13: Removed chrono_users_v4 localStorage - always fetch fresh from backend
+    const [users, setUsers] = useState<User[]>([]);
     const [currentUser, setCurrentUser] = useLocalStorage<User | null>('chrono_currentUser_v4', null);
     // Don't block rendering if we already have a user in local storage
     const [isSessionLoading, setIsSessionLoading] = useState(!currentUser);

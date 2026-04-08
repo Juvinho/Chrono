@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import '../styles/glitchi-overlay.css';
 
 interface GlitchiOverlayProps {
     senderUsername: string;
@@ -40,41 +41,6 @@ export default function GlitchiOverlay({ senderUsername, onComplete }: GlitchiOv
                     </p>
                 </div>
             </div>
-
-            <style>{`
-                @keyframes glitch-intense {
-                    0% { transform: translate(0); clip-path: inset(0 0 0 0); }
-                    10% { transform: translate(-5px, 2px); clip-path: inset(10% 0 40% 0); }
-                    20% { transform: translate(5px, -2px); clip-path: inset(30% 0 20% 0); }
-                    30% { transform: translate(-2px, 5px); clip-path: inset(60% 0 10% 0); }
-                    40% { transform: translate(2px, -5px); clip-path: inset(10% 0 80% 0); }
-                    50% { transform: translate(-8px, 3px); clip-path: inset(40% 0 40% 0); }
-                    100% { transform: translate(0); clip-path: inset(0 0 0 0); }
-                }
-                @keyframes glitch-shift {
-                    0% { transform: translateX(0); }
-                    20% { transform: translateX(-10px) skewX(20deg); }
-                    40% { transform: translateX(10px) skewX(-20deg); }
-                    60% { transform: translateX(-5px); }
-                    80% { transform: translateX(5px) skewY(10deg); }
-                    100% { transform: translateX(0); }
-                }
-                @keyframes scanline-fast {
-                    0% { transform: translateY(-100%); }
-                    100% { transform: translateY(1000%); }
-                }
-                @keyframes glitch-text {
-                    0% { transform: scale(1) skewX(0); filter: hue-rotate(0deg); }
-                    20% { transform: scale(1.1) skewX(10deg); filter: hue-rotate(90deg); }
-                    40% { transform: scale(0.9) skewX(-10deg); filter: hue-rotate(180deg); }
-                    60% { transform: scale(1.05) skewX(5deg); filter: hue-rotate(270deg); }
-                    100% { transform: scale(1) skewX(0); filter: hue-rotate(360deg); }
-                }
-                .animate-glitch-intense { animation: glitch-intense 0.2s infinite; }
-                .animate-glitch-shift { animation: glitch-shift 0.15s infinite; }
-                .animate-scanline-fast { animation: scanline-fast 0.5s linear infinite; }
-                .animate-glitch-text { animation: glitch-text 0.3s infinite; }
-            `}</style>
         </div>
     );
 }
