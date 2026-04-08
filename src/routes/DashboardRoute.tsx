@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import Dashboard from '../features/timeline/components/Dashboard';
-import { User, Page, Post, Conversation } from '../types';
+import { User, Page, Post, Conversation, Notification, MediaObject, PostUpdateData, ReactionData, CyberpunkReaction } from '../types';
 
 interface DashboardRouteProps {
     currentUser: User | null;
@@ -21,15 +21,15 @@ interface DashboardRouteProps {
 
     handleNavigate: (page: Page, data?: string) => void;
     handleLogout: () => void;
-    handleNotificationClick: (notification: any) => void;
+    handleNotificationClick: (notification: Notification) => void;
     onViewNotifications: () => void;
     setSelectedDate: (date: Date) => void;
     handleNewPost: (post: Post) => void;
-    handleUpdateReaction: (postId: string, reaction: any, actor?: User) => void;
-    handleReply: (parentId: string, content: string, isPrivate: boolean, media?: any, actor?: User) => void;
+    handleUpdateReaction: (postId: string, reaction: CyberpunkReaction, actor?: User) => void;
+    handleReply: (parentId: string, content: string, isPrivate: boolean, media?: MediaObject, actor?: User) => void;
     handleEcho: (post: Post, actor?: User) => void;
     handleDeletePost: (postId: string) => void;
-    handleEditPost: (postId: string, data: any) => void;
+    handleEditPost: (postId: string, data: PostUpdateData) => void;
     handlePollVote: (postId: string, optionIndex: number, actor?: User) => void;
     handleShowNewPosts: () => void;
     handleUpdateUser: (user: User) => Promise<{ success: boolean; error?: string }>;

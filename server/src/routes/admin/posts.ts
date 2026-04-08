@@ -1,8 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { pool } from '../../db/connection.js';
 import { requireAdmin } from '../../middleware/adminAuth.js';
+import { AdminAuditService } from '../../services/auditService.js';
 
 const router = Router();
+
+// A-09: Initialize audit service
+const auditService = new AdminAuditService(pool);
 
 router.use(requireAdmin);
 
@@ -94,6 +98,7 @@ router.put('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { content } = req.body;
+    const adminId = (req as any).user?.id;
 
     if (!content || content.trim().length === 0) {
       return res.status(400).json({ error: 'Content cannot be empty' });
@@ -103,12 +108,26 @@ router.put('/:id', async (req: Request, res: Response) => {
       `UPDATE posts 
        SET content = $1, updated_at = NOW()
        WHERE id = $2
-       RETURNING id, content, updated_at`,
+       RETURNING id, content, updated_at, author_id`,
       [content, id]
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Post not found' });
+    }
+
+    // A-09: Log the edit action
+    if (adminId) {
+      await auditService.logAction({
+        admin_id: adminId,
+        action_type: 'edit_post_content',
+        resource_type: 'post',
+        resource_id: String(id),
+        new_value: { content: content.substring(0, 100) + (content.length > 100 ? '...' : '') },
+        status: 'success',
+        ip_address: req.ip || req.socket.remoteAddress,
+        user_agent: req.headers['user-agent'],
+      }).catch(err => console.error('[AuditService] Failed to log edit action:', err));
     }
 
     console.log(`✏️ [ADMIN] Post edited: ${id}`);
@@ -131,13 +150,32 @@ router.put('/:id', async (req: Request, res: Response) => {
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const adminId = (req as any).user?.id;
+    const reason = (req.body as any)?.reason || 'Administrative action';
 
-    const postCheck = await pool.query('SELECT author_id FROM posts WHERE id = $1', [id]);
+    const postCheck = await pool.query('SELECT author_id, content FROM posts WHERE id = $1', [id]);
     if (postCheck.rows.length === 0) {
       return res.status(404).json({ error: 'Post not found' });
     }
 
+    const postData = postCheck.rows[0];
+
     await pool.query('DELETE FROM posts WHERE id = $1', [id]);
+
+    // A-09: Log the delete action
+    if (adminId) {
+      await auditService.logAction({
+        admin_id: adminId,
+        action_type: 'delete_post',
+        resource_type: 'post',
+        resource_id: String(id),
+        old_value: { content: postData.content.substring(0, 100) + (postData.content.length > 100 ? '...' : ''), author_id: postData.author_id },
+        reason: reason,
+        status: 'success',
+        ip_address: req.ip || req.socket.remoteAddress,
+        user_agent: req.headers['user-agent'],
+      }).catch(err => console.error('[AuditService] Failed to log delete action:', err));
+    }
 
     console.log(`🗑️ [ADMIN] Post deleted: ${id}`);
 

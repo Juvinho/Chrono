@@ -375,7 +375,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                         onDeletePost={handleDeletePost}
                         onEditPost={handleEditPost}
                         onPollVote={handlePollVote}
-                        onViewProfile={(...args: any[]) => handleNavigate(Page.Profile, args[0])}
+                        onViewProfile={(username: string) => handleNavigate(Page.Profile, username)}
                         onBack={handleBack}
                         typingParentIds={typingParentIds}
                     />
@@ -395,7 +395,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                         onDeletePost={handleDeletePost}
                         onEditPost={handleEditPost}
                         onPollVote={handlePollVote}
-                        onViewProfile={(...args: any[]) => handleNavigate(Page.Profile, args[0])}
+                        onViewProfile={(username: string) => handleNavigate(Page.Profile, username)}
                         onBack={handleBack}
                         typingParentIds={typingParentIds}
                     />
