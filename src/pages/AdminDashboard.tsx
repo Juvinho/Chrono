@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAdminAuth } from '../contexts/AdminContext';
+import { API_BASE_URL } from '../api/client';
 import { AdminUsers } from './AdminUsers';
 import { AdminPosts } from './AdminPosts';
 import { AdminVerification } from './AdminVerification';
@@ -82,7 +83,7 @@ export function AdminDashboard() {
     setIsLoading(true);
     setError('');
     try {
-      const response = await fetch('http://localhost:3001/api/admin/tags', {
+      const response = await fetch(`${API_BASE_URL}/admin/tags`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { apiClient } from '../api/client';
+import { API_BASE_URL } from '../api/client';
 
 interface AdminUser {
   id: number;
@@ -41,7 +41,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
   const verifyToken = async (token: string) => {
     try {
-      const response = await fetch('http://localhost:3001/api/admin/auth/verify', {
+      const response = await fetch(`${API_BASE_URL}/admin/auth/verify`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -67,7 +67,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
   const login = async (password: string) => {
     try {
-      const response = await fetch('http://localhost:3001/api/admin/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/admin/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password }),
@@ -96,7 +96,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     try {
       if (token) {
-        await fetch('http://localhost:3001/api/admin/auth/logout', {
+        await fetch(`${API_BASE_URL}/admin/auth/logout`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
         });

@@ -634,7 +634,9 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                                                     <img 
                                                         src={currentUser.equippedEffect.imageUrl} 
                                                         alt="" 
-                                                        className="w-full h-full object-cover"
+                                                        className="w-full h-full object-cover aspect-square"
+                                                        width={320}
+                                                        height={320}
                                                     />
                                                 </div>
                                             )}

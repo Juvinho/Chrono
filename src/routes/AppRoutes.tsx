@@ -359,7 +359,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                             onPostClick={handleOpenThreadView}
                         />
                     }
-                    rightContent={<MessagingLayout />}
+                    rightContent={<Suspense fallback={<LoadingSpinner />}><MessagingLayout /></Suspense>}
                 />
             ) : <Navigate to="/welcome" />} />
 

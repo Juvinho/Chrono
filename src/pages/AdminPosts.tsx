@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { adminUserService } from '../api/admin.service';
+import { API_BASE_URL } from '../api/client';
 import '../styles/admin-posts.css';
 
 interface Post {
@@ -34,7 +34,7 @@ export const AdminPosts: React.FC<AdminPostsProps> = ({ token }) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch('http://127.0.0.1:3001/api/admin/posts', {
+      const response = await fetch(`${API_BASE_URL}/admin/posts`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!response.ok) throw new Error('Erro ao carregar posts');
@@ -56,7 +56,7 @@ export const AdminPosts: React.FC<AdminPostsProps> = ({ token }) => {
   const handleEditSubmit = async () => {
     if (!selectedPost) return;
     try {
-      const response = await fetch(`http://127.0.0.1:3001/api/admin/posts/${selectedPost.id}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/posts/${selectedPost.id}`, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -81,7 +81,7 @@ export const AdminPosts: React.FC<AdminPostsProps> = ({ token }) => {
   const handleDelete = async () => {
     if (!selectedPost) return;
     try {
-      const response = await fetch(`http://127.0.0.1:3001/api/admin/posts/${selectedPost.id}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/posts/${selectedPost.id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });

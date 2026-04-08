@@ -529,7 +529,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
                             <img 
                                 src={post.imageUrl} 
                                 alt={t('postImageAlt', { username: post.author.username }) || `Image posted by @${post.author.username}`} 
-                                className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity" 
+                                className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity aspect-video" 
                                 loading="lazy"
                                 width={1280}
                                 height={720}
