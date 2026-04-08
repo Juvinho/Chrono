@@ -523,13 +523,17 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
                         {renderContentWithTags(post.content)}
                     </p>
                     {post.imageUrl && (
-                        <img 
-                            src={post.imageUrl} 
-                            alt={t('postImageAlt', { username: post.author.username }) || `Image posted by @${post.author.username}`} 
-                            className="w-full object-cover rounded-sm mt-2 cursor-pointer hover:opacity-80 transition-opacity" 
-                            loading="lazy"
-                            onClick={() => setShowImageViewer(true)}
-                        />
+                        <div className="w-full aspect-video rounded-sm mt-2 overflow-hidden">
+                            <img 
+                                src={post.imageUrl} 
+                                alt={t('postImageAlt', { username: post.author.username }) || `Image posted by @${post.author.username}`} 
+                                className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity" 
+                                loading="lazy"
+                                width={1280}
+                                height={720}
+                                onClick={() => setShowImageViewer(true)}
+                            />
+                        </div>
                     )}
                     {post.videoUrl && (
                         <video src={post.videoUrl} controls muted loop className="w-full object-cover rounded-sm mt-2 bg-black" aria-label={t('postVideoLabel', { username: post.author.username }) || `Video posted by @${post.author.username}`}></video>
@@ -731,7 +735,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
                     {replyMedia && (
                         <div className="mt-2 relative inline-block">
                             {replyMedia.imageUrl ? (
-                                <img src={replyMedia.imageUrl} alt="Reply media" className="h-20 w-auto rounded border border-[var(--theme-border-primary)]" />
+                                <img src={replyMedia.imageUrl} alt="Reply media" className="h-20 w-auto rounded border border-[var(--theme-border-primary)]" width="80" height="80" />
                             ) : (
                                 <video src={replyMedia.videoUrl} className="h-20 w-auto rounded border border-[var(--theme-border-primary)]" />
                             )}

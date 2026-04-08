@@ -5,6 +5,7 @@ import { SplitLayout } from '../layouts/SplitLayout';
 import { FeedContent } from '../components/FeedContent';
 import { Error404, Error500, Error403, Error429, Error503, ErrorTimeout } from '../components/ErrorPages';
 import { ErrorTestPage } from '../components/ErrorTestPage';
+import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { AdminLogin } from '../pages/AdminLogin';
 import { AdminDashboard } from '../pages/AdminDashboard';
 import { ProtectedAdminRoute } from '../components/ProtectedAdminRoute';
@@ -31,19 +32,6 @@ const RedirectToProfile = () => {
     const { username } = useParams<{ username: string }>();
     return <Navigate to={`/profile/${username}`} replace />;
 };
-
-const NotFound = ({ onNavigate }: { onNavigate: (page: Page) => void }) => (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--theme-bg-primary)] text-[var(--theme-text-primary)]">
-        <h1 className="text-6xl font-bold text-[var(--theme-primary)] mb-4">404</h1>
-        <p className="text-xl mb-8">AONDE MESMO VOCÊ ESTÁ QUERENDO CHEGAR?</p>
-        <button 
-            onClick={() => onNavigate(Page.Dashboard)}
-            className="px-6 py-3 bg-[var(--theme-bg-secondary)] border border-[var(--theme-primary)] rounded hover:bg-[var(--theme-bg-tertiary)] transition-colors"
-        >
-            RETURN TO ECHO FRAME
-        </button>
-    </div>
-);
 
 interface AppRoutesProps {
     currentUser: User | null;
@@ -436,8 +424,8 @@ export default function AppRoutes(props: AppRoutesProps) {
             {/* Redirect root */}
             <Route path="/" element={<Navigate to={currentUser ? "/echoframe" : "/welcome"} replace />} />
             
-            {/* 404 */}
-            <Route path="*" element={<NotFound onNavigate={handleNavigate} />} />
+            {/* 404 - Catch all unmatched routes */}
+            <Route path="*" element={<Error404 onNavigate={handleNavigate} />} />
         </Routes>
     );
 }

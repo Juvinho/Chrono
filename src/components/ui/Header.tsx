@@ -53,7 +53,7 @@ export default function Header({ user, onLogout, onViewProfile, onNavigate, onNo
         if (!user.notifications || user.notifications.length === 0) return;
         
         try {
-            const response = await apiClient.notifications.markAllNotificationsRead();
+            const response = await apiClient.markAllNotificationsRead();
             if (response.error) {
                 console.error('❌ Error marking all as read:', response.error);
                 return;

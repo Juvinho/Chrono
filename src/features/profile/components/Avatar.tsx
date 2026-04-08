@@ -7,9 +7,11 @@ interface AvatarProps {
     className?: string;
     username?: string; // For fallback generation
     onClick?: () => void;
+    width?: number; // For CLS optimization
+    height?: number; // For CLS optimization
 }
 
-export default function Avatar({ src, alt, className, username, onClick }: AvatarProps) {
+export default function Avatar({ src, alt, className, username, onClick, width, height }: AvatarProps) {
     const [error, setError] = useState(false);
     
     // Reset error state when src changes
@@ -56,6 +58,8 @@ export default function Avatar({ src, alt, className, username, onClick }: Avata
             className={className}
             onError={handleOnError}
             loading="lazy"
+            width={width}
+            height={height}
             onClick={onClick}
         />
     );
