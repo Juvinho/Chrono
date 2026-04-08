@@ -14,10 +14,13 @@ export interface Message {
 
 export interface Conversation {
   id: string; // comprised of participant usernames
-  participants: string[];
+  participants: (string | { username?: string })[];
   messages: Message[];
   lastMessageTimestamp: Date;
   unreadCount: { [username: string]: number };
+  other_username?: string;
+  last_message_at?: string;
+  updated_at?: string;
 }
 
 export type CyberpunkReaction = 'Glitch' | 'Upload' | 'Corrupt' | 'Rewind' | 'Static';
