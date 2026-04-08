@@ -106,14 +106,17 @@ router.put('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { display_name, email, bio, is_banned } = req.body;
+    const adminId = (req as any).user?.id;
 
     // Validar que o usuário existe
-    const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [id]);
+    const userCheck = await pool.query('SELECT id, username, display_name, email, bio, is_banned FROM users WHERE id = $1', [id]);
     if (userCheck.rows.length === 0) {
       return res.status(404).json({
         error: 'User not found',
       });
     }
+
+    const oldValues = userCheck.rows[0];
 
     // Construir query dinâmica baseado no que foi fornecido
     let updateFields = [];
@@ -162,6 +165,32 @@ router.put('/:id', async (req: Request, res: Response) => {
 
     const result = await pool.query(query, updateValues);
 
+    // A-09: Log the update action
+    if (adminId) {
+      await auditService.logAction({
+        admin_id: adminId,
+        action_type: 'update_tags', // Using generic update action for user profile modifications
+        resource_type: 'user',
+        resource_id: String(id),
+        resource_name: oldValues.username,
+        old_value: {
+          display_name: oldValues.display_name,
+          email: oldValues.email,
+          bio: oldValues.bio,
+          is_banned: oldValues.is_banned,
+        },
+        new_value: {
+          display_name: display_name !== undefined ? display_name : oldValues.display_name,
+          email: email !== undefined ? email : oldValues.email,
+          bio: bio !== undefined ? bio : oldValues.bio,
+          is_banned: is_banned !== undefined ? is_banned : oldValues.is_banned,
+        },
+        status: 'success',
+        ip_address: req.ip || req.socket.remoteAddress,
+        user_agent: req.headers['user-agent'],
+      }).catch(err => console.error('[AuditService] Failed to log update action:', err));
+    }
+
     console.log(`✅ [ADMIN] User ${id} updated by admin`, {
       changes: req.body,
       timestamp: new Date().toISOString(),
@@ -185,9 +214,10 @@ router.put('/:id', async (req: Request, res: Response) => {
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const adminId = (req as any).user?.id;
 
     // Verificar que o usuário existe
-    const userCheck = await pool.query('SELECT username FROM users WHERE id = $1', [id]);
+    const userCheck = await pool.query('SELECT id, username, display_name, email, bio FROM users WHERE id = $1', [id]);
     if (userCheck.rows.length === 0) {
       return res.status(404).json({
         error: 'User not found',
@@ -195,9 +225,26 @@ router.delete('/:id', async (req: Request, res: Response) => {
     }
 
     const username = userCheck.rows[0].username;
+    const userData = userCheck.rows[0];
 
     // Deletar usuário (isso vai em cascata conforme as constraints)
     await pool.query('DELETE FROM users WHERE id = $1', [id]);
+
+    // A-09: Log the delete action
+    if (adminId) {
+      await auditService.logAction({
+        admin_id: adminId,
+        action_type: 'delete_post', // Using existing action type for user deletion
+        resource_type: 'user',
+        resource_id: String(id),
+        resource_name: username,
+        old_value: userData,
+        reason: (req.body as any)?.reason || 'User deletion by administrator',
+        status: 'success',
+        ip_address: req.ip || req.socket.remoteAddress,
+        user_agent: req.headers['user-agent'],
+      }).catch(err => console.error('[AuditService] Failed to log delete action:', err));
+    }
 
     console.log(`✅ [ADMIN] User deleted by admin`, {
       userId: id,
