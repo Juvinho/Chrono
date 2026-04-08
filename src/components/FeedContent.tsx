@@ -19,6 +19,8 @@ import './styles/feed-content.css';
  * 
  * Assessment: KEEP - Valid separation of concerns with active styling
  */
+
+interface FeedContentProps {
   user: User;
   onNavigate: (page: Page, data?: string) => void;
   onNotificationClick: (notification: Notification) => void;
@@ -30,7 +32,7 @@ import './styles/feed-content.css';
   allKnownPosts?: Post[];
   onNewPost: (post: Post) => void;
   onUpdateReaction: (postId: string, reaction: CyberpunkReaction) => void;
-  onReply: (parentId: string, content: string, isPrivate: boolean) => void;
+  onReply: (parentId: string, content: string, isPrivate: boolean, media?: any) => void;
   onEcho: (post: Post) => void;
   onDeletePost: (postId: string) => void;
   onEditPost: (postId: string, newPostData: Omit<Post, 'id' | 'author' | 'timestamp' | 'replies' | 'repostOf'>) => void;

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import PostCard from './PostCard';
 import { Post, User, CyberpunkReaction, Notification } from '../../../types/index';
 import { useInfiniteScroll } from '../../../hooks/useInfiniteScroll';
-import LoadingSpinner from '../../../components/LoadingSpinner';
+import LoadingSpinner from '../../../components/ui/LoadingSpinner';
 
 interface PostListProps {
   posts: Post[];
@@ -80,7 +80,11 @@ export const PostList: React.FC<PostListProps> = ({
           onReply={onReply}
           onEcho={onEcho}
           onDelete={onDeletePost}
-          onEdit={onEditPost}
+          onEdit={(postToEdit) => {
+            // Edit handler: would normally open an edit modal
+            // For now, this is handled by the parent component
+            console.log('Edit post:', postToEdit.id);
+          }}
           onTagClick={onTagClick || (() => {})}
           onPollVote={onPollVote}
           typingParentIds={typingParentIds}

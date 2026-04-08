@@ -53,6 +53,7 @@ import adminConversationsRoutes from './routes/admin/conversations.js';
 import adminVerificationRoutes from './routes/admin/verification.js';
 import adminTagsAdminRoutes from './routes/admin/tags-admin.js';
 import adminDashboardRoutes from './routes/admin/dashboard.js';
+import adminAuditLogRoutes from './routes/admin/auditLog.js';
 import { NotificationService } from './services/notificationService.js';
 import { scheduleTagUpdates } from './services/tagService.js';
 import { scheduleTagUpdateJob } from './jobs/updateUserTags.js';
@@ -421,6 +422,7 @@ app.use('/api/admin/conversations', adminRateLimit, adminConversationsRoutes);
 app.use('/api/admin/verification', adminRateLimit, adminVerificationRoutes);
 app.use('/api/admin/tags-admin', adminStrictRateLimit, adminTagsAdminRoutes);
 app.use('/api/admin/dashboard', adminRateLimit, adminDashboardRoutes);
+app.use('/api/admin/audit-log', adminRateLimit, adminAuditLogRoutes);
 
 // Health check
 app.get('/health', async (_req: express.Request, res: express.Response) => {
