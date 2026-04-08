@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Dashboard from '../features/timeline/components/Dashboard';
 import { User, Page, Post, CyberpunkReaction, Conversation, Notification } from '../types';
 import './styles/feed-content.css';
 
 interface FeedContentProps {
   user: User;
-  onNavigate: (page: string, data?: string) => void;
+  onNavigate: (page: Page, data?: string) => void;
   onNotificationClick: (notification: Notification) => void;
   onViewNotifications: () => void;
   selectedDate: Date;

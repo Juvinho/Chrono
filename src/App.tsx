@@ -536,7 +536,7 @@ function App() {
                 return;
             }
             showToast('Você mandou um glitchi!', 'success');
-            playSound('glitch'); 
+            playSound('blim');
             await reloadBackendData();
         } catch (error) {
             console.error("Failed to send glitchi:", error);

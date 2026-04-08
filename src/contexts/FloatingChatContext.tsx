@@ -4,6 +4,7 @@ export interface OpenChat {
   userId: number | string;
   username: string;
   avatar?: string;
+  displayName?: string;
 }
 
 interface FloatingChatContextType {

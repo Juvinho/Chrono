@@ -88,7 +88,7 @@ export const FloatingChatWindow: React.FC<FloatingChatWindowProps> = ({
         <div className="floating-chat-header-info">
           <div className="floating-chat-avatar">
             {otherUser.avatarUrl ? (
-              <img src={otherUser.avatarUrl} alt={otherUser.displayName} />
+              <img src={otherUser.avatarUrl} alt={otherUser.displayName} width={40} height={40} />
             ) : (
               <div className="avatar-placeholder">{getInitials(otherUser.displayName)}</div>
             )}
