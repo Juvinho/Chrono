@@ -3,7 +3,22 @@ import Dashboard from '../features/timeline/components/Dashboard';
 import { User, Page, Post, CyberpunkReaction, Conversation, Notification } from '../types';
 import './styles/feed-content.css';
 
-interface FeedContentProps {
+/**
+ * A-07: FeedContent Wrapper Component
+ * 
+ * Not redundant - serves specific purposes:
+ * 1. Provides styling context for split-view layout (feed occupies 50% of screen)
+ * 2. Customizes scrollbar appearance (feed-content.css)
+ * 3. Manages overflow behavior for Dashboard integration
+ * 4. Responsive wrapper for potential mobile-specific changes
+ * 
+ * CSS: src/components/styles/feed-content.css (48 lines)
+ * - Sets height/width to 100% of parent container
+ * - Custom scrollbar styling (webkit)
+ * - Dark mode scrollbar adjustments
+ * 
+ * Assessment: KEEP - Valid separation of concerns with active styling
+ */
   user: User;
   onNavigate: (page: Page, data?: string) => void;
   onNotificationClick: (notification: Notification) => void;
