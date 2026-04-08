@@ -73,9 +73,14 @@ export interface Tag {
 // Conversation/Messaging Responses
 export interface Conversation {
   id: string;
-  participants: User[];
+  participants: User[] | string[];
   last_message?: Message;
+  messages?: Message[];
   updated_at: string;
+  last_message_at?: string;
+  other_username?: string;
+  lastMessageTimestamp?: string | number;
+  unreadCount?: Record<string, number>;
 }
 
 export interface Message {
