@@ -168,8 +168,8 @@ export default function ProfilePage({
 
   // Initialize isBlocked from currentUser's blockedUsers
   useEffect(() => {
-    if (profileUser && !isOwnProfile && (currentUser as any).blockedUsers) {
-      setIsBlocked((currentUser as any).blockedUsers.includes(profileUser.id));
+    if (profileUser && !isOwnProfile && currentUser.blockedUsers) {
+      setIsBlocked(currentUser.blockedUsers.includes(profileUser.id));
     }
   }, [profileUser, currentUser, isOwnProfile]);
 
