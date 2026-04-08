@@ -6,6 +6,8 @@ import { User, Page } from '../../../types/index';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { apiClient, mapApiUserToUser } from '../../../api';
 import { validateNoEmojis } from '../../../utils/emojiValidation';
+import PasswordStrengthIndicator from './PasswordStrengthIndicator';
+import { PasswordInput } from './PasswordInput';
 
 interface LoginScreenProps {
     onLogin: (user: User) => void;
@@ -255,14 +257,19 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
                                 {t('loginForgotPassword')}
                             </button>
                         </div>
-                        <input
-                            id="password"
-                            type="password"
+                        <PasswordInput
                             value={password}
-                            onChange={(e) => setPassword(e.target.value)}
+                            onChange={(e) => setPassword(e)}
+                            placeholder={t('loginPassword')}
+                            className="w-full px-3 py-2 mt-1 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)] pr-10"
+                            id="password"
                             required
-                            className="w-full px-3 py-2 mt-1 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)]"
                         />
+                        {password && (
+                            <div className="mt-2">
+                                <PasswordStrengthIndicator password={password} showRequirements={false} />
+                            </div>
+                        )}
                     </div>
 
                     {requiresTwoFactor && (

@@ -10,6 +10,8 @@ import { apiClient, mapApiUserToUser } from '../../../api';
 import FramePreview, { getFrameShape } from '../../profile/components/FramePreview';
 import { generateInitialsAvatar } from '../../../utils/avatarGenerator';
 import { validateNoEmojis } from '../../../utils/emojiValidation';
+import PasswordStrengthIndicator from './PasswordStrengthIndicator';
+import { PasswordInput } from './PasswordInput';
 
 interface RegisterProps {
   users: User[];
@@ -262,11 +264,28 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
                     </div>
                     <div>
                         <label className="text-sm font-bold text-[var(--theme-text-secondary)] block">{t('registerPassword')}</label>
-                        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="w-full px-3 py-2 mt-1 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)]" />
+                        <PasswordInput
+                            value={password}
+                            onChange={(e) => setPassword(e)}
+                            placeholder={t('registerPassword')}
+                            className="w-full px-3 py-2 mt-1 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)] pr-10"
+                            id="password"
+                            required
+                        />
+                        <div className="mt-2">
+                            <PasswordStrengthIndicator password={password} showRequirements={true} />
+                        </div>
                     </div>
                     <div>
                         <label className="text-sm font-bold text-[var(--theme-text-secondary)] block">{t('registerConfirmPass')}</label>
-                        <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="w-full px-3 py-2 mt-1 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)]" />
+                        <PasswordInput
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e)}
+                            placeholder={t('registerConfirmPass')}
+                            className="w-full px-3 py-2 mt-1 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)] pr-10"
+                            id="confirmPassword"
+                            required
+                        />
                     </div>
 
                     {error && <p className="text-red-500 text-sm text-center glitch-effect" data-text={error}>{error}</p>}
