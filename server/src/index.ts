@@ -3,6 +3,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
@@ -10,6 +11,7 @@ import { fileURLToPath } from 'url';
 import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
 import { csrfCookieSetter, csrfProtection, csrfTokenEndpoint } from './middleware/csrf.js';
+import { adminRateLimit, adminAuthRateLimit, adminStrictRateLimit } from './middleware/adminRateLimit.js';
 
 // Define __dirname for ES modules FIRST (needed for dotenv path)
 const __filename = fileURLToPath(import.meta.url);
@@ -42,6 +44,7 @@ import emailVerificationRouter from './routes/emailVerification.js';
 import bookmarkRoutes from './routes/bookmarks.js';
 import reportRoutes from './routes/reports.js';
 import twoFactorRoutes from './routes/twoFactor.js';
+import aiRoutes from './routes/aiRoutes.js';
 import adminAuthRoutes from './routes/admin/auth.js';
 import adminTagsRoutes from './routes/admin/tags.js';
 import adminUsersRoutes from './routes/admin/users.js';
@@ -60,6 +63,14 @@ if (!JWT_SECRET) {
   throw new Error('CRITICAL: JWT_SECRET environment variable is not set. Cannot start server.');
 }
 
+// Validate JWT_SECRET strength
+if (JWT_SECRET.length < 32) {
+  throw new Error('CRITICAL: JWT_SECRET too short. Minimum 32 characters required.');
+}
+if (JWT_SECRET === 'your-super-secret-jwt-key-change-this-in-production-12345') {
+  throw new Error('CRITICAL: JWT_SECRET is using default insecure value. Change it immediately.');
+}
+
 const app = express();
 const httpServer = createServer(app);
 const PORT = process.env.PORT || 3001;
@@ -73,6 +84,20 @@ const allowedOrigins = process.env.CORS_ORIGIN
 
 // Get host IP from environment or detect automatically
 const HOST = process.env.HOST || '0.0.0.0'; // 0.0.0.0 allows connections from any IP
+
+// Security Headers - Helmet MUST be before CORS
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      connectSrc: ["'self'", "wss:", "ws:"],
+      imgSrc: ["'self'", "data:", "https://i.imgur.com", "https://images.unsplash.com"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+}));
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -106,8 +131,8 @@ app.use(cors({
   credentials: true,
 }));
 app.use(cookieParser());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
 // CSRF Protection (Double Submit Cookie)
 app.use(csrfCookieSetter);  // Sets csrf_token cookie on every response
@@ -198,14 +223,30 @@ io.on('connect_error', (error: any) => {
   });
 });
 
+// ========== PRESENCE TRACKING (C-07) ==========
+// In-memory set of online user IDs (will reset on server restart)
+// For production, use Redis or a database
+const onlineUsers = new Set<string>();
+
 io.on('connection', (socket) => {
   console.log(`✅ [Socket.io] User ${socket.data.userId} (${socket.data.username}) connected. Total: ${io.engine.clientsCount}`);
+
+  // ========== PRESENCE: Announce user as online (C-07) ==========
+  if (socket.data.userId) {
+    onlineUsers.add(String(socket.data.userId));
+    // Broadcast to all clients: this user is now online
+    io.emit('user:online', { 
+      userId: socket.data.userId, 
+      username: socket.data.username,
+      timestamp: new Date().toISOString()
+    });
+  }
 
   // ✅ Teste de conexão - servidor envia ping
   socket.emit('ping_from_server', { message: 'Server is live', timestamp: new Date().toISOString() });
   
   socket.on('pong_from_client', () => {
-    console.log(`✅ [Socket.io] Pong recebido de ${socket.data.username}`);
+    // Pong received
   });
 
   socket.on('join_conversation', async (conversationId) => {
@@ -236,7 +277,16 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log(`User ${socket.data.userId} disconnected`);
+    // ========== PRESENCE: Announce user as offline (C-07) ==========
+    if (socket.data.userId) {
+      onlineUsers.delete(String(socket.data.userId));
+      // Broadcast to all clients: this user is now offline
+      io.emit('user:offline', { 
+        userId: socket.data.userId, 
+        username: socket.data.username,
+        timestamp: new Date().toISOString()
+      });
+    }
   });
 });
 
@@ -359,16 +409,18 @@ app.use('/api/tags', tagsRoutes);
 app.use('/api/bookmarks', bookmarkRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/auth/2fa', twoFactorRoutes);
+app.use('/api/ai', aiRoutes);
 
-// 🔐 ADMIN ROUTES (com autenticação especial)
-app.use('/api/admin/auth', adminAuthRoutes);
-app.use('/api/admin/tags', adminTagsRoutes);
-app.use('/api/admin/users', adminUsersRoutes);
-app.use('/api/admin/posts', adminPostsRoutes);
-app.use('/api/admin/conversations', adminConversationsRoutes);
-app.use('/api/admin/verification', adminVerificationRoutes);
-app.use('/api/admin/tags-admin', adminTagsAdminRoutes);
-app.use('/api/admin/dashboard', adminDashboardRoutes);
+// 🔐 ADMIN ROUTES - Apply rate limiting to all admin endpoints
+// Authentication is handled by requireAdmin middleware in each route
+app.use('/api/admin/auth', adminAuthRateLimit, adminAuthRoutes);
+app.use('/api/admin/tags', adminRateLimit, adminTagsRoutes);
+app.use('/api/admin/users', adminRateLimit, adminUsersRoutes);
+app.use('/api/admin/posts', adminRateLimit, adminPostsRoutes);
+app.use('/api/admin/conversations', adminRateLimit, adminConversationsRoutes);
+app.use('/api/admin/verification', adminRateLimit, adminVerificationRoutes);
+app.use('/api/admin/tags-admin', adminStrictRateLimit, adminTagsAdminRoutes);
+app.use('/api/admin/dashboard', adminRateLimit, adminDashboardRoutes);
 
 // Health check
 app.get('/health', async (_req: express.Request, res: express.Response) => {

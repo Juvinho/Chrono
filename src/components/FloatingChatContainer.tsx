@@ -37,13 +37,6 @@ export const FloatingChatContainer: React.FC<FloatingChatContainerProps> = ({ cu
     }
   }, [currentUser?.id]); // Only depend on user ID changes
 
-  // Debug: Log quando chats abrem
-  useEffect(() => {
-    if (openChats.length > 0) {
-      console.log('📱 FloatingChatContainer - openChats:', openChats);
-    }
-  }, [openChats]);
-
   // Ao abrir um chat, busca ou cria a conversa
   useEffect(() => {
     const loadConversations = async () => {
@@ -62,9 +55,7 @@ export const FloatingChatContainer: React.FC<FloatingChatContainerProps> = ({ cu
 
           while (retries > 0 && !success) {
             try {
-              console.log(`📱 Tentando iniciar conversa com userId: ${chat.userId} (tentativa ${4 - retries}/3)`);
               const conversation = await initConversation(chat.userId);
-              console.log('✅ Conversa inicializada:', conversation);
               if (conversation?.id) {
                 newConversations[key] = conversation as ConversationData;
                 success = true;

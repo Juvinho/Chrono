@@ -1,0 +1,1065 @@
+# 🎃 PROMPT: Halloween Aero Theme — Ativação via CLI + Auto-Commit GitHub
+
+---
+
+## 📋 Visão Geral
+
+Este documento é um **prompt detalhado** para gerar um tema de Halloween estilo "Aero Glass" para a plataforma social (estilo Twitter/X). O tema pode ser **ativado/desativado via linha de comando (CLI)** e faz **commit automático** no repositório GitHub.
+
+---
+
+## 🖼️ Descrição Visual Completa do Tema
+
+### Background Principal
+- **Cenário:** Cemitério/floresta sombria com neblina densa
+- **Cor dominante do fundo:** Gradiente de `#0a1a1a` (topo) para `#1a3a3a` (meio) com tons de teal escuro/esverdeado
+- **Neblina:** Camadas de névoa semi-transparente com opacidade variável (0.1 a 0.3), animadas com `@keyframes` suave de esquerda para direita
+- **Céu:** Tons escuros entre `#0d1117` e `#1a2332`, com leve brilho lunar difuso
+- **Imagem de fundo:** Imagem fullscreen fixa (`background-attachment: fixed; background-size: cover;`) de cemitério/floresta noturna
+
+### Elementos Decorativos
+- **Morcegos:** SVGs ou PNGs de morcegos posicionados no topo da página com animação de voo (`transform: translateX() translateY()` com keyframes)
+- **Abóboras (Jack-o'-lanterns):** Posicionadas na parte inferior da tela como elementos fixos (`position: fixed; bottom: 0;`), com brilho laranja interno (glow `box-shadow: 0 0 30px #ff6600`)
+- **Teias de aranha:** Posicionadas nos cantos superiores dos cards e da navbar usando `::before` e `::after` pseudo-elements com imagens SVG de teias
+
+### Cards de Posts
+```css
+.post-card {
+  background: rgba(10, 20, 30, 0.75);           /* Fundo escuro semi-transparente */
+  backdrop-filter: blur(12px);                    /* Efeito Aero Glass */
+  -webkit-backdrop-filter: blur(12px);
+  border: 1.5px solid rgba(255, 140, 0, 0.6);   /* Borda laranja brilhante */
+  border-radius: 12px;
+  box-shadow:
+    0 0 15px rgba(255, 140, 0, 0.3),             /* Glow externo laranja */
+    inset 0 0 20px rgba(255, 140, 0, 0.05);      /* Glow interno sutil */
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.post-card:hover {
+  box-shadow:
+    0 0 25px rgba(255, 140, 0, 0.5),
+    inset 0 0 30px rgba(255, 140, 0, 0.1);
+  border-color: rgba(255, 160, 0, 0.8);
+}
+```
+
+### Sidebar "Hub de Cordões"
+```css
+.sidebar-hub {
+  background: rgba(10, 20, 30, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1.5px solid rgba(255, 140, 0, 0.5);
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(255, 140, 0, 0.2);
+}
+
+.sidebar-hub .cordao-tag {
+  background: rgba(255, 140, 0, 0.15);
+  border: 1px solid rgba(255, 140, 0, 0.6);
+  border-radius: 8px;
+  padding: 8px 16px;
+  color: #ffaa33;
+  font-family: 'JetBrains Mono', monospace;
+}
+```
+
+### Navbar
+```css
+.navbar {
+  background: rgba(5, 10, 15, 0.9);
+  backdrop-filter: blur(15px);
+  border-bottom: 1px solid rgba(255, 140, 0, 0.3);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+}
+```
+
+### Abas (Todos, Seguindo, Mídia, Enquetes)
+```css
+.tab-active {
+  background: rgba(255, 140, 0, 0.2);
+  border: 1px solid rgba(255, 140, 0, 0.7);
+  border-radius: 8px;
+  color: #ff8c00;
+  font-weight: 600;
+}
+
+.tab-inactive {
+  color: rgba(255, 255, 255, 0.5);
+  border: 1px solid transparent;
+}
+
+.tab-inactive:hover {
+  color: rgba(255, 200, 100, 0.8);
+  background: rgba(255, 140, 0, 0.08);
+}
+```
+
+### Enquetes (Polls)
+```css
+.poll-option {
+  background: rgba(255, 140, 0, 0.08);
+  border: 1px solid rgba(255, 140, 0, 0.25);
+  border-radius: 8px;
+  color: #e0e0e0;
+  padding: 10px 16px;
+}
+
+.poll-option.selected {
+  background: rgba(255, 140, 0, 0.3);
+  border-color: rgba(255, 140, 0, 0.7);
+  color: #ffcc66;
+}
+
+.poll-bar-fill {
+  background: linear-gradient(90deg, #ff6600, #ff9933);
+  border-radius: 4px;
+  height: 100%;
+}
+```
+
+### Timeline Inferior (Barra de Datas)
+```css
+.timeline-bar {
+  background: rgba(5, 10, 15, 0.9);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(255, 140, 0, 0.3);
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  overflow-x: auto;
+  padding: 8px 20px;
+}
+
+.timeline-date {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.timeline-date.active {
+  color: #ff4444;
+  font-weight: bold;
+}
+```
+
+### Tipografia
+- **Fonte principal:** `'Inter', 'Segoe UI', sans-serif`
+- **Fonte mono (tags/cordões):** `'JetBrains Mono', 'Fira Code', monospace`
+- **Cor do texto principal:** `#e0e0e0`
+- **Cor do texto secundário:** `rgba(255, 255, 255, 0.5)`
+- **Cor de destaque:** `#ff8c00` (laranja Halloween)
+- **Cor de username:** `#ffffff` com badge vermelho 🔴
+
+### Paleta de Cores Completa
+| Elemento              | Cor HEX      | Uso                                      |
+|-----------------------|--------------|------------------------------------------|
+| Fundo principal       | `#0a1a1a`    | Background base                          |
+| Neblina               | `#1a3a3a`    | Camadas de névoa                         |
+| Laranja primário      | `#ff8c00`    | Bordas, glows, destaques                 |
+| Laranja secundário    | `#ff6600`    | Hover states, fills de enquetes          |
+| Laranja terciário     | `#ffaa33`    | Tags de cordões, textos de destaque      |
+| Texto principal       | `#e0e0e0`    | Corpo do texto                           |
+| Texto secundário      | `#808080`    | Datas, metadados                         |
+| Vermelho badge        | `#ff3333`    | Badges de verificação                    |
+| Card background       | `rgba(10,20,30,0.75)` | Fundo dos cards               |
+| Glow externo          | `rgba(255,140,0,0.3)` | Box-shadow dos cards           |
+
+---
+
+## ⚙️ Estrutura de Arquivos do Tema
+
+```
+themes/
+├── halloween/
+│   ├── halloween-theme.css          # CSS principal do tema
+│   ├── halloween-animations.css     # Animações (morcegos, neblina, glow)
+│   ├── assets/
+│   │   ├── bg-cemetery.webp         # Background do cemitério (1920x1080, ~200KB)
+│   │   ├── bat-1.svg                # Morcego sprite 1
+│   │   ├── bat-2.svg                # Morcego sprite 2
+│   │   ├── bat-3.svg                # Morcego sprite 3
+│   │   ├── pumpkin-left.webp        # Abóbora esquerda (com glow)
+│   │   ├── pumpkin-right.webp       # Abóbora direita (com glow)
+│   │   ├── cobweb-corner.svg        # Teia de aranha para cantos
+│   │   └── fog-layer.webp           # Camada de neblina
+│   └── halloween-config.json        # Configurações do tema
+```
+
+### halloween-config.json
+```json
+{
+  "theme_id": "halloween-aero",
+  "display_name": "🎃 Halloween Aero",
+  "version": "1.0.0",
+  "author": "SeuNome",
+  "description": "Tema Halloween com efeito Aero Glass, morcegos animados, abóboras e neblina",
+  "css_files": [
+    "themes/halloween/halloween-theme.css",
+    "themes/halloween/halloween-animations.css"
+  ],
+  "assets_dir": "themes/halloween/assets/",
+  "body_class": "theme-halloween",
+  "features": {
+    "animated_bats": true,
+    "fog_effect": true,
+    "pumpkin_decorations": true,
+    "cobwebs": true,
+    "glow_borders": true,
+    "aero_glass": true
+  },
+  "schedule": {
+    "auto_activate": "10-01",
+    "auto_deactivate": "11-05"
+  }
+}
+```
+
+---
+
+## 🔧 CSS Completo: halloween-theme.css
+
+```css
+/* ============================================
+   🎃 HALLOWEEN AERO THEME — Main Stylesheet
+   ============================================ */
+
+/* === RESET & BASE === */
+body.theme-halloween {
+  background-color: #0a1a1a;
+  background-image: url('./assets/bg-cemetery.webp');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  color: #e0e0e0;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* === OVERLAY DE ESCURECIMENTO === */
+body.theme-halloween::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* === NAVBAR === */
+body.theme-halloween .navbar,
+body.theme-halloween [class*="navbar"],
+body.theme-halloween header {
+  background: rgba(5, 10, 15, 0.92) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 140, 0, 0.3);
+  box-shadow: 0 2px 25px rgba(0, 0, 0, 0.6);
+  z-index: 100;
+}
+
+/* === CARDS DE POST === */
+body.theme-halloween .post-card,
+body.theme-halloween [class*="post"],
+body.theme-halloween [class*="tweet"],
+body.theme-halloween [class*="card"] {
+  background: rgba(10, 20, 30, 0.75) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1.5px solid rgba(255, 140, 0, 0.5) !important;
+  border-radius: 12px !important;
+  box-shadow:
+    0 0 15px rgba(255, 140, 0, 0.25),
+    inset 0 0 20px rgba(255, 140, 0, 0.04);
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+body.theme-halloween .post-card:hover,
+body.theme-halloween [class*="post"]:hover,
+body.theme-halloween [class*="card"]:hover {
+  box-shadow:
+    0 0 30px rgba(255, 140, 0, 0.45),
+    inset 0 0 25px rgba(255, 140, 0, 0.08);
+  border-color: rgba(255, 160, 0, 0.75) !important;
+  transform: translateY(-1px);
+}
+
+/* === SIDEBAR === */
+body.theme-halloween .sidebar,
+body.theme-halloween [class*="sidebar"],
+body.theme-halloween aside {
+  background: rgba(10, 20, 30, 0.8) !important;
+  backdrop-filter: blur(10px);
+  border: 1.5px solid rgba(255, 140, 0, 0.4);
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(255, 140, 0, 0.2);
+}
+
+/* === BOTÕES === */
+body.theme-halloween .btn-primary,
+body.theme-halloween [class*="btn-primary"],
+body.theme-halloween button[class*="create"] {
+  background: rgba(255, 140, 0, 0.2) !important;
+  border: 1.5px solid rgba(255, 140, 0, 0.7) !important;
+  color: #ffcc66 !important;
+  border-radius: 10px;
+  backdrop-filter: blur(8px);
+  transition: all 0.3s ease;
+  font-weight: 600;
+}
+
+body.theme-halloween .btn-primary:hover,
+body.theme-halloween [class*="btn-primary"]:hover {
+  background: rgba(255, 140, 0, 0.35) !important;
+  box-shadow: 0 0 20px rgba(255, 140, 0, 0.4);
+  transform: translateY(-1px);
+}
+
+/* === TABS (Todos, Seguindo, Mídia, Enquetes) === */
+body.theme-halloween .tab-active,
+body.theme-halloween [class*="tab"][class*="active"],
+body.theme-halloween [aria-selected="true"] {
+  background: rgba(255, 140, 0, 0.2) !important;
+  border: 1px solid rgba(255, 140, 0, 0.7) !important;
+  border-radius: 8px;
+  color: #ff8c00 !important;
+}
+
+body.theme-halloween .tab,
+body.theme-halloween [role="tab"] {
+  color: rgba(255, 255, 255, 0.5);
+  transition: all 0.2s ease;
+}
+
+body.theme-halloween .tab:hover,
+body.theme-halloween [role="tab"]:hover {
+  color: rgba(255, 200, 100, 0.8);
+  background: rgba(255, 140, 0, 0.08);
+}
+
+/* === ENQUETES / POLLS === */
+body.theme-halloween [class*="poll"] [class*="option"],
+body.theme-halloween .poll-option {
+  background: rgba(255, 140, 0, 0.06);
+  border: 1px solid rgba(255, 140, 0, 0.2);
+  border-radius: 8px;
+  color: #d0d0d0;
+}
+
+body.theme-halloween [class*="poll"] [class*="selected"],
+body.theme-halloween .poll-option.selected {
+  background: rgba(255, 140, 0, 0.25);
+  border-color: rgba(255, 140, 0, 0.6);
+  color: #ffcc66;
+}
+
+/* === TAGS / CORDÕES === */
+body.theme-halloween [class*="tag"],
+body.theme-halloween .cordao-tag,
+body.theme-halloween [class*="hashtag"] {
+  background: rgba(255, 140, 0, 0.12) !important;
+  border: 1px solid rgba(255, 140, 0, 0.5) !important;
+  border-radius: 8px;
+  color: #ffaa33 !important;
+  font-family: 'JetBrains Mono', monospace;
+  padding: 6px 14px;
+}
+
+/* === TIMELINE INFERIOR === */
+body.theme-halloween .timeline-bar,
+body.theme-halloween [class*="timeline"] {
+  background: rgba(5, 10, 15, 0.92) !important;
+  backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255, 140, 0, 0.3);
+}
+
+/* === SEARCH BAR === */
+body.theme-halloween input[type="search"],
+body.theme-halloween [class*="search"] input,
+body.theme-halloween .search-bar {
+  background: rgba(10, 20, 30, 0.7) !important;
+  border: 1px solid rgba(255, 140, 0, 0.3) !important;
+  border-radius: 20px;
+  color: #e0e0e0;
+  backdrop-filter: blur(8px);
+}
+
+body.theme-halloween input[type="search"]:focus,
+body.theme-halloween [class*="search"] input:focus {
+  border-color: rgba(255, 140, 0, 0.6) !important;
+  box-shadow: 0 0 15px rgba(255, 140, 0, 0.2);
+}
+
+/* === SCROLLBAR CUSTOMIZADA === */
+body.theme-halloween ::-webkit-scrollbar {
+  width: 8px;
+}
+
+body.theme-halloween ::-webkit-scrollbar-track {
+  background: rgba(10, 20, 30, 0.5);
+}
+
+body.theme-halloween ::-webkit-scrollbar-thumb {
+  background: rgba(255, 140, 0, 0.4);
+  border-radius: 4px;
+}
+
+body.theme-halloween ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 140, 0, 0.6);
+}
+
+/* === LINKS === */
+body.theme-halloween a {
+  color: #ffaa33;
+  transition: color 0.2s ease;
+}
+
+body.theme-halloween a:hover {
+  color: #ffcc66;
+  text-shadow: 0 0 8px rgba(255, 140, 0, 0.3);
+}
+
+/* === EMOJIS DE REAÇÃO === */
+body.theme-halloween [class*="reaction"],
+body.theme-halloween [class*="emoji-count"] {
+  background: rgba(255, 140, 0, 0.1);
+  border: 1px solid rgba(255, 140, 0, 0.3);
+  border-radius: 12px;
+}
+
+/* === TÍTULOS DE SEÇÃO === */
+body.theme-halloween h1, body.theme-halloween h2,
+body.theme-halloween h3, body.theme-halloween [class*="section-title"] {
+  color: #ff8c00;
+  text-shadow: 0 0 10px rgba(255, 140, 0, 0.2);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-family: 'JetBrains Mono', monospace;
+}
+```
+
+---
+
+## 🦇 CSS de Animações: halloween-animations.css
+
+```css
+/* ============================================
+   🦇 HALLOWEEN AERO THEME — Animations
+   ============================================ */
+
+/* === MORCEGOS ANIMADOS === */
+.halloween-bat {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.7;
+  filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.8));
+}
+
+.halloween-bat:nth-child(1) {
+  top: 5%; left: 15%;
+  width: 60px;
+  animation: batFly1 8s ease-in-out infinite;
+}
+
+.halloween-bat:nth-child(2) {
+  top: 8%; right: 20%;
+  width: 45px;
+  animation: batFly2 12s ease-in-out infinite;
+}
+
+.halloween-bat:nth-child(3) {
+  top: 12%; left: 60%;
+  width: 35px;
+  animation: batFly3 10s ease-in-out infinite;
+}
+
+.halloween-bat:nth-child(4) {
+  top: 3%; right: 10%;
+  width: 50px;
+  animation: batFly1 15s ease-in-out infinite reverse;
+}
+
+@keyframes batFly1 {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(30px, -15px) rotate(-5deg); }
+  50% { transform: translate(-20px, 10px) rotate(3deg); }
+  75% { transform: translate(15px, -8px) rotate(-2deg); }
+}
+
+@keyframes batFly2 {
+  0%, 100% { transform: translate(0, 0) scaleX(1); }
+  30% { transform: translate(-40px, -20px) scaleX(1); }
+  50% { transform: translate(-60px, 5px) scaleX(-1); }
+  80% { transform: translate(20px, -10px) scaleX(-1); }
+}
+
+@keyframes batFly3 {
+  0%, 100% { transform: translate(0, 0); opacity: 0.7; }
+  40% { transform: translate(50px, -30px); opacity: 0.4; }
+  70% { transform: translate(-30px, 15px); opacity: 0.8; }
+}
+
+/* === NEBLINA / FOG === */
+.halloween-fog {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 40%;
+  background: linear-gradient(
+    to top,
+    rgba(100, 130, 130, 0.15) 0%,
+    transparent 100%
+  );
+  z-index: 2;
+  pointer-events: none;
+  animation: fogDrift 20s ease-in-out infinite alternate;
+}
+
+.halloween-fog-2 {
+  position: fixed;
+  bottom: 5%; left: -10%;
+  width: 120%;
+  height: 30%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(100, 130, 130, 0.1) 0%,
+    transparent 70%
+  );
+  z-index: 2;
+  pointer-events: none;
+  animation: fogDrift2 30s ease-in-out infinite alternate;
+}
+
+@keyframes fogDrift {
+  0% { transform: translateX(-5%); opacity: 0.6; }
+  100% { transform: translateX(5%); opacity: 0.9; }
+}
+
+@keyframes fogDrift2 {
+  0% { transform: translateX(5%) scaleY(1); }
+  100% { transform: translateX(-8%) scaleY(1.2); }
+}
+
+/* === ABÓBORAS === */
+.halloween-pumpkin {
+  position: fixed;
+  bottom: -10px;
+  z-index: 50;
+  pointer-events: none;
+  filter: drop-shadow(0 0 25px rgba(255, 100, 0, 0.6));
+  animation: pumpkinGlow 3s ease-in-out infinite alternate;
+}
+
+.halloween-pumpkin.left {
+  left: 2%;
+  width: 120px;
+}
+
+.halloween-pumpkin.right {
+  right: 2%;
+  width: 100px;
+  animation-delay: 1.5s;
+}
+
+@keyframes pumpkinGlow {
+  0% { filter: drop-shadow(0 0 20px rgba(255, 100, 0, 0.5)); }
+  100% { filter: drop-shadow(0 0 35px rgba(255, 130, 0, 0.8)); }
+}
+
+/* === TEIAS DE ARANHA === */
+.halloween-cobweb {
+  position: fixed;
+  z-index: 99;
+  pointer-events: none;
+  opacity: 0.3;
+}
+
+.halloween-cobweb.top-left {
+  top: 0; left: 0;
+  width: 200px;
+  transform: rotate(0deg);
+}
+
+.halloween-cobweb.top-right {
+  top: 0; right: 0;
+  width: 180px;
+  transform: scaleX(-1);
+}
+
+/* === GLOW PULSANTE NOS CARDS === */
+@keyframes cardGlowPulse {
+  0%, 100% { box-shadow: 0 0 15px rgba(255, 140, 0, 0.25); }
+  50% { box-shadow: 0 0 25px rgba(255, 140, 0, 0.4); }
+}
+
+body.theme-halloween [class*="card"] {
+  animation: cardGlowPulse 4s ease-in-out infinite;
+}
+
+/* === PARTÍCULAS (opcional) === */
+.halloween-particle {
+  position: fixed;
+  width: 3px;
+  height: 3px;
+  background: rgba(255, 140, 0, 0.4);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+  animation: particleFloat 10s linear infinite;
+}
+
+@keyframes particleFloat {
+  0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.6; }
+  100% { transform: translateY(-10vh) rotate(720deg); opacity: 0; }
+}
+```
+
+---
+
+## 🖥️ Script de Injeção JS: halloween-injector.js
+
+```javascript
+/**
+ * 🎃 Halloween Theme Injector
+ * Injeta elementos decorativos no DOM
+ */
+
+(function injectHalloweenElements() {
+  // Verificar se tema está ativo
+  if (!document.body.classList.contains('theme-halloween')) return;
+
+  // === Injetar Morcegos ===
+  const batPositions = [
+    { top: '5%', left: '15%', size: '60px' },
+    { top: '8%', right: '20%', size: '45px' },
+    { top: '12%', left: '60%', size: '35px' },
+    { top: '3%', right: '10%', size: '50px' },
+  ];
+
+  batPositions.forEach((pos, i) => {
+    const bat = document.createElement('img');
+    bat.src = '/themes/halloween/assets/bat-' + ((i % 3) + 1) + '.svg';
+    bat.className = 'halloween-bat';
+    bat.alt = '';
+    bat.style.width = pos.size;
+    Object.assign(bat.style, pos);
+    document.body.appendChild(bat);
+  });
+
+  // === Injetar Abóboras ===
+  ['left', 'right'].forEach(side => {
+    const pumpkin = document.createElement('img');
+    pumpkin.src = `/themes/halloween/assets/pumpkin-${side}.webp`;
+    pumpkin.className = `halloween-pumpkin ${side}`;
+    pumpkin.alt = '';
+    document.body.appendChild(pumpkin);
+  });
+
+  // === Injetar Neblina ===
+  const fog1 = document.createElement('div');
+  fog1.className = 'halloween-fog';
+  document.body.appendChild(fog1);
+
+  const fog2 = document.createElement('div');
+  fog2.className = 'halloween-fog-2';
+  document.body.appendChild(fog2);
+
+  // === Injetar Teias ===
+  ['top-left', 'top-right'].forEach(pos => {
+    const web = document.createElement('img');
+    web.src = '/themes/halloween/assets/cobweb-corner.svg';
+    web.className = `halloween-cobweb ${pos}`;
+    web.alt = '';
+    document.body.appendChild(web);
+  });
+
+  // === Injetar Partículas (opcional) ===
+  for (let i = 0; i < 15; i++) {
+    const particle = document.createElement('div');
+    particle.className = 'halloween-particle';
+    particle.style.left = Math.random() * 100 + '%';
+    particle.style.animationDelay = Math.random() * 10 + 's';
+    particle.style.animationDuration = (8 + Math.random() * 8) + 's';
+    document.body.appendChild(particle);
+  }
+
+  console.log('🎃 Halloween theme elements injected!');
+})();
+```
+
+---
+
+## 🚀 Script CLI: Ativação + Auto-Commit
+
+### `scripts/theme-toggle.sh`
+
+```bash
+#!/bin/bash
+
+# ============================================
+# 🎃 HALLOWEEN THEME TOGGLE + AUTO-COMMIT
+# ============================================
+# Uso:
+#   ./scripts/theme-toggle.sh enable    → Ativa tema Halloween
+#   ./scripts/theme-toggle.sh disable   → Desativa tema Halloween
+#   ./scripts/theme-toggle.sh status    → Verifica status atual
+#   ./scripts/theme-toggle.sh schedule  → Agenda ativação automática (Out-Nov)
+# ============================================
+
+set -e
+
+# === CONFIGURAÇÕES ===
+THEME_NAME="halloween-aero"
+BRANCH="main"
+CONFIG_FILE="src/config/theme.json"              # Ajuste para seu projeto
+CSS_IMPORT_FILE="src/styles/main.css"            # Ajuste para seu projeto
+JS_ENTRY_FILE="src/main.js"                      # Ajuste para seu projeto
+LAYOUT_FILE="src/index.html"                     # Ou App.jsx / layout.tsx
+COMMIT_PREFIX="🎃 [theme]"
+
+# Cores para output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+ORANGE='\033[0;33m'
+PURPLE='\033[0;35m'
+NC='\033[0m' # No Color
+
+# === FUNÇÕES ===
+
+print_banner() {
+  echo ""
+  echo -e "${ORANGE}╔══════════════════════════════════════════╗${NC}"
+  echo -e "${ORANGE}║     🎃  HALLOWEEN AERO THEME TOGGLE  🎃  ║${NC}"
+  echo -e "${ORANGE}╚══════════════════════════════════════════╝${NC}"
+  echo ""
+}
+
+check_git() {
+  if ! git rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+    echo -e "${RED}❌ Erro: Não está em um repositório Git!${NC}"
+    exit 1
+  fi
+}
+
+enable_theme() {
+  echo -e "${ORANGE}🦇 Ativando tema Halloween...${NC}"
+  echo ""
+
+  # 1. Atualizar config do tema
+  if [ -f "$CONFIG_FILE" ]; then
+    # Se usa JSON config
+    python3 -c "
+import json
+with open('$CONFIG_FILE', 'r') as f:
+    config = json.load(f)
+config['active_theme'] = '$THEME_NAME'
+config['theme_class'] = 'theme-halloween'
+with open('$CONFIG_FILE', 'w') as f:
+    json.dump(config, f, indent=2)
+print('  ✅ Config atualizado: $CONFIG_FILE')
+" 2>/dev/null || {
+      # Fallback: criar config
+      mkdir -p "$(dirname "$CONFIG_FILE")"
+      echo "{\"active_theme\": \"$THEME_NAME\", \"theme_class\": \"theme-halloween\"}" > "$CONFIG_FILE"
+      echo -e "  ${GREEN}✅ Config criado: $CONFIG_FILE${NC}"
+    }
+  fi
+
+  # 2. Adicionar imports CSS
+  if [ -f "$CSS_IMPORT_FILE" ]; then
+    if ! grep -q "halloween-theme.css" "$CSS_IMPORT_FILE"; then
+      echo "" >> "$CSS_IMPORT_FILE"
+      echo "/* 🎃 Halloween Theme */" >> "$CSS_IMPORT_FILE"
+      echo "@import '../themes/halloween/halloween-theme.css';" >> "$CSS_IMPORT_FILE"
+      echo "@import '../themes/halloween/halloween-animations.css';" >> "$CSS_IMPORT_FILE"
+      echo -e "  ${GREEN}✅ CSS imports adicionados${NC}"
+    else
+      echo -e "  ${PURPLE}ℹ️  CSS imports já existem${NC}"
+    fi
+  fi
+
+  # 3. Adicionar body class no HTML/JSX
+  if [ -f "$LAYOUT_FILE" ]; then
+    # HTML
+    if grep -q '<body' "$LAYOUT_FILE" && ! grep -q 'theme-halloween' "$LAYOUT_FILE"; then
+      sed -i 's/<body/<body class="theme-halloween"/' "$LAYOUT_FILE"
+      echo -e "  ${GREEN}✅ Classe adicionada ao <body>${NC}"
+    fi
+    # JSX/TSX (className no body ou div root)
+    if grep -q 'className=' "$LAYOUT_FILE" && ! grep -q 'theme-halloween' "$LAYOUT_FILE"; then
+      sed -i 's/className="\([^"]*\)"/className="\1 theme-halloween"/' "$LAYOUT_FILE"
+      echo -e "  ${GREEN}✅ Classe adicionada ao root element${NC}"
+    fi
+  fi
+
+  # 4. Adicionar script injector
+  if [ -f "$JS_ENTRY_FILE" ]; then
+    if ! grep -q "halloween-injector" "$JS_ENTRY_FILE"; then
+      echo "" >> "$JS_ENTRY_FILE"
+      echo "// 🎃 Halloween Theme Injector" >> "$JS_ENTRY_FILE"
+      echo "import './themes/halloween/halloween-injector.js';" >> "$JS_ENTRY_FILE"
+      echo -e "  ${GREEN}✅ JS injector importado${NC}"
+    fi
+  fi
+
+  echo ""
+  echo -e "${GREEN}✅ Tema Halloween ATIVADO com sucesso!${NC}"
+}
+
+disable_theme() {
+  echo -e "${ORANGE}💤 Desativando tema Halloween...${NC}"
+  echo ""
+
+  # 1. Remover do config
+  if [ -f "$CONFIG_FILE" ]; then
+    python3 -c "
+import json
+with open('$CONFIG_FILE', 'r') as f:
+    config = json.load(f)
+config['active_theme'] = 'default'
+config['theme_class'] = ''
+with open('$CONFIG_FILE', 'w') as f:
+    json.dump(config, f, indent=2)
+print('  ✅ Config revertido')
+" 2>/dev/null
+  fi
+
+  # 2. Remover CSS imports
+  if [ -f "$CSS_IMPORT_FILE" ]; then
+    sed -i '/halloween-theme.css/d' "$CSS_IMPORT_FILE"
+    sed -i '/halloween-animations.css/d' "$CSS_IMPORT_FILE"
+    sed -i '/🎃 Halloween Theme/d' "$CSS_IMPORT_FILE"
+    echo -e "  ${GREEN}✅ CSS imports removidos${NC}"
+  fi
+
+  # 3. Remover body class
+  if [ -f "$LAYOUT_FILE" ]; then
+    sed -i 's/ *theme-halloween//g' "$LAYOUT_FILE"
+    sed -i 's/class="theme-halloween"//g' "$LAYOUT_FILE"
+    sed -i 's/class=" "/class=""/g' "$LAYOUT_FILE"
+    echo -e "  ${GREEN}✅ Classe removida do <body>${NC}"
+  fi
+
+  # 4. Remover JS injector
+  if [ -f "$JS_ENTRY_FILE" ]; then
+    sed -i '/halloween-injector/d' "$JS_ENTRY_FILE"
+    sed -i '/🎃 Halloween Theme Injector/d' "$JS_ENTRY_FILE"
+    echo -e "  ${GREEN}✅ JS injector removido${NC}"
+  fi
+
+  echo ""
+  echo -e "${GREEN}✅ Tema Halloween DESATIVADO!${NC}"
+}
+
+check_status() {
+  echo -e "${ORANGE}📊 Status do tema:${NC}"
+  echo ""
+
+  if [ -f "$CONFIG_FILE" ] && grep -q "$THEME_NAME" "$CONFIG_FILE"; then
+    echo -e "  Estado: ${GREEN}🎃 ATIVO${NC}"
+  else
+    echo -e "  Estado: ${PURPLE}💤 INATIVO${NC}"
+  fi
+
+  # Verificar se arquivos do tema existem
+  if [ -d "themes/halloween" ]; then
+    echo -e "  Arquivos: ${GREEN}✅ Presentes${NC}"
+    echo -e "  Pasta: themes/halloween/"
+    ls -la themes/halloween/ 2>/dev/null | tail -n +2 | while read line; do
+      echo "    $line"
+    done
+  else
+    echo -e "  Arquivos: ${RED}❌ Não encontrados${NC}"
+  fi
+}
+
+auto_commit() {
+  local action="$1"
+
+  echo ""
+  echo -e "${ORANGE}📦 Fazendo auto-commit...${NC}"
+
+  git add -A
+
+  # Verificar se há mudanças
+  if git diff --cached --quiet; then
+    echo -e "  ${PURPLE}ℹ️  Nenhuma mudança para commitar${NC}"
+    return
+  fi
+
+  local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+  local commit_msg=""
+
+  case "$action" in
+    "enable")
+      commit_msg="$COMMIT_PREFIX Ativar tema Halloween Aero [$timestamp]"
+      ;;
+    "disable")
+      commit_msg="$COMMIT_PREFIX Desativar tema Halloween [$timestamp]"
+      ;;
+    *)
+      commit_msg="$COMMIT_PREFIX Atualização de tema [$timestamp]"
+      ;;
+  esac
+
+  git commit -m "$commit_msg"
+  echo -e "  ${GREEN}✅ Commit: $commit_msg${NC}"
+
+  # Push automático
+  echo -e "${ORANGE}🚀 Fazendo push para origin/$BRANCH...${NC}"
+  git push origin "$BRANCH"
+  echo -e "  ${GREEN}✅ Push realizado com sucesso!${NC}"
+}
+
+setup_schedule() {
+  echo -e "${ORANGE}📅 Configurando agendamento automático...${NC}"
+  echo ""
+
+  # Criar cron jobs para ativação/desativação automática
+  SCRIPT_PATH="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+
+  # Remover crons anteriores
+  crontab -l 2>/dev/null | grep -v "theme-toggle" > /tmp/crontab_temp || true
+
+  # Adicionar novos crons
+  # Ativar dia 1 de Outubro às 00:01
+  echo "1 0 1 10 * $SCRIPT_PATH enable # 🎃 theme-toggle: ativar halloween" >> /tmp/crontab_temp
+  # Desativar dia 5 de Novembro às 00:01
+  echo "1 0 5 11 * $SCRIPT_PATH disable # 🎃 theme-toggle: desativar halloween" >> /tmp/crontab_temp
+
+  crontab /tmp/crontab_temp
+  rm /tmp/crontab_temp
+
+  echo -e "  ${GREEN}✅ Agendamento configurado:${NC}"
+  echo -e "    🎃 Ativar:    1 de Outubro 00:01"
+  echo -e "    💤 Desativar:  5 de Novembro 00:01"
+  echo ""
+  echo -e "  Crons atuais:"
+  crontab -l | grep "theme-toggle"
+}
+
+# === EXECUÇÃO PRINCIPAL ===
+
+print_banner
+check_git
+
+case "${1:-}" in
+  enable|on|activate|ativar)
+    enable_theme
+    auto_commit "enable"
+    ;;
+  disable|off|deactivate|desativar)
+    disable_theme
+    auto_commit "disable"
+    ;;
+  status|check|verificar)
+    check_status
+    ;;
+  schedule|agendar|cron)
+    setup_schedule
+    ;;
+  *)
+    echo -e "Uso: $0 {enable|disable|status|schedule}"
+    echo ""
+    echo "  enable    → Ativa tema Halloween + commit + push"
+    echo "  disable   → Desativa tema + commit + push"
+    echo "  status    → Verifica se o tema está ativo"
+    echo "  schedule  → Agenda ativação automática (Out-Nov)"
+    echo ""
+    exit 1
+    ;;
+esac
+
+echo ""
+echo -e "${ORANGE}🎃 Feito! Happy Halloween! 🦇${NC}"
+```
+
+---
+
+## 📦 Como Usar
+
+### 1. Copiar arquivos para o projeto
+```bash
+# Clonar/copiar a pasta themes/ para seu projeto
+cp -r themes/ /caminho/do/seu/projeto/
+
+# Copiar o script
+cp scripts/theme-toggle.sh /caminho/do/seu/projeto/scripts/
+chmod +x scripts/theme-toggle.sh
+```
+
+### 2. Ajustar caminhos no script
+Edite as variáveis no topo de `theme-toggle.sh`:
+```bash
+CONFIG_FILE="src/config/theme.json"     # Onde fica sua config
+CSS_IMPORT_FILE="src/styles/main.css"   # Seu CSS principal
+JS_ENTRY_FILE="src/main.js"            # Seu JS principal
+LAYOUT_FILE="src/index.html"           # Seu HTML/JSX principal
+BRANCH="main"                          # Sua branch principal
+```
+
+### 3. Comandos
+```bash
+# Ativar tema Halloween (+ auto-commit + push)
+./scripts/theme-toggle.sh enable
+
+# Desativar tema (+ auto-commit + push)
+./scripts/theme-toggle.sh disable
+
+# Ver status atual
+./scripts/theme-toggle.sh status
+
+# Agendar ativação automática (Out-Nov)
+./scripts/theme-toggle.sh schedule
+```
+
+### 4. Resultado do Commit
+```
+🎃 [theme] Ativar tema Halloween Aero [2026-10-01 00:01:00]
+```
+
+---
+
+## 🎨 Assets Necessários
+
+| Arquivo              | Formato | Tamanho Recomendado | Descrição                          |
+|----------------------|---------|--------------------|------------------------------------|
+| `bg-cemetery.webp`   | WebP    | 1920×1080, ≤300KB  | Cenário de cemitério com neblina   |
+| `bat-1.svg`          | SVG     | ~2KB               | Morcego sprite (asas abertas)      |
+| `bat-2.svg`          | SVG     | ~2KB               | Morcego sprite (asas meio)         |
+| `bat-3.svg`          | SVG     | ~2KB               | Morcego sprite (asas fechadas)     |
+| `pumpkin-left.webp`  | WebP    | 200×200, ≤50KB     | Jack-o'-lantern com glow           |
+| `pumpkin-right.webp` | WebP    | 180×180, ≤50KB     | Jack-o'-lantern com glow           |
+| `cobweb-corner.svg`  | SVG     | ~3KB               | Teia de aranha para cantos         |
+| `fog-layer.webp`     | WebP    | 1920×400, ≤100KB   | Camada de neblina (opcional)       |
+
+> **Dica:** Busque assets gratuitos em [SVGRepo](https://www.svgrepo.com), [Freepik](https://freepik.com), ou [Pixabay](https://pixabay.com) com termos como "halloween bat svg", "jack o lantern png", "spider web svg".
+
+---
+
+## ✅ Checklist de Implementação
+
+- [ ] Criar pasta `themes/halloween/` no projeto
+- [ ] Adicionar `halloween-theme.css`
+- [ ] Adicionar `halloween-animations.css`
+- [ ] Adicionar `halloween-injector.js`
+- [ ] Adicionar `halloween-config.json`
+- [ ] Baixar/criar todos os assets (SVGs, WebPs)
+- [ ] Copiar `theme-toggle.sh` para `scripts/`
+- [ ] Ajustar os caminhos de arquivo no script
+- [ ] Dar permissão de execução: `chmod +x scripts/theme-toggle.sh`
+- [ ] Testar: `./scripts/theme-toggle.sh enable`
+- [ ] Verificar no navegador
+- [ ] Testar: `./scripts/theme-toggle.sh disable`
+- [ ] (Opcional) Agendar: `./scripts/theme-toggle.sh schedule`
+
+---
+
+*Gerado em: Março 2026 | Tema: Halloween Aero Glass v1.0*

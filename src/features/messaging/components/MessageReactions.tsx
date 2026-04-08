@@ -36,11 +36,11 @@ export const MessageReactions: React.FC<MessageReactionsProps> = ({
             <button
               key={emoji}
               className="reaction-badge"
-              title={`${users.length} pessoas reagiram`}
+              title={`${(users as string[]).length} pessoas reagiram`}
               onClick={() => handleEmojiClick(emoji)}
             >
               <span className="reaction-emoji">{emoji}</span>
-              <span className="reaction-count">{users.length}</span>
+              <span className="reaction-count">{(users as string[]).length}</span>
             </button>
           ))}
         </div>

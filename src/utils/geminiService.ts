@@ -1,19 +1,22 @@
 import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 
-const getApiKey = () => {
-    // In Vite, process.env.API_KEY is replaced by the value from vite.config.ts
-    // which comes from GEMINI_API_KEY environment variable.
-    const key = (process.env.API_KEY as string);
-    if (!key || key === 'undefined' || key === 'null') return null;
-    return key;
-};
+/**
+ * DEPRECATED: This file is replaced by server-side AI services.
+ * The Gemini API key is NEVER exposed to the frontend for security reasons.
+ * All AI operations (image generation, sentiment analysis, bio generation, etc.)
+ * must go through the backend API endpoints:
+ * - POST /api/ai/generate-image
+ * - POST /api/ai/analyze-sentiment
+ * - POST /api/ai/generate-bio
+ * - POST /api/ai/generate-post
+ * - POST /api/ai/generate-reply
+ * - POST /api/ai/analyze-sentiment
+ * 
+ * This file is kept for backward compatibility but all functions return null.
+ * DO NOT RESTORE THE GEMINI_API_KEY OR USE THIS FILE.
+ */
 
-const apiKey = getApiKey();
-const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
-
-if (!ai) {
-    console.warn("⚠️ Gemini API Key not found. AI features will be disabled.");
-}
+const ai = null;
 
 export interface GeneratedPostData {
     username: string;
@@ -46,6 +49,15 @@ async function fileToGenerativePart(file: File) {
 }
 
 export const generatePostContent = async (): Promise<GeneratedPostData | null> => {
+    // This function has been moved to the backend for security.
+    // Call POST /api/ai/generate-post instead.
+    return null;
+};
+
+// DEPRECATED: Original implementation below is kept for reference only.
+// DO NOT USE. This code should be moved to server/src/services/aiService.ts
+/*
+export const _generatePostContent_deprecated = async (): Promise<GeneratedPostData | null> => {
     if (!ai) return null;
     try {
         const response = await ai.models.generateContent({

@@ -78,6 +78,21 @@ export const initConversation = async (req: AuthRequest, res: Response) => {
       return res.status(500).json({ error: 'Response generation failed' });
     }
     
+    // Emit socket event if new conversation was created (I-10: notify user in real-time)
+    const io = req.app.get('io');
+    const wasNewConversation = !conversation.id || conversation.created_at === new Date();
+    if (io && conversation && targetUserId) {
+      try {
+        // Emit new_conversation event to both users
+        io.to(userId).emit('new_conversation', responseData);
+        io.to(targetUserId).emit('new_conversation', responseData);
+        console.log(`✅ Emitted new_conversation event to both users`);
+      } catch (err) {
+        console.error('⚠️ Failed to emit new_conversation event:', err);
+        // Don't fail the request if Socket.io emit fails
+      }
+    }
+    
     res.json(responseData);
   } catch (error: any) {
     console.error('❌ Error init conversation:', error.message, error.stack);
@@ -173,18 +188,12 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
     const { conversationId } = req.params;
     const { content, imageUrl } = req.body;
     
-    console.log('📨 sendMessage controller called', {
+    console.log('📨 sendMessage', {
       userId,
       conversationId,
-      conversationIdType: typeof conversationId,
-      contentLength: content ? content.length : 0,
-      contentPreview: content ? content.substring(0, 50) : null,
+      hasContent: !!content,
       hasImage: !!imageUrl,
-      imageUrlType: typeof imageUrl,
-      imageUrlLength: imageUrl ? imageUrl.length : 0,
-      imageUrlPreview: imageUrl ? imageUrl.substring(0, 50) : null,
-      requestBodyKeys: Object.keys(req.body),
-      fullBody: JSON.stringify(req.body).substring(0, 200)
+      contentLength: content?.length ?? 0,
     });
     
     const message = await chatService.sendMessage(conversationId, userId, content, imageUrl);

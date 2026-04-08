@@ -1,0 +1,220 @@
+/* ============================================
+   🎃 HALLOWEEN AERO THEME — Main Stylesheet
+   ============================================ */
+
+/* === RESET & BASE === */
+body.theme-halloween {
+  background-color: #0a1a1a;
+  background-image: url('./assets/bg-cemetery.webp');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  color: #e0e0e0;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* === OVERLAY DE ESCURECIMENTO === */
+body.theme-halloween::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* === NAVBAR === */
+body.theme-halloween .navbar,
+body.theme-halloween [class*="navbar"],
+body.theme-halloween header {
+  background: rgba(5, 10, 15, 0.92) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 140, 0, 0.3);
+  box-shadow: 0 2px 25px rgba(0, 0, 0, 0.6);
+  z-index: 100;
+}
+
+/* === CARDS DE POST === */
+body.theme-halloween .post-card,
+body.theme-halloween [class*="post"],
+body.theme-halloween [class*="tweet"],
+body.theme-halloween [class*="card"] {
+  background: rgba(10, 20, 30, 0.75) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1.5px solid rgba(255, 140, 0, 0.5) !important;
+  border-radius: 12px !important;
+  box-shadow:
+    0 0 15px rgba(255, 140, 0, 0.25),
+    inset 0 0 20px rgba(255, 140, 0, 0.04);
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+body.theme-halloween .post-card:hover,
+body.theme-halloween [class*="post"]:hover,
+body.theme-halloween [class*="card"]:hover {
+  box-shadow:
+    0 0 30px rgba(255, 140, 0, 0.45),
+    inset 0 0 25px rgba(255, 140, 0, 0.08);
+  border-color: rgba(255, 160, 0, 0.75) !important;
+  transform: translateY(-1px);
+}
+
+/* === SIDEBAR === */
+body.theme-halloween .sidebar,
+body.theme-halloween [class*="sidebar"],
+body.theme-halloween aside {
+  background: rgba(10, 20, 30, 0.8) !important;
+  backdrop-filter: blur(10px);
+  border: 1.5px solid rgba(255, 140, 0, 0.4);
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(255, 140, 0, 0.2);
+}
+
+/* === BOTÕES === */
+body.theme-halloween .btn-primary,
+body.theme-halloween [class*="btn-primary"],
+body.theme-halloween button[class*="create"] {
+  background: rgba(255, 140, 0, 0.2) !important;
+  border: 1.5px solid rgba(255, 140, 0, 0.7) !important;
+  color: #ffcc66 !important;
+  border-radius: 10px;
+  backdrop-filter: blur(8px);
+  transition: all 0.3s ease;
+  font-weight: 600;
+}
+
+body.theme-halloween .btn-primary:hover,
+body.theme-halloween [class*="btn-primary"]:hover {
+  background: rgba(255, 140, 0, 0.35) !important;
+  box-shadow: 0 0 20px rgba(255, 140, 0, 0.4);
+  transform: translateY(-1px);
+}
+
+/* === TABS (Todos, Seguindo, Mídia, Enquetes) === */
+body.theme-halloween .tab-active,
+body.theme-halloween [class*="tab"][class*="active"],
+body.theme-halloween [aria-selected="true"] {
+  background: rgba(255, 140, 0, 0.2) !important;
+  border: 1px solid rgba(255, 140, 0, 0.7) !important;
+  border-radius: 8px;
+  color: #ff8c00 !important;
+}
+
+body.theme-halloween .tab,
+body.theme-halloween [role="tab"] {
+  color: rgba(255, 255, 255, 0.5);
+  transition: all 0.2s ease;
+}
+
+body.theme-halloween .tab:hover,
+body.theme-halloween [role="tab"]:hover {
+  color: rgba(255, 200, 100, 0.8);
+  background: rgba(255, 140, 0, 0.08);
+}
+
+/* === ENQUETES / POLLS === */
+body.theme-halloween [class*="poll"] [class*="option"],
+body.theme-halloween .poll-option {
+  background: rgba(255, 140, 0, 0.06);
+  border: 1px solid rgba(255, 140, 0, 0.2);
+  border-radius: 8px;
+  color: #d0d0d0;
+}
+
+body.theme-halloween [class*="poll"] [class*="selected"],
+body.theme-halloween .poll-option.selected {
+  background: rgba(255, 140, 0, 0.25);
+  border-color: rgba(255, 140, 0, 0.6);
+  color: #ffcc66;
+}
+
+/* === TAGS / CORDÕES === */
+body.theme-halloween [class*="tag"],
+body.theme-halloween .cordao-tag,
+body.theme-halloween [class*="hashtag"] {
+  background: rgba(255, 140, 0, 0.12) !important;
+  border: 1px solid rgba(255, 140, 0, 0.5) !important;
+  border-radius: 8px;
+  color: #ffaa33 !important;
+  font-family: 'JetBrains Mono', monospace;
+  padding: 6px 14px;
+}
+
+/* === TIMELINE INFERIOR === */
+body.theme-halloween .timeline-bar,
+body.theme-halloween [class*="timeline"] {
+  background: rgba(5, 10, 15, 0.92) !important;
+  backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255, 140, 0, 0.3);
+}
+
+/* === SEARCH BAR === */
+body.theme-halloween input[type="search"],
+body.theme-halloween [class*="search"] input,
+body.theme-halloween .search-bar {
+  background: rgba(10, 20, 30, 0.7) !important;
+  border: 1px solid rgba(255, 140, 0, 0.3) !important;
+  border-radius: 20px;
+  color: #e0e0e0;
+  backdrop-filter: blur(8px);
+}
+
+body.theme-halloween input[type="search"]:focus,
+body.theme-halloween [class*="search"] input:focus {
+  border-color: rgba(255, 140, 0, 0.6) !important;
+  box-shadow: 0 0 15px rgba(255, 140, 0, 0.2);
+}
+
+/* === SCROLLBAR CUSTOMIZADA === */
+body.theme-halloween ::-webkit-scrollbar {
+  width: 8px;
+}
+
+body.theme-halloween ::-webkit-scrollbar-track {
+  background: rgba(10, 20, 30, 0.5);
+}
+
+body.theme-halloween ::-webkit-scrollbar-thumb {
+  background: rgba(255, 140, 0, 0.4);
+  border-radius: 4px;
+}
+
+body.theme-halloween ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 140, 0, 0.6);
+}
+
+/* === LINKS === */
+body.theme-halloween a {
+  color: #ffaa33;
+  transition: color 0.2s ease;
+}
+
+body.theme-halloween a:hover {
+  color: #ffcc66;
+  text-shadow: 0 0 8px rgba(255, 140, 0, 0.3);
+}
+
+/* === EMOJIS DE REAÇÃO === */
+body.theme-halloween [class*="reaction"],
+body.theme-halloween [class*="emoji-count"] {
+  background: rgba(255, 140, 0, 0.1);
+  border: 1px solid rgba(255, 140, 0, 0.3);
+  border-radius: 12px;
+}
+
+/* === TÍTULOS DE SEÇÃO === */
+body.theme-halloween h1, body.theme-halloween h2,
+body.theme-halloween h3, body.theme-halloween [class*="section-title"] {
+  color: #ff8c00;
+  text-shadow: 0 0 10px rgba(255, 140, 0, 0.2);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-family: 'JetBrains Mono', monospace;
+}

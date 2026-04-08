@@ -3,7 +3,10 @@ import bcrypt from 'bcryptjs';
 
 const updatePassword = async () => {
   const username = 'Juvinho';
-  const newPassword = '27Set@2004';
+  const newPassword = process.env.NEW_PASSWORD;
+  if (!newPassword) {
+    throw new Error('NEW_PASSWORD environment variable required');
+  }
 
   try {
     console.log(`Updating password for user: ${username}`);

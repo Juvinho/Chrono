@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { User, Page, Post, Notification, Conversation } from '../../../types/index';
 import Header from '../../../components/ui/Header';
 import { useTranslation } from '../../../hooks/useTranslation';
-import { analyzeVideo } from '../../../utils/geminiService';
+// Gemini video analysis removed for security - use backend API instead
 import { FilmIcon, UploadIcon } from '../../../components/ui/icons';
 
 interface DataSlicerPageProps {
@@ -76,9 +76,11 @@ export default function DataSlicerPage({
     setAnalysisResult(null);
     setError(null);
     
-    const result = await analyzeVideo(prompt, videoFile);
+    // TODO: Video analysis moved to backend API
+    // const result = await apiClient.post('/api/ai/analyze-video', { prompt, video: videoFile });
+    // setAnalysisResult(result.data);
     
-    setAnalysisResult(result);
+    setError('Video analysis will be available via backend API');
     setIsLoading(false);
   };
 

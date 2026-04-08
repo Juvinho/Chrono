@@ -88,15 +88,22 @@ export class FollowService {
   }
 
   async getFollowersFull(userId: string): Promise<any[]> {
+    // OPTIMIZATION C-10: Use LEFT JOINs instead of subqueries to avoid N+1
     const result = await pool.query(
-      `SELECT u.id, u.username, u.avatar, p.bio, u.is_verified, 
+      `SELECT DISTINCT
+              u.id, u.username, u.avatar, p.bio, u.is_verified, 
               u.verification_badge_label, u.verification_badge_color,
-              (SELECT row_to_json(i) FROM user_items ui JOIN items i ON ui.item_id = i.id WHERE ui.user_id = u.id AND ui.is_equipped = true AND i.type = 'frame' LIMIT 1) as equipped_frame,
-              (SELECT row_to_json(i) FROM user_items ui JOIN items i ON ui.item_id = i.id WHERE ui.user_id = u.id AND ui.is_equipped = true AND i.type = 'effect' LIMIT 1) as equipped_effect
+              i_frame.id as frame_id, i_frame.name as frame_name, i_frame.image_url as frame_image,
+              i_effect.id as effect_id, i_effect.name as effect_name, i_effect.image_url as effect_image
        FROM follows f 
        JOIN users u ON f.follower_id = u.id 
        LEFT JOIN user_profiles p ON u.id = p.user_id
-       WHERE f.following_id = $1`,
+       LEFT JOIN user_items ui_frame ON u.id = ui_frame.user_id AND ui_frame.is_equipped = true
+       LEFT JOIN items i_frame ON ui_frame.item_id = i_frame.id AND i_frame.type = 'frame'
+       LEFT JOIN user_items ui_effect ON u.id = ui_effect.user_id AND ui_effect.is_equipped = true
+       LEFT JOIN items i_effect ON ui_effect.item_id = i_effect.id AND i_effect.type = 'effect'
+       WHERE f.following_id = $1
+       ORDER BY u.username ASC`,
       [userId]
     );
     return result.rows.map(row => ({
@@ -109,29 +116,36 @@ export class FollowService {
             label: row.verification_badge_label,
             color: row.verification_badge_color
         } : undefined,
-        equippedFrame: row.equipped_frame ? {
-            id: row.equipped_frame.id,
-            name: row.equipped_frame.name,
-            imageUrl: row.equipped_frame.image_url
+        equippedFrame: row.frame_id ? {
+            id: row.frame_id,
+            name: row.frame_name,
+            imageUrl: row.frame_image
         } : undefined,
-        equippedEffect: row.equipped_effect ? {
-            id: row.equipped_effect.id,
-            name: row.equipped_effect.name,
-            imageUrl: row.equipped_effect.image_url
+        equippedEffect: row.effect_id ? {
+            id: row.effect_id,
+            name: row.effect_name,
+            imageUrl: row.effect_image
         } : undefined
     }));
   }
 
   async getFollowingFull(userId: string): Promise<any[]> {
+    // OPTIMIZATION C-10: Use LEFT JOINs instead of subqueries to avoid N+1
     const result = await pool.query(
-      `SELECT u.id, u.username, u.avatar, p.bio, u.is_verified,
+      `SELECT DISTINCT
+              u.id, u.username, u.avatar, p.bio, u.is_verified,
               u.verification_badge_label, u.verification_badge_color,
-              (SELECT row_to_json(i) FROM user_items ui JOIN items i ON ui.item_id = i.id WHERE ui.user_id = u.id AND ui.is_equipped = true AND i.type = 'frame' LIMIT 1) as equipped_frame,
-              (SELECT row_to_json(i) FROM user_items ui JOIN items i ON ui.item_id = i.id WHERE ui.user_id = u.id AND ui.is_equipped = true AND i.type = 'effect' LIMIT 1) as equipped_effect
+              i_frame.id as frame_id, i_frame.name as frame_name, i_frame.image_url as frame_image,
+              i_effect.id as effect_id, i_effect.name as effect_name, i_effect.image_url as effect_image
        FROM follows f 
        JOIN users u ON f.following_id = u.id 
        LEFT JOIN user_profiles p ON u.id = p.user_id
-       WHERE f.follower_id = $1`,
+       LEFT JOIN user_items ui_frame ON u.id = ui_frame.user_id AND ui_frame.is_equipped = true
+       LEFT JOIN items i_frame ON ui_frame.item_id = i_frame.id AND i_frame.type = 'frame'
+       LEFT JOIN user_items ui_effect ON u.id = ui_effect.user_id AND ui_effect.is_equipped = true
+       LEFT JOIN items i_effect ON ui_effect.item_id = i_effect.id AND i_effect.type = 'effect'
+       WHERE f.follower_id = $1
+       ORDER BY u.username ASC`,
       [userId]
     );
     return result.rows.map(row => ({
@@ -144,15 +158,15 @@ export class FollowService {
             label: row.verification_badge_label,
             color: row.verification_badge_color
         } : undefined,
-        equippedFrame: row.equipped_frame ? {
-            id: row.equipped_frame.id,
-            name: row.equipped_frame.name,
-            imageUrl: row.equipped_frame.image_url
+        equippedFrame: row.frame_id ? {
+            id: row.frame_id,
+            name: row.frame_name,
+            imageUrl: row.frame_image
         } : undefined,
-        equippedEffect: row.equipped_effect ? {
-            id: row.equipped_effect.id,
-            name: row.equipped_effect.name,
-            imageUrl: row.equipped_effect.image_url
+        equippedEffect: row.effect_id ? {
+            id: row.effect_id,
+            name: row.effect_name,
+            imageUrl: row.effect_image
         } : undefined
     }));
   }

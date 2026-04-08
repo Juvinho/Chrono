@@ -18,8 +18,6 @@ export interface Conversation {
   messages: Message[];
   lastMessageTimestamp: Date;
   unreadCount: { [username: string]: number };
-  isEncrypted?: boolean;
-  selfDestructTimer?: number; // in seconds, 0 or undefined means no self-destruct
 }
 
 export type CyberpunkReaction = 'Glitch' | 'Upload' | 'Corrupt' | 'Rewind' | 'Static';

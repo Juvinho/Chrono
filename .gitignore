@@ -23,10 +23,16 @@ dist-ssr
 !dev-server.bat
 !dev-server.ps1
 
-# Environment variables
+# Environment variables - NEVER commit real credentials
 .env
+.env.local
+.env.*.local
 .env.production
+.env.staging
 server.env
+server/.env
+server/.env.local
+server/.env.*.local
 
 # Editor directories and files
 .vscode/*

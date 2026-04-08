@@ -1,6 +1,7 @@
 
 
 import React, { useState, useRef, useEffect } from 'react';
+import HCaptcha from '@hcaptcha/react-hcaptcha';
 import GlitchText from '../../../components/ui/GlitchText';
 import { User, Page, ProfileSettings } from '../../../types/index';
 import { useTranslation } from '../../../hooks/useTranslation';
@@ -33,7 +34,9 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
     const [confirmPassword, setConfirmPassword] = useState('');
     const [avatar, setAvatar] = useState('');
     const [error, setError] = useState('');
-    const [captchaVerified, setCaptchaVerified] = useState(false);
+    const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+    const [captchaError, setCaptchaError] = useState('');
+    const captchaRef = useRef<HCaptcha>(null);
     const [emailError, setEmailError] = useState('');
     const [usernameError, setUsernameError] = useState('');
     const [usernameSuggestions, setUsernameSuggestions] = useState<string[]>([]);
@@ -171,8 +174,8 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
             return;
         }
 
-        if (!captchaVerified) {
-            setError(t('errorCaptchaRequired'));
+        if (!captchaToken) {
+            setCaptchaError('Please complete the captcha verification.');
             return;
         }
 
@@ -182,7 +185,7 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
                 email, 
                 password, 
                 avatar: avatar || undefined, 
-                captchaVerified 
+                captchaToken
             });
             
             if (response.error) {
@@ -268,22 +271,30 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
 
                     {error && <p className="text-red-500 text-sm text-center glitch-effect" data-text={error}>{error}</p>}
                     
-                    <div className="flex items-center space-x-2 p-3 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)]">
-                        <input
-                            type="checkbox"
-                            id="captcha-register"
-                            checked={captchaVerified}
-                            onChange={(e) => setCaptchaVerified(e.target.checked)}
-                            className="w-5 h-5 cursor-pointer accent-[var(--theme-primary)]"
+                    <div className="p-3 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)]">
+                        <HCaptcha
+                            ref={captchaRef}
+                            sitekey={import.meta.env.VITE_HCAPTCHA_SITEKEY}
+                            onVerify={(token) => {
+                                setCaptchaToken(token);
+                                setCaptchaError('');
+                            }}
+                            onExpire={() => {
+                                setCaptchaToken(null);
+                                setCaptchaError('Captcha expired. Please verify again.');
+                            }}
+                            onError={() => {
+                                setCaptchaToken(null);
+                                setCaptchaError('Captcha failed. Please try again.');
+                            }}
+                            theme="dark"
                         />
-                        <label htmlFor="captcha-register" className="text-sm text-[var(--theme-text-primary)] cursor-pointer flex-1">
-                            {t('captchaIAmNotARobot')}
-                        </label>
+                        {captchaError && <p className="text-red-500 text-sm mt-2">{captchaError}</p>}
                     </div>
 
                     <button 
                         type="submit" 
-                        disabled={!captchaVerified}
+                        disabled={!captchaToken}
                         className="w-full py-2 px-4 bg-[var(--theme-primary)] text-white font-bold hover:bg-[var(--theme-secondary)] transition-colors duration-300 border border-[var(--theme-secondary)] focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         [ {t('registerButton')} ]

@@ -163,7 +163,6 @@ export const useAppSession = ({
                         imageUrl: msg.imageUrl,
                         videoUrl: msg.videoUrl,
                         status: msg.status,
-                        isEncrypted: msg.isEncrypted,
                         timestamp: new Date(msg.createdAt || msg.created_at || Date.now()),
                     })).sort((a: any, b: any) => a.timestamp.getTime() - b.timestamp.getTime());
                     return {
@@ -172,8 +171,6 @@ export const useAppSession = ({
                         messages: mappedMsgs,
                         lastMessageTimestamp: new Date(conv.lastMessageTimestamp || conv.last_message_at || conv.updated_at || Date.now()),
                         unreadCount: conv.unreadCount || {},
-                        isEncrypted: conv.isEncrypted,
-                        selfDestructTimer: conv.selfDestructTimer
                     };
                 });
                 setConversations(mappedConversations);

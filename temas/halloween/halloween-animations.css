@@ -1,0 +1,171 @@
+/* ============================================
+   🦇 HALLOWEEN AERO THEME — Animations
+   ============================================ */
+
+/* === MORCEGOS ANIMADOS === */
+.halloween-bat {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.7;
+  filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.8));
+}
+
+.halloween-bat:nth-child(1) {
+  top: 5%; left: 15%;
+  width: 60px;
+  animation: batFly1 8s ease-in-out infinite;
+}
+
+.halloween-bat:nth-child(2) {
+  top: 8%; right: 20%;
+  width: 45px;
+  animation: batFly2 12s ease-in-out infinite;
+}
+
+.halloween-bat:nth-child(3) {
+  top: 12%; left: 60%;
+  width: 35px;
+  animation: batFly3 10s ease-in-out infinite;
+}
+
+.halloween-bat:nth-child(4) {
+  top: 3%; right: 10%;
+  width: 50px;
+  animation: batFly1 15s ease-in-out infinite reverse;
+}
+
+@keyframes batFly1 {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(30px, -15px) rotate(-5deg); }
+  50% { transform: translate(-20px, 10px) rotate(3deg); }
+  75% { transform: translate(15px, -8px) rotate(-2deg); }
+}
+
+@keyframes batFly2 {
+  0%, 100% { transform: translate(0, 0) scaleX(1); }
+  30% { transform: translate(-40px, -20px) scaleX(1); }
+  50% { transform: translate(-60px, 5px) scaleX(-1); }
+  80% { transform: translate(20px, -10px) scaleX(-1); }
+}
+
+@keyframes batFly3 {
+  0%, 100% { transform: translate(0, 0); opacity: 0.7; }
+  40% { transform: translate(50px, -30px); opacity: 0.4; }
+  70% { transform: translate(-30px, 15px); opacity: 0.8; }
+}
+
+/* === NEBLINA / FOG === */
+.halloween-fog {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 40%;
+  background: linear-gradient(
+    to top,
+    rgba(100, 130, 130, 0.15) 0%,
+    transparent 100%
+  );
+  z-index: 2;
+  pointer-events: none;
+  animation: fogDrift 20s ease-in-out infinite alternate;
+}
+
+.halloween-fog-2 {
+  position: fixed;
+  bottom: 5%; left: -10%;
+  width: 120%;
+  height: 30%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(100, 130, 130, 0.1) 0%,
+    transparent 70%
+  );
+  z-index: 2;
+  pointer-events: none;
+  animation: fogDrift2 30s ease-in-out infinite alternate;
+}
+
+@keyframes fogDrift {
+  0% { transform: translateX(-5%); opacity: 0.6; }
+  100% { transform: translateX(5%); opacity: 0.9; }
+}
+
+@keyframes fogDrift2 {
+  0% { transform: translateX(5%) scaleY(1); }
+  100% { transform: translateX(-8%) scaleY(1.2); }
+}
+
+/* === ABÓBORAS === */
+.halloween-pumpkin {
+  position: fixed;
+  bottom: -10px;
+  z-index: 50;
+  pointer-events: none;
+  filter: drop-shadow(0 0 25px rgba(255, 100, 0, 0.6));
+  animation: pumpkinGlow 3s ease-in-out infinite alternate;
+}
+
+.halloween-pumpkin.left {
+  left: 2%;
+  width: 120px;
+}
+
+.halloween-pumpkin.right {
+  right: 2%;
+  width: 100px;
+  animation-delay: 1.5s;
+}
+
+@keyframes pumpkinGlow {
+  0% { filter: drop-shadow(0 0 20px rgba(255, 100, 0, 0.5)); }
+  100% { filter: drop-shadow(0 0 35px rgba(255, 130, 0, 0.8)); }
+}
+
+/* === TEIAS DE ARANHA === */
+.halloween-cobweb {
+  position: fixed;
+  z-index: 99;
+  pointer-events: none;
+  opacity: 0.3;
+}
+
+.halloween-cobweb.top-left {
+  top: 0; left: 0;
+  width: 200px;
+  transform: rotate(0deg);
+}
+
+.halloween-cobweb.top-right {
+  top: 0; right: 0;
+  width: 180px;
+  transform: scaleX(-1);
+}
+
+/* === GLOW PULSANTE NOS CARDS === */
+@keyframes cardGlowPulse {
+  0%, 100% { box-shadow: 0 0 15px rgba(255, 140, 0, 0.25); }
+  50% { box-shadow: 0 0 25px rgba(255, 140, 0, 0.4); }
+}
+
+body.theme-halloween [class*="card"] {
+  animation: cardGlowPulse 4s ease-in-out infinite;
+}
+
+/* === PARTÍCULAS (opcional) === */
+.halloween-particle {
+  position: fixed;
+  width: 3px;
+  height: 3px;
+  background: rgba(255, 140, 0, 0.4);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+  animation: particleFloat 10s linear infinite;
+}
+
+@keyframes particleFloat {
+  0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.6; }
+  100% { transform: translateY(-10vh) rotate(720deg); opacity: 0; }
+}

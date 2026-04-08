@@ -8,7 +8,7 @@ import { useAppSession } from './hooks/useAppSession';
 import { useAppTheme } from './hooks/useAppTheme';
 import { useRealtimeFeed } from './hooks/useRealtimeFeed';
 import { LanguageProvider } from './hooks/useTranslation';
-import { generateReplyContent } from './utils/geminiService';
+// Gemini removed from frontend for security (C-01)
 import { apiClient, mapApiPostToPost } from './api';
 import { useSound } from './contexts/SoundContext';
 import { useToast } from './contexts/ToastContext';
@@ -358,11 +358,11 @@ function App() {
                 const typingDuration = 3000 + Math.random() * 4000;
                 setTimeout(async () => {
                     try {
-                        const replyData = await generateReplyContent(post.content);
-                        if (replyData) {
-                            const replier = { ...replierSkeleton, username: replyData.username, bio: replyData.bio };
-                            handleReply(post.id, replyData.content, Math.random() < 0.1, replier);
-                        }
+                        // TODO: Move reply generation to backend API
+                        // const response = await apiClient.post('/api/ai/generate-reply', { postContent: post.content })
+                        // const replyData = response.data;
+                        // For now, reply generation is disabled
+                        return;
                     } catch (error) {
                         console.warn("User post interaction simulation: Failed to generate a reply due to API error.", error);
                     } finally {

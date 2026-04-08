@@ -2,6 +2,7 @@ import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import crypto from 'crypto';
 import { pool } from './connection.js';
 import bcrypt from 'bcryptjs';
 
@@ -150,7 +151,10 @@ export async function migrate(retries = 3) {
       
       // @Juvinho: The Creator
       console.log('👤 Garantindo conta: @Juvinho');
-      const juvinhoPassword = await bcrypt.hash('27Set@2004', 10);
+      const juvinhoPassword = await bcrypt.hash(
+        process.env.SEED_JUVINHO_PASSWORD || crypto.randomBytes(32).toString('hex'),
+        12
+      );
       await pool.query(`
           INSERT INTO users (
               username, email, password_hash, is_verified, 

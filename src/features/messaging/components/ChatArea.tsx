@@ -5,6 +5,7 @@ import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { soundsService } from '../../../services/soundsService';
+import { usePresence } from '../../../hooks/usePresence';
 
 interface ChatAreaProps {
   conversationId: number | string;
@@ -12,7 +13,7 @@ interface ChatAreaProps {
 
 const ChatArea: React.FC<ChatAreaProps> = ({ conversationId }) => {
   const { t } = useTranslation();
-  console.log(`📍 ChatArea carregado com conversationId:`, conversationId);
+  const { isOnline } = usePresence();
   
   const {
     messages,
@@ -26,7 +27,6 @@ const ChatArea: React.FC<ChatAreaProps> = ({ conversationId }) => {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const previousLengthRef = useRef<number>(0);
-  const currentUserIdRef = useRef<string>(localStorage.getItem('userId') || 'unknown');
 
   // Find current conversation
   const currentConversation = conversations.find(c => c.id === conversationId);
@@ -39,14 +39,13 @@ const ChatArea: React.FC<ChatAreaProps> = ({ conversationId }) => {
   useEffect(() => {
     // Only scroll if new messages arrived, not on initial load
     if (messages.length > previousLengthRef.current) {
-      console.log(`📬 New messages: ${previousLengthRef.current} -> ${messages.length}`);
-      
       // Play sound when receiving a message from the other user
+      // TODO: Use currentUser from context while checking message sender
       const lastMessage = messages[messages.length - 1];
-      if (lastMessage && lastMessage.senderId !== currentUserIdRef.current) {
-        soundsService.playMessageReceived();
-      }
-      
+      // Commented out sound notification until currentUser is available from context
+      // if (lastMessage && lastMessage.senderId !== currentUserIdRef.current) {
+      //   soundsService.playMessageReceived();
+      // }
       scrollToBottom();
     }
     previousLengthRef.current = messages.length;
@@ -85,7 +84,9 @@ const ChatArea: React.FC<ChatAreaProps> = ({ conversationId }) => {
             </div>
             <div className="chat-header-info">
               <h3>{currentConversation.otherUser.displayName}</h3>
-              <span className="status">{t('online')}</span>
+              <span className="status">
+                {isOnline(currentConversation.otherUser.id) ? t('online') : t('offline')}
+              </span>
             </div>
           </>
         )}

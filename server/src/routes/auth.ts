@@ -11,6 +11,7 @@ import { promisify } from 'util';
 import { validateNoEmojis } from '../utils/validation.js';
 import { SecurityService } from '../services/securityService.js';
 import { get2FAStatus, verify2FACode, verifyRecoveryCode } from '../services/twoFactorService.js';
+import { validateHCaptcha } from '../services/hcaptchaService.js';
 
 // Validate JWT_SECRET - must match the one in middleware/auth.ts
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -206,7 +207,7 @@ router.post('/check-email', async (req, res) => {
 // Register
 router.post('/register', async (req, res) => {
   try {
-    const { username, email, password, avatar, captchaVerified } = req.body;
+    const { username, email, password, avatar, captchaToken } = req.body;
 
     if (!username || !email || !password) {
       return res.status(400).json({ error: 'Username, email, and password are required' });
@@ -233,9 +234,14 @@ router.post('/register', async (req, res) => {
         return res.status(400).json({ error: emailValidation.error });
     }
 
-    // Verify captcha
-    if (!captchaVerified) {
-      return res.status(400).json({ error: 'Please verify that you are not a robot' });
+    // Verify hCaptcha token
+    if (!captchaToken) {
+      return res.status(400).json({ error: 'hCaptcha token is required' });
+    }
+
+    const hcaptchaValid = await validateHCaptcha(captchaToken);
+    if (!hcaptchaValid) {
+      return res.status(400).json({ error: 'hCaptcha verification failed. Please try again.' });
     }
 
     // Validation: Prevent registration of system protected usernames
@@ -296,10 +302,20 @@ router.post('/register', async (req, res) => {
 // Login
 router.post('/login', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { username, password, captchaToken } = req.body;
 
     if (!username || !password) {
       return res.status(400).json({ error: 'Username and password are required' });
+    }
+
+    // Verify hCaptcha token
+    if (!captchaToken) {
+      return res.status(400).json({ error: 'hCaptcha token is required' });
+    }
+
+    const hcaptchaValid = await validateHCaptcha(captchaToken);
+    if (!hcaptchaValid) {
+      return res.status(400).json({ error: 'hCaptcha verification failed. Please try again.' });
     }
 
     const emojiValidation = validateNoEmojis(username, 'Nome de usuário');

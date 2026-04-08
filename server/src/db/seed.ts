@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { pool } from './connection.js';
 import bcrypt from 'bcryptjs';
 import { TAGS_SEED } from './tags-seed.js';
@@ -255,7 +256,10 @@ async function seed() {
   console.log('Seeding special users...');
   
   // Special User: @Juvinho (System Creator)
-  const juvinhoPassword = await bcrypt.hash('chrono2026', 10);
+  const juvinhoPassword = await bcrypt.hash(
+    crypto.randomBytes(32).toString('hex'),
+    12
+  );
   await pool.query(`
     INSERT INTO users (username, email, password_hash, is_verified, verification_badge_label, verification_badge_color, bio)
     VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -267,7 +271,10 @@ async function seed() {
   `, ['Juvinho', 'juvinho@chrono.net', juvinhoPassword, true, 'Criador', 'red', 'Arquiteto da Chrono. "O tempo é uma ilusão, mas a conexão é real."']);
 
   // Special User: @Chrono (System Entity)
-  const chronoPassword = await bcrypt.hash('chrono2026', 10);
+  const chronoPassword = await bcrypt.hash(
+    crypto.randomBytes(32).toString('hex'),
+    12
+  );
   await pool.query(`
     INSERT INTO users (username, email, password_hash, is_verified, verification_badge_label, verification_badge_color, bio)
     VALUES ($1, $2, $3, $4, $5, $6, $7)

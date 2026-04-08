@@ -7,7 +7,9 @@ import { useTranslation } from '../../../hooks/useTranslation';
 import { ImageCropper } from '../../../components/ui/ImageCropper';
 import FramePreview, { getFrameShape } from './FramePreview';
 import { apiClient } from '../../../api';
-import { generateBio, analyzeProfileWithAI } from '../../../utils/geminiService';
+// Gemini API calls moved to backend for security (C-01)
+// Use POST /api/ai/generate-bio instead of generateBio()
+// Use POST /api/ai/analyze-profile instead of analyzeProfileWithAI()
 import TwoFactorSetup from '../../auth/components/TwoFactorSetup';
 
 // FIX: Add a default settings object to fall back on.
@@ -281,63 +283,35 @@ export default function SettingsPage({
     }
   };
 
-  const handleGenerateBio = async () => {
-    setIsGeneratingBio(true);
-    try {
-      // Pass recent posts to give more context to AI
-      const userPosts = allPosts.filter(p => p.author.username === draftUser.username);
-      const newBio = await generateBio({
-        ...draftUser,
-        posts: userPosts
-      });
-      
-      if (newBio) {
-        setDraftUser(prev => ({ ...prev, bio: newBio }));
-        setSaveStatus('success');
-        setSaveMessage(t('aiBioSuccess'));
-        setTimeout(() => setSaveStatus('idle'), 3000);
-      } else {
-        throw new Error(t('aiBioError'));
-      }
-    } catch (error: any) {
-      setSaveStatus('error');
-      setSaveMessage(error.message || t('aiBioError'));
-    } finally {
-      setIsGeneratingBio(false);
-    }
-  };
+  // TODO: Move bio generation to backend API
+  // const handleGenerateBio = async () => {
+  //   setIsGeneratingBio(true);
+  //   try {
+  //     // TODO: Call POST /api/ai/generate-bio instead
+  //     // const response = await apiClient.post('/api/ai/generate-bio', { 
+  //     //   username: draftUser.username, 
+  //     //   posts: userPosts 
+  //     // })
+  //     // setDraftUser(prev => ({ ...prev, bio: response.data.bio }));
+  //   } finally {
+  //     setIsGeneratingBio(false);
+  //   }
+  // };
 
-  const handleAnalyzeProfile = async () => {
-    setIsAnalyzingProfile(true);
-    setProfileAnalysis(null);
-    try {
-      // Get user posts
-      const userPosts = allPosts.filter(p => p.author.username === draftUser.username);
-      
-      if (userPosts.length === 0) {
-        throw new Error('You need to have some posts to analyze your profile');
-      }
-
-      const analysis = await analyzeProfileWithAI({
-        username: draftUser.username,
-        posts: userPosts
-      });
-      
-      if (analysis) {
-        setProfileAnalysis(analysis);
-        setSaveStatus('success');
-        setSaveMessage('Profile analysis complete! Your AI-generated bio is ready.');
-        setTimeout(() => setSaveStatus('idle'), 5000);
-      } else {
-        throw new Error('Failed to analyze profile');
-      }
-    } catch (error: any) {
-      setSaveStatus('error');
-      setSaveMessage(error.message || 'Error analyzing profile');
-    } finally {
-      setIsAnalyzingProfile(false);
-    }
-  };
+  // TODO: Move profile analysis to backend API
+  // const handleAnalyzeProfile = async () => {
+  //   setIsAnalyzingProfile(true);
+  //   setProfileAnalysis(null);
+  //   try {
+  //     // TODO: Call POST /api/ai/analyze-profile instead
+  //     // const response = await apiClient.post('/api/ai/analyze-profile', { 
+  //     //   username: draftUser.username, 
+  //     //   posts: userPosts 
+  //     // })
+  //   } finally {
+  //     setIsAnalyzingProfile(false);
+  //   }
+  // };
   
   const handleApplyAnalysisBio = () => {
     if (profileAnalysis?.bio) {
@@ -679,7 +653,10 @@ export default function SettingsPage({
                             <label className="text-sm text-[var(--theme-text-secondary)] font-mono uppercase">{t('bio')}</label>
                             <div className="flex gap-2">
                                 <button 
-                                    onClick={handleGenerateBio}
+                                    onClick={() => {
+                                      // TODO: Bio generation available via backend API
+                                      alert('Bio generation will be available via backend API');
+                                    }}
                                     disabled={isGeneratingBio}
                                     className="text-xs flex items-center gap-1 text-[var(--theme-primary)] hover:underline disabled:opacity-50"
                                 >
@@ -690,7 +667,10 @@ export default function SettingsPage({
                                     )}
                                 </button>
                                 <button 
-                                    onClick={handleAnalyzeProfile}
+                                    onClick={() => {
+                                      // TODO: Profile analysis available via backend API
+                                      alert('Profile analysis will be available via backend API');
+                                    }}
                                     disabled={isAnalyzingProfile || allPosts.filter(p => p.author.username === draftUser.username).length === 0}
                                     className="text-xs flex items-center gap-1 text-cyan-400 hover:underline disabled:opacity-50"
                                     title="Analyze your posts to generate a personalized bio"

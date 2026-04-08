@@ -14,11 +14,6 @@ export const MessagingLayout: React.FC = () => {
   const [selectedConversationId, setSelectedConversationId] = useState<number | string | null>(null);
   const [isReindexing, setIsReindexing] = useState(false);
 
-  console.log('💬 MessagingLayout carregado', {
-    selectedConversationId,
-    conversationsCount: conversations.length,
-    conversations: conversations.map(c => ({ id: c.id, otherUser: c.otherUser.username }))
-  });
 
   // ✅ Limpa contador quando volta avisualizar a aba
   useEffect(() => {

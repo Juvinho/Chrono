@@ -31,11 +31,3 @@ pool.on('error', (err: Error) => {
   console.error('❌ Erro inesperado no cliente de banco de dados:', err);
 });
 
-export const query = async (text: string, params?: any[]) => {
-  const start = Date.now();
-  const res = await pool.query(text, params);
-  const duration = Date.now() - start;
-  console.log('Query executada', { text, duration, rows: res.rowCount });
-  return res;
-};
-

@@ -86,10 +86,11 @@ export class ApiClient {
         headers['X-CSRF-Token'] = csrfToken;
       }
     }
-    const apiKey = ((import.meta as any)?.env?.VITE_API_KEY as string | undefined) || (process.env as any)?.API_KEY;
-    if (apiKey) {
-      headers['X-API-Key'] = apiKey;
-    }
+    // API Key management moved server-side for security
+    // Frontend never holds sensitive credentials
+    // if (apiKey) {
+    //   headers['X-API-Key'] = apiKey;
+    // }
 
     try {
       const controller = new AbortController();

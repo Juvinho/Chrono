@@ -830,15 +830,12 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
     );
 };
 
-export default React.memo(PostCard, (prevProps, nextProps) => {
-    // Re-render if isNew changed (for glitch animation)
-    if (prevProps.isNew !== nextProps.isNew) return false;
-    // Re-render if post ID changed
-    if (prevProps.post.id !== nextProps.post.id) return false;
-    // Re-render if reactions changed
-    if (JSON.stringify(prevProps.post.reactions) !== JSON.stringify(nextProps.post.reactions)) return false;
-    // Re-render if bookmark status changed
-    if (prevProps.isBookmarked !== nextProps.isBookmarked) return false;
-    // Otherwise skip re-render
-    return true;
-});
+/**
+ * FIXED (C-06): Removed broken custom comparator
+ * The previous comparator only checked: isNew, post.id, reactions, isBookmarked
+ * This missed important changes like: post.content, post.isPrivate, post.replies, post.poll
+ * 
+ * Solution: Use React.memo with shallow comparison (default)
+ * React's shallow comparison is sufficient for this component and prevents missed updates.
+ */
+export default React.memo(PostCard);

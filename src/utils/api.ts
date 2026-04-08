@@ -72,11 +72,6 @@ class ApiClient {
       }
     }
 
-    const apiKey = ((import.meta as any)?.env?.VITE_API_KEY as string | undefined) || (process.env as any)?.API_KEY;
-    if (apiKey) {
-      headers['X-API-Key'] = apiKey;
-    }
-
     try {
       // Add timeout to fetch
       const controller = new AbortController();

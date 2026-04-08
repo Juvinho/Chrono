@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { User } from '../../../types/index';
 import { useTranslation } from '../../../hooks/useTranslation';
-import { generateBio } from '../../../utils/geminiService';
+import { apiClient } from '../../../api';
+// Gemini bio generation removed for security - uses backend API instead (I-11)
 
 interface EditProfileModalProps {
     user: User;
@@ -33,15 +34,21 @@ export default function EditProfileModal({ user, onClose, onSave }: EditProfileM
         setIsGeneratingBio(true);
         setError(null);
         try {
-            const newBio = await generateBio({
-                ...user,
-                ...formData
+            const response = await apiClient.post('/api/ai/generate-bio', {
+                username: user.username,
+                bio: formData.bio,
+                location: formData.location,
+                website: formData.website,
+                skills: formData.skills.split(',').map(s => s.trim()).filter(Boolean),
+                headline: formData.headline,
+                profileType: formData.profileType
             });
             
-            if (newBio) {
-                setFormData(prev => ({ ...prev, bio: newBio }));
+            const responseData = response.data as { bio?: string };
+            if (responseData?.bio) {
+                setFormData(prev => ({ ...prev, bio: responseData.bio }));
             } else {
-                throw new Error(t('aiBioError') || 'Failed to generate bio');
+                setError('Failed to generate bio');
             }
         } catch (err: any) {
             setError(err.message || 'Error generating bio');

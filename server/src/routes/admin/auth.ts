@@ -20,7 +20,7 @@ router.post('/login', async (req: Request, res: Response) => {
     }
 
     // ✅ VERIFICAÇÃO DA SENHA MASTER
-    const isValidPassword = adminConfig.verifyMasterPassword(password);
+    const isValidPassword = await adminConfig.verifyMasterPassword(password);
 
     if (!isValidPassword) {
       // Log de tentativa falhada

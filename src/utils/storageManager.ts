@@ -11,6 +11,16 @@ const STORAGE_LIMITS = {
   softLimit: 3 * 1024 * 1024, // 3MB (começa a limpar antes de atingir limite)
 };
 
+// I-13: TTL Configuration (24 horas em milliseconds)
+const TTL_CONFIG = {
+  DEFAULT_TTL: 24 * 60 * 60 * 1000, // 24 horas
+  KEY_SPECIFIC_TTL: {
+    'chrono_currentUser_v4': 24 * 60 * 60 * 1000, // User data: 24 horas
+    'chrono_token': 24 * 60 * 60 * 1000, // Auth token: 24 horas
+    'chrono_notifications': 1 * 60 * 60 * 1000, // Notifications: 1 hora
+  }
+};
+
 interface StorageSchema {
   version: number;
   timestamp: number;
@@ -81,6 +91,59 @@ export function getStorageBreakdown(): { key: string; size: number; percent: num
   }
 
   return breakdown.sort((a, b) => b.size - a.size);
+}
+
+/**
+ * I-13: Verifica se um item armazenado expirou (TTL validation)
+ * Retorna true se o item ainda é válido, false se expirou
+ */
+export function isDataExpired(key: string, schema: StorageSchema): boolean {
+  if (!schema.timestamp) return true; // Sem timestamp = expirado
+
+  const ttl = TTL_CONFIG.KEY_SPECIFIC_TTL[key as keyof typeof TTL_CONFIG.KEY_SPECIFIC_TTL] 
+    || TTL_CONFIG.DEFAULT_TTL;
+  const now = Date.now();
+  const age = now - schema.timestamp;
+
+  const expired = age > ttl;
+  if (expired) {
+    console.log(`[StorageManager] Data expirou para chave ${key}: ${(age / 1000 / 60).toFixed(1)}min idade (TTL: ${(ttl / 1000 / 60).toFixed(1)}min)`);
+  }
+  return expired;
+}
+
+/**
+ * I-13: Limpa dados expirados do localStorage
+ * Remove todas as chaves com TTL excedido
+ */
+export function cleanupExpiredData(): void {
+  let removedCount = 0;
+  const keysToRemove: string[] = [];
+
+  for (let key in localStorage) {
+    if (!localStorage.hasOwnProperty(key)) continue;
+
+    try {
+      const item = localStorage.getItem(key);
+      if (!item) continue;
+
+      const schema = JSON.parse(item) as StorageSchema;
+      if (schema.version && schema.timestamp && isDataExpired(key, schema)) {
+        keysToRemove.push(key);
+        removedCount++;
+      }
+    } catch {
+      // Se não conseguir parsear, ignora
+    }
+  }
+
+  keysToRemove.forEach(key => {
+    localStorage.removeItem(key);
+  });
+
+  if (removedCount > 0) {
+    console.log(`[StorageManager] Limpeza concluída: ${removedCount} chaves expiradas removidas`);
+  }
 }
 
 /**
@@ -179,7 +242,7 @@ export function setCompressed(key: string, data: any): boolean {
 }
 
 /**
- * Carrega de dados comprimidos
+ * Carrega de dados comprimidos com validação de TTL (I-13)
  */
 export function getCompressed(key: string): any {
   try {
@@ -188,6 +251,13 @@ export function getCompressed(key: string): any {
 
     try {
       const schema = JSON.parse(item) as StorageSchema;
+
+      // I-13: Verifica se os dados expiraram
+      if (schema.version === 1 && isDataExpired(key, schema)) {
+        console.log(`[StorageManager] Removendo dados expirados: ${key}`);
+        localStorage.removeItem(key);
+        return null;
+      }
 
       if (schema.version === 1 && schema.compressed && schema.data) {
         return decompressData(schema.data);

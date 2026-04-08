@@ -1,5 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import HCaptcha from '@hcaptcha/react-hcaptcha';
 import GlitchText from '../../../components/ui/GlitchText';
 import { User, Page } from '../../../types/index';
 import { useTranslation } from '../../../hooks/useTranslation';
@@ -23,7 +24,9 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
     const [error, setError] = useState('');
     const [dbError, setDbError] = useState('');
     const [message, setMessage] = useState('');
-    const [captchaVerified, setCaptchaVerified] = useState(false);
+    const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+    const [captchaError, setCaptchaError] = useState('');
+    const captchaRef = useRef<HCaptcha>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
     const [isResending, setIsResending] = useState(false);
@@ -80,7 +83,7 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
              // If error persists, we still let them try, but it will likely fail
         }
 
-        console.log('Login attempt starting...', { username, captchaVerified });
+        console.log('Login attempt starting...', { username, captchaToken });
         setError('');
         setMessage('');
 
@@ -91,9 +94,9 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
             return;
         }
 
-        if (!captchaVerified) {
-            console.log('Captcha not verified');
-            setError('Por favor, confirme que você não é um robô');
+        if (!captchaToken) {
+            console.log('Captcha token not verified');
+            setCaptchaError('Please complete the captcha verification.');
             return;
         }
 
@@ -104,6 +107,7 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
             const response = await apiClient.login({ 
                 username, 
                 password,
+                captchaToken,
             });
             console.log('API response:', response);
             
@@ -356,22 +360,30 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
 
                     {message && <p className="text-green-400 text-sm text-center">{message}</p>}
                     
-                    <div className="flex items-center space-x-2 p-3 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)]">
-                        <input
-                            type="checkbox"
-                            id="captcha-login"
-                            checked={captchaVerified}
-                            onChange={(e) => setCaptchaVerified(e.target.checked)}
-                            className="w-5 h-5 cursor-pointer accent-[var(--theme-primary)]"
+                    <div className="p-3 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)]">
+                        <HCaptcha
+                            ref={captchaRef}
+                            sitekey={import.meta.env.VITE_HCAPTCHA_SITEKEY}
+                            onVerify={(token) => {
+                                setCaptchaToken(token);
+                                setCaptchaError('');
+                            }}
+                            onExpire={() => {
+                                setCaptchaToken(null);
+                                setCaptchaError('Captcha expired. Please verify again.');
+                            }}
+                            onError={() => {
+                                setCaptchaToken(null);
+                                setCaptchaError('Captcha failed. Please try again.');
+                            }}
+                            theme="dark"
                         />
-                        <label htmlFor="captcha-login" className="text-sm text-[var(--theme-text-primary)] cursor-pointer flex-1">
-                            Eu não sou um robô
-                        </label>
+                        {captchaError && <p className="text-red-500 text-sm mt-2">{captchaError}</p>}
                     </div>
 
                     <button
                         type="submit"
-                        disabled={isLoading || !captchaVerified}
+                        disabled={isLoading || !captchaToken}
                         className={`w-full py-2 px-4 bg-[var(--theme-primary)] text-white font-bold hover:bg-[var(--theme-secondary)] transition-colors duration-300 border border-[var(--theme-secondary)] focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                         {isLoading ? '[ CONNECTING... ]' : `[ ${t('loginConnectButton')} ]`}

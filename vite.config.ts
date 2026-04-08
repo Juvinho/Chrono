@@ -17,8 +17,7 @@ export default defineConfig(({ mode }) => {
         setupFiles: './setupTests.ts',
       },
       define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+        // REMOVED: Gemini API key is now handled server-side only for security
       },
       resolve: {
         alias: {

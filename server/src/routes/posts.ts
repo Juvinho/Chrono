@@ -140,9 +140,15 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const { limit = 50, offset = 0, author, inReplyTo } = req.query;
 
+    // SECURITY FIX C-11: Validate pagination parameters
+    const rawLimit = parseInt(limit as string) || 50;
+    const rawOffset = parseInt(offset as string) || 0;
+    const safeLimit = Math.min(Math.max(1, rawLimit), 100); // Enforce 1-100 range
+    const safeOffset = Math.max(0, rawOffset);
+
     const posts = await postService.getPosts(req.userId || undefined, {
-      limit: parseInt(limit as string),
-      offset: parseInt(offset as string),
+      limit: safeLimit,
+      offset: safeOffset,
       authorId: author as string,
       inReplyToId: inReplyTo === 'null' ? null : (inReplyTo as string),
     });
@@ -150,7 +156,12 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     // Use optimized batch enrichment
     const enrichedPosts = await batchEnrichPosts(posts, req.userId || undefined);
 
-    res.json(enrichedPosts);
+    res.json({
+      posts: enrichedPosts,
+      limit: safeLimit,
+      offset: safeOffset,
+      hasMore: enrichedPosts.length === safeLimit,
+    });
   } catch (error: any) {
     console.error('Get posts error:', error);
     res.status(500).json({ error: error.message || 'Failed to get posts' });

@@ -2,7 +2,9 @@ import React, { useState, useRef, useEffect, memo } from 'react';
 import { Post, User } from '../../../types/index';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { CameraIcon, PollIcon, CalendarIcon, LockClosedIcon, MicrophoneIcon, ImageIcon, SparklesIcon } from '../../../components/ui/icons';
-import { generateImage, analyzeSentiment } from '../../../utils/geminiService';
+// Gemini API calls moved to backend for security (C-01)
+// Use POST /api/ai/generate-image instead of generateImage()
+// Use POST /api/ai/analyze-sentiment instead of analyzeSentiment()
 import FramePreview, { getFrameShape } from '../../profile/components/FramePreview';
 import { containsEmoji } from '../../../utils/emojiValidation';
 
@@ -170,14 +172,16 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
     recognition.start();
   };
   
-  const handleGenerateImage = async () => {
-    if (!imagePrompt.trim()) return;
-    setIsGeneratingImage(true);
-    setGeneratedImageUrl(null);
-    const imageUrl = await generateImage(imagePrompt, aspectRatio);
-    setGeneratedImageUrl(imageUrl);
-    setIsGeneratingImage(false);
-  };
+  // TODO: Implement image generation via backend API
+  // const handleGenerateImage = async () => {
+  //   if (!imagePrompt.trim()) return;
+  //   setIsGeneratingImage(true);
+  //   setGeneratedImageUrl(null);
+  //   // TODO: Call POST /api/ai/generate-image instead
+  //   // const response = await apiClient.post('/api/ai/generate-image', { prompt: imagePrompt, aspectRatio })
+  //   // setGeneratedImageUrl(response.data.imageUrl);
+  //   setIsGeneratingImage(false);
+  // };
 
   const handleSubmit = async () => {
     // Basic validation
@@ -210,9 +214,11 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
     try {
         // Determine mood (Neural Moods)
         let mood: 'neon-joy' | 'void-despair' | 'rage-glitch' | 'zen-stream' | 'neutral' = 'neutral';
-        if (content.trim()) {
-            mood = await analyzeSentiment(content.trim());
-        }
+        // TODO: Move sentiment analysis to backend API
+        // if (content.trim()) {
+        //   const response = await apiClient.post('/api/ai/analyze-sentiment', { content: content.trim() })
+        //   mood = response.data.sentiment;
+        // }
 
         const postData: Omit<Post, 'id' | 'author' | 'timestamp' | 'replies' | 'repostOf' | 'likes' | 'likedBy'> & { timestamp?: Date; mood?: any } = {
           content: content.trim(),
@@ -370,7 +376,10 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
                              <option value="16:9">16:9</option>
                              <option value="9:16">9:16</option>
                          </select>
-                         <button onClick={handleGenerateImage} disabled={isGeneratingImage || !imagePrompt.trim()} className="p-2 bg-[var(--theme-primary)] text-white rounded-sm disabled:opacity-50">
+                         <button onClick={() => {
+                           // TODO: Image generation available via backend API
+                           alert('Image generation will be available via backend API');
+                         }} disabled={true} title="Image generation moved to backend" className="p-2 bg-gray-400 text-white rounded-sm opacity-50 cursor-not-allowed">
                              <SparklesIcon className="w-5 h-5"/>
                          </button>
                     </div>

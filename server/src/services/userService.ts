@@ -6,7 +6,7 @@ import { FollowService } from './followService.js';
 
 const FULL_USER_SELECT = `
   SELECT 
-    u.id, u.username, COALESCE(u.display_name, '') as display_name, u.email, u.password_hash, u.avatar, 
+    u.id, u.username, COALESCE(u.display_name, '') as display_name, u.email, u.avatar, 
     u.followers_count, u.following_count, u.is_verified, u.verification_badge_label, u.verification_badge_color, u.blocked_users, u.created_at, u.updated_at, u.last_seen,
     u.profile_type, u.headline, u.connections_count, u.skills, u.work_experience, u.education,
     p.bio, p.birthday, p.location, p.website, p.cover_image, p.pronouns,
@@ -387,9 +387,6 @@ export class UserService {
   }
 
   mapUserFromDb(row: any): User {
-    // Override verification for Juvinho
-    const isJuvinho = row.username === 'Juvinho';
-
     const mapItem = (itemJson: any) => {
         if (!itemJson) return undefined;
         return {
@@ -424,15 +421,13 @@ export class UserService {
       workExperience: row.work_experience || [],
       education: row.education || [],
       isPrivate: row.is_private, // From user_settings join
-      isVerified: isJuvinho ? true : row.is_verified,
-      verificationBadge: isJuvinho
-        ? { label: 'Criador', color: '#ff0000' }
-        : (row.verification_badge_label
-          ? {
-              label: row.verification_badge_label,
-              color: row.verification_badge_color,
-            }
-          : undefined),
+      isVerified: row.is_verified,
+      verificationBadge: row.verification_badge_label
+        ? {
+            label: row.verification_badge_label,
+            color: row.verification_badge_color,
+          }
+        : undefined,
       profileSettings: row.profile_settings || {
         theme: row.theme || 'light',
         accentColor: row.accent_color || 'purple',
@@ -451,10 +446,13 @@ export class UserService {
       // unless explicitly needed for auth. We handle password_hash separately in auth logic.
     };
 
-    // Remove sensitive fields if they accidentally leaked from the DB row
-    delete user.password_hash;
-    delete user.passwordHash;
-    delete user.two_factor_secret;
+    // Security check: ensure password_hash never leaks into user object
+    if ('password_hash' in user || 'passwordHash' in user || 'password' in user) {
+      throw new Error('[SECURITY] password_hash leaked into user object');
+    }
+    if ('two_factor_secret' in user) {
+      throw new Error('[SECURITY] two_factor_secret leaked into user object');
+    }
     
     return user;
   }

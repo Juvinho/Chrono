@@ -3,19 +3,20 @@ import { Message, SendMessageRequest } from '../types';
 import { getMessages, sendMessage } from '../api/messagingApi';
 import { useSound } from '../../../contexts/SoundContext';
 import { useMessageNotification } from '../../../contexts/MessageNotificationContext';
+import { useSocketMessages } from './useSocketMessages';
 
 export function useMessages(conversationId: number | string | null) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastFetchRef = useRef<number>(0);
   const isFetchingRef = useRef<boolean>(false);
   const previousMessagesLengthRef = useRef<number>(0);
   
   const { playSound } = useSound();
   const { incrementUnread, isPageVisible } = useMessageNotification();
+  const { setOnNewMessage } = useSocketMessages(conversationId);
 
   // Carrega mensagens com debounce
   const fetchMessages = useCallback(async () => {
@@ -117,31 +118,37 @@ export function useMessages(conversationId: number | string | null) {
     }
   };
 
-  // Inicia polling automático - apenas quando conversationId muda
+  // Inicia carregamento inicial e listeners Socket.io
   useEffect(() => {
     if (!conversationId) {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-      }
       return;
     }
 
     // Carrega mensagens ao iniciar
     fetchMessages();
 
-    // Inicia polling a cada 3 segundos para detecção mais rápida de novas mensagens
-    pollingIntervalRef.current = setInterval(() => {
-      fetchMessages();
-    }, 3000);
+    // Setup Socket.io listener for new messages (I-10: replaces polling)
+    setOnNewMessage((newMessage: Message) => {
+      console.log(`🔊 Nova mensagem recebida via Socket.io: ${newMessage.id}`);
+      
+      // Toca som if not sent by current user
+      playSound('message_receive');
+      
+      // Adiciona à lista
+      setMessages((prev) => [...prev, newMessage]);
+      previousMessagesLengthRef.current += 1;
+      
+      // Incrementa unread if page not visible
+      if (!isPageVisible) {
+        console.log('🔔 Incrementando unread (página escondida)');
+        incrementUnread(1);
+      }
+    });
 
     return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-      }
+      // Cleanup handled by useSocketMessages hook
     };
-  }, [conversationId]); // Remover fetchMessages das dependências
+  }, [conversationId, setOnNewMessage]); // Remover fetchMessages das dependências
 
   return {
     messages,

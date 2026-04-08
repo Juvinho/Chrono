@@ -24,7 +24,14 @@ export interface RegisterRequest {
   email: string;
   password: string;
   avatar?: string;
-  captchaVerified?: boolean;
+  captchaToken?: string;
+}
+
+export interface LoginRequest {
+  username: string;
+  password: string;
+  twoFactorCode?: string;
+  captchaToken?: string;
 }
 
 export interface RegisterResponse {

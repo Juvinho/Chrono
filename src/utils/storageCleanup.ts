@@ -1,11 +1,19 @@
 // 🧹 Utilitário para limpar e gerenciar localStorage
+import { postIdMapper } from './postIdMapper';
+import { cleanupExpiredData } from './storageManager';
 
 export function cleanupLocalStorage() {
   try {
     console.log('[🧹 Storage Cleanup] Iniciando limpeza...');
     
+    // I-13: Limpar dados expirados com TTL
+    cleanupExpiredData();
+    
+    // Cleanup post ID mapper TTL entries
+    postIdMapper.cleanup();
+    
     const itemsToClean = [
-      'chrono_users_v4',  // Usuários em cache
+      'chrono_users_v4',  // Usuários em cache - sempre fetch fresh (I-13)
       'chrono_posts_cache', // Posts em cache
       'echo_frame_posts', // Posts do echo frame
       'feed_data', // Dados do feed

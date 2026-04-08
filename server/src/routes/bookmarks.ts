@@ -13,6 +13,12 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 
     const { limit = 50, offset = 0 } = req.query;
 
+    // SECURITY FIX C-11: Validate pagination parameters
+    const rawLimit = parseInt(limit as string) || 50;
+    const rawOffset = parseInt(offset as string) || 0;
+    const safeLimit = Math.min(Math.max(1, rawLimit), 100); // Enforce 1-100 range
+    const safeOffset = Math.max(0, rawOffset);
+
     const result = await pool.query(
       `SELECT b.id as bookmark_id, b.created_at as bookmarked_at, 
               p.id, p.author_id, p.content, p.image_url, p.video_url, 
@@ -28,7 +34,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
        WHERE b.user_id = $1
        ORDER BY b.created_at DESC
        LIMIT $2 OFFSET $3`,
-      [req.userId, parseInt(limit as string), parseInt(offset as string)]
+      [req.userId, safeLimit, safeOffset]
     );
 
     const bookmarks = result.rows.map((row: any) => ({
@@ -61,7 +67,12 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
       isBookmarked: true,
     }));
 
-    res.json(bookmarks);
+    res.json({
+      bookmarks,
+      limit: safeLimit,
+      offset: safeOffset,
+      hasMore: bookmarks.length === safeLimit,
+    });
   } catch (error: any) {
     console.error('Get bookmarks error:', error);
     res.status(500).json({ error: error.message || 'Failed to get bookmarks' });

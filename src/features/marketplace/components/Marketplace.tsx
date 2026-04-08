@@ -54,11 +54,7 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
     const [view, setView] = useState<'marketplace' | 'checkout'>('marketplace');
     const [selectedItem, setSelectedItem] = useState<Item | null>(null);
     const [selectedSubscription, setSelectedSubscription] = useState<'pro' | 'pro_plus' | null>(null);
-    const [cardNumber, setCardNumber] = useState('');
-    const [cardName, setCardName] = useState('');
-    const [cardExpiry, setCardExpiry] = useState('');
-    const [cardCvv, setCardCvv] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState<'credit_card' | 'pix' | 'crypto'>('credit_card');
+    const [paymentMethod, setPaymentMethod] = useState<'pix' | 'crypto'>('pix');
     const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
     useEffect(() => {
@@ -196,29 +192,7 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
         });
     }, [items, searchTerm, rarityFilter, sortBy]);
 
-    // Formatting helpers
-    const formatCardNumber = (value: string) => {
-        const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-        const matches = v.match(/\d{4,16}/g);
-        const match = matches && matches[0] || '';
-        const parts = [];
-        for (let i = 0, len = match.length; i < len; i += 4) {
-            parts.push(match.substring(i, i + 4));
-        }
-        if (parts.length) {
-            return parts.join(' ');
-        } else {
-            return value;
-        }
-    };
-
-    const formatExpiry = (value: string) => {
-        const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-        if (v.length >= 2) {
-            return v.substring(0, 2) + '/' + v.substring(2, 4);
-        }
-        return v;
-    };
+    // Payment processing helpers stored at server-side
 
     if (view === 'checkout') {
         const price = selectedItem ? selectedItem.price : (selectedSubscription === 'pro' ? 5.99 : 12.99);
@@ -253,9 +227,9 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                             </div>
                         </div>
 
-                        {/* Payment Method Tabs */}
-                        <div className="grid grid-cols-3 gap-2">
-                            {(['credit_card', 'pix', 'crypto'] as const).map(method => (
+                        {/* Payment Method Tabs - Security Fix: Credit cards removed */}
+                        <div className="grid grid-cols-2 gap-2">
+                            {(['pix', 'crypto'] as const).map(method => (
                                 <button
                                     key={method}
                                     onClick={() => setPaymentMethod(method)}
@@ -269,57 +243,6 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                                 </button>
                             ))}
                         </div>
-
-                        {/* Card Form */}
-                        {paymentMethod === 'credit_card' && (
-                            <div className="space-y-4 animate-[fadeIn_0.2s_ease-out]">
-                                <div>
-                                    <label className="block text-xs uppercase text-[var(--theme-text-secondary)] mb-1">Card Number</label>
-                                    <input 
-                                        type="text" 
-                                        value={cardNumber}
-                                        onChange={(e) => setCardNumber(formatCardNumber(e.target.value))}
-                                        placeholder="0000 0000 0000 0000"
-                                        maxLength={19}
-                                        className="w-full bg-[var(--theme-bg-primary)] border border-[var(--theme-border-primary)] rounded p-2 text-[var(--theme-text-light)] focus:border-[var(--theme-primary)] outline-none font-mono"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs uppercase text-[var(--theme-text-secondary)] mb-1">Cardholder Name</label>
-                                    <input 
-                                        type="text" 
-                                        value={cardName}
-                                        onChange={(e) => setCardName(e.target.value)}
-                                        placeholder="JOHN DOE"
-                                        className="w-full bg-[var(--theme-bg-primary)] border border-[var(--theme-border-primary)] rounded p-2 text-[var(--theme-text-light)] focus:border-[var(--theme-primary)] outline-none"
-                                    />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-xs uppercase text-[var(--theme-text-secondary)] mb-1">Expiry</label>
-                                        <input 
-                                            type="text" 
-                                            value={cardExpiry}
-                                            onChange={(e) => setCardExpiry(formatExpiry(e.target.value))}
-                                            placeholder="MM/YY"
-                                            maxLength={5}
-                                            className="w-full bg-[var(--theme-bg-primary)] border border-[var(--theme-border-primary)] rounded p-2 text-[var(--theme-text-light)] focus:border-[var(--theme-primary)] outline-none font-mono"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs uppercase text-[var(--theme-text-secondary)] mb-1">CVV</label>
-                                        <input 
-                                            type="text" 
-                                            value={cardCvv}
-                                            onChange={(e) => setCardCvv(e.target.value.replace(/\D/g,''))}
-                                            placeholder="123"
-                                            maxLength={3}
-                                            className="w-full bg-[var(--theme-bg-primary)] border border-[var(--theme-border-primary)] rounded p-2 text-[var(--theme-text-light)] focus:border-[var(--theme-primary)] outline-none font-mono"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        )}
                         
                         {paymentMethod === 'pix' && (
                              <div className="text-center p-8 border-2 border-dashed border-[var(--theme-border-primary)] rounded-lg animate-[fadeIn_0.2s_ease-out]">
@@ -351,7 +274,7 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
 
                         <button 
                             onClick={handleConfirmPurchase}
-                            disabled={isProcessingPayment || (paymentMethod === 'credit_card' && (!cardNumber || !cardName || !cardExpiry || !cardCvv))}
+                            disabled={isProcessingPayment}
                             className="w-full py-3 bg-[var(--theme-primary)] text-white font-bold uppercase rounded hover:bg-[var(--theme-secondary)] disabled:opacity-50 disabled:cursor-not-allowed transition-all relative overflow-hidden"
                         >
                             {isProcessingPayment ? (

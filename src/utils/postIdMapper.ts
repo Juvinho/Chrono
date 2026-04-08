@@ -5,15 +5,26 @@
 interface PostIdMapping {
   randomId: string;
   realId: string;
+  timestamp?: number; // TTL tracking
+}
+
+interface StoredMapping {
+  randomId: string;
+  realId: string;
+  timestamp: number;
 }
 
 class PostIdMapper {
-  private mappings: Map<string, string> = new Map(); // randomId -> realId
+  private mappings: Map<string, { realId: string; timestamp: number }> = new Map(); // randomId -> { realId, timestamp }
   private reverseMappings: Map<string, string> = new Map(); // realId -> randomId
   private readonly STORAGE_KEY = 'chrono_post_id_mappings';
+  private readonly MAX_ENTRIES = 1000;
+  private readonly TTL_DAYS = 30;
+  private readonly TTL_MS = this.TTL_DAYS * 24 * 60 * 60 * 1000; // 30 days
 
   constructor() {
     this.loadFromStorage();
+    this.cleanup();
   }
 
   /**
@@ -32,14 +43,28 @@ class PostIdMapper {
       return this.reverseMappings.get(realId)!;
     }
 
+    // Check if we're at max capacity - remove oldest entry
+    if (this.mappings.size >= this.MAX_ENTRIES) {
+      const oldestEntry = Array.from(this.mappings.entries()).sort(
+        ([, a], [, b]) => a.timestamp - b.timestamp
+      )[0];
+      
+      if (oldestEntry) {
+        const [oldRandomId, { realId: oldRealId }] = oldestEntry;
+        this.mappings.delete(oldRandomId);
+        this.reverseMappings.delete(oldRealId);
+      }
+    }
+
     // Gera novo ID randômico (garante unicidade)
     let randomId = this.generateRandomId();
     while (this.mappings.has(randomId)) {
       randomId = this.generateRandomId();
     }
 
-    // Armazena mapeamento bidirecional
-    this.mappings.set(randomId, realId);
+    // Armazena mapeamento bidirecional com timestamp
+    const now = Date.now();
+    this.mappings.set(randomId, { realId, timestamp: now });
     this.reverseMappings.set(realId, randomId);
 
     // Persiste no localStorage
@@ -52,7 +77,8 @@ class PostIdMapper {
    * Obtém o ID real a partir do ID randômico
    */
   getRealId(randomId: string): string | null {
-    return this.mappings.get(randomId) || null;
+    const entry = this.mappings.get(randomId);
+    return entry ? entry.realId : null;
   }
 
   /**
@@ -61,10 +87,48 @@ class PostIdMapper {
   resolveId(idString: string): string | null {
     // Se parecer um ID randômico (7 dígitos), tenta resolver
     if (/^\d{7}$/.test(idString)) {
-      return this.mappings.get(idString) || null;
+      const mapping = this.mappings.get(idString);
+      return mapping ? mapping.realId : null;
     }
     // Senão é um ID real, retorna direto
     return idString;
+  }
+
+  /**
+   * Limpa mapeamentos expirados (>30 dias) e entries em excesso (>1000)
+   * Chamado automaticamente no constructor e pode ser chamado manualmente
+   */
+  cleanup(): void {
+    const now = Date.now();
+    let removed = 0;
+
+    // Remove entries expiradas (TTL)
+    for (const [randomId, { realId, timestamp }] of Array.from(this.mappings.entries())) {
+      if (now - timestamp > this.TTL_MS) {
+        this.mappings.delete(randomId);
+        this.reverseMappings.delete(realId);
+        removed++;
+      }
+    }
+
+    // Se ainda está acima do limite, remove as mais antigas
+    while (this.mappings.size > this.MAX_ENTRIES) {
+      const oldestEntry = Array.from(this.mappings.entries()).sort(
+        ([, a], [, b]) => a.timestamp - b.timestamp
+      )[0];
+      
+      if (oldestEntry) {
+        const [oldRandomId, { realId: oldRealId }] = oldestEntry;
+        this.mappings.delete(oldRandomId);
+        this.reverseMappings.delete(oldRealId);
+        removed++;
+      }
+    }
+
+    if (removed > 0) {
+      console.log(`[PostIdMapper] Cleaned up ${removed} expired entries`);
+      this.saveToStorage();
+    }
   }
 
   /**
@@ -81,7 +145,13 @@ class PostIdMapper {
    */
   private saveToStorage(): void {
     try {
-      const data = Array.from(this.mappings.entries());
+      const data: StoredMapping[] = Array.from(this.mappings.entries()).map(
+        ([randomId, { realId, timestamp }]) => ({
+          randomId,
+          realId,
+          timestamp
+        })
+      );
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
     } catch (error) {
       console.error('Failed to save post ID mappings:', error);
@@ -95,9 +165,9 @@ class PostIdMapper {
     try {
       const data = localStorage.getItem(this.STORAGE_KEY);
       if (data) {
-        const mappings: Array<[string, string]> = JSON.parse(data);
-        mappings.forEach(([randomId, realId]) => {
-          this.mappings.set(randomId, realId);
+        const mappings: StoredMapping[] = JSON.parse(data);
+        mappings.forEach(({ randomId, realId, timestamp }) => {
+          this.mappings.set(randomId, { realId, timestamp });
           this.reverseMappings.set(realId, randomId);
         });
       }

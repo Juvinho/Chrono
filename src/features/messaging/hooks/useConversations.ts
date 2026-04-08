@@ -1,22 +1,23 @@
 import { useState, useEffect, useRef } from 'react';
 import { Conversation } from '../types';
 import { getConversations } from '../api/messagingApi';
+import { useSocketConversations } from './useSocketConversations';
 
 export function useConversations() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const retryCountRef = useRef<number>(0);
   const maxRetriesRef = useRef<number>(3);
   const lastSuccessfulDataRef = useRef<Conversation[]>([]); // Guardar último resultado bem-sucedido
+  
+  // Socket.io listeners for real-time updates (I-10: replaces 3-second polling)
+  const { setOnConversationUpdate, setOnNewConversation, setOnConversationDelete } = useSocketConversations();
 
-  const fetchConversations = async (isRetry = false, isPolling = false) => {
+  const fetchConversations = async (isRetry = false) => {
     try {
       if (!isRetry) {
-        if (!isPolling) {
-          setIsLoading(true);
-        }
+        setIsLoading(true);
         setError(null);
         retryCountRef.current = 0;
       }
@@ -35,7 +36,6 @@ export function useConversations() {
       
       console.log('✅ Conversas carregadas:', {
         count: data.length,
-        isPolling,
         conversationIds: data.map(c => c.id)
       });
     } catch (err: any) {
@@ -44,42 +44,22 @@ export function useConversations() {
         code: err?.code,
         statusCode: err?.statusCode,
         retry: retryCountRef.current,
-        isPolling,
         lastSuccessfulCount: lastSuccessfulDataRef.current.length
       });
       
-      // Se é polling e temos dados anteriores, não limpa (pode ser erro temporário)
-      if (isPolling && lastSuccessfulDataRef.current.length > 0) {
-        console.log('📌 Mantendo conversas anteriores durante polling');
-        return;
-      }
-      
-      // Retry logic para erros temporários (apenas se não for polling)
-      if (!isPolling && retryCountRef.current < maxRetriesRef.current) {
+      // Retry logic para erros temporários
+      if (retryCountRef.current < maxRetriesRef.current) {
         retryCountRef.current++;
         console.log(`🔄 Tentativa ${retryCountRef.current}/${maxRetriesRef.current}...`);
         
         // Aguarda 1 segundo antes de tentar novamente
         await new Promise(resolve => setTimeout(resolve, 1000));
-        return fetchConversations(true, false);
+        return fetchConversations(true);
       }
       
-      // Se mesmo após retries continuar offline, tenta restaurar do cache
-      const cachedConversations = sessionStorage.getItem('cachedConversations');
-      if (cachedConversations) {
-        try {
-          const cached = JSON.parse(cachedConversations);
-          if (Array.isArray(cached) && cached.length > 0) {
-            setConversations(cached);
-            lastSuccessfulDataRef.current = cached;
-            setError('⚠️ Usando dados em cache (conexão perdida)');
-            console.log('📦 Usando conversas em cache:', cached.length);
-            return;
-          }
-        } catch (cacheErr) {
-          console.error('Erro ao restaurar cache:', cacheErr);
-        }
-      }
+      // SECURITY FIX: Removed sessionStorage caching for private messages (C-14)
+      // Conversations contain sensitive data that should not be persisted on disk
+      // Only use in-memory cache via lastSuccessfulDataRef
       
       // Só mostra erro se realmente não tem dados anteriores
       if (lastSuccessfulDataRef.current.length === 0) {
@@ -93,31 +73,59 @@ export function useConversations() {
 
   useEffect(() => {
     // Carrega conversas ao iniciar
-    fetchConversations(false, false);
+    fetchConversations(false);
 
-    // Inicia polling a cada 3 segundos
-    pollingIntervalRef.current = setInterval(() => {
-      fetchConversations(false, true); // isPolling = true
-    }, 3000);
+    // Setup Socket.io listener for real-time conversation updates (I-10: replaces 3-second polling)
+    setOnConversationUpdate((data: any) => {
+      console.log(`📍 Atualizando conversa via Socket.io: ${data.id}`);
+      
+      // Atualiza conversa existente ou adiciona nova
+      setConversations((prev) => {
+        const existingIndex = prev.findIndex(c => c.id === data.id);
+        if (existingIndex >= 0) {
+          // Atualiza conversa existente
+          const updated = [...prev];
+          updated[existingIndex] = {
+            ...updated[existingIndex],
+            ...data,
+          };
+          return updated;
+        } else {
+          // Nova conversa (fallback)
+          return prev;
+        }
+      });
+    });
+
+    setOnNewConversation((conversation: Conversation) => {
+      console.log(`✨ Nova conversa recebida via Socket.io: ${conversation.id}`);
+      
+      // Adiciona nova conversa à lista
+      setConversations((prev) => {
+        // Evita duplicatas
+        if (prev.some(c => c.id === conversation.id)) {
+          return prev;
+        }
+        return [conversation, ...prev];
+      });
+    });
+
+    setOnConversationDelete((conversationId: string | number) => {
+      console.log(`🗑️ Conversa deletada via Socket.io: ${conversationId}`);
+      
+      // Remove conversa deletada
+      setConversations((prev) => prev.filter(c => c.id !== conversationId));
+    });
 
     return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-      }
+      // Cleanup handled by useSocketConversations hook
     };
-  }, []);
-
-  // Salva conversas em cache sempre que mudam
-  useEffect(() => {
-    if (conversations.length > 0) {
-      sessionStorage.setItem('cachedConversations', JSON.stringify(conversations));
-    }
-  }, [conversations]);
+  }, [setOnConversationUpdate, setOnNewConversation, setOnConversationDelete]);
 
   return {
     conversations,
     isLoading,
     error,
-    refetch: (isPolling = false) => fetchConversations(false, isPolling),
+    refetch: () => fetchConversations(false),
   };
 }

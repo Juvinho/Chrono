@@ -96,7 +96,6 @@ export interface Message {
   glitchiType?: string | null;
   metadata?: any;
   status?: 'sent' | 'delivered' | 'read';
-  isEncrypted?: boolean;
   createdAt: Date;
 }
 
@@ -106,8 +105,6 @@ export interface Conversation {
   messages: Message[];
   lastMessageTimestamp: Date;
   unreadCount: { [username: string]: number };
-  isEncrypted?: boolean;
-  selfDestructTimer?: number;
 }
 
 export interface Notification {

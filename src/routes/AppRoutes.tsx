@@ -8,10 +8,10 @@ import { ErrorTestPage } from '../components/ErrorTestPage';
 import { AdminLogin } from '../pages/AdminLogin';
 import { AdminDashboard } from '../pages/AdminDashboard';
 import { ProtectedAdminRoute } from '../components/ProtectedAdminRoute';
+import { DashboardRoute } from './DashboardRoute';
 
 // Lazy load components
 const LoginScreen = React.lazy(() => import('../features/auth/components/LoginScreen'));
-const Dashboard = React.lazy(() => import('../features/timeline/components/Dashboard'));
 const ProfilePage = React.lazy(() => import('../features/profile/components/ProfilePage'));
 const SettingsPage = React.lazy(() => import('../features/profile/components/SettingsPage'));
 const Welcome = React.lazy(() => import('../features/auth/components/Welcome'));
@@ -118,115 +118,116 @@ export default function AppRoutes(props: AppRoutesProps) {
             <Route path="/reset-password" element={<ResetPassword emailToReset={emailToReset} onPasswordReset={handlePasswordReset} onNavigate={handleNavigate} />} />
             
             {/* Protected Routes */}
-            <Route path="/echoframe" element={currentUser ? (
-                <Dashboard 
-                    user={currentUser}
-                    onLogout={handleLogout}
-                    onNavigate={handleNavigate}
-                    onNotificationClick={handleNotificationClick}
-                    onViewNotifications={onViewNotifications}
-                    selectedDate={selectedDate}
-                    setSelectedDate={setSelectedDate}
-                    allUsers={combinedUsers}
-                    allPosts={memoizedPosts}
-                    allKnownPosts={memoizedAllPosts}
-                    onNewPost={handleNewPost}
-                    onUpdateReaction={handleUpdateReaction}
-                    onReply={handleReply}
-                    onEcho={handleEcho}
-                    onDeletePost={handleDeletePost}
-                    onEditPost={handleEditPost}
-                    onPollVote={handlePollVote}
-                    isGenerating={isGenerating}
-                    typingParentIds={typingParentIds}
-                    conversations={conversations}
-                    newPostsCount={pendingPosts.length}
-                    onShowNewPosts={handleShowNewPosts}
+            <Route path="/echoframe" element={
+                <DashboardRoute 
+                    currentUser={currentUser}
+                    combinedUsers={combinedUsers}
+                    memoizedPosts={memoizedPosts}
+                    memoizedAllPosts={memoizedAllPosts}
+                    memoizedUsers={memoizedUsers}
+                    pendingPosts={pendingPosts}
                     newPostIds={newPostIds}
-                    
-                    onUpdateUser={handleUpdateUser}
-                    onOpenMarketplace={() => setIsMarketplaceOpen(true)}
+                    conversations={conversations}
+                    selectedDate={selectedDate}
+                    typingParentIds={typingParentIds}
                     nextAutoRefresh={nextAutoRefresh}
                     isAutoRefreshPaused={isAutoRefreshPaused}
-                    onBack={handleBack}
                     lastViewedNotifications={lastViewedNotifications}
-                    onPostClick={handleOpenThreadView}
-                    onOpenChat={handleOpenChat}
-                />
-            ) : <Navigate to="/welcome" />} />
-
-            <Route path="/echoframe/:dateSegment" element={currentUser ? (
-                <Dashboard 
-                    user={currentUser}
-                    onLogout={handleLogout}
-                    onNavigate={handleNavigate}
-                    onNotificationClick={handleNotificationClick}
-                    onViewNotifications={onViewNotifications}
-                    selectedDate={selectedDate}
-                    setSelectedDate={setSelectedDate}
-                    allUsers={combinedUsers}
-                    allPosts={memoizedPosts}
-                    allKnownPosts={memoizedAllPosts}
-                    onNewPost={handleNewPost}
-                    onUpdateReaction={handleUpdateReaction}
-                    onReply={handleReply}
-                    onEcho={handleEcho}
-                    onDeletePost={handleDeletePost}
-                    onEditPost={handleEditPost}
-                    onPollVote={handlePollVote}
                     isGenerating={isGenerating}
-                    typingParentIds={typingParentIds}
-                    conversations={conversations}
-                    newPostsCount={pendingPosts.length}
-                    onShowNewPosts={handleShowNewPosts}
+                    handleNavigate={handleNavigate}
+                    handleLogout={handleLogout}
+                    handleNotificationClick={handleNotificationClick}
+                    onViewNotifications={onViewNotifications}
+                    setSelectedDate={setSelectedDate}
+                    handleNewPost={handleNewPost}
+                    handleUpdateReaction={handleUpdateReaction}
+                    handleReply={handleReply}
+                    handleEcho={handleEcho}
+                    handleDeletePost={handleDeletePost}
+                    handleEditPost={handleEditPost}
+                    handlePollVote={handlePollVote}
+                    handleShowNewPosts={handleShowNewPosts}
+                    handleUpdateUser={handleUpdateUser}
+                    setIsMarketplaceOpen={setIsMarketplaceOpen}
+                    handleBack={handleBack}
+                    handleOpenChat={handleOpenChat}
+                    handleOpenThreadView={handleOpenThreadView}
+                />
+            } />
+
+            <Route path="/echoframe/:dateSegment" element={
+                <DashboardRoute 
+                    currentUser={currentUser}
+                    combinedUsers={combinedUsers}
+                    memoizedPosts={memoizedPosts}
+                    memoizedAllPosts={memoizedAllPosts}
+                    memoizedUsers={memoizedUsers}
+                    pendingPosts={pendingPosts}
                     newPostIds={newPostIds}
-                    
-                    onUpdateUser={handleUpdateUser}
-                    onOpenMarketplace={() => setIsMarketplaceOpen(true)}
-                    nextAutoRefresh={nextAutoRefresh}
-                    isAutoRefreshPaused={isAutoRefreshPaused}
-                    onBack={handleBack}
-                    lastViewedNotifications={lastViewedNotifications}
-                    onPostClick={handleOpenThreadView}
-                    onOpenChat={handleOpenChat}
-                />
-            ) : <Navigate to="/welcome" />} />
-
-            <Route path="/echo/:dateSegment" element={currentUser ? (
-                <Dashboard 
-                    user={currentUser}
-                    onLogout={handleLogout}
-                    onNavigate={handleNavigate}
-                    onNotificationClick={handleNotificationClick}
-                    onViewNotifications={onViewNotifications}
-                    selectedDate={selectedDate}
-                    setSelectedDate={setSelectedDate}
-                    allUsers={combinedUsers}
-                    allPosts={memoizedPosts}
-                    allKnownPosts={memoizedAllPosts}
-                    onNewPost={handleNewPost}
-                    onUpdateReaction={handleUpdateReaction}
-                    onReply={handleReply}
-                    onEcho={handleEcho}
-                    onDeletePost={handleDeletePost}
-                    onEditPost={handleEditPost}
-                    onPollVote={handlePollVote}
-                    isGenerating={isGenerating}
-                    typingParentIds={typingParentIds}
                     conversations={conversations}
-                    newPostsCount={pendingPosts.length}
-                    onShowNewPosts={handleShowNewPosts}
-                    
-                    onUpdateUser={handleUpdateUser}
-                    onOpenMarketplace={() => setIsMarketplaceOpen(true)}
+                    selectedDate={selectedDate}
+                    typingParentIds={typingParentIds}
                     nextAutoRefresh={nextAutoRefresh}
                     isAutoRefreshPaused={isAutoRefreshPaused}
-                    onBack={handleBack}
                     lastViewedNotifications={lastViewedNotifications}
-                    onPostClick={handleOpenThreadView}
-                    onOpenChat={handleOpenChat}
+                    isGenerating={isGenerating}
+                    handleNavigate={handleNavigate}
+                    handleLogout={handleLogout}
+                    handleNotificationClick={handleNotificationClick}
+                    onViewNotifications={onViewNotifications}
+                    setSelectedDate={setSelectedDate}
+                    handleNewPost={handleNewPost}
+                    handleUpdateReaction={handleUpdateReaction}
+                    handleReply={handleReply}
+                    handleEcho={handleEcho}
+                    handleDeletePost={handleDeletePost}
+                    handleEditPost={handleEditPost}
+                    handlePollVote={handlePollVote}
+                    handleShowNewPosts={handleShowNewPosts}
+                    handleUpdateUser={handleUpdateUser}
+                    setIsMarketplaceOpen={setIsMarketplaceOpen}
+                    handleBack={handleBack}
+                    handleOpenChat={handleOpenChat}
+                    handleOpenThreadView={handleOpenThreadView}
                 />
-            ) : <Navigate to="/welcome" />} />
+            } />
+
+            <Route path="/echo/:dateSegment" element={
+                <DashboardRoute 
+                    currentUser={currentUser}
+                    combinedUsers={combinedUsers}
+                    memoizedPosts={memoizedPosts}
+                    memoizedAllPosts={memoizedAllPosts}
+                    memoizedUsers={memoizedUsers}
+                    pendingPosts={pendingPosts}
+                    newPostIds={newPostIds}
+                    conversations={conversations}
+                    selectedDate={selectedDate}
+                    typingParentIds={typingParentIds}
+                    nextAutoRefresh={nextAutoRefresh}
+                    isAutoRefreshPaused={isAutoRefreshPaused}
+                    lastViewedNotifications={lastViewedNotifications}
+                    isGenerating={isGenerating}
+                    handleNavigate={handleNavigate}
+                    handleLogout={handleLogout}
+                    handleNotificationClick={handleNotificationClick}
+                    onViewNotifications={onViewNotifications}
+                    setSelectedDate={setSelectedDate}
+                    handleNewPost={handleNewPost}
+                    handleUpdateReaction={handleUpdateReaction}
+                    handleReply={handleReply}
+                    handleEcho={handleEcho}
+                    handleDeletePost={handleDeletePost}
+                    handleEditPost={handleEditPost}
+                    handlePollVote={handlePollVote}
+                    handleShowNewPosts={handleShowNewPosts}
+                    handleUpdateUser={handleUpdateUser}
+                    setIsMarketplaceOpen={setIsMarketplaceOpen}
+                    handleBack={handleBack}
+                    handleOpenChat={handleOpenChat}
+                    handleOpenThreadView={handleOpenThreadView}
+                />
+            } />
 
             {/* Rota de Perfil Padrão (/profile/username) */}
             <Route path="/profile/:username" element={currentUser ? (
@@ -297,41 +298,42 @@ export default function AppRoutes(props: AppRoutesProps) {
             
             {/* Chat test route removed */}
             
-            <Route path="/cordao/:tag" element={currentUser ? (
-                    <Dashboard 
-                    user={currentUser}
-                    onLogout={handleLogout}
-                    onNavigate={handleNavigate}
-                    onNotificationClick={handleNotificationClick}
-                    onViewNotifications={onViewNotifications}
-                    selectedDate={selectedDate}
-                    setSelectedDate={setSelectedDate}
-                    allUsers={combinedUsers}
-                    allPosts={memoizedPosts}
-                    allKnownPosts={memoizedAllPosts}
-                    onNewPost={handleNewPost}
-                    onUpdateReaction={handleUpdateReaction}
-                    onReply={handleReply}
-                    onEcho={handleEcho}
-                    onDeletePost={handleDeletePost}
-                    onEditPost={handleEditPost}
-                    onPollVote={handlePollVote}
-                    isGenerating={isGenerating}
-                    typingParentIds={typingParentIds}
+            <Route path="/cordao/:tag" element={
+                <DashboardRoute 
+                    currentUser={currentUser}
+                    combinedUsers={combinedUsers}
+                    memoizedPosts={memoizedPosts}
+                    memoizedAllPosts={memoizedAllPosts}
+                    memoizedUsers={memoizedUsers}
+                    pendingPosts={pendingPosts}
+                    newPostIds={newPostIds}
                     conversations={conversations}
-                    newPostsCount={pendingPosts.length}
-                    onShowNewPosts={handleShowNewPosts}
-                    
-                    onUpdateUser={handleUpdateUser}
-                    onOpenMarketplace={() => setIsMarketplaceOpen(true)}
+                    selectedDate={selectedDate}
+                    typingParentIds={typingParentIds}
                     nextAutoRefresh={nextAutoRefresh}
                     isAutoRefreshPaused={isAutoRefreshPaused}
-                    onBack={handleBack}
                     lastViewedNotifications={lastViewedNotifications}
-                    onPostClick={handleOpenThreadView}
-                    onOpenChat={handleOpenChat}
+                    isGenerating={isGenerating}
+                    handleNavigate={handleNavigate}
+                    handleLogout={handleLogout}
+                    handleNotificationClick={handleNotificationClick}
+                    onViewNotifications={onViewNotifications}
+                    setSelectedDate={setSelectedDate}
+                    handleNewPost={handleNewPost}
+                    handleUpdateReaction={handleUpdateReaction}
+                    handleReply={handleReply}
+                    handleEcho={handleEcho}
+                    handleDeletePost={handleDeletePost}
+                    handleEditPost={handleEditPost}
+                    handlePollVote={handlePollVote}
+                    handleShowNewPosts={handleShowNewPosts}
+                    handleUpdateUser={handleUpdateUser}
+                    setIsMarketplaceOpen={setIsMarketplaceOpen}
+                    handleBack={handleBack}
+                    handleOpenChat={handleOpenChat}
+                    handleOpenThreadView={handleOpenThreadView}
                 />
-            ) : <Navigate to="/welcome" />} />
+            } />
 
             <Route path="/messages" element={currentUser ? (
                 <SplitLayout

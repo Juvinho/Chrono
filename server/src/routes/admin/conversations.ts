@@ -81,7 +81,11 @@ router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const convCheck = await pool.query('SELECT id FROM conversations WHERE id = $1', [id]);
+    // Get conversation details before deletion to notify participants
+    const convCheck = await pool.query(
+      'SELECT user1_id, user2_id FROM conversations WHERE id = $1', 
+      [id]
+    );
     if (convCheck.rows.length === 0) {
       return res.status(404).json({ error: 'Conversation not found' });
     }
@@ -89,6 +93,20 @@ router.delete('/:id', async (req: Request, res: Response) => {
     await pool.query('DELETE FROM conversations WHERE id = $1', [id]);
 
     console.log(`🗑️ [ADMIN] Conversation deleted: ${id}`);
+
+    // Emit socket event to notify both users (I-10: real-time notification)
+    const io = req.app.get('io');
+    if (io) {
+      try {
+        const { user1_id, user2_id } = convCheck.rows[0];
+        io.to(user1_id).emit('conversation_deleted', { conversationId: id });
+        io.to(user2_id).emit('conversation_deleted', { conversationId: id });
+        console.log(`✅ Emitted conversation_deleted event to both users`);
+      } catch (err) {
+        console.error('⚠️ Failed to emit conversation_deleted event:', err);
+        // Don't fail the request if Socket.io emit fails
+      }
+    }
 
     res.json({
       success: true,

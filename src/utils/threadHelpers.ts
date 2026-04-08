@@ -17,11 +17,11 @@ export function calculateThreadDuration(posts: Post[]): string {
 
   // Ordenar posts por data
   const sortedPosts = [...posts].sort(
-    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
   );
 
-  const firstDate = new Date(sortedPosts[0].createdAt);
-  const lastDate = new Date(sortedPosts[sortedPosts.length - 1].createdAt);
+  const firstDate = new Date(sortedPosts[0].timestamp);
+  const lastDate = new Date(sortedPosts[sortedPosts.length - 1].timestamp);
 
   // Calcular diferença
   const diffMs = lastDate.getTime() - firstDate.getTime();
