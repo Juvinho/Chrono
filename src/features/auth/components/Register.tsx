@@ -12,6 +12,7 @@ import { generateInitialsAvatar } from '../../../utils/avatarGenerator';
 import { validateNoEmojis } from '../../../utils/emojiValidation';
 import PasswordStrengthIndicator from './PasswordStrengthIndicator';
 import { PasswordInput } from './PasswordInput';
+import { useFormNavigation } from '../../../hooks/useFormNavigation';
 
 interface RegisterProps {
   users: User[];
@@ -47,6 +48,12 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
     const [isCustomAvatar, setIsCustomAvatar] = useState(false);
     const avatarInputRef = useRef<HTMLInputElement>(null);
 
+    // Form navigation refs (for Enter key navigation)
+    const emailRef = useRef<HTMLInputElement>(null);
+    const usernameRef = useRef<HTMLInputElement>(null);
+    const passwordRef = useRef<HTMLInputElement>(null);
+    const confirmPasswordRef = useRef<HTMLInputElement>(null);
+
     // Mock initial frame for preview (optional, or null if new users start with no frame)
     // For now, we assume new users have no frame, but we use the helper to be safe/consistent
     const avatarShape = 'rounded-full'; // Default for new users without frame
@@ -58,6 +65,31 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
             setAvatar(generated);
         }
     }, [username, isCustomAvatar]);
+
+    // Form navigation: Allow Enter key to move between fields
+    useFormNavigation(
+        {
+            fields: [
+                { current: emailRef.current, id: 'email' },
+                { current: usernameRef.current, id: 'username' },
+                { current: passwordRef.current, id: 'password' },
+                { current: confirmPasswordRef.current, id: 'confirmPassword' },
+            ],
+            onSubmit: () => {
+                // On Enter in confirm password field, focus captcha or submit
+                const captchaElement = document.querySelector('[class*="hcaptcha"]');
+                if (captchaElement) {
+                    (captchaElement as HTMLElement).focus();
+                } else {
+                    const form = document.querySelector('form');
+                    if (form) {
+                        form.dispatchEvent(new Event('submit', { bubbles: true }));
+                    }
+                }
+            },
+            submitOnLastField: false,
+        }
+    );
 
     useEffect(() => {
         const checkUsername = async () => {
@@ -213,14 +245,14 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
                 <form className="space-y-4" onSubmit={handleSubmit}>
                     <div>
                         <label className="text-sm font-bold text-[var(--theme-text-secondary)] block">{t('registerEmail')}</label>
-                        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className={`w-full px-3 py-2 mt-1 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border ${emailError ? 'border-red-500' : 'border-[var(--theme-border-primary)]'} focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)]`} />
+                        <input ref={emailRef} type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className={`w-full px-3 py-2 mt-1 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border ${emailError ? 'border-red-500' : 'border-[var(--theme-border-primary)]'} focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)]`} />
                         {isCheckingEmail && <p className="text-xs text-[var(--theme-text-secondary)] mt-1 animate-pulse">{t('verifyingAvailability')}</p>}
                         {emailError && <p className="text-xs text-red-500 mt-1">{emailError}</p>}
                         {!emailError && !isCheckingEmail && email && /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(email) && <p className="text-xs text-green-500 mt-1">{t('emailValid')}</p>}
                     </div>
                     <div>
                         <label className="text-sm font-bold text-[var(--theme-text-secondary)] block">{t('registerUsername')}</label>
-                        <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} required className={`w-full px-3 py-2 mt-1 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border ${usernameError ? 'border-red-500' : 'border-[var(--theme-border-primary)]'} focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)]`} />
+                        <input ref={usernameRef} type="text" value={username} onChange={(e) => setUsername(e.target.value)} required className={`w-full px-3 py-2 mt-1 text-[var(--theme-text-primary)] bg-[var(--theme-bg-tertiary)] border ${usernameError ? 'border-red-500' : 'border-[var(--theme-border-primary)]'} focus:outline-none focus:ring-2 focus:ring-[var(--theme-primary)]`} />
                          {isCheckingUsername && <p className="text-xs text-[var(--theme-text-secondary)] mt-1 animate-pulse">{t('verifyingAvailability')}</p>}
                         {usernameError && (
                             <div className="mt-1">
@@ -265,6 +297,7 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
                     <div>
                         <label className="text-sm font-bold text-[var(--theme-text-secondary)] block">{t('registerPassword')}</label>
                         <PasswordInput
+                            ref={passwordRef}
                             value={password}
                             onChange={(e) => setPassword(e)}
                             placeholder={t('registerPassword')}
@@ -279,6 +312,7 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
                     <div>
                         <label className="text-sm font-bold text-[var(--theme-text-secondary)] block">{t('registerConfirmPass')}</label>
                         <PasswordInput
+                            ref={confirmPasswordRef}
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e)}
                             placeholder={t('registerConfirmPass')}

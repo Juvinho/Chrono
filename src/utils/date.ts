@@ -70,6 +70,10 @@ export const isPostWithin24Hours = (postTimestamp: string | Date, now: Date = ne
  * Formata timestamp como tempo relativo (P-06: deduplicated from PostCard and NotificationsPanel)
  * Exemplo: "agora", "5m", "14:30", "ontem 14:30", "3d 14:30", "feb-04"
  */
+/**
+ * Formata tempo relativo para posts (P-06: centralized formatter)
+ * Exemplo: "agora", "5m", "14:30", "ontem 14:30", "3d 14:30", "Feb-05"
+ */
 export const formatRelativeTime = (date: Date): string => {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -107,4 +111,52 @@ export const formatRelativeTime = (date: Date): string => {
   
   // Mais anterior
   return date.toLocaleDateString('pt-BR', { month: 'short', day: 'numeric' });
+};
+
+/**
+ * Formata timestamp para mensagens (Facebook Messenger style - P-06 unified)
+ * Exemplo: "14:30", "Ontem", "Seg", "05/02"
+ */
+export const formatMessageTimestamp = (timestamp: string | Date): string => {
+  const date = new Date(timestamp);
+  const now = new Date();
+  
+  const diffInMs = now.getTime() - date.getTime();
+  const diffInHours = diffInMs / (1000 * 60 * 60);
+  const diffInDays = diffInHours / 24;
+  
+  // Hoje: 14:30
+  if (diffInHours < 24 && date.getDate() === now.getDate()) {
+    return date.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+  
+  // Ontem
+  if (diffInDays < 2 && date.getDate() === now.getDate() - 1) {
+    return 'Ontem';
+  }
+  
+  // Esta semana: Seg, Ter, Qua...
+  if (diffInDays < 7) {
+    return date.toLocaleDateString('pt-BR', { weekday: 'short' });
+  }
+  
+  // Mais antigo: 05/02
+  return date.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+  });
+};
+
+/**
+ * Formata apenas a hora da mensagem (14:30)
+ */
+export const formatMessageTime = (timestamp: string | Date): string => {
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 };

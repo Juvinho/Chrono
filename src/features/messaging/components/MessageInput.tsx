@@ -144,7 +144,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
       )}
       {imageUrl && (
         <div className="image-preview-container">
-          <img src={imageUrl} alt="Preview" className="image-preview-img" />
+          <img src={imageUrl} alt="Preview" className="image-preview-img aspect-video" width="300" height="169" />
           <button
             onClick={() => setImageUrl(null)}
             className="image-preview-remove"

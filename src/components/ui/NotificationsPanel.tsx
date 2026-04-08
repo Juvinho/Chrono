@@ -8,6 +8,7 @@ interface NotificationsPanelProps {
     notifications: Notification[];
     onClose: () => void;
     onNotificationClick: (notification: Notification) => void;
+    onMarkAllAsRead?: () => void;
 }
 
 interface AggregatedNotification {
@@ -84,7 +85,7 @@ const NotificationItem: React.FC<{
     );
 }
 
-export default function NotificationsPanel({ notifications, onClose, onNotificationClick }: NotificationsPanelProps) {
+export default function NotificationsPanel({ notifications, onClose, onNotificationClick, onMarkAllAsRead }: NotificationsPanelProps) {
     const { t } = useTranslation();
 
     // Aggregate notifications
@@ -135,7 +136,18 @@ export default function NotificationsPanel({ notifications, onClose, onNotificat
         <div className="notifications-panel">
             <div className="p-3 border-b border-[var(--theme-border-primary)] flex justify-between items-center">
                 <h3 className="font-bold text-[var(--theme-text-light)] glitch-effect" data-text={t('notificationsTitle')}>{t('notificationsTitle')}</h3>
-                <button onClick={onClose} className="text-xs text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-light)]">{t('close')}</button>
+                <div className="flex gap-2 items-center">
+                    {aggregatedNotifications.length > 0 && aggregatedNotifications.some(n => !n.read) && (
+                        <button 
+                            onClick={onMarkAllAsRead}
+                            className="text-xs px-2 py-1 text-[var(--theme-primary)] hover:bg-[var(--theme-primary)]/10 border border-[var(--theme-primary)]/30 rounded transition-colors"
+                            title="Mark all notifications as read"
+                        >
+                            Marcar tudo
+                        </button>
+                    )}
+                    <button onClick={onClose} className="text-xs text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-light)]">{t('close')}</button>
+                </div>
             </div>
             {aggregatedNotifications.length > 0 ? (
                 <div className="max-h-[400px] overflow-y-auto no-scrollbar">

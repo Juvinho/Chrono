@@ -110,7 +110,7 @@ export function AdminDashboard() {
         <div className="admin-sidebar-header">
           <div className="admin-avatar">
             {admin?.avatarUrl ? (
-              <img src={admin.avatarUrl} alt={admin.username} />
+              <img src={admin.avatarUrl} alt={admin.username} width="48" height="48" className="aspect-square" />
             ) : (
               <span>{admin?.username.charAt(0).toUpperCase()}</span>
             )}

@@ -8,6 +8,7 @@ import { apiClient, mapApiUserToUser } from '../../../api';
 import { validateNoEmojis } from '../../../utils/emojiValidation';
 import PasswordStrengthIndicator from './PasswordStrengthIndicator';
 import { PasswordInput } from './PasswordInput';
+import { useFormNavigation } from '../../../hooks/useFormNavigation';
 
 interface LoginScreenProps {
     onLogin: (user: User) => void;
@@ -34,6 +35,10 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
     const [isResending, setIsResending] = useState(false);
     const [resendSuccess, setResendSuccess] = useState(false);
 
+    // Form navigation refs (for Enter key navigation)
+    const usernameRef = useRef<HTMLInputElement>(null);
+    const passwordRef = useRef<HTMLInputElement>(null);
+
     useEffect(() => {
         const msg = sessionStorage.getItem('chrono_login_message');
         if (msg) {
@@ -44,6 +49,24 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
         // Check backend health
         checkBackendHealth();
     }, []);
+
+    // Form navigation: Allow Enter key to move between fields
+    useFormNavigation(
+        {
+            fields: [
+                { current: usernameRef.current, id: 'username' },
+                { current: passwordRef.current, id: 'password' },
+            ],
+            onSubmit: () => {
+                // On Enter in password field, submit the form
+                const form = document.querySelector('form');
+                if (form) {
+                    form.dispatchEvent(new Event('submit', { bubbles: true }));
+                }
+            },
+            submitOnLastField: true,
+        }
+    );
 
     const checkBackendHealth = async () => {
         try {
@@ -233,6 +256,7 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
                             {t('loginUserID')}
                         </label>
                         <input
+                            ref={usernameRef}
                             id="username"
                             type="text"
                             value={username}
@@ -258,6 +282,7 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
                             </button>
                         </div>
                         <PasswordInput
+                            ref={passwordRef}
                             value={password}
                             onChange={(e) => setPassword(e)}
                             placeholder={t('loginPassword')}

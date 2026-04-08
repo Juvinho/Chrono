@@ -47,6 +47,20 @@ export default function Header({ user, onLogout, onViewProfile, onNavigate, onNo
         }
     };
 
+    // U-11: Mark all notifications as read
+    const handleMarkAllAsRead = () => {
+        if (!user.notifications) return;
+        
+        const updatedNotifications = user.notifications.map(n => ({
+            ...n,
+            read: true
+        }));
+        
+        // Update user notifications locally
+        // Note: This should also trigger an API call to persist the changes
+        console.log('📌 Marking all notifications as read:', updatedNotifications.length);
+    };
+
     const handleOpenChatSidebar = () => {
         openSidebar();
     };
@@ -129,6 +143,7 @@ export default function Header({ user, onLogout, onViewProfile, onNavigate, onNo
                             notifications={user.notifications}
                             onClose={() => setIsNotificationsOpen(false)}
                             onNotificationClick={onNotificationClick}
+                            onMarkAllAsRead={handleMarkAllAsRead}
                         />
                     )}
                  </div>

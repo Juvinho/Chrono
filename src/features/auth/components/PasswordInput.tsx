@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 
 interface EyeIconProps {
   size?: number;
@@ -49,40 +49,48 @@ interface PasswordInputProps {
   disabled?: boolean;
 }
 
-export const PasswordInput: React.FC<PasswordInputProps> = ({
-  value,
-  onChange,
-  placeholder = 'Digite sua senha',
-  className = '',
-  id = 'password',
-  required = false,
-  disabled = false,
-}) => {
-  const [showPassword, setShowPassword] = React.useState(false);
+export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
+  (
+    {
+      value,
+      onChange,
+      placeholder = 'Digite sua senha',
+      className = '',
+      id = 'password',
+      required = false,
+      disabled = false,
+    },
+    ref
+  ) => {
+    const [showPassword, setShowPassword] = React.useState(false);
 
-  return (
-    <div className="relative">
-      <input
-        id={id}
-        type={showPassword ? 'text' : 'password'}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        required={required}
-        disabled={disabled}
-        className={className}
-      />
-      <button
-        type="button"
-        onClick={() => setShowPassword(!showPassword)}
-        className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center justify-center text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-primary)] transition-colors"
-        tabIndex={-1}
-        disabled={disabled}
-      >
-        {showPassword ? <EyeOffIcon size={20} /> : <EyeIcon size={20} />}
-      </button>
-    </div>
-  );
-};
+    return (
+      <div className="relative">
+        <input
+          ref={ref}
+          id={id}
+          type={showPassword ? 'text' : 'password'}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          required={required}
+          disabled={disabled}
+          className={className}
+        />
+        <button
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center justify-center text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-primary)] transition-colors"
+          tabIndex={-1}
+          disabled={disabled}
+        >
+          {showPassword ? <EyeOffIcon size={20} /> : <EyeIcon size={20} />}
+        </button>
+      </div>
+    );
+  }
+);
+
+PasswordInput.displayName = 'PasswordInput';
 
 export { EyeIcon, EyeOffIcon };
