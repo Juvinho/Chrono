@@ -398,6 +398,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
                             <Avatar 
                                 src={post.author.avatar || 'https://picsum.photos/seed/user/100/100'} 
                                 username={post.author.username}
+                                width={40}
+                                height={40}
                                 className="w-full h-full object-cover"
                             />
                         </div>
@@ -482,7 +484,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
                                 const replyAvatarShape = post.inReplyTo!.author.equippedFrame ? getFrameShape(post.inReplyTo!.author.equippedFrame.name) : 'rounded-full';
                                 return (
                                     <div className="relative w-4 h-4">
-                                        <Avatar src={post.inReplyTo!.author.avatar} username={post.inReplyTo!.author.username} className={`w-full h-full ${replyAvatarShape} object-cover`} />
+                                        <Avatar src={post.inReplyTo!.author.avatar} username={post.inReplyTo!.author.username} width={16} height={16} className={`w-full h-full ${replyAvatarShape} object-cover`} />
                                         {post.inReplyTo!.author.equippedFrame && (
                                             <div className="absolute -inset-0.5 z-20 pointer-events-none">
                                                 <FramePreview item={post.inReplyTo!.author.equippedFrame} />

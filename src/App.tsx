@@ -18,6 +18,7 @@ import AppRoutes from './routes/AppRoutes';
 import { FloatingChatContainer } from './components/FloatingChatContainer';
 import { FloatingChatManager } from './features/messaging/components/FloatingChatManager';
 import { MessagesSidebar } from './features/messaging/components/MessagesSidebar';
+import LoadingSpinner from './components/ui/LoadingSpinner';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import './styles/floating-chats.css';
 import './styles/animations.css';
@@ -635,7 +636,7 @@ function App() {
         <LanguageProvider>
             <AuthProvider user={currentUser}>
                 <div key={animationKey} className="page-transition">
-                    <Suspense fallback={null}>
+                    <Suspense fallback={<LoadingSpinner />}>
                         <div className={`app-container ${currentUser?.profileSettings?.theme || 'theme-cyberpunk'}`}>
                             <AppRoutes
                                 currentUser={currentUser}

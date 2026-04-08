@@ -177,7 +177,7 @@ export default function Header({ user, onLogout, onViewProfile, onNavigate, onNo
                             const avatarShape = user.equippedFrame ? getFrameShape(user.equippedFrame.name) : 'rounded-full';
                             return (
                                 <>
-                                    <Avatar src={user.avatar} username={user.username} className={`w-full h-full ${avatarShape} border-2 border-[var(--theme-border-primary)] group-hover:border-[var(--theme-primary)] transition-colors object-cover`} />
+                                    <Avatar src={user.avatar} username={user.username} width={32} height={32} className={`w-full h-full ${avatarShape} border-2 border-[var(--theme-border-primary)] group-hover:border-[var(--theme-primary)] transition-colors object-cover`} />
                                     
                                     {/* Effect Overlay */}
                                     {user.equippedEffect && (

@@ -1,8 +1,7 @@
-import React, { Suspense } from 'react';
+import React from 'react';
 import { Navigate } from 'react-router-dom';
+import Dashboard from '../features/timeline/components/Dashboard';
 import { User, Page, Post, Conversation } from '../types';
-
-const Dashboard = React.lazy(() => import('../features/timeline/components/Dashboard'));
 
 interface DashboardRouteProps {
     currentUser: User | null;
@@ -84,40 +83,38 @@ export const DashboardRoute: React.FC<DashboardRouteProps> = ({
     }
 
     return (
-        <Suspense fallback={<div>Carregando...</div>}>
-            <Dashboard
-                user={currentUser}
-                onLogout={handleLogout}
-                onNavigate={handleNavigate}
-                onNotificationClick={handleNotificationClick}
-                onViewNotifications={onViewNotifications}
-                selectedDate={selectedDate}
-                setSelectedDate={setSelectedDate}
-                allUsers={combinedUsers}
-                allPosts={memoizedPosts}
-                allKnownPosts={memoizedAllPosts}
-                onNewPost={handleNewPost}
-                onUpdateReaction={handleUpdateReaction}
-                onReply={handleReply}
-                onEcho={handleEcho}
-                onDeletePost={handleDeletePost}
-                onEditPost={handleEditPost}
-                onPollVote={handlePollVote}
-                isGenerating={isGenerating}
-                typingParentIds={typingParentIds}
-                conversations={conversations}
-                newPostsCount={pendingPosts.length}
-                onShowNewPosts={handleShowNewPosts}
-                newPostIds={newPostIds}
-                onUpdateUser={handleUpdateUser}
-                onOpenMarketplace={() => setIsMarketplaceOpen(true)}
-                nextAutoRefresh={nextAutoRefresh}
-                isAutoRefreshPaused={isAutoRefreshPaused}
-                onBack={handleBack}
-                lastViewedNotifications={lastViewedNotifications}
-                onPostClick={handleOpenThreadView}
-                onOpenChat={handleOpenChat}
-            />
-        </Suspense>
+        <Dashboard
+            user={currentUser}
+            onLogout={handleLogout}
+            onNavigate={handleNavigate}
+            onNotificationClick={handleNotificationClick}
+            onViewNotifications={onViewNotifications}
+            selectedDate={selectedDate}
+            setSelectedDate={setSelectedDate}
+            allUsers={combinedUsers}
+            allPosts={memoizedPosts}
+            allKnownPosts={memoizedAllPosts}
+            onNewPost={handleNewPost}
+            onUpdateReaction={handleUpdateReaction}
+            onReply={handleReply}
+            onEcho={handleEcho}
+            onDeletePost={handleDeletePost}
+            onEditPost={handleEditPost}
+            onPollVote={handlePollVote}
+            isGenerating={isGenerating}
+            typingParentIds={typingParentIds}
+            conversations={conversations}
+            newPostsCount={pendingPosts.length}
+            onShowNewPosts={handleShowNewPosts}
+            newPostIds={newPostIds}
+            onUpdateUser={handleUpdateUser}
+            onOpenMarketplace={() => setIsMarketplaceOpen(true)}
+            nextAutoRefresh={nextAutoRefresh}
+            isAutoRefreshPaused={isAutoRefreshPaused}
+            onBack={handleBack}
+            lastViewedNotifications={lastViewedNotifications}
+            onPostClick={handleOpenThreadView}
+            onOpenChat={handleOpenChat}
+        />
     );
 };

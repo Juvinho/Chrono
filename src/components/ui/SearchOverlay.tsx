@@ -358,7 +358,7 @@ function UserCard({
             className="w-full flex items-center gap-3 p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-sm transition-colors text-left group"
         >
             <div className="relative w-8 h-8 flex-shrink-0">
-                <Avatar src={user.avatar} username={user.username} className={`w-full h-full ${avatarShape} object-cover`} />
+                <Avatar src={user.avatar} username={user.username} width={32} height={32} className={`w-full h-full ${avatarShape} object-cover`} />
                 {user.equippedFrame && (
                     <div className="absolute -inset-1 z-20 pointer-events-none">
                         <FramePreview item={user.equippedFrame} />

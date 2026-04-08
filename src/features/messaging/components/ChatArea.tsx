@@ -75,7 +75,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({ conversationId }) => {
           <>
             <div className="chat-header-avatar">
               {currentConversation.otherUser.avatarUrl ? (
-                <img src={currentConversation.otherUser.avatarUrl} alt="" />
+                <img src={currentConversation.otherUser.avatarUrl} alt="" width={40} height={40} />
               ) : (
                 <div className="avatar-placeholder">
                   {currentConversation.otherUser.displayName.charAt(0)}

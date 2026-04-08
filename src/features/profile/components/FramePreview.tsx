@@ -153,6 +153,8 @@ export default function FramePreview({ item }: FramePreviewProps) {
             src={item.imageUrl} 
             alt="" // Empty alt to prevent text overlay on broken image
             className="absolute inset-0 w-full h-full pointer-events-none z-20 scale-110 object-contain"
+            width={256}
+            height={256}
             onError={(e) => {
                 // If image fails, hide it completely
                 e.currentTarget.style.display = 'none'; 

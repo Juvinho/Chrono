@@ -154,6 +154,8 @@ export default function Timeline({ selectedDate, setSelectedDate, onNavigate, al
                                             <Avatar
                                                 src={author.avatar}
                                                 username={author.username}
+                                                width={24}
+                                                height={24}
                                                 className={`w-full h-full ${avatarShape} border-2 border-[var(--theme-bg-primary)] group-hover:border-[var(--theme-secondary)] transition-all object-cover relative z-0`}
                                             />
                                             {author.equippedEffect && (

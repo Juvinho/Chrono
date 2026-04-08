@@ -180,7 +180,6 @@ export class SearchService {
    */
   static async fetchTrendingCordoes(): Promise<TrendingCordao[]> {
     try {
-      const { apiClient } = await import('../api/client');
       const response = await apiClient.get('/posts/trending/cordoes');
       
       if (response.data && Array.isArray(response.data)) {

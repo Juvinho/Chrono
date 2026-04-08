@@ -584,6 +584,8 @@ export default function ProfilePage({
                 <Avatar 
                   src={profileUser.coverImage ? `${profileUser.coverImage}${profileUser.coverImage.includes('data:') ? '' : `?t=${imageCacheBuster}`}` : (profileUser.profileSettings?.coverImage ? `${profileUser.profileSettings.coverImage}${profileUser.profileSettings.coverImage.includes('data:') ? '' : `?t=${imageCacheBuster}`}` : 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&h=400&fit=crop&q=80')} 
                   username={profileUser.username}
+                  width={1200}
+                  height={400}
                   className="w-full h-full object-cover"
                 />
             </div>
@@ -592,6 +594,8 @@ export default function ProfilePage({
                     <img 
                         src={profileUser.avatar ? (profileUser.avatar.includes('data:') ? profileUser.avatar : `${profileUser.avatar}?t=${imageCacheBuster}`) : 'https://via.placeholder.com/150'}
                         alt={profileUser.username}
+                        width={96}
+                        height={96}
                         className={`w-full h-full ${avatarShape} object-cover`}
                         onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://via.placeholder.com/150'; }}
                         key={`avatar-${imageCacheBuster}`}

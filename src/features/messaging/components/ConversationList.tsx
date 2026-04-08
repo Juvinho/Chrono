@@ -81,7 +81,7 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
       {/* Avatar */}
       <div className="conversation-avatar">
         {otherUser.avatarUrl ? (
-          <img src={otherUser.avatarUrl} alt={otherUser.displayName} />
+          <img src={otherUser.avatarUrl} alt={otherUser.displayName} width={56} height={56} />
         ) : (
           <div className="avatar-placeholder">
             {otherUser.displayName.charAt(0).toUpperCase()}

@@ -69,6 +69,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isMine }) => {
               <img
                 src={message.imageUrl}
                 alt="Message"
+                width={200}
+                height={200}
                 onClick={() => setShowImageViewer(true)}
                 style={{
                   maxWidth: '200px',

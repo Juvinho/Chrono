@@ -363,7 +363,7 @@ export default function AppRoutes(props: AppRoutesProps) {
             ) : <Navigate to="/welcome" />} />
 
             <Route path="/thread/:postId" element={currentUser ? (
-                <Suspense fallback={null}>
+                <Suspense fallback={<LoadingSpinner />}>
                     <ThreadView 
                         currentUser={currentUser}
                         allUsers={combinedUsers}
@@ -383,7 +383,7 @@ export default function AppRoutes(props: AppRoutesProps) {
 
             {/* Post Detail with shareable random ID (7 digits) */}
             <Route path="/post/:randomId" element={currentUser ? (
-                <Suspense fallback={null}>
+                <Suspense fallback={<LoadingSpinner />}>
                     <PostDetail 
                         currentUser={currentUser}
                         allUsers={combinedUsers}
