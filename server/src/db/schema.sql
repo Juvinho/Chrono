@@ -147,7 +147,7 @@ CREATE TABLE IF NOT EXISTS videos (
 CREATE TABLE IF NOT EXISTS items (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     type VARCHAR(20) NOT NULL,
-    name VARCHAR(100) NOT NULL,
+    name VARCHAR(100) NOT NULL UNIQUE,
     description TEXT,
     price DECIMAL(10, 2) NOT NULL,
     currency VARCHAR(10) DEFAULT 'BRL',

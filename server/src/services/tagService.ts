@@ -1,60 +1,67 @@
 import { pool } from '../db/connection.js';
-import { TAG_IDS } from '../db/tags-seed.js';
-
-interface UserMetrics {
-  userId: string;
-  totalReacoes: number;
-  diasDesdeCriacao: number;
-  avisos: number;
-  timeStamoCriacao: Date;
-}
 
 /**
  * Verificação automática de aquisição/remoção de tags
  * Executada periodicamente por cron job
+ *
+ * Produção: user_tags usa (user_id UUID, tag_key VARCHAR, earned_at TIMESTAMP)
+ * sem coluna ativo/adquirida_em (schema fix_user_tags_schema.sql)
  */
+
+// Garante que as tag_definitions necessárias existem antes de atribuir tags
+async function ensureTagDefinitions() {
+  const required = [
+    { tag_key: 'newcomer',  display_name: 'Recém-chegado', description: 'Conta com menos de 7 dias', color: '#2ecc71', icon: '🌱', tag_type: 'badge', display_order: 60 },
+    { tag_key: 'popular',   display_name: 'Popular',       description: 'Conteúdo amplamente apreciado (≥5000 reações)', color: '#FF6B9D', icon: '⭐', tag_type: 'achievement', display_order: 50 },
+    { tag_key: 'warned',    display_name: 'Advertido',     description: 'Usuário com advertência ativa', color: '#e67e22', icon: '⚠️', tag_type: 'moderation', display_order: 70 },
+  ];
+
+  for (const tag of required) {
+    await pool.query(
+      `INSERT INTO tag_definitions (tag_key, display_name, description, color, icon, tag_type, display_order)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (tag_key) DO NOTHING`,
+      [tag.tag_key, tag.display_name, tag.description, tag.color, tag.icon, tag.tag_type, tag.display_order]
+    );
+  }
+}
 
 // ==================== ATUALIZAR TAG: RECÉM-CHEGADO ====================
 export async function updateNewcommerTag() {
   try {
-    const DAY_IN_MS = 24 * 60 * 60 * 1000;
-    const SEVEN_DAYS_MS = 7 * DAY_IN_MS;
+    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
     // Adicionar tag para usuários com conta < 7 dias
     const addResult = await pool.query(
-      `INSERT INTO user_tags (user_id, tag_id, ativo, adquirida_em)
-       SELECT u.id, $1, true, NOW()
+      `INSERT INTO user_tags (user_id, tag_key, earned_at)
+       SELECT u.id, $1, NOW()
        FROM users u
-       WHERE 
+       WHERE
          EXTRACT(EPOCH FROM (NOW() - u.created_at)) * 1000 < $2
          AND NOT EXISTS (
-           SELECT 1 FROM user_tags ut 
-           WHERE ut.user_id = u.id AND ut.tag_id = $1
+           SELECT 1 FROM user_tags ut
+           WHERE ut.user_id = u.id AND ut.tag_key = $1
          )
-       ON CONFLICT (user_id, tag_id) DO UPDATE
-       SET ativo = true, removida_em = NULL
-       WHERE user_tags.ativo = false`,
-      [TAG_IDS.RECEM_CHEGADO, SEVEN_DAYS_MS]
+       ON CONFLICT (user_id, tag_key) DO NOTHING`,
+      ['newcomer', SEVEN_DAYS_MS]
     );
 
-    console.log(`✅ Updated Recém-chegado tag: ${addResult.rowCount} users affected`);
+    console.log(`✅ Updated Recém-chegado tag: ${addResult.rowCount} users added`);
 
     // Remover tag para usuários com conta > 7 dias
     const removeResult = await pool.query(
-      `UPDATE user_tags
-       SET ativo = false, removida_em = NOW(), motivo_remocao = 'Deixou de ser recém-chegado'
-       WHERE tag_id = $1 
-         AND ativo = true
+      `DELETE FROM user_tags
+       WHERE tag_key = $1
          AND user_id IN (
            SELECT u.id FROM users u
            WHERE EXTRACT(EPOCH FROM (NOW() - u.created_at)) * 1000 >= $2
          )`,
-      [TAG_IDS.RECEM_CHEGADO, SEVEN_DAYS_MS]
+      ['newcomer', SEVEN_DAYS_MS]
     );
 
-    console.log(`✅ Removed Recém-chegado tag: ${removeResult.rowCount} users affected`);
+    console.log(`✅ Removed Recém-chegado tag: ${removeResult.rowCount} users removed`);
   } catch (error) {
-    console.error('Error updating newcommer tag:', error);
+    console.error('Error updating newcomer tag:', error);
   }
 }
 
@@ -63,23 +70,29 @@ export async function updatePopularTag() {
   try {
     const REACTION_THRESHOLD = 5000;
 
-    // Adicionar tag para usuários com >= 5000 reações
+    // Conta total de reações recebidas pelo usuário em todos os seus posts
     const addResult = await pool.query(
-      `INSERT INTO user_tags (user_id, tag_id, ativo, adquirida_em)
-       SELECT u.id, $1, true, NOW()
+      `INSERT INTO user_tags (user_id, tag_key, earned_at)
+       SELECT u.id, $1, NOW()
        FROM users u
-       WHERE 
-         (SELECT COALESCE(SUM(j->'value'::text)::integer, 0)
-          FROM posts p, jsonb_each(p.reactions) j
-          WHERE p.author->'username'::text = to_jsonb(u.username)->'username'::text) >= $2
-         AND NOT EXISTS (
-           SELECT 1 FROM user_tags ut 
-           WHERE ut.user_id = u.id AND ut.tag_id = $1
-         )
-       ON CONFLICT (user_id, tag_id) DO UPDATE
-       SET ativo = true, removida_em = NULL
-       WHERE user_tags.ativo = false`,
-      [TAG_IDS.POPULAR, REACTION_THRESHOLD]
+       WHERE (
+         SELECT COALESCE(SUM(
+           CASE WHEN jsonb_typeof(p.reactions) = 'object'
+             THEN (SELECT COALESCE(SUM(val::text::integer), 0)
+                   FROM jsonb_each_text(p.reactions) AS kv(key, val)
+                   WHERE val ~ '^\d+$')
+             ELSE 0
+           END
+         ), 0)
+         FROM posts p
+         WHERE p.author_id = u.id
+       ) >= $2
+       AND NOT EXISTS (
+         SELECT 1 FROM user_tags ut
+         WHERE ut.user_id = u.id AND ut.tag_key = $1
+       )
+       ON CONFLICT (user_id, tag_key) DO NOTHING`,
+      ['popular', REACTION_THRESHOLD]
     );
 
     console.log(`✅ Updated Popular tag: ${addResult.rowCount} users affected`);
@@ -91,14 +104,12 @@ export async function updatePopularTag() {
 // ==================== ATUALIZAR TAG: ADVERTIDO ====================
 export async function updateAdvertidoTag() {
   try {
-    // Remover tag depois de 60 dias sem infrações adicionais
+    // Remover tag 'warned' depois de 60 dias sem infrações adicionais
     const removeResult = await pool.query(
-      `UPDATE user_tags
-       SET ativo = false, removida_em = NOW(), motivo_remocao = 'Período de advertência expirou'
-       WHERE tag_id = $1 
-         AND ativo = true
-         AND adquirida_em < NOW() - INTERVAL '60 days'`,
-      [TAG_IDS.ADVERTIDO]
+      `DELETE FROM user_tags
+       WHERE tag_key = $1
+         AND earned_at < NOW() - INTERVAL '60 days'`,
+      ['warned']
     );
 
     console.log(`✅ Removed Advertido tag (expired): ${removeResult.rowCount} users affected`);
@@ -110,9 +121,7 @@ export async function updateAdvertidoTag() {
 // ==================== ATUALIZAR TAG: SILENCIADO ====================
 export async function updateSilenciadoTag() {
   try {
-    // Remover tag se tempo de silenciamento expirou
-    // NOTE: Esta implementação assume que existe campo de end_date de silenciamento
-    // Por enquanto, será manual
+    // Remoção de silenciamento é manual por enquanto
     console.log('⏭️  Silenciado tag removal is manual');
   } catch (error) {
     console.error('Error updating silenciado tag:', error);
@@ -122,13 +131,14 @@ export async function updateSilenciadoTag() {
 // ==================== EXECUTAR TODAS AS ATUALIZAÇÕES ====================
 export async function runTagUpdateCycle() {
   console.log('🔄 Starting automatic tag update cycle...');
-  
+
   try {
+    await ensureTagDefinitions();
     await updateNewcommerTag();
     await updatePopularTag();
-      await updateAdvertidoTag();
+    await updateAdvertidoTag();
     await updateSilenciadoTag();
-    
+
     console.log('✅ Tag update cycle complete');
   } catch (error) {
     console.error('❌ Error running tag update cycle:', error);
@@ -136,17 +146,13 @@ export async function runTagUpdateCycle() {
 }
 
 // ==================== SCHEDULE AUTOMATIC UPDATES ====================
-/**
- * Execute tag updates every 6 hours
- * Call this in your server startup
- */
 export function scheduleTagUpdates() {
   // Run once on startup
   runTagUpdateCycle();
-  
+
   // Schedule for every 6 hours
   const SIX_HOURS = 6 * 60 * 60 * 1000;
   setInterval(runTagUpdateCycle, SIX_HOURS);
-  
+
   console.log('📅 Tag update scheduler initialized (every 6 hours)');
 }

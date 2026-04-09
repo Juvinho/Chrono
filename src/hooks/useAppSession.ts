@@ -5,6 +5,7 @@ import { User, Post, Conversation, Page, Notification } from '../types';
 import { useLocalStorage } from './useLocalStorage';
 import { apiClient, mapApiUserToUser, mapApiPostToPost } from '../api';
 import { NotificationManager } from '../utils/notificationManager';
+import { reconnectSocket, closeSocket } from '../services/socketService';
 
 interface UseAppSessionProps {
     setPosts: Dispatch<SetStateAction<Post[]>>;
@@ -88,7 +89,7 @@ export const useAppSession = ({
                 // Reload notifications specifically for this update
                 const notificationsResult = await apiClient.getNotifications();
                 let finalNotifications: Notification[] = [];
-                if (notificationsResult.data) {
+                if (notificationsResult.data && Array.isArray(notificationsResult.data)) {
                     finalNotifications = notificationsResult.data.map((n: Notification) => ({
                         ...n,
                         timestamp: new Date(n.timestamp || Date.now())
@@ -113,7 +114,7 @@ export const useAppSession = ({
 
             // Reload posts with intelligent merge to preserve loaded replies
             const postsResult = await apiClient.getPosts();
-            if (postsResult.data) {
+            if (postsResult.data && Array.isArray(postsResult.data)) {
                 // Deduplicate posts based on ID
                 const uniquePosts = postsResult.data.reduce((acc: Post[], current: Post) => {
                     const x = acc.find((item: Post) => item.id === current.id);
@@ -151,7 +152,7 @@ export const useAppSession = ({
 
             // Reload conversations
             const conversationsResult = await apiClient.getConversations();
-            if (conversationsResult.data) {
+            if (conversationsResult.data && Array.isArray(conversationsResult.data)) {
                 const mappedConversations = conversationsResult.data.map((conv: Conversation) => {
                     const participantsList = Array.isArray(conv.participants)
                         ? conv.participants.map((p: string | { username?: string }) => typeof p === 'string' ? p : (p.username || p))
@@ -242,17 +243,19 @@ export const useAppSession = ({
         };
     }, [setCurrentUser, setUsers]);
 
-    const handleLogin = (user: User) => { 
+    const handleLogin = (user: User) => {
         console.log('App.handleLogin called with:', user);
-        setCurrentUser(user); 
+        setCurrentUser(user);
+        reconnectSocket();
         navigate('/echoframe');
     };
     
-    const handleLogout = async () => { 
-        setCurrentUser(null); 
-        setPosts([]); 
+    const handleLogout = async () => {
+        setCurrentUser(null);
+        setPosts([]);
         setConversations([]);
         sessionStorage.removeItem('chrono_currentPage');
+        closeSocket();
         // Call server to clear httpOnly auth cookie
         try {
             await apiClient.request('/auth/logout', { method: 'POST' });

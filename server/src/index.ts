@@ -130,9 +130,10 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       connectSrc: ["'self'", "wss:", "ws:"],
-      imgSrc: ["'self'", "data:", "https://i.imgur.com", "https://images.unsplash.com"],
+      imgSrc: ["'self'", "data:", "https://i.imgur.com", "https://images.unsplash.com", "https://via.placeholder.com"],
       scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
     },
   },
   crossOriginEmbedderPolicy: false,

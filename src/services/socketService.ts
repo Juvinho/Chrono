@@ -27,7 +27,12 @@ export const getSocket = (): Socket => {
     });
 
     socket.on('connect_error', (error) => {
-      console.error('⚠️ Socket.io connection error:', error);
+      // Auth errors are expected when not logged in — stop spamming reconnect attempts
+      if (error.message?.includes('Authentication error') || error.message?.includes('token required')) {
+        if (socket) socket.io.opts.reconnection = false;
+      } else {
+        console.warn('⚠️ Socket.io connection error:', error.message);
+      }
     });
   }
 
@@ -38,6 +43,14 @@ export const closeSocket = () => {
   if (socket) {
     socket.close();
     socket = null;
+  }
+};
+
+/** Call after successful login to re-enable and reconnect the socket. */
+export const reconnectSocket = () => {
+  if (socket) {
+    socket.io.opts.reconnection = true;
+    socket.connect();
   }
 };
 
