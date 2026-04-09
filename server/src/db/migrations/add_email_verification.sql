@@ -34,5 +34,7 @@ CREATE INDEX IF NOT EXISTS idx_users_verification_token ON users(verification_to
 -- Add column for rate limiting check
 ALTER TABLE users ADD COLUMN IF NOT EXISTS last_verification_email_sent_at TIMESTAMP;
 
--- Add constraint to ensure email is unique if verified
-ALTER TABLE users ADD CONSTRAINT IF NOT EXISTS unique_verified_email UNIQUE (email) WHERE email_verified = true;
+-- Add index to ensure email is unique if verified (PostgreSQL-compatible)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_unique_verified_email 
+  ON users(email) 
+  WHERE email_verified = true;
