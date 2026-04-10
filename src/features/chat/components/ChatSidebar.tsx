@@ -27,7 +27,7 @@ export const ChatSidebar: React.FC = () => {
               }`}
             >
               <img 
-                src={conv.other_avatar || 'https://via.placeholder.com/40'} 
+                src={conv.other_avatar || 'https://placehold.co/40'} 
                 alt={conv.other_username}
                 className="w-12 h-12 rounded-full object-cover"
                 width={48}

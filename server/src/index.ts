@@ -129,11 +129,28 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      connectSrc: ["'self'", "wss:", "ws:"],
-      imgSrc: ["'self'", "data:", "https://i.imgur.com", "https://images.unsplash.com", "https://via.placeholder.com"],
-      scriptSrc: ["'self'"],
+      connectSrc: [
+        "'self'",
+        "wss:", "ws:",
+        "https://hcaptcha.com", "https://*.hcaptcha.com",
+      ],
+      imgSrc: [
+        "'self'", "data:", "blob:",
+        "https://i.imgur.com",
+        "https://images.unsplash.com",
+        "https://placehold.co",
+        "https://*.hcaptcha.com",
+      ],
+      scriptSrc: [
+        "'self'",
+        // Tailwind CDN — no PostCSS integration in this project, CDN is the styling mechanism
+        "https://cdn.tailwindcss.com",
+        // hCaptcha
+        "https://js.hcaptcha.com", "https://hcaptcha.com",
+      ],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      frameSrc: ["'self'", "https://hcaptcha.com", "https://newassets.hcaptcha.com"],
     },
   },
   crossOriginEmbedderPolicy: false,

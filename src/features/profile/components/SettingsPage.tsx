@@ -612,7 +612,7 @@ export default function SettingsPage({
                         <div className="flex items-end gap-4 -mt-12 px-4 relative z-10">
                             <div className="relative group">
                                 <div className="w-24 h-24 rounded-full border-4 border-[var(--theme-bg-primary)] overflow-hidden bg-black">
-                                    <img src={draftUser.avatar && !draftUser.avatar.includes('data:') ? `${draftUser.avatar}?t=${imageCacheBuster}` : (draftUser.avatar || 'https://via.placeholder.com/150')} alt={draftUser.username} className="w-full h-full object-cover aspect-square" width={96} height={96} key={`avatar-${imageCacheBuster}`} />
+                                    <img src={draftUser.avatar && !draftUser.avatar.includes('data:') ? `${draftUser.avatar}?t=${imageCacheBuster}` : (draftUser.avatar || 'https://placehold.co/150')} alt={draftUser.username} className="w-full h-full object-cover aspect-square" width={96} height={96} key={`avatar-${imageCacheBuster}`} />
                                 </div>
                                 <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
                                      onClick={() => fileInputRef.current?.click()}>

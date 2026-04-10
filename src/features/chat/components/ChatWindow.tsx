@@ -56,7 +56,7 @@ export const ChatWindow: React.FC = () => {
       {/* Header */}
       <div className="p-4 border-b border-[var(--theme-border)] flex items-center gap-3">
         <img 
-          src={activeConversation.other_avatar || 'https://via.placeholder.com/40'} 
+          src={activeConversation.other_avatar || 'https://placehold.co/40'} 
           alt={activeConversation.other_username}
           className="w-10 h-10 rounded-full object-cover"
           width={40}

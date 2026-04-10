@@ -55,8 +55,8 @@ export const MessageNotificationProvider: React.FC<{ children: React.ReactNode }
         try {
           new Notification('Nova Mensagem', {
             body: `Você tem ${unreadCount} mensagens não lidas`,
-            icon: 'https://via.placeholder.com/64',
-            badge: 'https://via.placeholder.com/64',
+            icon: 'https://placehold.co/64',
+            badge: 'https://placehold.co/64',
             tag: 'chrono-message',
             requireInteraction: false
           });

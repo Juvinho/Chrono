@@ -496,7 +496,7 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                                                             return (
                                                                 <>
                                                                     {/* Avatar Base */}
-                                                                    <img src={currentUser.avatar || 'https://via.placeholder.com/150'} alt="Preview" className={`w-full h-full ${avatarShape} object-cover`} width={96} height={96} />
+                                                                    <img src={currentUser.avatar || 'https://placehold.co/150'} alt="Preview" className={`w-full h-full ${avatarShape} object-cover`} width={96} height={96} />
                                                                     
                                                                     {/* Frame Overlay */}
                                                                     {item.type === 'frame' ? (
@@ -602,7 +602,7 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                                     
                                     return (
                                         <div className={`relative w-64 h-64 md:w-80 md:h-80 ${avatarShape} border-4 border-[var(--theme-border-primary)] shadow-2xl overflow-hidden bg-[var(--theme-bg-secondary)]`}>
-                                            <img src={currentUser.avatar || 'https://via.placeholder.com/150'} alt="You" className={`w-full h-full ${avatarShape} object-cover aspect-square`} width={320} height={320} />
+                                            <img src={currentUser.avatar || 'https://placehold.co/150'} alt="You" className={`w-full h-full ${avatarShape} object-cover aspect-square`} width={320} height={320} />
                                             
                                             {/* Preview Item Overlay */}
                                             {previewItem.type === 'frame' && (

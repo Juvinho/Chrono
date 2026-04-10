@@ -104,7 +104,7 @@ const ReactionTooltip: React.FC<ReactionTooltipProps> = ({ postId, reactions, is
                         width={24}
                         height={24}
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://via.placeholder.com/24?text=?';
+                          (e.target as HTMLImageElement).src = 'https://placehold.co/24?text=?';
                         }}
                       />
                       <span className="reaction-user-name">{user.username}</span>

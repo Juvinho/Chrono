@@ -584,12 +584,12 @@ export default function ProfilePage({
             <div className="absolute -bottom-16 left-4 md:left-8 flex items-end z-10">
                 <div className="relative w-24 h-24">
                     <img 
-                        src={profileUser.avatar ? (profileUser.avatar.includes('data:') ? profileUser.avatar : `${profileUser.avatar}?t=${imageCacheBuster}`) : 'https://via.placeholder.com/150'}
+                        src={profileUser.avatar ? (profileUser.avatar.includes('data:') ? profileUser.avatar : `${profileUser.avatar}?t=${imageCacheBuster}`) : 'https://placehold.co/150'}
                         alt={profileUser.username}
                         width={96}
                         height={96}
                         className={`w-full h-full ${avatarShape} object-cover`}
-                        onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://via.placeholder.com/150'; }}
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://placehold.co/150'; }}
                         key={`avatar-${imageCacheBuster}`}
                     />
                     {profileUser.equippedFrame && (
