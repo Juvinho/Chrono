@@ -121,9 +121,15 @@ export const useAppSession = ({
 
             // Reload posts with intelligent merge to preserve loaded replies
             const postsResult = await apiClient.getPosts();
-            if (postsResult.data && Array.isArray(postsResult.data)) {
+            // Backend returns { posts: [...], ... } — extract the array
+            const postsArray: Post[] = Array.isArray(postsResult.data)
+                ? postsResult.data
+                : Array.isArray((postsResult.data as any)?.posts)
+                    ? (postsResult.data as any).posts
+                    : null;
+            if (postsArray) {
                 // Deduplicate posts based on ID
-                const uniquePosts = postsResult.data.reduce((acc: Post[], current: Post) => {
+                const uniquePosts = postsArray.reduce((acc: Post[], current: Post) => {
                     const x = acc.find((item: Post) => item.id === current.id);
                     if (!x) {
                         return acc.concat([current]);

@@ -17,7 +17,7 @@ import FramePreview, { getFrameShape } from './FramePreview';
 import Avatar from './Avatar';
 import LoadingSpinner from '../../../components/ui/LoadingSpinner';
 import { Error404 } from '../../../components/ErrorPages';
-import { apiClient } from '../../../api';
+import { apiClient, mapApiPostToPost } from '../../../api';
 import { TagBadgeGroup } from '../../../components/ui/TagBadge';
 import { useUserTags } from '../../../hooks/useTags';
 import { ProfileBioSidebar } from '../../../components/ProfileBioSidebar';
@@ -72,6 +72,8 @@ export default function ProfilePage({
   const [fetchedUser, setFetchedUser] = useState<User | null>(null);
   const [isLoadingUser, setIsLoadingUser] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [profilePosts, setProfilePosts] = useState<Post[]>([]);
+  const [isLoadingPosts, setIsLoadingPosts] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [userListModal, setUserListModal] = useState<{title: string, users: User[]} | null>(null);
   const [postToEdit, setPostToEdit] = useState<Post | null>(null);
@@ -129,10 +131,11 @@ export default function ProfilePage({
   }, [profileUser, effectiveFetchedUser, isOwnProfile, foundUser]);
 
   useEffect(() => {
-    // Reset fetched user when profile username changes
+    // Reset fetched user and posts when profile username changes
     if (fetchedUser && fetchedUser.username.toLowerCase() !== profileUsername.toLowerCase()) {
         setFetchedUser(null);
         setFetchError(null);
+        setProfilePosts([]);
     }
 
     // CRITICAL FIX: Always fetch profile data from API for non-own profiles
@@ -160,6 +163,36 @@ export default function ProfilePage({
             });
     }
   }, [profileUsername, isOwnProfile, effectiveFetchedUser]);
+
+  // Fetch posts for this profile directly from the API using the user's ID
+  useEffect(() => {
+    if (!profileUser?.id) return;
+    let cancelled = false;
+    setIsLoadingPosts(true);
+    apiClient.getPosts({ author: profileUser.id, limit: 100 })
+      .then(response => {
+        if (cancelled) return;
+        // Backend returns { posts: [...] } — extract the array
+        const postsArr = Array.isArray(response.data)
+          ? response.data
+          : Array.isArray((response.data as any)?.posts)
+            ? (response.data as any).posts
+            : null;
+        if (postsArr) {
+          setProfilePosts(postsArr.map(mapApiPostToPost));
+        } else {
+          // Fallback: filter from allPosts if API call fails
+          setProfilePosts(allPosts.filter(p => p.author?.username === profileUser.username));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setProfilePosts(allPosts.filter(p => p.author?.username === profileUser.username));
+        }
+      })
+      .finally(() => { if (!cancelled) setIsLoadingPosts(false); });
+    return () => { cancelled = true; };
+  }, [profileUser?.id]);
 
   // Force image reload when avatar or cover changes (cache buster)
   useEffect(() => {
@@ -219,26 +252,22 @@ export default function ProfilePage({
 
   const filteredPosts = useMemo(() => {
       if (!profileUser) return [];
-      let posts = allPosts.filter(p => p.author.username === profileUser.username);
-      
+      let posts = [...profilePosts];
+
       if (activeTab === 'temporal') {
           posts = posts.filter(p => isSameDay(new Date(p.timestamp), selectedDate));
       } else if (activeTab === 'media') {
           posts = posts.filter(p => p.imageUrl || p.videoUrl);
       }
-      
+
       return posts.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  }, [allPosts, profileUser?.username, selectedDate, activeTab]);
+  }, [profilePosts, selectedDate, activeTab]);
 
   const popularCords = useMemo(() => {
     if (!profileUser) return [];
-    // Collect all posts where the user is the author or has replied
-    const userPosts = allPosts.filter(p => p.author.username === profileUser.username);
-    
-    // Extract unique tags starting with $ from these posts
     const tagCounts: Record<string, number> = {};
-    
-    userPosts.forEach(post => {
+
+    profilePosts.forEach(post => {
         const matches = post.content.match(/\$[a-zA-Z0-9_]+/g);
         if (matches) {
             matches.forEach(tag => {
@@ -248,7 +277,7 @@ export default function ProfilePage({
     });
 
     allPosts.forEach(post => {
-        const userReplied = post.replies?.some(reply => reply.author.username === profileUser.username);
+        const userReplied = post.replies?.some(reply => reply.author?.username === profileUser.username);
         if (userReplied) {
              const matches = post.content.match(/\$[a-zA-Z0-9_]+/g);
              if (matches) {
@@ -262,8 +291,8 @@ export default function ProfilePage({
     return Object.entries(tagCounts)
         .sort(([, countA], [, countB]) => countB - countA)
         .slice(0, 5)
-        .map(([tag]) => ({ id: tag, content: tag, replies: [], reactions: {}, timestamp: new Date(), author: { username: '', avatar: '' } as User })); 
-  }, [allPosts, profileUser?.username]);
+        .map(([tag]) => ({ id: tag, content: tag, replies: [], reactions: {}, timestamp: new Date(), author: { username: '', avatar: '' } as User }));
+  }, [profilePosts, allPosts, profileUser?.username]);
 
   if (!profileUser) {
       if (isLoadingUser) {
