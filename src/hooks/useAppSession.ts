@@ -213,7 +213,7 @@ export const useAppSession = ({
 
                     // Load initial users (recommended/popular)
                     const usersRes = await apiClient.searchUsers('');
-                    if (usersRes.data) {
+                    if (usersRes.data && Array.isArray(usersRes.data)) {
                         setUsers(usersRes.data);
                     }
                 } else {
