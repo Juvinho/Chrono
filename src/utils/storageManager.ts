@@ -6,9 +6,9 @@ import LZ from 'lz-string';
  */
 
 const STORAGE_LIMITS = {
-  maxPerKey: 100 * 1024,  // 100KB por chave
-  maxTotal: 4 * 1024 * 1024, // 4MB total
-  softLimit: 3 * 1024 * 1024, // 3MB (começa a limpar antes de atingir limite)
+  maxPerKey: 300 * 1024,  // 300KB por chave (aumentado de 100KB)
+  maxTotal: 5 * 1024 * 1024, // 5MB total (aumentado de 4MB)
+  softLimit: 4 * 1024 * 1024, // 4MB (começa a limpar antes de atingir limite)
 };
 
 // I-13: TTL Configuration (24 horas em milliseconds)
