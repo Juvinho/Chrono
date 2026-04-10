@@ -4,6 +4,7 @@ import Header from '../../../components/ui/Header';
 import Avatar from './Avatar';
 import { BlockIcon, FlagIcon } from '../../../components/ui/icons';
 import { useTranslation } from '../../../hooks/useTranslation';
+import { useToast } from '../../../contexts/ToastContext';
 import { ImageCropper } from '../../../components/ui/ImageCropper';
 import FramePreview, { getFrameShape } from './FramePreview';
 import { apiClient } from '../../../api';
@@ -51,6 +52,7 @@ export default function SettingsPage({
   user, onLogout, onNavigate, onNotificationClick, onViewNotifications, onUpdateUser, allUsers, allPosts, conversations, onOpenMarketplace, onOpenChat, onBack, lastViewedNotifications
 }: SettingsPageProps) {
   const { t, setLanguage, language } = useTranslation();
+  const { showToast } = useToast();
 
   // FIX: Safely initialize draftUser state to ensure profileSettings always exists.
   // This prevents crashes when updating settings for users who don't have a profileSettings object yet.
@@ -283,20 +285,29 @@ export default function SettingsPage({
     }
   };
 
-  // TODO: Move bio generation to backend API
-  // const handleGenerateBio = async () => {
-  //   setIsGeneratingBio(true);
-  //   try {
-  //     // TODO: Call POST /api/ai/generate-bio instead
-  //     // const response = await apiClient.post('/api/ai/generate-bio', { 
-  //     //   username: draftUser.username, 
-  //     //   posts: userPosts 
-  //     // })
-  //     // setDraftUser(prev => ({ ...prev, bio: response.data.bio }));
-  //   } finally {
-  //     setIsGeneratingBio(false);
-  //   }
-  // };
+  // Bio generation via backend API
+  const handleGenerateBio = async () => {
+    setIsGeneratingBio(true);
+    try {
+      const response = await apiClient.post('/api/ai/generate-bio', { 
+        username: draftUser.username,
+        bio: draftUser.bio,
+        location: draftUser.location,
+        website: draftUser.website,
+        headline: draftUser.headline
+      });
+      
+      if (response.data?.bio) {
+        setDraftUser(prev => ({ ...prev, bio: response.data.bio }));
+        showToast('Bio generated successfully!', 'success');
+      }
+    } catch (error: any) {
+      console.error('Bio generation error:', error);
+      showToast(error.response?.data?.error || 'Failed to generate bio. Please ensure API key is configured.', 'error');
+    } finally {
+      setIsGeneratingBio(false);
+    }
+  };
 
   // TODO: Move profile analysis to backend API
   // const handleAnalyzeProfile = async () => {
@@ -653,10 +664,7 @@ export default function SettingsPage({
                             <label className="text-sm text-[var(--theme-text-secondary)] font-mono uppercase">{t('bio')}</label>
                             <div className="flex gap-2">
                                 <button 
-                                    onClick={() => {
-                                      // TODO: Bio generation available via backend API
-                                      alert('Bio generation will be available via backend API');
-                                    }}
+                                    onClick={handleGenerateBio}
                                     disabled={isGeneratingBio}
                                     className="text-xs flex items-center gap-1 text-[var(--theme-primary)] hover:underline disabled:opacity-50"
                                 >
