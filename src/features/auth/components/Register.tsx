@@ -327,7 +327,7 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
                     <div className="p-3 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)]">
                         <HCaptcha
                             ref={captchaRef}
-                            sitekey={import.meta.env.VITE_HCAPTCHA_SITEKEY}
+                            sitekey={import.meta.env.VITE_HCAPTCHA_SITEKEY ?? 'e8f869b0-7b7a-41b2-95f4-a5b013e4e6dc'}
                             onVerify={(token) => {
                                 setCaptchaToken(token);
                                 setCaptchaError('');
