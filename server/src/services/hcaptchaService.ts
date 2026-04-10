@@ -17,7 +17,7 @@ export async function verifyHCaptcha(token: string): Promise<{
   error_codes?: string[];
 }> {
   const secret = process.env.HCAPTCHA_SECRET;
-  
+
   if (!secret) {
     console.error('HCAPTCHA_SECRET not set in environment variables');
     throw new Error('hCaptcha configuration error');
