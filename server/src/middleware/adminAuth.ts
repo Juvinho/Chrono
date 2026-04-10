@@ -18,6 +18,14 @@ declare global {
 
 // Middleware: Verifica se usuário tem sessão admin ativa
 export function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  // Block all admin operations when secrets are not configured
+  if (!adminConfig.isEnabled()) {
+    return res.status(503).json({
+      error: 'Admin panel is not configured',
+      code: 'ADMIN_DISABLED',
+    });
+  }
+
   try {
     // Pega token do header
     const authHeader = req.headers.authorization;

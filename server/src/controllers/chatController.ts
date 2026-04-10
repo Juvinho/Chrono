@@ -43,10 +43,18 @@ export const initConversation = async (req: AuthRequest, res: Response) => {
 
     console.log('✅ Target user exists');
     
-    // TODO: Check if users have blocked each other
-    // const isBlocked = await blockService.isBlocked(userId, targetUserId);
-    // if (isBlocked) return res.status(403).json({ error: 'Cannot message this user' });
-    
+    // QC-09: Check if either user has blocked the other
+    const blockCheck = await pool.query(
+      `SELECT 1 FROM users
+       WHERE (id = $1 AND $2 = ANY(blocked_users))
+          OR (id = $2 AND $1 = ANY(blocked_users))
+       LIMIT 1`,
+      [userId, targetUserId]
+    );
+    if (blockCheck.rows.length > 0) {
+      return res.status(403).json({ error: 'Cannot message this user' });
+    }
+
     let conversation = await chatService.getConversation(userId, targetUserId);
     console.log('🔍 Existing conversation lookup:', conversation?.id || 'none found');
     
@@ -187,15 +195,27 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
     const userId = req.userId!;
     const { conversationId } = req.params;
     const { content, imageUrl } = req.body;
-    
-    console.log('📨 sendMessage', {
-      userId,
-      conversationId,
-      hasContent: !!content,
-      hasImage: !!imageUrl,
-      contentLength: content?.length ?? 0,
-    });
-    
+
+    // QC-09: Block message if either user has blocked the other
+    const convRow = await pool.query(
+      `SELECT user1_id, user2_id FROM conversations WHERE id = $1`,
+      [conversationId]
+    );
+    if (convRow.rows.length > 0) {
+      const { user1_id, user2_id } = convRow.rows[0];
+      const otherUserId = user1_id === userId ? user2_id : user1_id;
+      const blockCheck = await pool.query(
+        `SELECT 1 FROM users
+         WHERE (id = $1 AND $2 = ANY(blocked_users))
+            OR (id = $2 AND $1 = ANY(blocked_users))
+         LIMIT 1`,
+        [userId, otherUserId]
+      );
+      if (blockCheck.rows.length > 0) {
+        return res.status(403).json({ error: 'Cannot send message to this user' });
+      }
+    }
+
     const message = await chatService.sendMessage(conversationId, userId, content, imageUrl);
     
     // Emit socket events if io is available on app

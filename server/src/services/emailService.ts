@@ -507,6 +507,42 @@ export class EmailService {
   }
 
   /**
+   * Send password reset email with a secure one-time token
+   */
+  async sendPasswordResetEmail(user: User, token: string): Promise<void> {
+    const resetLink = `${this.config.frontendUrl}/reset-password/${token}`;
+    const html = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="UTF-8"><title>Redefinir Senha - Chrono</title></head>
+<body style="font-family:sans-serif;background:#f5f5f5;margin:0;padding:20px">
+  <div style="max-width:560px;margin:auto;background:#fff;padding:32px;border-radius:8px">
+    <h2 style="color:#0084ff">Redefinir sua senha</h2>
+    <p>Olá, <strong>@${user.username}</strong>!</p>
+    <p>Recebemos uma solicitação para redefinir a senha da sua conta Chrono.</p>
+    <p style="margin:24px 0">
+      <a href="${resetLink}"
+         style="background:#0084ff;color:#fff;padding:12px 28px;text-decoration:none;border-radius:6px;font-weight:600">
+        Redefinir Senha
+      </a>
+    </p>
+    <p style="color:#666;font-size:13px">Este link expira em <strong>1 hora</strong>.</p>
+    <p style="color:#666;font-size:13px">Se você não solicitou a redefinição de senha, ignore este email — sua conta permanece segura.</p>
+    <hr style="border:none;border-top:1px solid #eee;margin:24px 0"/>
+    <p style="color:#999;font-size:12px">© 2026 Chrono — nunca compartilhe este link.</p>
+  </div>
+</body>
+</html>`.trim();
+
+    await this.transporter.sendMail({
+      from: `${this.config.fromName} <${this.config.fromEmail}>`,
+      to: user.email,
+      subject: '🔑 Redefinir senha - Chrono',
+      html,
+    });
+  }
+
+  /**
    * Test email configuration
    */
   async testConnection(): Promise<boolean> {

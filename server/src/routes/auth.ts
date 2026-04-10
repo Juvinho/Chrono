@@ -329,9 +329,9 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Check verification status
-    const verificationCheck = await pool.query('SELECT is_verified, email FROM users WHERE id = $1', [user.id]);
-    if (verificationCheck.rows.length > 0 && !verificationCheck.rows[0].is_verified) {
+    // Check verification status (use email_verified as canonical column)
+    const verificationCheck = await pool.query('SELECT email_verified, email FROM users WHERE id = $1', [user.id]);
+    if (verificationCheck.rows.length > 0 && !verificationCheck.rows[0].email_verified) {
          await securityService.logAction(user.id, 'login', 'user', user.id, 'failure', { username, reason: 'email_not_verified' }, req);
          return res.status(403).json({ 
            error: 'email_not_verified',
@@ -508,7 +508,10 @@ router.post('/verify-email', async (req, res) => {
     if (!token) return res.status(400).json({ error: 'Token required' });
 
     const result = await pool.query(
-      'UPDATE users SET is_verified = TRUE, email_verified = TRUE, email_verification_token = NULL WHERE email_verification_token = $1 RETURNING id, username, email',
+      `UPDATE users
+       SET email_verified = TRUE, is_verified = TRUE, email_verification_token = NULL
+       WHERE email_verification_token = $1
+       RETURNING id, username, email`,
       [token]
     );
 
@@ -574,54 +577,90 @@ router.post('/resend-verification', async (req, res) => {
   }
 });
 
-// Reset password request
+// Forgot password — generate a secure token, store hash, send email
 router.post('/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
-
     if (!email) {
       return res.status(400).json({ error: 'Email is required' });
     }
 
+    // Always respond the same way to avoid leaking whether an email is registered
+    const genericResponse = { message: 'If that email is registered, reset instructions have been sent.' };
+
     const user = await userService.getUserByEmail(email);
     if (!user) {
-      // Don't reveal if email exists
-      return res.json({ message: 'If email exists, password reset instructions sent' });
+      return res.json(genericResponse);
     }
 
-    // In production, send email with reset token
-    // For now, just return success
-    res.json({ message: 'Password reset instructions sent (if email exists)' });
+    // Generate a random token and store its SHA-256 hash
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    await pool.query(
+      'UPDATE users SET password_reset_token = $1, password_reset_expires = $2 WHERE id = $3',
+      [hashedToken, expiresAt, user.id]
+    );
+
+    try {
+      const { getEmailService } = await import('../services/emailService.js');
+      const emailService = await getEmailService();
+      if (emailService) {
+        await emailService.sendPasswordResetEmail(user, rawToken);
+      }
+    } catch (emailErr) {
+      console.error('Failed to send password reset email:', emailErr);
+      // Don't expose email errors to caller
+    }
+
+    res.json(genericResponse);
   } catch (error: any) {
     console.error('Forgot password error:', error);
-    res.status(500).json({ error: error.message || 'Request failed' });
+    res.status(500).json({ error: 'Request failed' });
   }
 });
 
-// Reset password
+// Reset password — requires a valid one-time token
 router.post('/reset-password', async (req, res) => {
   try {
-    const { email, newPassword } = req.body;
+    const { token, newPassword } = req.body;
 
-    if (!email || !newPassword) {
-      return res.status(400).json({ error: 'Email and new password are required' });
+    if (!token || !newPassword) {
+      return res.status(400).json({ error: 'Token and new password are required' });
     }
 
     if (newPassword.length < 6) {
       return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
 
-    const user = await userService.getUserByEmail(email);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const result = await pool.query(
+      `SELECT id FROM users
+       WHERE password_reset_token = $1
+         AND password_reset_expires > NOW()`,
+      [hashedToken]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: 'Invalid or expired reset token' });
     }
 
-    await userService.updatePassword(user.id, newPassword);
+    const userId = result.rows[0].id;
+
+    await userService.updatePassword(userId, newPassword);
+
+    // Invalidate the token immediately after use
+    await pool.query(
+      'UPDATE users SET password_reset_token = NULL, password_reset_expires = NULL WHERE id = $1',
+      [userId]
+    );
 
     res.json({ message: 'Password reset successfully' });
   } catch (error: any) {
     console.error('Reset password error:', error);
-    res.status(500).json({ error: error.message || 'Password reset failed' });
+    res.status(500).json({ error: 'Password reset failed' });
   }
 });
 

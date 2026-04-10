@@ -8,6 +8,14 @@ const router = Router();
 
 // POST /api/admin/auth/login - Autentica com senha master
 router.post('/login', async (req: Request, res: Response) => {
+  // Reject immediately if admin is not configured
+  if (!adminConfig.isEnabled()) {
+    return res.status(503).json({
+      error: 'Admin panel is not configured',
+      code: 'ADMIN_DISABLED',
+    });
+  }
+
   try {
     const { password, userId } = req.body;
 

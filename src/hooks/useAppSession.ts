@@ -23,7 +23,25 @@ export const useAppSession = ({
     // 1. Basic User State
     // I-13: Removed chrono_users_v4 localStorage - always fetch fresh from backend
     const [users, setUsers] = useState<User[]>([]);
-    const [currentUser, setCurrentUser] = useLocalStorage<User | null>('chrono_currentUser_v4', null);
+    const [currentUser, _setCurrentUserRaw] = useLocalStorage<User | null>('chrono_currentUser_v4', null);
+
+    // QC-08: Strip sensitive / large fields before persisting to localStorage.
+    // email, blockedUsers, notifications, and follower lists are re-fetched from
+    // the API on every session reload — no need to expose them via DevTools.
+    const setCurrentUser = useCallback((value: User | null | ((prev: User | null) => User | null)) => {
+        const sanitize = (u: User | null): User | null => {
+            if (!u) return null;
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { email, password, blockedUsers, notifications, followingList, followersList, ...safe } = u;
+            return safe as User;
+        };
+        if (typeof value === 'function') {
+            _setCurrentUserRaw(prev => sanitize(value(prev)));
+        } else {
+            _setCurrentUserRaw(sanitize(value));
+        }
+    }, [_setCurrentUserRaw]);
+
     // Don't block rendering if we already have a user in local storage
     const [isSessionLoading, setIsSessionLoading] = useState(!currentUser);
 

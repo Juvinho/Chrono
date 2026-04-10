@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
 import SearchOverlay from './SearchOverlay';
-import { apiClient } from '../../utils/api';
+import { apiClient } from '../../api';
 
 // Mock dependencies
-vi.mock('../../utils/api', () => ({
+vi.mock('../../api', () => ({
   apiClient: {
     searchUsers: vi.fn(),
   },

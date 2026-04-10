@@ -46,12 +46,14 @@ export const closeSocket = () => {
   }
 };
 
-/** Call after successful login to re-enable and reconnect the socket. */
+/**
+ * Call after successful login to get a fresh socket with reconnection enabled.
+ * Closes the old socket (which may have had reconnection disabled due to an auth error)
+ * and lets getSocket() create a new one with the correct options.
+ */
 export const reconnectSocket = () => {
-  if (socket) {
-    socket.io.opts.reconnection = true;
-    socket.connect();
-  }
+  closeSocket();   // destroy the old socket entirely
+  getSocket();     // create a fresh one — reconnection is enabled by default
 };
 
 export const isSocketConnected = (): boolean => {

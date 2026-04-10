@@ -26,7 +26,6 @@ if (!fs.existsSync(envPath)) {
 dotenv.config({ path: envPath });
 
 // NOW import modules that depend on environment variables
-import { migrate } from './db/migrate.js';
 import { initializeDatabase } from './db/initializeDatabase.js';
 import { runMigrations } from './db/migrations.js';
 import { pool } from './db/connection.js';
@@ -114,12 +113,15 @@ const app = express();
 const httpServer = createServer(app);
 const PORT = process.env.PORT || 3001;
 
-// Middleware
-const allowedOrigins = process.env.CORS_ORIGIN 
+// MNT-06: Require CORS_ORIGIN in production — wildcard fallback is insecure
+if (process.env.NODE_ENV === 'production' && !process.env.CORS_ORIGIN) {
+  console.error('CRITICAL: CORS_ORIGIN must be set in production. Refusing to start.');
+  process.exit(1);
+}
+
+const allowedOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
-  : (process.env.NODE_ENV === 'production'
-      ? ['*']
-      : ['http://localhost:3000', 'http://localhost:5173']);
+  : ['http://localhost:3000', 'http://localhost:5173'];
 
 // Get host IP from environment or detect automatically
 const HOST = process.env.HOST || '0.0.0.0'; // 0.0.0.0 allows connections from any IP
@@ -358,31 +360,28 @@ const getClientIp = (req: any) => {
   return req.socket.remoteAddress || req.connection.remoteAddress || 'unknown';
 };
 
+// QC-04: Sane rate limits — prevent abuse without blocking legitimate users
 const apiLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 1000, // Increased to 1000 for better usability and polling support
+  windowMs: 60 * 1000,  // 1 minute
+  max: 120,             // ~2 req/s average per IP
   message: { error: 'Too many requests. Please try again later.' },
   keyGenerator: getClientIp,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => {
-    // Don't rate limit GET requests as heavily for polling
-    return false;
-  }
 });
 
 const authLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 100, // More restrictive for auth to prevent brute force
-  message: { error: 'Too many login attempts. Please try again in an hour.' },
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,                   // 10 attempts per 15 min — brute force protection
+  message: { error: 'Too many login attempts. Please try again later.' },
   keyGenerator: getClientIp,
   standardHeaders: true,
   legacyHeaders: false,
 });
 
 const profileUpdateLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 300, // Increased for better usability
+  windowMs: 60 * 1000, // 1 minute
+  max: 10,
   message: { error: 'Você está atualizando seu perfil muito rápido. Aguarde um momento.' },
   keyGenerator: getClientIp,
   standardHeaders: true,
@@ -390,8 +389,8 @@ const profileUpdateLimiter = rateLimit({
 });
 
 const postLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 100, // Increased to 100 posts per minute
+  windowMs: 60 * 1000, // 1 minute
+  max: 15,             // 15 posts/min is generous for real use
   message: { error: 'Você está postando muito rápido. Aguarde um momento.' },
   keyGenerator: getClientIp,
   standardHeaders: true,
@@ -399,16 +398,13 @@ const postLimiter = rateLimit({
 });
 
 const chatLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 500, // Increased to 500 requests per minute for better chat usability
+  windowMs: 60 * 1000, // 1 minute
+  max: 60,             // 1 message/s average — GET (polling) is not counted
   message: { error: 'Você está enviando muitas mensagens. Aguarde um momento.' },
   keyGenerator: getClientIp,
   standardHeaders: true,
   legacyHeaders: false,
-  // Don't rate limit GET requests (polling for messages)
-  skip: (req) => {
-    return req.method === 'GET';
-  }
+  skip: (req) => req.method === 'GET',
 });
 
 app.use('/api/', apiLimiter);
@@ -576,8 +572,7 @@ app.get('*', (req: express.Request, res: express.Response) => {
     res.sendFile(indexPath);
   } else {
     console.error(`❌ Cannot send index.html, file does not exist at: ${indexPath}`);
-    // Still return 200 with error info so it's visible in browser without crashing
-    res.status(200).send(`
+    res.status(500).send(`
       <html>
         <body style="background: #000; color: #0f0; font-family: monospace; padding: 20px; line-height: 1.6;">
           <h1 style="color: #f0f; border-bottom: 2px solid #f0f; padding-bottom: 10px;">❌ CHRONO_SYSTEM_FAILURE</h1>
@@ -632,17 +627,13 @@ const startServer = async () => {
       // Don't stop server, migration might still work
     }
 
-    // Run migrations (idempotent)
-    console.log('📦 Iniciando migrações do banco de dados...');
+    // Run SQL migrations (idempotent — tracked in schema_migrations table)
+    console.log('Running database migrations...');
     try {
-      await migrate();
-      console.log('✅ Migrações do migrate concluídas com sucesso.');
-      
-      // Run additional SQL migrations
       await runMigrations();
-      console.log('✅ Migrações de SQL concluídas com sucesso.');
+      console.log('Database migrations complete.');
     } catch (err: any) {
-      console.error('⚠️  Erro durante migrações:', err.message);
+      console.error('Migration error:', err.message);
     }
 
     try {
