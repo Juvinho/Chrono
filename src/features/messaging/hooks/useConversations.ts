@@ -39,6 +39,20 @@ export function useConversations() {
         conversationIds: data.map(c => c.id)
       });
     } catch (err: any) {
+      const isAuthError =
+        err?.statusCode === 401 ||
+        err?.statusCode === 403 ||
+        err?.message?.toLowerCase().includes('unauthorized') ||
+        err?.message?.toLowerCase().includes('forbidden');
+
+      if (isAuthError) {
+        // Auth errors are not transient — retrying won't help.
+        // Silently clear conversations and stop; the session layer will redirect to login.
+        setConversations([]);
+        setIsLoading(false);
+        return;
+      }
+
       console.error('❌ Erro ao carregar conversas:', {
         message: err?.message,
         code: err?.code,
@@ -46,12 +60,12 @@ export function useConversations() {
         retry: retryCountRef.current,
         lastSuccessfulCount: lastSuccessfulDataRef.current.length
       });
-      
-      // Retry logic para erros temporários
+
+      // Retry logic apenas para erros temporários (5xx, rede)
       if (retryCountRef.current < maxRetriesRef.current) {
         retryCountRef.current++;
         console.log(`🔄 Tentativa ${retryCountRef.current}/${maxRetriesRef.current}...`);
-        
+
         // Aguarda 1 segundo antes de tentar novamente
         await new Promise(resolve => setTimeout(resolve, 1000));
         return fetchConversations(true);

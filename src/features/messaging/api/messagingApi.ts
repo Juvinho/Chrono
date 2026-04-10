@@ -9,19 +9,14 @@ const API_BASE = '/chat';
 
 // Lista todas as conversas do usuário
 export async function getConversations(): Promise<Conversation[]> {
-  console.log('📤 getConversations API call started');
   const response = await baseClient.get<Conversation[]>(`${API_BASE}`);
-  
-  console.log('📥 getConversations response:', {
-    hasError: !!response.error,
-    error: response.error,
-    dataCount: response.data?.length || 0,
-    dataIds: response.data?.map(c => c.id) || [],
-    fullResponse: response
-  });
-  
-  if (response.error) throw new Error(response.error);
-  return response.data || [];
+
+  if (response.error) {
+    const err: any = new Error(response.error);
+    err.statusCode = response.status ?? 0;
+    throw err;
+  }
+  return Array.isArray(response.data) ? response.data : [];
 }
 
 // Inicializa conversa com outro usuário (Find or Create)

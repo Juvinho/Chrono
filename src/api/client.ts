@@ -38,6 +38,8 @@ export interface ApiResponse<T> {
   data?: T;
   error?: string;
   retryAfter?: number;
+  /** HTTP status code, present only on error responses */
+  status?: number;
 }
 
 let globalRateLimitUntil = 0;
@@ -111,11 +113,13 @@ export class ApiClient {
           const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 5000;
           console.warn(`Rate limited (429). Server suggests waiting ${waitTime}ms`);
           globalRateLimitUntil = Date.now() + waitTime;
-          return { error: 'rateLimitError', retryAfter: waitTime };
+          return { error: 'rateLimitError', retryAfter: waitTime, status: 429 };
         }
-        const data = await response.json().catch(() => ({}));
-        const errorMessage = data.error || data.details || `Request failed with status ${response.status}`;
-        return { error: errorMessage, data: data as T };
+        const errBody = await response.json().catch(() => ({}));
+        const errorMessage = errBody.error || errBody.details || errBody.message || `Request failed with status ${response.status}`;
+        // Never populate `data` on error responses — callers checking `result.data`
+        // must not mistake an error payload for valid data (avoids auth loops on 401).
+        return { error: errorMessage, status: response.status };
       }
 
       const text = await response.text();

@@ -83,13 +83,20 @@ export const useAppSession = ({
                 userResult = await apiClient.getCurrentUser();
             }
             
-            if (userResult.data) {
+            if (userResult.status === 401 || userResult.status === 403) {
+                // Auth cookie expired or invalid — clear session and stop.
+                // Do NOT retry: 401 means unauthenticated, not a transient error.
+                setCurrentUser(null);
+                return;
+            }
+
+            if (!userResult.error && userResult.data) {
                 const mappedUser = mapApiUserToUser(userResult.data);
-                
+
                 // Reload notifications specifically for this update
                 const notificationsResult = await apiClient.getNotifications();
                 let finalNotifications: Notification[] = [];
-                if (notificationsResult.data && Array.isArray(notificationsResult.data)) {
+                if (!notificationsResult.error && notificationsResult.data && Array.isArray(notificationsResult.data)) {
                     finalNotifications = notificationsResult.data.map((n: Notification) => ({
                         ...n,
                         timestamp: new Date(n.timestamp || Date.now())
@@ -107,7 +114,7 @@ export const useAppSession = ({
                         notifications: finalNotifications
                     };
                 });
-                
+
                 // Update in users array if present
                 setUsers(prev => prev.map(u => u.username === mappedUser.username ? mappedUser : u));
             }
@@ -154,9 +161,11 @@ export const useAppSession = ({
             const conversationsResult = await apiClient.getConversations();
             if (conversationsResult.data && Array.isArray(conversationsResult.data)) {
                 const mappedConversations = conversationsResult.data.map((conv: Conversation) => {
-                    const participantsList = Array.isArray(conv.participants)
-                        ? conv.participants.map((p: string | { username?: string }) => typeof p === 'string' ? p : (p.username || p))
-                        : (conv.other_username ? [currentUser?.username, conv.other_username] : []);
+                    const participantsList: string[] = Array.isArray(conv.participants)
+                        ? conv.participants.map((p: string | { username?: string }) =>
+                              typeof p === 'string' ? p : (p.username ?? ''))
+                              .filter((p: string) => p !== '')
+                        : [currentUser?.username, conv.other_username].filter((p): p is string => typeof p === 'string');
                     const msgs = Array.isArray(conv.messages) ? conv.messages : [];
                     const mappedMsgs = msgs.map((msg: any) => ({
                         id: msg.id,
@@ -207,7 +216,7 @@ export const useAppSession = ({
                     result = await apiClient.getCurrentUser();
                 }
                 
-                if (result.data) {
+                if (!result.error && result.data) {
                     const mappedUser = mapApiUserToUser(result.data);
                     setCurrentUser(mappedUser);
 
@@ -217,15 +226,13 @@ export const useAppSession = ({
                         setUsers(usersRes.data);
                     }
                 } else {
-                    // No valid session — user is not logged in
-                    if (currentUser) setCurrentUser(null);
+                    // No valid session (401/403) or network error — clear stale localStorage user
+                    setCurrentUser(null);
                 }
             } catch (error) {
                 console.error("Session validation failed:", error);
-                // Don't logout on generic network errors if we have a user
-                if (currentUser === null) {
-                    setCurrentUser(null);
-                }
+                // Clear session on any unexpected error during validation
+                setCurrentUser(null);
             }
             setIsSessionLoading(false);
         };
