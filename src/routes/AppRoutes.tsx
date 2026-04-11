@@ -368,7 +368,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     <ThreadView 
                         currentUser={currentUser}
                         allUsers={combinedUsers}
-                        allPosts={memoizedPosts}
+                        allPosts={memoizedAllPosts}
                         onReply={handleReply}
                         onUpdateReaction={handleUpdateReaction}
                         onEcho={handleEcho}
@@ -388,7 +388,7 @@ export default function AppRoutes(props: AppRoutesProps) {
                     <PostDetail 
                         currentUser={currentUser}
                         allUsers={combinedUsers}
-                        allPosts={memoizedPosts}
+                        allPosts={memoizedAllPosts}
                         onReply={handleReply}
                         onUpdateReaction={handleUpdateReaction}
                         onEcho={handleEcho}

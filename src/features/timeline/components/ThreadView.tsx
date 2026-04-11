@@ -66,21 +66,22 @@ export const ThreadView: React.FC<ThreadViewProps> = ({
                 const response = await apiClient.getPost(postId);
                 if (response.error) {
                     setError(response.error);
+                    setLoading(false);
                     return;
                 }
 
                 const mappedPost = mapApiPostToPost(response.data || response);
                 setRootPost(mappedPost);
+                setLoading(false);
             } catch (err: any) {
                 console.error('Failed to load thread:', err);
                 setError(err.message || 'Failed to load thread');
-            } finally {
                 setLoading(false);
             }
         };
 
         loadPost();
-    }, [postId, rootPost]);
+    }, [postId]);
 
     if (loading) {
         return null;

@@ -74,6 +74,7 @@ export const PostDetail: React.FC<PostDetailProps> = ({
         
         if (!realId) {
           setError('Post não encontrado');
+          setLoading(false);
           return;
         }
 
@@ -88,21 +89,22 @@ export const PostDetail: React.FC<PostDetailProps> = ({
           } else {
             setError(response.error);
           }
+          setLoading(false);
           return;
         }
 
         const mappedPost = mapApiPostToPost(response.data || response);
         setRootPost(mappedPost);
+        setLoading(false);
       } catch (err: any) {
         console.error('Failed to load post:', err);
         setError(err.message || 'Erro ao carregar o post');
-      } finally {
         setLoading(false);
       }
     };
 
     loadPost();
-  }, [randomId, rootPost]);
+  }, [randomId]);
 
   const handleReplySubmit = (content: string, isPrivate: boolean, media?: any) => {
     if (rootPost) {
