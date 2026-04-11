@@ -280,62 +280,21 @@ export default function ProfilePage({
       return posts.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }, [profilePosts, selectedDate, activeTab]);
 
-  const popularCords = useMemo(() => {
-    if (!profileUser) return [];
-    const tagCounts: Record<string, number> = {};
-
-    // 24-hour window:
-    //   • Today        → [now − 24 h, now]
-    //   • Past date    → [end-of-day − 24 h, end-of-day]   (23:59:59 of that day)
-    //   • Future date  → cap window end at now
-    const now = Date.now();
-    const isSelectedToday =
-      selectedDate instanceof Date &&
-      selectedDate.toDateString() === new Date().toDateString();
-
-    let windowEnd: number;
-    if (isSelectedToday || !(selectedDate instanceof Date) || isNaN(selectedDate.getTime())) {
-      windowEnd = now;
-    } else {
-      const endOfDay = new Date(selectedDate);
-      endOfDay.setHours(23, 59, 59, 999);
-      windowEnd = Math.min(endOfDay.getTime(), now);
-    }
-    const windowStart = windowEnd - 24 * 60 * 60 * 1000;
-
-    const inWindow = (ts: Date | string | number) => {
-      const t = new Date(ts).getTime();
-      return t >= windowStart && t <= windowEnd;
-    };
-
-    profilePosts.forEach(post => {
-        if (!inWindow(post.timestamp)) return;
-        const matches = post.content.match(/\$[a-zA-Z0-9_]+/g);
-        if (matches) {
-            matches.forEach(tag => {
-                tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-            });
-        }
-    });
-
-    allPosts.forEach(post => {
-        if (!inWindow(post.timestamp)) return;
-        const userReplied = post.replies?.some(reply => reply.author?.username === profileUser.username);
-        if (userReplied) {
-             const matches = post.content.match(/\$[a-zA-Z0-9_]+/g);
-             if (matches) {
-                matches.forEach(tag => {
-                    tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-                });
-             }
-        }
-    });
-
-    return Object.entries(tagCounts)
-        .sort(([, countA], [, countB]) => countB - countA)
-        .slice(0, 5)
-        .map(([tag]) => ({ id: tag, content: tag, replies: [], reactions: {}, timestamp: new Date(), author: { username: '', avatar: '' } as User }));
-  }, [profilePosts, allPosts, profileUser?.username, selectedDate]);
+  // Calculate best posts sorted by total reactions
+  const bestPosts = useMemo(() => {
+    if (!profilePosts) return [];
+    
+    return [...profilePosts]
+      .map(post => {
+        const totalReactions = Object.values(post.reactions || {}).reduce((sum, count) => sum + (count || 0), 0);
+        const reposts = post.reposts || 0;
+        const likes = post.likes || 0;
+        const totalEngagement = likes + (totalReactions || 0) + reposts;
+        return { post, totalEngagement };
+      })
+      .sort((a, b) => b.totalEngagement - a.totalEngagement)
+      .map(({ post }) => post);
+  }, [profilePosts]);
 
   if (!profileUser) {
       if (isLoadingUser) {
@@ -842,34 +801,39 @@ export default function ProfilePage({
           </div>
           
           <div className="mt-4 px-4 pb-8 max-w-7xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                {/* Left Column: Engagement */}
+            <div className="grid grid-cols-1 lg:grid-cols-[35%_1fr] gap-6">
+                {/* Left Column: Melhores Posts */}
                 <div className="hidden lg:block space-y-4">
                     <div className="bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] rounded-lg p-4">
-                        <h3 className="font-bold text-[var(--theme-text-light)] mb-3 border-b border-[var(--theme-border-primary)] pb-2">
-                            {t('popularCords') || "Cordões Mais Comentados"}
+                        <h3 className="font-bold text-[var(--theme-text-light)] mb-3 border-b border-[var(--theme-border-primary)] pb-2 flex items-center">
+                            <span className="mr-2">⚡</span> {t('bestPosts') || "Melhores Posts"}
                         </h3>
                         <div className="space-y-3">
-                            {popularCords.length > 0 ? (
-                                popularCords.map(tagPost => (
-                                    <div key={tagPost.id} className="text-sm cursor-pointer hover:bg-[var(--theme-bg-tertiary)] p-2 rounded transition-colors" onClick={() => {
-                                        sessionStorage.setItem('chrono_search_query', tagPost.content);
-                                        onNavigate(Page.Dashboard);
-                                    }}>
-                                        <p className="line-clamp-2 text-[var(--theme-text-primary)] font-mono">{tagPost.content}</p>
-                                    </div>
-                                ))
+                            {bestPosts.length > 0 ? (
+                                bestPosts.slice(0, 8).map(post => {
+                                    const totalReactions = Object.values(post.reactions || {}).reduce((sum, count) => sum + (count || 0), 0);
+                                    const totalEngagement = (post.likes || 0) + totalReactions + (post.reposts || 0);
+                                    return (
+                                        <div key={post.id} className="text-sm cursor-pointer hover:bg-[var(--theme-bg-tertiary)] p-3 rounded transition-colors border border-[var(--theme-border-primary)]" onClick={() => onNavigate(Page.Profile, post.author.username)}>
+                                            <p className="line-clamp-2 text-[var(--theme-text-primary)] text-xs mb-1 font-mono">{post.content}</p>
+                                            <div className="flex items-center text-xs text-[var(--theme-text-secondary)]">
+                                                <span className="mr-2">❤️ {totalEngagement}</span>
+                                                <span className="text-[var(--theme-primary)] font-bold">@{post.author.username}</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })
                             ) : (
                                 <p className="text-sm text-[var(--theme-text-secondary)]">
-                                    {t('noCordsInPeriod') || 'Nenhum cordão em destaque neste período'}
+                                    {t('noPostsYet') || 'Nenhum post registrado'}
                                 </p>
                             )}
                         </div>
                     </div>
                 </div>
 
-                {/* Center Column: Feed */}
-                <div className="lg:col-span-2 space-y-4">
+                {/* Right Column: Feed Atual */}
+                <div className="space-y-4">
                     {/* Tabs */}
                     <div className="flex border-b border-[var(--theme-border-primary)] mb-4 bg-[var(--theme-bg-secondary)] rounded-t-lg overflow-hidden">
                         <button 
@@ -988,11 +952,6 @@ export default function ProfilePage({
                             <p className="text-lg">{t('profileIsPrivate')}</p>
                         </div>
                     )}
-                </div>
-
-                {/* Right Column: Bio with Tags */}
-                <div className="hidden lg:block space-y-4">
-                    <ProfileBioSidebar userId={profileUser?.id || null} />
                 </div>
             </div>
           </div>
