@@ -21,6 +21,7 @@ import { apiClient, mapApiPostToPost } from '../../../api';
 import { TagBadgeGroup } from '../../../components/ui/TagBadge';
 import { useUserTags } from '../../../hooks/useTags';
 import { ProfileBioSidebar } from '../../../components/ProfileBioSidebar';
+import { postIdMapper } from '../../../utils/postIdMapper';
 
 interface ProfilePageProps {
   currentUser: User;
@@ -322,6 +323,11 @@ export default function ProfilePage({
    const handleTagClick = (tag: string) => {
     sessionStorage.setItem('chrono_search_query', tag);
     onNavigate(Page.Dashboard);
+  };
+  
+  const handleNavigateToPost = (postId: string) => {
+    const randomId = postIdMapper.getRandomId(postId);
+    navigate(`/post/${randomId}`);
   };
   
   const handleFollowClick = () => {
@@ -815,7 +821,7 @@ export default function ProfilePage({
                                     const totalReactions = Object.values(post.reactions || {}).reduce((sum, count) => sum + (count || 0), 0);
                                     const totalEngagement = (post.likes || 0) + totalReactions + (post.reposts || 0);
                                     return (
-                                        <div key={post.id} className="text-sm cursor-pointer hover:bg-[var(--theme-bg-tertiary)] p-3 rounded transition-colors border border-[var(--theme-border-primary)] w-full overflow-hidden overflow-wrap break-word" onClick={() => onNavigate(Page.Profile, post.author.username)}>
+                                        <div key={post.id} className="text-sm cursor-pointer hover:bg-[var(--theme-bg-tertiary)] py-3 px-2 transition-colors border-b border-[var(--theme-border-primary)] w-full overflow-hidden last:border-b-0" onClick={() => handleNavigateToPost(post.id)}>
                                             <p className="line-clamp-2 text-[var(--theme-text-primary)] text-xs mb-1 font-mono overflow-wrap break-word">{post.content}</p>
                                             <div className="flex items-center text-xs text-[var(--theme-text-secondary)] overflow-hidden overflow-wrap break-word">
                                                 <span className="mr-2">❤️ {totalEngagement}</span>
