@@ -33,7 +33,7 @@ export const initConversation = async (req: AuthRequest, res: Response) => {
     
     // Verify target user exists
     const targetUserResult = await pool.query(
-      `SELECT id FROM users WHERE id = $1`,
+      `SELECT id FROM users WHERE id = $1::uuid`,
       [targetUserId]
     );
     if (targetUserResult.rows.length === 0) {
@@ -198,7 +198,7 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
 
     // QC-09: Block message if either user has blocked the other
     const convRow = await pool.query(
-      `SELECT user1_id, user2_id FROM conversations WHERE id = $1`,
+      `SELECT user1_id, user2_id FROM conversations WHERE id = $1::uuid`,
       [conversationId]
     );
     if (convRow.rows.length > 0) {

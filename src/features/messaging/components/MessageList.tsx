@@ -117,6 +117,11 @@ interface MessageBubbleProps {
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isMine, isFirst, isLast }) => {
   const [showImageViewer, setShowImageViewer] = useState(false);
 
+  // Enhanced CSS classes for better visual hierarchy
+  const itemClass = ['message-item', isMine ? 'mine' : 'theirs']
+    .filter(Boolean)
+    .join(' ');
+
   const bubbleClass = [
     'message-bubble',
     isMine ? 'mine' : 'theirs',
@@ -126,25 +131,38 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isMine, isFirst,
     .filter(Boolean)
     .join(' ');
 
-  const itemClass = ['message-item', isMine ? 'mine' : 'theirs', isLast ? '' : 'grouped']
-    .filter(Boolean)
-    .join(' ');
-
   return (
     <>
       <div className={itemClass}>
+        {/* Avatar for theirs messages (on left) */}
+        {!isMine && isLast && (
+          <div className="message-avatar">
+            {message.sender.avatarUrl ? (
+              <img src={message.sender.avatarUrl} alt={message.sender.username} />
+            ) : (
+              <div className="avatar-placeholder-small">
+                {message.sender.displayName?.charAt(0) || '?'}
+              </div>
+            )}
+          </div>
+        )}
+        {!isMine && !isLast && <div className="message-avatar-placeholder" />}
+
+        {/* Message bubble content */}
         <div className={bubbleClass}>
+          {/* Image if present */}
           {message.imageUrl && (
             <div style={{ marginBottom: message.content ? '6px' : 0 }}>
               <img
                 src={message.imageUrl}
-                alt="Imagem"
+                alt="Message attachment"
                 width={200}
                 height={200}
                 onClick={() => setShowImageViewer(true)}
                 style={{
-                  maxWidth: '200px',
-                  borderRadius: '10px',
+                  maxWidth: '100%',
+                  maxHeight: '250px',
+                  borderRadius: '12px',
                   display: 'block',
                   cursor: 'pointer',
                   transition: 'opacity 0.2s',
@@ -154,20 +172,39 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isMine, isFirst,
               />
             </div>
           )}
+
+          {/* Text content */}
           {message.content && (
             <div className="message-content">{message.content}</div>
           )}
+
+          {/* Meta info (timestamp and read status) */}
           <div className="message-meta">
             <span className="message-time">{formatTime(message.sentAt)}</span>
             {isMine && (
-              <span className={`read-tick ${message.isRead ? 'read' : ''}`}>
+              <span className={`read-tick ${message.isRead ? 'read' : 'unread'}`}>
                 {message.isRead ? '✓✓' : '✓'}
               </span>
             )}
           </div>
         </div>
+
+        {/* Avatar for mine messages (on right) */}
+        {isMine && isLast && (
+          <div className="message-avatar">
+            {message.sender.avatarUrl ? (
+              <img src={message.sender.avatarUrl} alt={message.sender.username} />
+            ) : (
+              <div className="avatar-placeholder-small">
+                {message.sender.displayName?.charAt(0) || '?'}
+              </div>
+            )}
+          </div>
+        )}
+        {isMine && !isLast && <div className="message-avatar-placeholder" />}
       </div>
 
+      {/* Image viewer modal */}
       {message.imageUrl && (
         <ImageViewer
           isOpen={showImageViewer}

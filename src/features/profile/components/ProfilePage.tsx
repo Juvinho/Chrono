@@ -209,6 +209,20 @@ export default function ProfilePage({
     }
   }, [profileUser, currentUser, isOwnProfile]);
 
+  // Refresh the user list modal when currentUser's followingList changes (Item #1 fix)
+  useEffect(() => {
+    if (userListModal) {
+      setUserListModal(prev => {
+        if (!prev) return prev;
+        // Update the currentUserFollowing list when the current user's following list changes
+        return {
+          ...prev,
+          currentUserFollowing: currentUser.followingList || []
+        };
+      });
+    }
+  }, [currentUser.followingList]);
+
   // Close profile menu on click outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -270,11 +284,23 @@ export default function ProfilePage({
     if (!profileUser) return [];
     const tagCounts: Record<string, number> = {};
 
-    // Window: 24 h ending at selectedDate (or now if selectedDate is today/future)
-    const anchor = selectedDate instanceof Date && !isNaN(selectedDate.getTime())
-      ? selectedDate.getTime()
-      : Date.now();
-    const windowEnd   = Math.min(anchor, Date.now());
+    // 24-hour window:
+    //   • Today        → [now − 24 h, now]
+    //   • Past date    → [end-of-day − 24 h, end-of-day]   (23:59:59 of that day)
+    //   • Future date  → cap window end at now
+    const now = Date.now();
+    const isSelectedToday =
+      selectedDate instanceof Date &&
+      selectedDate.toDateString() === new Date().toDateString();
+
+    let windowEnd: number;
+    if (isSelectedToday || !(selectedDate instanceof Date) || isNaN(selectedDate.getTime())) {
+      windowEnd = now;
+    } else {
+      const endOfDay = new Date(selectedDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      windowEnd = Math.min(endOfDay.getTime(), now);
+    }
     const windowStart = windowEnd - 24 * 60 * 60 * 1000;
 
     const inWindow = (ts: Date | string | number) => {

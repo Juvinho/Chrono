@@ -1,7 +1,7 @@
 // Types principais do sistema de mensagens
 
 export interface User {
-  id: number | string;
+  id: string;
   username: string;
   displayName: string;
   avatarUrl: string | null;
@@ -15,7 +15,7 @@ export interface MessagePreview {
 }
 
 export interface Conversation {
-  id: number | string;
+  id: string; // UUID string, never number
   otherUser: User;
   lastMessage: MessagePreview | null;
   unreadCount: number;
@@ -23,8 +23,8 @@ export interface Conversation {
 }
 
 export interface Message {
-  id: number | string;
-  conversationId: number | string;
+  id: string;
+  conversationId: string; // UUID string, never number
   sender: User;
   content: string;
   imageUrl?: string; // Support for image attachments
@@ -33,7 +33,7 @@ export interface Message {
 }
 
 export interface SendMessageRequest {
-  conversationId: number | string;
+  conversationId: string; // UUID string, never number
   content: string;
   imageUrl?: string;
 }

@@ -269,6 +269,70 @@
   gap: 4px;
 }
 
+/* Message item wrapper - handles left/right alignment */
+.message-item {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.message-item.mine {
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+}
+
+.message-item.theirs {
+  justify-content: flex-start;
+}
+
+.message-avatar {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 2px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  object-fit: cover;
+  overflow: hidden;
+}
+
+.message-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-placeholder-small {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: var(--theme-primary);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 50%;
+}
+
+.message-avatar-placeholder {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  margin-bottom: 2px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .messages-empty {
   display: flex;
   align-items: center;

@@ -301,6 +301,20 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
   }
 });
 
+// Toggle post privacy (C-04: Lock icon functionality)
+router.patch('/:id/privacy', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await postService.togglePostPrivacy(req.params.id, req.userId!);
+    res.json({ 
+      message: `Post is now ${result.isPrivate ? 'private' : 'public'}`,
+      isPrivate: result.isPrivate 
+    });
+  } catch (error: any) {
+    console.error('Toggle privacy error:', error);
+    res.status(500).json({ error: error.message || 'Failed to toggle post privacy' });
+  }
+});
+
 // Reactions endpoints moved to reactions router
 
 router.post('/:id/echo', authenticateToken, async (req: AuthRequest, res: Response) => {
@@ -458,14 +472,28 @@ router.post('/admin/cleanup-blank/:username', authenticateToken, async (req: Aut
   }
 });
 
-// Get trending cordões with mention counts (Twitter-style trending)
-// Only shows cordões from today (00:00 to 23:59)
+// Get trending cordões — last 24 h relative to optional ?date= param (defaults to now)
 router.get('/trending/cordoes', async (req: AuthRequest, res: Response) => {
   try {
     const { trendingService } = await import('../services/trendingService.js');
-    
-    // Get trending cordões only from today
-    const cordoes = await trendingService.getTrendingCordoesForToday();
+
+    const dateParam = req.query.date as string | undefined;
+    let cordoes;
+
+    if (dateParam) {
+      // Parse date and build a 24-h window ending at 23:59:59 of that day,
+      // capped at now so future dates don't return empty results
+      const anchor = new Date(dateParam);
+      if (isNaN(anchor.getTime())) {
+        return res.status(400).json({ error: 'Invalid date parameter' });
+      }
+      anchor.setHours(23, 59, 59, 999);
+      const windowEnd = new Date(Math.min(anchor.getTime(), Date.now()));
+      const windowStart = new Date(windowEnd.getTime() - 24 * 60 * 60 * 1000);
+      cordoes = await trendingService.getTrendingCordoesInTimeRange(windowStart, windowEnd);
+    } else {
+      cordoes = await trendingService.getTrendingCordoesForToday();
+    }
 
     res.json(cordoes);
   } catch (error: any) {

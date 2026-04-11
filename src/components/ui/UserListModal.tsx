@@ -34,7 +34,8 @@ export default function UserListModal({ title, users, currentUser, currentUserFo
                         <div className="space-y-3">
                             {users.map(user => {
                                 const isCurrentUser = user.username === currentUser.username;
-                                const followingSource = currentUserFollowing ?? currentUser.followingList;
+                                // Use currentUserFollowing if provided (even if empty), fallback to currentUser.followingList
+                                const followingSource = currentUserFollowing !== undefined ? currentUserFollowing : currentUser.followingList;
                                 const isFollowing = followingSource?.includes(user.username);
                                 const avatarShape = user.equippedFrame ? getFrameShape(user.equippedFrame.name) : 'rounded-full';
                                 return (

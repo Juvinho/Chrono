@@ -71,10 +71,14 @@ export default function EchoFrame({
     // Removed local timeToRefresh state to prevent re-renders
     // Direct Chat removed from EchoFrame to avoid duplication with Messages module
 
-    // Load trending cordões - can be called multiple times
+    // Load trending cordões - re-fetches when selectedDate changes
     const loadTrendingCordoes = useCallback(async () => {
         try {
-            const response = await apiClient.get('/posts/trending/cordoes');
+            const isToday = selectedDate.toDateString() === new Date().toDateString();
+            const url = isToday
+                ? '/posts/trending/cordoes'
+                : `/posts/trending/cordoes?date=${selectedDate.toISOString().split('T')[0]}`;
+            const response = await apiClient.get(url);
             if (response.data && Array.isArray(response.data)) {
                 console.log('✅ Trending cordões loaded:', response.data);
                 setTrendingCordoes(response.data.slice(0, 10)); // Limit to 10
@@ -84,9 +88,9 @@ export default function EchoFrame({
         } catch (error) {
             console.error("Failed to load trending cordões:", error);
         }
-    }, []);
+    }, [selectedDate]);
 
-    // Initial load of trending cordões
+    // Reload trending cordões when selectedDate changes
     useEffect(() => {
         loadTrendingCordoes();
     }, [loadTrendingCordoes]);

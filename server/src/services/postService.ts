@@ -204,6 +204,21 @@ export class PostService {
     await pool.query('DELETE FROM posts WHERE id = $1', [postId]);
   }
 
+  async togglePostPrivacy(postId: string, authorId: string): Promise<{ isPrivate: boolean }> {
+    const post = await this.getPostById(postId);
+    if (!post || post.authorId !== authorId) {
+      throw new Error('Post not found or unauthorized');
+    }
+    
+    const newPrivacy = !post.isPrivate;
+    await pool.query(
+      'UPDATE posts SET is_private = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [newPrivacy, postId]
+    );
+    
+    return { isPrivate: newPrivacy };
+  }
+
   async getReplies(postId: string, userId?: string): Promise<Post[]> {
     return this.getPosts(userId, { inReplyToId: postId });
   }
