@@ -8,12 +8,13 @@ interface UserListModalProps {
   title: string;
   users: User[];
   currentUser: User;
+  currentUserFollowing?: string[];
   onFollowToggle: (username: string) => void;
   onClose: () => void;
   onViewProfile: (username: string) => void;
 }
 
-export default function UserListModal({ title, users, currentUser, onFollowToggle, onClose, onViewProfile }: UserListModalProps) {
+export default function UserListModal({ title, users, currentUser, currentUserFollowing, onFollowToggle, onClose, onViewProfile }: UserListModalProps) {
     const { t } = useTranslation();
     const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
         if (e.target === e.currentTarget) {
@@ -33,7 +34,8 @@ export default function UserListModal({ title, users, currentUser, onFollowToggl
                         <div className="space-y-3">
                             {users.map(user => {
                                 const isCurrentUser = user.username === currentUser.username;
-                                const isFollowing = currentUser.followingList?.includes(user.username);
+                                const followingSource = currentUserFollowing ?? currentUser.followingList;
+                                const isFollowing = followingSource?.includes(user.username);
                                 const avatarShape = user.equippedFrame ? getFrameShape(user.equippedFrame.name) : 'rounded-full';
                                 return (
                                     <div key={user.username} className="flex items-center justify-between">

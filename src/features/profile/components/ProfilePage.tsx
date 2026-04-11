@@ -75,7 +75,7 @@ export default function ProfilePage({
   const [profilePosts, setProfilePosts] = useState<Post[]>([]);
   const [isLoadingPosts, setIsLoadingPosts] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
-  const [userListModal, setUserListModal] = useState<{title: string, users: User[]} | null>(null);
+  const [userListModal, setUserListModal] = useState<{title: string, users: User[], currentUserFollowing: string[]} | null>(null);
   const [postToEdit, setPostToEdit] = useState<Post | null>(null);
   const [activeTab, setActiveTab] = useState<'posts' | 'media' | 'temporal' | 'professional'>('posts');
 
@@ -131,6 +131,9 @@ export default function ProfilePage({
   }, [profileUser, effectiveFetchedUser, isOwnProfile, foundUser]);
 
   useEffect(() => {
+    // Scroll to top whenever the viewed profile changes
+    window.scrollTo({ top: 0, behavior: 'instant' });
+
     // Reset fetched user and posts when profile username changes
     if (fetchedUser && fetchedUser.username.toLowerCase() !== profileUsername.toLowerCase()) {
         setFetchedUser(null);
@@ -266,8 +269,10 @@ export default function ProfilePage({
   const popularCords = useMemo(() => {
     if (!profileUser) return [];
     const tagCounts: Record<string, number> = {};
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
 
     profilePosts.forEach(post => {
+        if (new Date(post.timestamp).getTime() < cutoff) return;
         const matches = post.content.match(/\$[a-zA-Z0-9_]+/g);
         if (matches) {
             matches.forEach(tag => {
@@ -277,6 +282,7 @@ export default function ProfilePage({
     });
 
     allPosts.forEach(post => {
+        if (new Date(post.timestamp).getTime() < cutoff) return;
         const userReplied = post.replies?.some(reply => reply.author?.username === profileUser.username);
         if (userReplied) {
              const matches = post.content.match(/\$[a-zA-Z0-9_]+/g);
@@ -475,51 +481,47 @@ export default function ProfilePage({
 
   const handleOpenUserList = async (type: 'followers' | 'following') => {
     if (!profileUser) return;
-    
+
     const title = type === 'followers' ? t('profileFollowers') : t('profileFollowing');
     const rawList = type === 'followers' ? profileUser.followersList : profileUser.followingList;
     const count = type === 'followers' ? (profileUser.followers || 0) : (profileUser.following || 0);
 
-    console.log(`[ProfilePage] Request to open ${type}. Count: ${count}. Raw list:`, rawList);
-
-    // 1. If we have a list of objects, use it directly
-    if (Array.isArray(rawList) && rawList.length > 0 && typeof rawList[0] !== 'string') {
-        console.log('[ProfilePage] Using existing full user objects');
-        setUserListModal({ title, users: rawList as unknown as User[] });
-        return;
+    // Fetch current user's live following list from API so the follow button state is accurate
+    let liveFollowingList: string[] = [];
+    if (currentUser) {
+      try {
+        const meRes = await apiClient.getUser(currentUser.username);
+        const following = meRes.data?.followingList;
+        if (Array.isArray(following)) {
+          liveFollowingList = following.map((u: any) =>
+            typeof u === 'string' ? u : u?.username
+          ).filter(Boolean);
+        }
+      } catch {
+        // non-critical; fall through with empty list
+      }
     }
 
-    // 2. If the count is 0, show empty list immediately
+    // If the count is 0, show empty list immediately
     if (count === 0) {
-        setUserListModal({ title, users: [] });
+        setUserListModal({ title, users: [], currentUserFollowing: liveFollowingList });
         return;
     }
 
-    // 3. If we have strings (usernames) and they exist in allUsers, we can try to reconstruct
-    // But for reliability (and to fix the bug), let's fetch the fresh list from API
+    // Fetch the profile user's followers/following list fresh from API
     try {
-        console.log(`[ProfilePage] Fetching fresh details for ${profileUser.username} to populate list...`);
-        // Show a loading indicator if needed, or just wait
         const response = await apiClient.getUser(profileUser.username);
-        
+
         if (response.data) {
             const freshList = type === 'followers' ? response.data.followersList : response.data.followingList;
-            console.log(`[ProfilePage] API returned ${freshList?.length} items for ${type}`);
-            
-            // Map the API response (which might be raw) to User objects if needed, 
-            // but usually apiClient response is already mapped? 
-            // The apiClient returns mapped data from `mappers.ts`.
-            
-            setUserListModal({ title, users: freshList || [] });
+            setUserListModal({ title, users: freshList || [], currentUserFollowing: liveFollowingList });
         } else {
-            console.warn('[ProfilePage] API returned no data');
-            setUserListModal({ title, users: [] });
+            setUserListModal({ title, users: [], currentUserFollowing: liveFollowingList });
         }
     } catch (e) {
         console.error('[ProfilePage] Error fetching user list:', e);
-        // Fallback: try to show what we have (strings) mapped from allUsers
         const fallback = getFullUsersFromList(rawList || []);
-        setUserListModal({ title, users: fallback });
+        setUserListModal({ title, users: fallback, currentUserFollowing: liveFollowingList });
     }
   };
 
@@ -976,7 +978,21 @@ export default function ProfilePage({
             title={userListModal.title}
             users={getFullUsersFromList(userListModal.users)}
             currentUser={currentUser}
-            onFollowToggle={onFollowToggle}
+            currentUserFollowing={userListModal.currentUserFollowing}
+            onFollowToggle={(username) => {
+              // Optimistically update the local following state so the button flips instantly
+              setUserListModal(prev => {
+                if (!prev) return prev;
+                const alreadyFollowing = prev.currentUserFollowing.includes(username);
+                return {
+                  ...prev,
+                  currentUserFollowing: alreadyFollowing
+                    ? prev.currentUserFollowing.filter(u => u !== username)
+                    : [...prev.currentUserFollowing, username],
+                };
+              });
+              onFollowToggle(username);
+            }}
             onClose={() => setUserListModal(null)}
             onViewProfile={(username) => {
               setUserListModal(null);

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, memo } from 'react';
 import { Post, User } from '../../../types/index';
 import { useTranslation } from '../../../hooks/useTranslation';
-import { CameraIcon, PollIcon, CalendarIcon, LockClosedIcon, MicrophoneIcon, ImageIcon, SparklesIcon } from '../../../components/ui/icons';
+import { CameraIcon, PollIcon, CalendarIcon, LockClosedIcon, MicrophoneIcon, ImageIcon, SparklesIcon, HourglassIcon } from '../../../components/ui/icons';
 // Gemini API calls moved to backend for security (C-01)
 // Use POST /api/ai/generate-image instead of generateImage()
 // Use POST /api/ai/analyze-sentiment instead of analyzeSentiment()
@@ -461,17 +461,21 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
                         <CalendarIcon className="w-6 h-6" />
                     </button>
                 </div>
-                <div className="relative group">
-                    <input 
-                        type="datetime-local" 
-                        value={unlockAt} 
-                        onChange={(e) => setUnlockAt(e.target.value)}
-                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
-                    />
-                    <button title="Time Capsule (Unlock Date)" className={`p-2 transition-colors ${unlockAt ? 'text-[var(--theme-primary)]' : 'hover:text-[var(--theme-primary)]'}`}>
-                        <LockClosedIcon className="w-6 h-6"/>
-                    </button>
-                </div>
+                <button
+                    title="Time Capsule (Unlock Date)"
+                    onClick={() => {
+                        if (unlockAt) {
+                            setUnlockAt('');
+                        } else {
+                            // Default: 1 week from now
+                            const d = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+                            setUnlockAt(new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+                        }
+                    }}
+                    className={`p-2 transition-colors ${unlockAt ? 'text-[var(--theme-primary)]' : 'hover:text-[var(--theme-primary)]'}`}
+                >
+                    <HourglassIcon className="w-6 h-6"/>
+                </button>
             </div>
             <div className="flex items-center space-x-4">
                  {isListening && <span className="text-sm text-red-500 animate-pulse">{t('listening')}</span>}

@@ -26,17 +26,43 @@ export default function Timeline({ selectedDate, setSelectedDate, onNavigate, al
     const [scrollLeft, setScrollLeft] = useState(0);
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
-    const today = useMemo(() => new Date(), []);
+    const today = useMemo(() => {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        return d;
+    }, []);
+
+    const isToday = selectedDate.toDateString() === today.toDateString();
+
     const dates = useMemo(() => {
         const dateArray: Date[] = [];
-        // Extend range to show more past/future activity
-        for (let i = -60; i <= 30; i++) {
+        // Base range: 30 days back, 7 days forward — avoids long lists causing scroll instability
+        const rangeStart = -30;
+        const rangeEnd = 7;
+        for (let i = rangeStart; i <= rangeEnd; i++) {
             const date = new Date(today);
             date.setDate(today.getDate() + i);
             dateArray.push(date);
         }
+
+        // If selectedDate falls outside base range, insert it at the correct position
+        const selStr = selectedDate.toDateString();
+        const inRange = dateArray.some(d => d.toDateString() === selStr);
+        if (!inRange) {
+            const selOffset = Math.round(
+                (selectedDate.getTime() - today.getTime()) / 86400000
+            );
+            const insertDate = new Date(today);
+            insertDate.setDate(today.getDate() + selOffset);
+            if (selOffset < rangeStart) {
+                dateArray.unshift(insertDate);
+            } else {
+                dateArray.push(insertDate);
+            }
+        }
+
         return dateArray;
-    }, [today]);
+    }, [today, selectedDate]);
 
     const postsByDate = useMemo(() => {
         const map = new Map<string, User[]>();
@@ -108,13 +134,25 @@ export default function Timeline({ selectedDate, setSelectedDate, onNavigate, al
 
     return (
         <div className="h-24 bg-[var(--theme-bg-primary)] border-t-2 border-[var(--theme-border-primary)] z-10 flex items-center justify-center p-2 flex-shrink-0 relative">
-            <button
-                onClick={() => setIsCalendarOpen(true)}
-                className="absolute left-4 top-1/2 -translate-y-1/2 z-30 p-3 bg-[var(--theme-bg-primary)] text-[var(--theme-primary)] border-2 border-[var(--theme-primary)] rounded-full hover:bg-[var(--theme-primary)] hover:text-[var(--theme-bg-primary)] transition-all shadow-lg hover:shadow-[0_0_15px_var(--theme-primary)]"
-                title={t('dateJump')}
-            >
-                <CalendarIcon className="w-6 h-6" />
-            </button>
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 z-30 flex items-center gap-2">
+                <button
+                    onClick={() => setIsCalendarOpen(true)}
+                    className="p-3 bg-[var(--theme-bg-primary)] text-[var(--theme-primary)] border-2 border-[var(--theme-primary)] rounded-full hover:bg-[var(--theme-primary)] hover:text-[var(--theme-bg-primary)] transition-all shadow-lg hover:shadow-[0_0_15px_var(--theme-primary)]"
+                    title={t('dateJump')}
+                >
+                    <CalendarIcon className="w-6 h-6" />
+                </button>
+
+                {!isToday && (
+                    <button
+                        onClick={() => setSelectedDate(new Date())}
+                        className="px-3 py-1.5 text-xs font-bold bg-[var(--theme-primary)] text-white rounded-full shadow-lg hover:opacity-90 transition-opacity whitespace-nowrap"
+                        title="Voltar para hoje"
+                    >
+                        Hoje
+                    </button>
+                )}
+            </div>
 
             <div
                 ref={timelineRef}

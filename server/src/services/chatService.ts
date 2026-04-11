@@ -74,7 +74,7 @@ export class ChatService {
   async getConversationById(conversationId: string) {
     try {
       const result = await pool.query(
-        `SELECT id, user1_id, user2_id, created_at, updated_at FROM conversations WHERE id = $1`,
+        `SELECT id, user1_id, user2_id, created_at, updated_at FROM conversations WHERE id = $1::uuid`,
         [conversationId]
       );
       return result.rows[0] || null;
@@ -402,9 +402,9 @@ export class ChatService {
   async markAsRead(conversationId: string, userId: string): Promise<void> {
     try {
       await pool.query(
-        `UPDATE messages 
-         SET is_read = true 
-         WHERE conversation_id = $1 AND sender_id != $2`,
+        `UPDATE messages
+         SET is_read = true
+         WHERE conversation_id = $1::uuid AND sender_id != $2::uuid`,
         [conversationId, userId]
       );
     } catch (error: any) {

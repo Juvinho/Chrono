@@ -82,21 +82,43 @@ export class SearchService {
   }
 
   /**
-   * Busca por cordão específico (ex: $ossodemais)
+   * Busca por cordão com algoritmo de prefixo/substring relevante.
+   * Ex: "$osso" encontra $ossodemais (prefixo) e $meuosso (substring).
+   * Ordem: prefixo exato > outros prefixos > substring > popularidade.
    */
   static searchCordoes(term: string, allPosts: Post[]): Post[] {
     if (!term.startsWith('$')) return [];
 
-    // Sanitizar termo para regex seguro
-    const sanitized = this.sanitizeSearchTerm(term.substring(1));
-    const pattern = new RegExp(`\\$${sanitized}\\b`, 'i');
-    return allPosts.filter(p => {
-      try {
-        return pattern.test(p.content);
-      } catch {
-        return false; // Se regex falhar, excluir post
-      }
-    });
+    const query = term.substring(1).toLowerCase();
+    if (!query) return [];
+
+    // Extract all cords from a post's content
+    const getCords = (content: string) =>
+      (content.match(/\$[A-Za-z0-9_]+/g) || []).map(t => t.substring(1).toLowerCase());
+
+    const exactMatches: Post[] = [];
+    const prefixMatches: Post[] = [];
+    const substringMatches: Post[] = [];
+    const seen = new Set<string>();
+
+    for (const post of allPosts) {
+      const cords = getCords(post.content);
+      const isExact    = cords.some(c => c === query);
+      const isPrefix   = !isExact && cords.some(c => c.startsWith(query));
+      const isSubstr   = !isExact && !isPrefix && cords.some(c => c.includes(query));
+
+      if (isExact)   { exactMatches.push(post);    seen.add(post.id); }
+      else if (isPrefix)   { prefixMatches.push(post);  seen.add(post.id); }
+      else if (isSubstr)   { substringMatches.push(post); seen.add(post.id); }
+    }
+
+    const byPopularity = (a: Post, b: Post) => this.getPopularity(b) - this.getPopularity(a);
+
+    return [
+      ...exactMatches.sort(byPopularity),
+      ...prefixMatches.sort(byPopularity),
+      ...substringMatches.sort(byPopularity),
+    ];
   }
 
   /**

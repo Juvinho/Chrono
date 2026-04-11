@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { Message } from '../types';
-import { formatMessageTime } from '../utils/formatTimestamp';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { ImageViewer } from '../../../components/ImageViewer';
 
@@ -9,11 +8,26 @@ interface MessageListProps {
   messages: Message[];
 }
 
+function formatDateSeparator(date: Date): string {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today.getTime() - 86400000);
+  const msgDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+  if (msgDay.getTime() === today.getTime()) return 'Hoje';
+  if (msgDay.getTime() === yesterday.getTime()) return 'Ontem';
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+
+function formatTime(dateStr: string): string {
+  const d = new Date(dateStr);
+  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
 export const MessageList: React.FC<MessageListProps> = ({ messages }) => {
   const { user: currentUser } = useAuth();
   const { t } = useTranslation();
-  
-  // Guard against invalid state
+
   if (!currentUser) {
     return (
       <div className="messages-empty">
@@ -30,23 +44,65 @@ export const MessageList: React.FC<MessageListProps> = ({ messages }) => {
     );
   }
 
-  const messageElements = useMemo(() => {
-    return messages.map((message) => {
-      const isMine = String(message.sender.id) === String(currentUser.id);
-      
-      return (
-        <MessageBubble
-          key={message.id}
-          message={message}
-          isMine={isMine}
-        />
-      );
-    });
+  // Build enriched message list with grouping + date separators
+  const items = useMemo(() => {
+    type Item =
+      | { kind: 'separator'; label: string; key: string }
+      | { kind: 'message'; message: Message; isMine: boolean; isFirst: boolean; isLast: boolean };
+
+    const result: Item[] = [];
+    let lastDayKey = '';
+
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+      const sentAt = new Date(msg.sentAt);
+      const dayKey = `${sentAt.getFullYear()}-${sentAt.getMonth()}-${sentAt.getDate()}`;
+
+      if (dayKey !== lastDayKey) {
+        result.push({ kind: 'separator', label: formatDateSeparator(sentAt), key: `sep-${dayKey}` });
+        lastDayKey = dayKey;
+      }
+
+      const isMine = String(msg.sender.id) === String(currentUser.id);
+      const prevMsg = messages[i - 1];
+      const nextMsg = messages[i + 1];
+
+      const isFirst =
+        !prevMsg ||
+        String(prevMsg.sender.id) !== String(msg.sender.id) ||
+        new Date(msg.sentAt).getTime() - new Date(prevMsg.sentAt).getTime() > 5 * 60 * 1000;
+
+      const isLast =
+        !nextMsg ||
+        String(nextMsg.sender.id) !== String(msg.sender.id) ||
+        new Date(nextMsg.sentAt).getTime() - new Date(msg.sentAt).getTime() > 5 * 60 * 1000;
+
+      result.push({ kind: 'message', message: msg, isMine, isFirst, isLast });
+    }
+
+    return result;
   }, [messages, currentUser.id]);
 
   return (
     <div className="message-list">
-      {messageElements}
+      {items.map((item) => {
+        if (item.kind === 'separator') {
+          return (
+            <div key={item.key} className="message-date-separator">
+              <span>{item.label}</span>
+            </div>
+          );
+        }
+        return (
+          <MessageBubble
+            key={item.message.id}
+            message={item.message}
+            isMine={item.isMine}
+            isFirst={item.isFirst}
+            isLast={item.isLast}
+          />
+        );
+      })}
     </div>
   );
 };
@@ -54,48 +110,64 @@ export const MessageList: React.FC<MessageListProps> = ({ messages }) => {
 interface MessageBubbleProps {
   message: Message;
   isMine: boolean;
+  isFirst: boolean;
+  isLast: boolean;
 }
 
-const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isMine }) => {
-  const { t } = useTranslation();
+const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isMine, isFirst, isLast }) => {
   const [showImageViewer, setShowImageViewer] = useState(false);
-  
+
+  const bubbleClass = [
+    'message-bubble',
+    isMine ? 'mine' : 'theirs',
+    isFirst ? 'first' : '',
+    isLast ? 'last' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const itemClass = ['message-item', isMine ? 'mine' : 'theirs', isLast ? '' : 'grouped']
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <>
-      <div className={`message-item ${isMine ? 'mine' : 'theirs'}`}>
-        <div className="message-bubble">
+      <div className={itemClass}>
+        <div className={bubbleClass}>
           {message.imageUrl && (
-            <div style={{ marginBottom: message.content ? '8px' : '0' }}>
+            <div style={{ marginBottom: message.content ? '6px' : 0 }}>
               <img
                 src={message.imageUrl}
-                alt="Message"
+                alt="Imagem"
                 width={200}
                 height={200}
                 onClick={() => setShowImageViewer(true)}
                 style={{
                   maxWidth: '200px',
-                  borderRadius: '8px',
+                  borderRadius: '10px',
                   display: 'block',
                   cursor: 'pointer',
                   transition: 'opacity 0.2s',
                 }}
-                onMouseEnter={e => (e.currentTarget.style.opacity = '0.8')}
-                onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.8')}
+                onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
               />
             </div>
           )}
           {message.content && (
-            <div className="message-content">
-              {message.content}
-            </div>
+            <div className="message-content">{message.content}</div>
           )}
-          <div className="message-time">
-            {formatMessageTime(message.sentAt)}
-            {isMine && message.isRead && <span className="read-indicator"> · {t('seen')}</span>}
+          <div className="message-meta">
+            <span className="message-time">{formatTime(message.sentAt)}</span>
+            {isMine && (
+              <span className={`read-tick ${message.isRead ? 'read' : ''}`}>
+                {message.isRead ? '✓✓' : '✓'}
+              </span>
+            )}
           </div>
         </div>
       </div>
-      
+
       {message.imageUrl && (
         <ImageViewer
           isOpen={showImageViewer}

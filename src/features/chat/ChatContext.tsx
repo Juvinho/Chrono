@@ -263,7 +263,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
       return () => {
-        socket.emit('leave_conversation', activeConversation.id);
+        socketRef.current?.emit('leave_conversation', activeConversation.id);
       };
     }
   }, [activeConversation, socket]);
