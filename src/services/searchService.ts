@@ -179,8 +179,13 @@ export class SearchService {
       const resultados = this.searchPosts(term, allPosts);
       console.log(`[Search] Post matches (${term}):`, resultados.length);
 
+      // Filtra cordões garantindo que o nome da tag contém o termo (case-insensitive)
       cordoes = resultados
         .filter(p => p.isThread || this.hasCordaoTag(p))
+        .filter(p => {
+          const tags = this.extractCordoes(p.content);
+          return tags.some(tag => tag.toLowerCase().includes(term.toLowerCase()));
+        })
         .sort((a, b) => this.getPopularity(b) - this.getPopularity(a));
 
       posts = resultados
