@@ -800,11 +800,12 @@ export default function ProfilePage({
             </div>
           </div>
           
-          <div className="mt-4 px-4 pb-8 max-w-7xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-[35%_1fr] gap-6">
+          <div className="mt-4 px-4 md:px-8 pb-8 w-full mx-auto">
+            <div className="max-w-4xl mx-auto w-full overflow-hidden">
+              <div className="grid grid-cols-1 lg:grid-cols-[35fr_65fr] gap-4 lg:gap-6 w-full overflow-hidden"  style={{ boxSizing: 'border-box' }}>
                 {/* Left Column: Melhores Posts */}
-                <div className="hidden lg:block space-y-4">
-                    <div className="bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] rounded-lg p-4">
+                <div className="hidden lg:block space-y-4 w-full min-w-0">
+                    <div className="bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] rounded-lg p-4 w-full overflow-hidden">
                         <h3 className="font-bold text-[var(--theme-text-light)] mb-3 border-b border-[var(--theme-border-primary)] pb-2 flex items-center">
                             <span className="mr-2">⚡</span> {t('bestPosts') || "Melhores Posts"}
                         </h3>
@@ -814,11 +815,11 @@ export default function ProfilePage({
                                     const totalReactions = Object.values(post.reactions || {}).reduce((sum, count) => sum + (count || 0), 0);
                                     const totalEngagement = (post.likes || 0) + totalReactions + (post.reposts || 0);
                                     return (
-                                        <div key={post.id} className="text-sm cursor-pointer hover:bg-[var(--theme-bg-tertiary)] p-3 rounded transition-colors border border-[var(--theme-border-primary)]" onClick={() => onNavigate(Page.Profile, post.author.username)}>
-                                            <p className="line-clamp-2 text-[var(--theme-text-primary)] text-xs mb-1 font-mono">{post.content}</p>
-                                            <div className="flex items-center text-xs text-[var(--theme-text-secondary)]">
+                                        <div key={post.id} className="text-sm cursor-pointer hover:bg-[var(--theme-bg-tertiary)] p-3 rounded transition-colors border border-[var(--theme-border-primary)] w-full overflow-hidden overflow-wrap break-word" onClick={() => onNavigate(Page.Profile, post.author.username)}>
+                                            <p className="line-clamp-2 text-[var(--theme-text-primary)] text-xs mb-1 font-mono overflow-wrap break-word">{post.content}</p>
+                                            <div className="flex items-center text-xs text-[var(--theme-text-secondary)] overflow-hidden overflow-wrap break-word">
                                                 <span className="mr-2">❤️ {totalEngagement}</span>
-                                                <span className="text-[var(--theme-primary)] font-bold">@{post.author.username}</span>
+                                                <span className="text-[var(--theme-primary)] font-bold truncate">@{post.author.username}</span>
                                             </div>
                                         </div>
                                     );
@@ -833,9 +834,9 @@ export default function ProfilePage({
                 </div>
 
                 {/* Right Column: Feed Atual */}
-                <div className="space-y-4">
+                <div className="space-y-4 w-full min-w-0 overflow-hidden">
                     {/* Tabs */}
-                    <div className="flex border-b border-[var(--theme-border-primary)] mb-4 bg-[var(--theme-bg-secondary)] rounded-t-lg overflow-hidden">
+                    <div className="flex border-b border-[var(--theme-border-primary)] mb-4 bg-[var(--theme-bg-secondary)] rounded-t-lg overflow-hidden w-full"  style={{ boxSizing: 'border-box' }}>
                         <button 
                             className={`flex-1 py-3 text-center font-bold transition-colors ${activeTab === 'posts' ? 'bg-[var(--theme-bg-tertiary)] text-[var(--theme-primary)] border-b-2 border-[var(--theme-primary)]' : 'text-[var(--theme-text-secondary)] hover:bg-[var(--theme-bg-tertiary)]'}`}
                             onClick={() => handleTabChange('posts')}
@@ -915,7 +916,7 @@ export default function ProfilePage({
                         </div>
                     ) : canViewPosts ? (
                         filteredPosts.length > 0 ? (
-                            <>
+                            <div className="w-full overflow-hidden">
                                 {filteredPosts.slice(0, visiblePostsCount).map(post => <PostCard 
                                 key={post.id} 
                                 post={post} 
@@ -941,7 +942,7 @@ export default function ProfilePage({
                                         </button>
                                     </div>
                                 )}
-                            </>
+                            </div>
                         ) : (
                             <div className="text-center text-[var(--theme-text-secondary)] p-10 border border-dashed border-[var(--theme-border-primary)]">
                                 <p className="text-lg">{activeTab === 'temporal' ? t('noEchoesFoundDate') : t('noPostsYet')}</p>
@@ -953,6 +954,7 @@ export default function ProfilePage({
                         </div>
                     )}
                 </div>
+              </div>
             </div>
           </div>
         </div>
