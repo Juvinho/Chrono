@@ -269,10 +269,21 @@ export default function ProfilePage({
   const popularCords = useMemo(() => {
     if (!profileUser) return [];
     const tagCounts: Record<string, number> = {};
-    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+
+    // Window: 24 h ending at selectedDate (or now if selectedDate is today/future)
+    const anchor = selectedDate instanceof Date && !isNaN(selectedDate.getTime())
+      ? selectedDate.getTime()
+      : Date.now();
+    const windowEnd   = Math.min(anchor, Date.now());
+    const windowStart = windowEnd - 24 * 60 * 60 * 1000;
+
+    const inWindow = (ts: Date | string | number) => {
+      const t = new Date(ts).getTime();
+      return t >= windowStart && t <= windowEnd;
+    };
 
     profilePosts.forEach(post => {
-        if (new Date(post.timestamp).getTime() < cutoff) return;
+        if (!inWindow(post.timestamp)) return;
         const matches = post.content.match(/\$[a-zA-Z0-9_]+/g);
         if (matches) {
             matches.forEach(tag => {
@@ -282,7 +293,7 @@ export default function ProfilePage({
     });
 
     allPosts.forEach(post => {
-        if (new Date(post.timestamp).getTime() < cutoff) return;
+        if (!inWindow(post.timestamp)) return;
         const userReplied = post.replies?.some(reply => reply.author?.username === profileUser.username);
         if (userReplied) {
              const matches = post.content.match(/\$[a-zA-Z0-9_]+/g);
@@ -298,7 +309,7 @@ export default function ProfilePage({
         .sort(([, countA], [, countB]) => countB - countA)
         .slice(0, 5)
         .map(([tag]) => ({ id: tag, content: tag, replies: [], reactions: {}, timestamp: new Date(), author: { username: '', avatar: '' } as User }));
-  }, [profilePosts, allPosts, profileUser?.username]);
+  }, [profilePosts, allPosts, profileUser?.username, selectedDate]);
 
   if (!profileUser) {
       if (isLoadingUser) {
@@ -823,7 +834,9 @@ export default function ProfilePage({
                                     </div>
                                 ))
                             ) : (
-                                <p className="text-sm text-[var(--theme-text-secondary)]">{t('noPostsYet')}</p>
+                                <p className="text-sm text-[var(--theme-text-secondary)]">
+                                    {t('noCordsInPeriod') || 'Nenhum cordão em destaque neste período'}
+                                </p>
                             )}
                         </div>
                     </div>

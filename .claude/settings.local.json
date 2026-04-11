@@ -3,7 +3,8 @@
     "allow": [
       "Bash(npx tsc:*)",
       "Bash(xargs ls:*)",
-      "Bash(echo \"FRONTEND_EXIT:$?\")"
+      "Bash(echo \"FRONTEND_EXIT:$?\")",
+      "Bash(npm install:*)"
     ]
   }
 }
