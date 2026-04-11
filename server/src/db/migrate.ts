@@ -124,9 +124,10 @@ export async function migrate(retries = 3) {
         try {
           await pool.query(statement);
         } catch (err: any) {
-          // Ignore errors for IF NOT EXISTS statements
-          if (!err.message?.includes('already exists') && !err.message?.includes('does not exist')) {
-            console.warn(`⚠️  Query ${i + 1} warning:`, err.message?.substring(0, 100));
+          // Ignore errors for IF NOT EXISTS / already exists statements and SSL warnings
+          const msg = err.message || '';
+          if (!msg.includes('already exists') && !msg.includes('does not exist') && !msg.includes('self-signed')) {
+            console.warn(`Schema warning (query ${i + 1}):`, msg.substring(0, 100));
           }
         }
       }
@@ -136,11 +137,18 @@ export async function migrate(retries = 3) {
       const migrationsDir = join(__dirname, 'migrations');
       try {
           const migrationFiles = readdirSync(migrationsDir).filter(f => f.endsWith('.sql')).sort();
-          
+
           for (const file of migrationFiles) {
               const migrationContent = readFileSync(join(migrationsDir, file), 'utf-8');
               console.log(`Applying migration: ${file}`);
-              await pool.query(migrationContent);
+              try {
+                  await pool.query(migrationContent);
+              } catch (migErr: any) {
+                  // Ignore "already exists" errors — migration is idempotent
+                  if (!migErr.message?.includes('already exists') && !migErr.message?.includes('does not exist')) {
+                      console.warn(`Migration warning (${file}):`, migErr.message?.substring(0, 120));
+                  }
+              }
           }
       } catch (e) {
           console.log('No additional migrations folder found or empty.');
