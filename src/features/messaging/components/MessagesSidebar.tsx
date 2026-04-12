@@ -202,13 +202,15 @@ export function MessagesSidebar() {
       <style>{`
         .messages-window {
           position: fixed;
-          top: 82px;
+          --timeline-safe-offset: 96px;
+          --header-safe-offset: 74px;
+          top: auto;
           right: 20px;
-          bottom: auto;
+          bottom: calc(var(--timeline-safe-offset) + env(safe-area-inset-bottom, 0px));
           width: min(960px, calc(100vw - 40px));
-          height: min(74vh, 760px);
-          min-height: 460px;
-          max-height: calc(100vh - 98px);
+          height: clamp(420px, 58vh, 620px);
+          min-height: 420px;
+          max-height: calc(100vh - var(--header-safe-offset) - var(--timeline-safe-offset));
           background: var(--theme-bg-primary);
           border: 1px solid var(--theme-border-primary);
           border-radius: 18px;
@@ -430,10 +432,13 @@ export function MessagesSidebar() {
 
         @media (max-width: 980px) {
           .messages-window {
-            top: 76px;
+            --timeline-safe-offset: 96px;
+            --header-safe-offset: 68px;
             width: min(860px, calc(100vw - 24px));
             right: 12px;
-            max-height: calc(100vh - 88px);
+            bottom: calc(var(--timeline-safe-offset) + env(safe-area-inset-bottom, 0px));
+            height: clamp(400px, 56vh, 580px);
+            max-height: calc(100vh - var(--header-safe-offset) - var(--timeline-safe-offset));
           }
 
           .messages-window-list-panel {
