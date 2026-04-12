@@ -699,7 +699,7 @@ export default function ProfilePage({
   }
 
   return (
-    <div className="h-screen w-screen flex flex-col">
+    <div className="h-screen w-screen flex flex-col overflow-hidden">
       <Header 
           user={currentUser} 
           onLogout={onLogout} 
@@ -716,8 +716,8 @@ export default function ProfilePage({
           onBack={onBack}
           lastViewedNotifications={lastViewedNotifications}
       />
-      <main className="flex-grow overflow-y-auto overflow-x-hidden">
-        <div className={`max-w-4xl mx-auto ${borderRadius === 'none' ? '' : 'my-4'} animate-fade-in`}>
+      <main className="flex-1 overflow-y-auto overflow-x-hidden w-full">
+        <div className={`max-w-4xl mx-auto w-full px-4 md:px-0 ${borderRadius === 'none' ? '' : 'my-4'} animate-fade-in`}>
           <div className={`relative ${getRadiusClass('container')} shadow-lg`}>
             <div className={`relative h-48 md:h-64 w-full overflow-hidden ${getRadiusClass('container')}`} key={`cover-${imageCacheBuster}`}>
                 <Avatar 
@@ -940,9 +940,9 @@ export default function ProfilePage({
             </div>
           </div>
           
-          <div className="mt-4 px-4 md:px-8 pb-8 w-full mx-auto max-w-4xl overflow-x-hidden" style={{ boxSizing: 'border-box' }}>
-            <div className="max-w-4xl mx-auto w-full overflow-hidden" style={{ boxSizing: 'border-box' }}>
-              <div className="grid grid-cols-1 lg:grid-cols-[35fr_65fr] gap-4 lg:gap-6 w-full overflow-hidden"  style={{ boxSizing: 'border-box' }}>
+          <div className="mt-4 px-4 md:px-8 pb-8 w-full mx-auto max-w-4xl overflow-x-hidden overflow-y-visible" style={{ boxSizing: 'border-box' }}>
+            <div className="w-full overflow-hidden" style={{ boxSizing: 'border-box' }}>
+              <div className="grid grid-cols-1 lg:grid-cols-[35fr_65fr] gap-4 lg:gap-6 w-full overflow-visible"  style={{ boxSizing: 'border-box' }}>
                 {/* Left Column: Melhores Posts */}
                 <div className="hidden lg:block space-y-4 w-full min-w-0">
                     <div className="bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] rounded-lg p-4 w-full overflow-hidden">
@@ -1100,7 +1100,9 @@ export default function ProfilePage({
         </div>
       </main>
       {/* FIX: Pass allPosts to Timeline component */}
-      <Timeline selectedDate={selectedDate} setSelectedDate={setSelectedDate} onNavigate={onNavigate} allPosts={allPosts} />
+      <div className="flex-shrink-0 w-full overflow-x-hidden">
+        <Timeline selectedDate={selectedDate} setSelectedDate={setSelectedDate} onNavigate={onNavigate} allPosts={allPosts} />
+      </div>
       
       {/* Modal de Detalhes do Post (Legacy: Se ainda usado via state interno) */}
       {/* Agora preferimos usar a rota /post/:id */}
