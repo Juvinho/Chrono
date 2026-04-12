@@ -116,6 +116,93 @@ const registerEchoSpamAttempt = (postId: string): number => {
     return next.count;
 };
 
+const upsertPostInCollection = (collection: Post[], incoming: Post): Post[] => {
+    const existingIndex = collection.findIndex((post) => post.id === incoming.id);
+    if (existingIndex === -1) {
+        return [incoming, ...collection];
+    }
+
+    const next = [...collection];
+    next[existingIndex] = incoming;
+    return next;
+};
+
+const replacePostInCollection = (collection: Post[], incoming: Post): Post[] => {
+    let changed = false;
+
+    const next = collection.map((post) => {
+        if (post.id === incoming.id) {
+            changed = true;
+            return incoming;
+        }
+
+        if (post.replies && post.replies.length > 0) {
+            const updatedReplies = replacePostInCollection(post.replies, incoming);
+            if (updatedReplies !== post.replies) {
+                changed = true;
+                return { ...post, replies: updatedReplies };
+            }
+        }
+
+        return post;
+    });
+
+    return changed ? next : collection;
+};
+
+const patchPostInCollection = (
+    collection: Post[],
+    postId: string,
+    patch: Partial<Post>
+): Post[] => {
+    let changed = false;
+
+    const next = collection.map((post) => {
+        let updatedPost = post;
+
+        if (post.id === postId) {
+            changed = true;
+            updatedPost = { ...post, ...patch };
+        }
+
+        if (updatedPost.replies && updatedPost.replies.length > 0) {
+            const updatedReplies = patchPostInCollection(updatedPost.replies, postId, patch);
+            if (updatedReplies !== updatedPost.replies) {
+                changed = true;
+                updatedPost = { ...updatedPost, replies: updatedReplies };
+            }
+        }
+
+        return updatedPost;
+    });
+
+    return changed ? next : collection;
+};
+
+const removePostFromCollection = (collection: Post[], postId: string): Post[] => {
+    let changed = false;
+
+    const filtered = collection
+        .filter((post) => {
+            const keep = post.id !== postId;
+            if (!keep) changed = true;
+            return keep;
+        })
+        .map((post) => {
+            if (post.replies && post.replies.length > 0) {
+                const updatedReplies = removePostFromCollection(post.replies, postId);
+                if (updatedReplies !== post.replies) {
+                    changed = true;
+                    return { ...post, replies: updatedReplies };
+                }
+            }
+
+            return post;
+        });
+
+    return changed ? filtered : collection;
+};
+
 function App() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -151,9 +238,6 @@ function App() {
     useEffect(() => {
       cleanupLocalStorage();
     }, []);
-
-    // ✅ Inicializar WebSocket para posts em tempo real (ou stub se não disponível)
-    useRealtimeFeed();
 
     // 3. Other Local State
     const [isMarketplaceOpen, setIsMarketplaceOpen] = useState(false);
@@ -392,6 +476,8 @@ function App() {
             if (parentPostResult.data) {
                 const mappedParentPost = mapApiPostToPost(parentPostResult.data);
                 setPosts(prev => prev.map(p => p.id === parentPostId ? mappedParentPost : p));
+                setDisplayedPosts(prev => prev.map(p => p.id === parentPostId ? mappedParentPost : p));
+                setPendingPosts(prev => prev.map(p => p.id === parentPostId ? mappedParentPost : p));
             }
         } catch (error) {
             console.error("Failed to reply via API:", error);
@@ -414,6 +500,62 @@ function App() {
     const handleOpenChat = () => {
         navigate('/messages');
     };
+
+    const handleRealtimePostAdded = useCallback((socketPost: any) => {
+        try {
+            const mappedPost = mapApiPostToPost(socketPost);
+            if (!mappedPost?.id) return;
+
+            setPosts((prev) => upsertPostInCollection(prev, mappedPost));
+
+            if (isSameDay(selectedDate, new Date())) {
+                setDisplayedPosts((prev) => upsertPostInCollection(prev, mappedPost));
+                setNewPostIds((prev) => new Set([...prev, mappedPost.id]));
+                window.setTimeout(() => {
+                    setNewPostIds((prev) => {
+                        const updated = new Set(prev);
+                        updated.delete(mappedPost.id);
+                        return updated;
+                    });
+                }, 3000);
+            }
+        } catch (error) {
+            console.error('Failed to process realtime post_added event:', error);
+        }
+    }, [selectedDate]);
+
+    const handleRealtimePostUpdated = useCallback((socketPost: any) => {
+        try {
+            const mappedPost = mapApiPostToPost(socketPost);
+            if (!mappedPost?.id) return;
+
+            setPosts((prev) => replacePostInCollection(prev, mappedPost));
+            setDisplayedPosts((prev) => replacePostInCollection(prev, mappedPost));
+            setPendingPosts((prev) => replacePostInCollection(prev, mappedPost));
+        } catch (error) {
+            console.error('Failed to process realtime post_updated event:', error);
+        }
+    }, []);
+
+    const handleRealtimePostDeleted = useCallback((payload: { id?: string } | string) => {
+        const postId = typeof payload === 'string' ? payload : payload?.id;
+        if (!postId) return;
+
+        setPosts((prev) => removePostFromCollection(prev, postId));
+        setDisplayedPosts((prev) => removePostFromCollection(prev, postId));
+        setPendingPosts((prev) => removePostFromCollection(prev, postId));
+        setNewPostIds((prev) => {
+            const updated = new Set(prev);
+            updated.delete(postId);
+            return updated;
+        });
+    }, []);
+
+    useRealtimeFeed({
+        onPostAdded: handleRealtimePostAdded,
+        onPostUpdated: handleRealtimePostUpdated,
+        onPostDeleted: handleRealtimePostDeleted,
+    });
 
     const simulateUserPostInteraction = (post: Post) => {
         // 🚫 DESABILITADO - Não simular mais interações IA
@@ -492,12 +634,13 @@ function App() {
         // 🎨 Adicionar direto em displayedPosts para aparecer sem F5
         console.log('[handleNewPost] ✨ Adicionando post com animação glitch');
         setDisplayedPosts(prev => {
-            console.log('[handleNewPost] Posts antes:', prev.length, 'Posts depois:', prev.length + 1);
-            return [post, ...prev];
+            const next = upsertPostInCollection(prev, post);
+            console.log('[handleNewPost] Posts antes:', prev.length, 'Posts depois:', next.length);
+            return next;
         });
         
         // Também adicionar em posts para manter sincronizado
-        setPosts(prev => [post, ...prev]);
+        setPosts(prev => upsertPostInCollection(prev, post));
         
         // Mark post as new for glitch animation
         setNewPostIds(prev => new Set([...prev, post.id]));
@@ -527,7 +670,17 @@ function App() {
                 if (reactor.username === currentUser?.username) showToast(result.error, 'error');
                 return;
             }
-            await reloadBackendData();
+
+            if (result.data?.reactions) {
+                const patch: Partial<Post> = {
+                    reactions: result.data.reactions,
+                    userReaction: result.data.userReaction || undefined,
+                };
+
+                setPosts((prev) => patchPostInCollection(prev, postId, patch));
+                setDisplayedPosts((prev) => patchPostInCollection(prev, postId, patch));
+                setPendingPosts((prev) => patchPostInCollection(prev, postId, patch));
+            }
         } catch (error) {
             console.error("Failed to update reaction via API:", error);
             if (reactor.username === currentUser?.username) showToast('Falha ao reagir ao post.', 'error');
@@ -595,7 +748,11 @@ function App() {
                 playSound('notification');
                 showToast('Post ecoado! 🔊', 'success');
             }
-            await reloadBackendData();
+
+            if (result.data) {
+                const mappedPost = mapApiPostToPost(result.data);
+                handleNewPost(mappedPost);
+            }
         } catch (error: any) {
             console.error("Failed to echo post via API:", error);
             const errorMsg = error?.message || 'Falha ao ecoar post.';
@@ -614,7 +771,14 @@ function App() {
                 return;
             }
             showToast('Post deletado.', 'info');
-            await reloadBackendData();
+            setPosts((prev) => removePostFromCollection(prev, postIdToDelete));
+            setDisplayedPosts((prev) => removePostFromCollection(prev, postIdToDelete));
+            setPendingPosts((prev) => removePostFromCollection(prev, postIdToDelete));
+            setNewPostIds((prev) => {
+                const updated = new Set(prev);
+                updated.delete(postIdToDelete);
+                return updated;
+            });
         } catch (error) {
             console.error("Failed to delete post via API:", error);
             showToast('Falha ao deletar post.', 'error');
@@ -644,7 +808,13 @@ function App() {
              }
              
              showToast('Post atualizado.', 'success');
-             await reloadBackendData();
+
+             if (result.data) {
+                 const mappedPost = mapApiPostToPost(result.data);
+                 setPosts((prev) => replacePostInCollection(prev, mappedPost));
+                 setDisplayedPosts((prev) => replacePostInCollection(prev, mappedPost));
+                 setPendingPosts((prev) => replacePostInCollection(prev, mappedPost));
+             }
          } catch (error) {
              console.error("Failed to update post via API:", error);
              showToast('Falha ao atualizar post.', 'error');
@@ -660,7 +830,13 @@ function App() {
                 console.error("Failed to vote via API:", result.error);
                 return;
             }
-            await reloadBackendData();
+
+            if (result.data) {
+                const mappedPost = mapApiPostToPost(result.data);
+                setPosts((prev) => replacePostInCollection(prev, mappedPost));
+                setDisplayedPosts((prev) => replacePostInCollection(prev, mappedPost));
+                setPendingPosts((prev) => replacePostInCollection(prev, mappedPost));
+            }
         } catch (error) {
             console.error("Failed to vote via API:", error);
         }

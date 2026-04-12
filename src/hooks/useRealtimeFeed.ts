@@ -1,20 +1,20 @@
 // Real-time feed updates via Socket.io WebSocket connection
 import { useEffect, useRef } from 'react';
-import { Post } from '../types/index';
 import { getSocket } from '../services/socketService';
 import { Socket } from 'socket.io-client';
 
-let onNewPost: ((post: Post) => void) | null = null;
+type RealtimeFeedHandlers = {
+  onPostAdded?: (post: any) => void;
+  onPostUpdated?: (post: any) => void;
+  onPostDeleted?: (payload: { id?: string } | string) => void;
+};
 
-export function setOnNewPostCallback(callback: (post: Post) => void) {
-  onNewPost = callback;
-}
-
-export function useRealtimeFeed(onPost?: (post: Post) => void) {
+export function useRealtimeFeed(handlers: RealtimeFeedHandlers = {}) {
   const socketRef = useRef<Socket | null>(null);
+  const { onPostAdded, onPostUpdated, onPostDeleted } = handlers;
 
   useEffect(() => {
-    if (!onPost && !onNewPost) {
+    if (!onPostAdded && !onPostUpdated && !onPostDeleted) {
       console.log('[useRealtimeFeed] No callback provided');
       return;
     }
@@ -24,41 +24,39 @@ export function useRealtimeFeed(onPost?: (post: Post) => void) {
       socketRef.current = socket;
 
       // Listen for new posts broadcast to all connected clients
-      const handleNewPost = (post: Post) => {
+      const handleNewPost = (post: any) => {
         console.log('📨 New post received via WebSocket:', post.id);
-        
-        // Call the provided callback first
-        if (onPost) {
-          onPost(post);
-        }
-        
-        // Also call the legacy callback if set
-        if (onNewPost) {
-          onNewPost(post);
-        }
+        onPostAdded?.(post);
       };
 
       socket.on('post_added', handleNewPost);
 
       // Listen for post reactions/updates
-      const handlePostUpdated = (post: Post) => {
+      const handlePostUpdated = (post: any) => {
         console.log('🔄 Post updated via WebSocket:', post.id);
-        if (onPost) {
-          onPost(post);
-        }
+        onPostUpdated?.(post);
       };
 
       socket.on('post_updated', handlePostUpdated);
+
+      const handlePostDeleted = (payload: { id?: string } | string) => {
+        const postId = typeof payload === 'string' ? payload : payload?.id;
+        console.log('🗑️ Post deleted via WebSocket:', postId || 'unknown');
+        onPostDeleted?.(payload);
+      };
+
+      socket.on('post_deleted', handlePostDeleted);
 
       return () => {
         // Clean up listeners when component unmounts or hook dependencies change
         socket.off('post_added', handleNewPost);
         socket.off('post_updated', handlePostUpdated);
+        socket.off('post_deleted', handlePostDeleted);
       };
     } catch (error) {
       console.error('[useRealtimeFeed] Failed to setup WebSocket:', error);
     }
-  }, [onPost]);
+  }, [onPostAdded, onPostDeleted, onPostUpdated]);
 
   return {
     isConnected: socketRef.current?.connected || false,

@@ -353,8 +353,8 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
                 return;
             }
 
-            // Navigate to verify page with email
-            onNavigate(Page.Verify, email);
+            // Navigate with normalized email to keep resend/verification flow consistent.
+            onNavigate(Page.Verify, normalizedEmail);
             
         } catch (err: any) {
             setError(err.message || 'Erro ao registrar. Tente novamente.');

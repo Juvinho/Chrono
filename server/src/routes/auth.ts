@@ -126,7 +126,18 @@ const getUniqueConflictField = (error: any): 'username' | 'email' | null => {
 };
 
 // Shared validation helpers
-const validateEmail = async (email: string) => {
+const validateEmail = async (
+  email: string,
+  options: {
+    checkMx?: boolean;
+    failOnMxLookupError?: boolean;
+  } = {}
+) => {
+    const {
+      checkMx = true,
+      failOnMxLookupError = false,
+    } = options;
+
     if (!email) return { valid: false, error: 'Email required' };
 
     // RFC 5322 compliant regex
@@ -143,21 +154,26 @@ const validateEmail = async (email: string) => {
         return { valid: false, error: 'Disposable email addresses are not allowed' };
     }
 
-    // Check DNS MX records and SMTP Handshake
-    try {
+    // Optional DNS MX check: expensive and network-dependent.
+    if (checkMx) {
+      try {
         const addresses = await resolveMx(domain);
         if (!addresses || addresses.length === 0) {
-             return { valid: false, error: 'Invalid email domain (no MX records)' };
+           return { valid: false, error: 'Invalid email domain (no MX records)' };
         }
-        
+          
         // Skip SMTP check - too restrictive and often fails
         // Focus on DNS MX record validation instead
         // const smtpValid = await checkSmtp(domain, email);
         // if (!smtpValid) {
         //      return { valid: false, error: 'Email address does not exist or is invalid' };
         // }
-    } catch (err) {
+      } catch (err: any) {
+        if (failOnMxLookupError) {
         return { valid: false, error: 'Email validation failed - cannot verify domain' };
+        }
+        console.warn(`[auth] MX lookup unavailable for ${domain}:`, err?.message || err);
+      }
     }
 
     return { valid: true };
@@ -204,7 +220,7 @@ router.post('/check-email', async (req, res) => {
   try {
     const { email } = req.body;
   const normalizedEmail = String(email || '').trim().toLowerCase();
-  const validation = await validateEmail(normalizedEmail);
+  const validation = await validateEmail(normalizedEmail, { checkMx: false });
     
     if (!validation.valid) {
         return res.json(validation);
@@ -254,7 +270,10 @@ router.post('/register', async (req, res) => {
     }
     
     // Rigorous Email Validation
-    const emailValidation = await validateEmail(normalizedEmail);
+    const emailValidation = await validateEmail(normalizedEmail, {
+      checkMx: true,
+      failOnMxLookupError: false,
+    });
     if (!emailValidation.valid) {
         return res.status(400).json({ error: emailValidation.error });
     }
@@ -617,13 +636,14 @@ router.post('/verify-email', async (req, res) => {
 router.post('/resend-verification', async (req, res) => {
   try {
     const { email } = req.body;
+    const normalizedEmail = String(email || '').trim().toLowerCase();
 
-    if (!email) {
+    if (!normalizedEmail) {
       return res.status(400).json({ error: 'Email é obrigatório' });
     }
 
     // Find user by email
-    const user = await userService.getUserByEmail(email);
+    const user = await userService.getUserByEmail(normalizedEmail);
     if (!user) {
       // Don't reveal if email exists for security
       return res.json({ success: true, message: 'Se o email existir, um link de verificação será enviado.' });
@@ -645,9 +665,9 @@ router.post('/resend-verification', async (req, res) => {
         const userAgent = req.get('user-agent');
         
         await emailService.sendVerificationEmail(user, ipAddress, userAgent);
-        console.log(`✅ Verification email resent to ${email}`);
+        console.log(`✅ Verification email resent to ${normalizedEmail}`);
       } else {
-        console.warn(`⚠️ Email service not available for resend to ${email}`);
+        console.warn(`⚠️ Email service not available for resend to ${normalizedEmail}`);
       }
     } catch (emailError: any) {
       // Rate limit error

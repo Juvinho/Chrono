@@ -283,6 +283,12 @@ router.put('/:id', authenticateToken, async (req: AuthRequest, res: Response) =>
     const { id } = req.params;
     const post = await postService.updatePost(id, req.userId!, req.body);
     const enrichedPost = await enrichPost(post);
+
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('post_updated', enrichedPost);
+    }
+
     res.json(enrichedPost);
   } catch (error: any) {
     console.error('Update post error:', error);
@@ -293,7 +299,14 @@ router.put('/:id', authenticateToken, async (req: AuthRequest, res: Response) =>
 // Delete post
 router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    await postService.deletePost(req.params.id, req.userId!);
+    const { id } = req.params;
+    await postService.deletePost(id, req.userId!);
+
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('post_deleted', { id });
+    }
+
     res.json({ message: 'Post deleted successfully' });
   } catch (error: any) {
     console.error('Delete post error:', error);
@@ -369,6 +382,12 @@ router.post('/:id/echo', authenticateToken, async (req: AuthRequest, res: Respon
       await notificationService.createNotification(originalPost.authorId, req.userId, 'repost', id);
     }
     const enrichedPost = await enrichPost(newPost);
+
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('post_added', enrichedPost);
+    }
+
     res.status(201).json(enrichedPost);
   } catch (error: any) {
     console.error('Echo post error:', error);
@@ -411,6 +430,12 @@ router.post('/:id/reply', authenticateToken, async (req: AuthRequest, res: Respo
       await notificationService.createNotification(parentPost.authorId, req.userId, 'reply', id);
     }
     const enrichedPost = await enrichPost(replyPost);
+
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('post_added', enrichedPost);
+    }
+
     res.status(201).json(enrichedPost);
   } catch (error: any) {
     console.error('Reply post error:', error);
@@ -433,6 +458,12 @@ router.post('/:id/poll/vote', authenticateToken, async (req: AuthRequest, res: R
     }
     // Return the enriched post with updated voters and poll data
     const enrichedPost = await enrichPost(post, 0, 1);
+
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('post_updated', enrichedPost);
+    }
+
     res.json(enrichedPost);
   } catch (error: any) {
     console.error('Vote error:', error);
