@@ -716,7 +716,7 @@ export default function ProfilePage({
           onBack={onBack}
           lastViewedNotifications={lastViewedNotifications}
       />
-      <main className="flex-grow overflow-y-auto">
+      <main className="flex-grow overflow-y-auto overflow-x-hidden">
         <div className={`max-w-4xl mx-auto ${borderRadius === 'none' ? '' : 'my-4'} animate-fade-in`}>
           <div className={`relative ${getRadiusClass('container')} shadow-lg`}>
             <div className={`relative h-48 md:h-64 w-full overflow-hidden ${getRadiusClass('container')}`} key={`cover-${imageCacheBuster}`}>
@@ -758,8 +758,8 @@ export default function ProfilePage({
                 </div>
             </div>
           </div>
-          <div className={`pt-20 px-8 pb-8 bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] mt-[-1px] ${getRadiusClass('container')} relative z-0`}>
-            <div className="flex justify-between items-start">
+          <div className={`pt-20 px-4 md:px-8 pb-6 md:pb-8 bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] mt-[-1px] ${getRadiusClass('container')} relative z-0`}>
+            <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-3">
               <div>
                 <div className="flex items-center space-x-2">
                     <h1 className="text-2xl font-bold text-[var(--theme-text-light)]">@{profileUser.username}</h1>
@@ -857,8 +857,8 @@ export default function ProfilePage({
                   </p>
                 )}
               </div>
-              <div className="flex items-center space-x-2 flex-shrink-0">
-                  <button onClick={() => onNavigate(Page.Dashboard)} className="back-to-echo-btn">
+              <div className="flex items-center gap-2 flex-wrap">
+                  <button onClick={() => onNavigate(Page.Dashboard)} className="back-to-echo-btn hidden md:flex">
                       &lt; {t('backToEchoFrame')}
                   </button>
                   {isOwnProfile ? (
@@ -930,7 +930,7 @@ export default function ProfilePage({
                   )}
               </div>
             </div>
-            <div className="flex space-x-6 mt-4 text-[var(--theme-text-secondary)]">
+            <div className="flex flex-wrap gap-6 mt-4 text-[var(--theme-text-secondary)]">
               <button onClick={() => handleOpenUserList('followers')}>
                   <span className="font-bold text-[var(--theme-text-light)]">{profileUser.followers}</span> {t('profileFollowers')}
                 </button>
@@ -976,7 +976,7 @@ export default function ProfilePage({
                 {/* Right Column: Feed Atual */}
                 <div className="space-y-4 w-full min-w-0 overflow-hidden">
                     {/* Tabs */}
-                    <div className="flex border-b border-[var(--theme-border-primary)] mb-4 bg-[var(--theme-bg-secondary)] rounded-t-lg overflow-hidden w-full"  style={{ boxSizing: 'border-box' }}>
+                    <div className="flex border-b border-[var(--theme-border-primary)] mb-4 bg-[var(--theme-bg-secondary)] rounded-t-lg overflow-x-auto w-full whitespace-nowrap"  style={{ boxSizing: 'border-box' }}>
                         <button 
                             className={`flex-1 py-3 text-center font-bold transition-colors ${activeTab === 'posts' ? 'bg-[var(--theme-bg-tertiary)] text-[var(--theme-primary)] border-b-2 border-[var(--theme-primary)]' : 'text-[var(--theme-text-secondary)] hover:bg-[var(--theme-bg-tertiary)]'}`}
                             onClick={() => handleTabChange('posts')}
