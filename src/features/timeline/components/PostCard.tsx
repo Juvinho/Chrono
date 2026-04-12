@@ -1,7 +1,7 @@
 import React, { useState, ReactNode, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Post, CyberpunkReaction, User } from '../../../types/index';
-import { ReactIcon, GlitchIcon, UploadIcon, CorruptIcon, RewindIcon, StaticIcon, ReplyIcon, EchoIcon, EditIcon, VerifiedIcon, CheckCircleIcon, LockClosedIcon, DotsHorizontalIcon, TrashIcon, BookmarkIcon, ShareIcon, FlagIcon } from '../../../components/ui/icons';
+import { ReactIcon, GlitchIcon, UploadIcon, CameraIcon, CorruptIcon, RewindIcon, StaticIcon, ReplyIcon, EchoIcon, EditIcon, VerifiedIcon, CheckCircleIcon, LockClosedIcon, DotsHorizontalIcon, TrashIcon, BookmarkIcon, ShareIcon, FlagIcon } from '../../../components/ui/icons';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useSound } from '../../../contexts/SoundContext';
 import { useToast } from '../../../contexts/ToastContext';
@@ -149,6 +149,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
     };
     const [isReplyPrivate, setIsReplyPrivate] = useState(false);
     const [replyMedia, setReplyMedia] = useState<{ imageUrl?: string, videoUrl?: string } | null>(null);
+    const [isDraggingOver, setIsDraggingOver] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [justVotedIndex, setJustVotedIndex] = useState<number | null>(null);
@@ -231,20 +232,52 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
         }, 800);
     };
 
+    const readFileAsMedia = (file: File) => {
+        if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) return;
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const result = reader.result as string;
+            if (file.type.startsWith('video/')) {
+                setReplyMedia({ videoUrl: result });
+            } else {
+                setReplyMedia({ imageUrl: result });
+            }
+        };
+        reader.readAsDataURL(file);
+    };
+
     const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const result = reader.result as string;
-                if (file.type.startsWith('video/')) {
-                    setReplyMedia({ videoUrl: result });
-                } else {
-                    setReplyMedia({ imageUrl: result });
+        if (file) readFileAsMedia(file);
+    };
+
+    const handleReplyPaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+        const items = event.clipboardData?.items;
+        if (!items) return;
+        for (const item of Array.from(items)) {
+            if (item.type.startsWith('image/')) {
+                const file = item.getAsFile();
+                if (file) {
+                    event.preventDefault();
+                    readFileAsMedia(file);
+                    return;
                 }
-            };
-            reader.readAsDataURL(file);
+            }
         }
+    };
+
+    const handleReplyDragOver = (event: React.DragEvent) => {
+        event.preventDefault();
+        setIsDraggingOver(true);
+    };
+
+    const handleReplyDragLeave = () => setIsDraggingOver(false);
+
+    const handleReplyDrop = (event: React.DragEvent) => {
+        event.preventDefault();
+        setIsDraggingOver(false);
+        const file = event.dataTransfer.files?.[0];
+        if (file) readFileAsMedia(file);
     };
     
     const handleReplySubmit = () => {
@@ -640,14 +673,12 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
                         {renderContentWithTags(post.content)}
                     </p>
                     {post.imageUrl && (
-                        <div className="w-full aspect-video rounded-sm mt-2 overflow-hidden">
-                            <img 
-                                src={post.imageUrl} 
-                                alt={t('postImageAlt', { username: post.author.username }) || `Image posted by @${post.author.username}`} 
-                                className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity aspect-video" 
+                        <div className="mt-2 rounded-sm overflow-hidden border border-[var(--theme-border-primary)]">
+                            <img
+                                src={post.imageUrl}
+                                alt={t('postImageAlt', { username: post.author.username }) || `Image posted by @${post.author.username}`}
+                                className="w-full max-h-[32rem] object-contain cursor-pointer hover:opacity-80 transition-opacity bg-[var(--theme-bg-secondary)]"
                                 loading="lazy"
-                                width={1280}
-                                height={720}
                                 onClick={() => setShowImageViewer(true)}
                             />
                         </div>
@@ -761,40 +792,43 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
                         isVisible={showReactionTooltip}
                     />
                 </div>
-                <div className="flex items-center space-x-4">
-                    <button 
-                        onClick={() => setIsReplying(!isReplying)} 
-                        className="flex items-center space-x-1 hover:text-[var(--theme-secondary)] transition-colors" 
+                <div className="flex items-center space-x-1 sm:space-x-4">
+                    <button
+                        onClick={() => setIsReplying(!isReplying)}
+                        className="flex items-center space-x-1 p-2 min-h-[44px] min-w-[44px] hover:text-[var(--theme-secondary)] transition-colors"
                         title={t('postReply')}
                         aria-label={t('postReply') || 'Reply to post'}
                     >
                         <ReplyIcon className="w-5 h-5" />
+                        <span className="hidden sm:inline text-xs">{t('postReply')}</span>
                     </button>
-                    <button 
-                        onClick={() => onEcho(post)} 
-                        className="flex items-center space-x-1 hover:text-[var(--theme-secondary)] transition-colors" 
+                    <button
+                        onClick={() => onEcho(post)}
+                        className="flex items-center space-x-1 p-2 min-h-[44px] min-w-[44px] hover:text-[var(--theme-secondary)] transition-colors"
                         title={t('postEcho')}
                         aria-label={t('postEcho') || 'Echo post'}
                     >
                         <EchoIcon className="w-5 h-5" />
+                        <span className="hidden sm:inline text-xs">{t('postEcho')}</span>
                     </button>
                     <div className="relative">
-                        <button 
-                            onClick={() => setShowReactions(!showReactions)} 
-                            className={`flex items-center space-x-1 hover:text-[var(--theme-secondary)] transition-colors ${
+                        <button
+                            onClick={() => setShowReactions(!showReactions)}
+                            className={`flex items-center space-x-1 p-2 min-h-[44px] min-w-[44px] hover:text-[var(--theme-secondary)] transition-colors ${
                                 lastReactionAdded ? 'reaction-button-glow' : ''
                             }`}
                             title={t('postReact')}
                             aria-label={t('postReact') || 'React to post'}
                         >
                             <ReactIcon className={`w-5 h-5 ${lastReactionAdded ? 'like-heartbeat' : ''}`} />
+                            <span className="hidden sm:inline text-xs">{t('postReact')}</span>
                         </button>
                         {showReactions && (
                             <div className="absolute bottom-full right-0 mb-2 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] rounded-sm p-1 flex space-x-1 z-10 animate-[fadeIn_0.2s_ease-in-out]">
                                 {reactions.map(reaction => (
-                                    <button 
-                                        key={reaction} 
-                                        onClick={() => handleReact(reaction)} 
+                                    <button
+                                        key={reaction}
+                                        onClick={() => handleReact(reaction)}
                                         className={`reaction-button hover:scale-125 transition-transform ${
                                             animatingReactions.has(reaction) ? 'reaction-button-active' : ''
                                         }`}
@@ -807,18 +841,18 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
                             </div>
                         )}
                     </div>
-                    <button 
+                    <button
                         onClick={handleCopyPostLink}
-                        className="flex items-center space-x-1 hover:text-[var(--theme-secondary)] transition-colors"
+                        className="flex items-center space-x-1 p-2 min-h-[44px] min-w-[44px] hover:text-[var(--theme-secondary)] transition-colors"
                         title="Compartilhar"
                         aria-label="Compartilhar post"
                     >
                         <ShareIcon className="w-5 h-5" />
                     </button>
                     {onBookmark && (
-                        <button 
+                        <button
                             onClick={() => onBookmark(post.id)}
-                            className={`flex items-center space-x-1 hover:text-[var(--theme-secondary)] transition-colors ${isBookmarked ? 'text-[var(--theme-primary)]' : ''}`}
+                            className={`flex items-center space-x-1 p-2 min-h-[44px] min-w-[44px] hover:text-[var(--theme-secondary)] transition-colors ${isBookmarked ? 'text-[var(--theme-primary)]' : ''}`}
                             title={isBookmarked ? 'Remover dos salvos' : 'Salvar post'}
                             aria-label={isBookmarked ? 'Remover dos salvos' : 'Salvar post'}
                         >
@@ -829,29 +863,47 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
             </div>
             {isReplying && (
                 <div className="mt-2">
-                     <div className="text-sm text-[var(--theme-text-secondary)] mb-2">
+                    <div className="text-sm text-[var(--theme-text-secondary)] mb-2">
                         {t('replyingTo')}{' '}
                         <button onClick={() => onViewProfile(post.author.username)} className="chrono-tag">@{post.author.username}</button>
-                     </div>
-                     <textarea
-                        placeholder={t('postReplyTo', { username: post.author.username })}
-                        value={replyContent}
-                        onChange={(e) => setReplyContent(e.target.value)}
-                        className="w-full bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] rounded-sm py-1 px-3 text-[var(--theme-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--theme-primary)] resize-none"
-                        rows={2}
-                        autoFocus
-                    />
-                    
+                    </div>
+                    <div
+                        onDragOver={handleReplyDragOver}
+                        onDragLeave={handleReplyDragLeave}
+                        onDrop={handleReplyDrop}
+                        className={`relative rounded-sm transition-colors ${isDraggingOver ? 'ring-2 ring-[var(--theme-primary)] bg-[var(--theme-primary)]/10' : ''}`}
+                    >
+                        <textarea
+                            placeholder={t('postReplyTo', { username: post.author.username })}
+                            value={replyContent}
+                            onChange={(e) => setReplyContent(e.target.value)}
+                            onPaste={handleReplyPaste}
+                            className="w-full bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] rounded-sm py-1 px-3 text-[var(--theme-text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--theme-primary)] resize-none"
+                            rows={2}
+                            autoFocus
+                        />
+                        {isDraggingOver && (
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                <span className="text-[var(--theme-primary)] text-sm font-bold">Solte a imagem aqui</span>
+                            </div>
+                        )}
+                    </div>
+
                     {replyMedia && (
-                        <div className="mt-2 relative inline-block">
+                        <div className="mt-2 relative inline-block max-w-full">
                             {replyMedia.imageUrl ? (
-                                <img src={replyMedia.imageUrl} alt="Reply media" className="h-20 w-auto rounded border border-[var(--theme-border-primary)]" width="80" height="80" />
+                                <img
+                                    src={replyMedia.imageUrl}
+                                    alt="Prévia da imagem"
+                                    className="max-h-40 w-auto rounded border border-[var(--theme-border-primary)] object-contain bg-[var(--theme-bg-secondary)]"
+                                />
                             ) : (
-                                <video src={replyMedia.videoUrl} className="h-20 w-auto rounded border border-[var(--theme-border-primary)]" />
+                                <video src={replyMedia.videoUrl} className="max-h-40 w-auto rounded border border-[var(--theme-border-primary)]" />
                             )}
-                            <button 
+                            <button
                                 onClick={() => setReplyMedia(null)}
-                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold leading-none"
+                                title="Remover mídia"
                             >
                                 ×
                             </button>
@@ -859,28 +911,29 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
                     )}
 
                     <div className="mt-2 flex justify-between items-center">
-                        <div className="flex items-center space-x-2">
-                            <button 
-                                onClick={() => setIsReplyPrivate(p => !p)} 
-                                className="flex items-center space-x-2 text-sm text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-light)]"
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => setIsReplyPrivate(p => !p)}
+                                className="flex items-center gap-1 text-sm text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-light)]"
                                 title={t('postMakePrivate')}
                             >
                                 <LockClosedIcon className={`w-4 h-4 ${isReplyPrivate ? 'text-[var(--theme-primary)]' : ''}`} />
                                 <span>{isReplyPrivate ? t('postPrivate') : t('postPublic')}</span>
                             </button>
-                             <input 
-                                type="file" 
-                                ref={fileInputRef} 
-                                onChange={handleFileSelect} 
-                                className="hidden" 
-                                accept="image/*,video/*" 
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleFileSelect}
+                                className="hidden"
+                                accept="image/*,video/*"
                             />
-                            <button 
-                                onClick={() => fileInputRef.current?.click()} 
-                                className={`text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)] ${replyMedia ? 'text-[var(--theme-primary)]' : ''}`}
-                                title={t('attachMedia')}
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                className={`flex items-center gap-1 text-sm transition-colors ${replyMedia ? 'text-[var(--theme-primary)]' : 'text-[var(--theme-text-secondary)] hover:text-[var(--theme-primary)]'}`}
+                                title="Anexar imagem ou vídeo (ou cole com Ctrl+V)"
                             >
-                                <UploadIcon className="w-5 h-5" />
+                                <CameraIcon className="w-4 h-4" />
+                                <span>{replyMedia ? 'Trocar' : 'Imagem'}</span>
                             </button>
                         </div>
                         <button

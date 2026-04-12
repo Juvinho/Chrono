@@ -105,7 +105,7 @@ export default function Header({ user, onLogout, onViewProfile, onNavigate, onNo
     }, [conversations]);
 
     return (
-        <header className="h-16 bg-[var(--theme-bg-primary)] border-b-2 border-[var(--theme-border-primary)] z-50 relative flex items-center justify-between px-6 flex-shrink-0">
+        <header className="h-14 md:h-16 bg-[var(--theme-bg-primary)] border-b-2 border-[var(--theme-border-primary)] z-50 relative flex items-center justify-between px-3 md:px-6 flex-shrink-0">
             <div className="flex items-center space-x-4">
                 {onBack && (
                     <button 
@@ -117,17 +117,17 @@ export default function Header({ user, onLogout, onViewProfile, onNavigate, onNo
                     </button>
                 )}
                 <div className="cursor-pointer" onClick={() => onNavigate(Page.Dashboard)}>
-                  <GlitchText text="C." className="logo-glitch text-4xl font-bold tracking-tighter" />
+                  <GlitchText text="C." className="logo-glitch text-3xl md:text-4xl font-bold tracking-tighter" />
                 </div>
             </div>
             
-            <div className="relative w-1/3">
-                 <button 
+            <div className="relative flex-1 mx-2 md:mx-4 md:w-1/3 md:flex-none">
+                 <button
                     onClick={() => setIsSearchOpen(true)}
                     className="w-full bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] rounded-sm py-1 px-3 text-left text-[var(--theme-text-secondary)] flex justify-between items-center hover:border-[var(--theme-primary)] transition-colors"
                 >
-                    <span>{t('searchPlaceholder')}</span>
-                    <SearchIcon className="w-5 h-5" />
+                    <span className="truncate text-sm md:text-base">{t('searchPlaceholder')}</span>
+                    <SearchIcon className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0 ml-1" />
                 </button>
             </div>
 
@@ -136,7 +136,7 @@ export default function Header({ user, onLogout, onViewProfile, onNavigate, onNo
                     <FilmIcon className="w-5 h-5 md:w-6 md:h-6" />
                  </button>
 
-                 <button onClick={() => onNavigate(Page.Bookmarks)} title={t('bookmarks') || 'Posts Salvos'} className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-secondary)] p-2 rounded-full hover:bg-[var(--theme-bg-tertiary)] transition-colors">
+                 <button onClick={() => onNavigate(Page.Bookmarks)} title={t('bookmarks') || 'Posts Salvos'} className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-secondary)] p-2 rounded-full hover:bg-[var(--theme-bg-tertiary)] transition-colors hidden sm:block">
                     <BookmarkIcon className="w-5 h-5 md:w-6 md:h-6" />
                  </button>
                  {/* Chat Icon */}

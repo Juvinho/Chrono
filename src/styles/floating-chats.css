@@ -16,9 +16,8 @@
 }
 
 @media (max-width: 768px) {
-  .floating-chats-container {
-    right: 0;
-    gap: 0;
-    bottom: 60px;
+  .floating-chats-container,
+  .floating-chat-box {
+    display: none !important;
   }
 }

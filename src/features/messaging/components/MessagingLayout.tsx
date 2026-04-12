@@ -12,6 +12,7 @@ export const MessagingLayout: React.FC = () => {
   const { conversations, isLoading, error, refetch } = useConversations();
   const { unreadCount, resetUnread } = useMessageNotification();
   const [selectedConversationId, setSelectedConversationId] = useState<number | string | null>(null);
+  const [showSidebar, setShowSidebar] = useState(true);
   const [isReindexing, setIsReindexing] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
 
@@ -94,16 +95,24 @@ export const MessagingLayout: React.FC = () => {
     }
   };
 
+  const handleSelectConversation = (id: number | string) => {
+    setSelectedConversationId(id);
+    // No mobile, ir direto para o chat ocultando a sidebar
+    if (window.innerWidth < 768) {
+      setShowSidebar(false);
+    }
+  };
+
   return (
     <div className="messaging-layout">
-      {/* SIDEBAR - Lista de conversas */}
-      <div className="messaging-sidebar">
+      {/* SIDEBAR - visível no desktop sempre; no mobile só quando showSidebar=true */}
+      <div className={`messaging-sidebar ${showSidebar ? 'flex' : 'hidden'} md:flex flex-col`}>
         <div className="messaging-sidebar-header">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <h2 style={{ margin: 0 }}>Mensagens</h2>
               {unreadCount > 0 && (
-                <span 
+                <span
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -143,16 +152,16 @@ export const MessagingLayout: React.FC = () => {
             )}
           </div>
         </div>
-        
+
         <ConversationList
           conversations={conversations}
           isLoading={isLoading}
           error={error}
           selectedId={selectedConversationId}
-          onSelect={setSelectedConversationId}
+          onSelect={handleSelectConversation}
         />
         {initError && (
-          <div 
+          <div
             style={{
               padding: '12px',
               margin: '8px',
@@ -184,8 +193,17 @@ export const MessagingLayout: React.FC = () => {
         )}
       </div>
 
-      {/* MAIN AREA - Chat */}
-      <div className="messaging-main">
+      {/* MAIN AREA - visível no desktop sempre; no mobile só quando !showSidebar */}
+      <div className={`messaging-main ${!showSidebar ? 'flex' : 'hidden'} md:flex flex-col`}>
+        {/* Botão "Voltar" — apenas no mobile quando há conversa selecionada */}
+        {selectedConversationId && (
+          <button
+            className="md:hidden flex items-center gap-2 px-4 py-3 border-b border-[var(--theme-border-primary)] text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-primary)] transition-colors text-sm flex-shrink-0"
+            onClick={() => setShowSidebar(true)}
+          >
+            ← Voltar para mensagens
+          </button>
+        )}
         {selectedConversationId ? (
           <ChatArea conversationId={selectedConversationId} />
         ) : (

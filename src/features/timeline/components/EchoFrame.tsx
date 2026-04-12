@@ -638,8 +638,66 @@ export default function EchoFrame({
     }
 
     const renderMobileHeader = () => (
-        <div className="lg:hidden mb-6 space-y-4">
-            {/* Mobile header content without stories */}
+        <div className="lg:hidden mb-4 space-y-3">
+            {/* Cordões Populares — acordeão mobile */}
+            <details className="border border-[var(--theme-border-primary)] rounded-sm bg-[var(--theme-bg-secondary)]">
+                <summary className="px-4 py-3 font-bold text-sm text-[var(--theme-text-light)] cursor-pointer flex items-center justify-between list-none select-none">
+                    <span>:: {t('popularCords') || 'Cordões Populares'}</span>
+                    <span className="text-[var(--theme-primary)] text-xs">▼</span>
+                </summary>
+                <div className="px-4 pb-3 space-y-2">
+                    {trendingCordoes.length > 0 ? (
+                        trendingCordoes.slice(0, 5).map(cord => (
+                            <div
+                                key={cord.tag}
+                                onClick={() => onTagClick(cord.displayName)}
+                                className="cursor-pointer p-2 hover:bg-red-900/20 rounded-sm transition-colors border-l-2 border-red-500 bg-black/30"
+                            >
+                                <p className="font-bold text-red-500 text-xs">{cord.displayName}</p>
+                                <p className="text-xs text-red-400 mt-0.5">📊 {cord.mentions.toLocaleString()} menções</p>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-[var(--theme-text-secondary)] text-xs italic">Nenhum cordão em destaque</p>
+                    )}
+                </div>
+            </details>
+
+            {/* Hub de Cordões — acordeão mobile */}
+            <details className="border border-[var(--theme-border-primary)] rounded-sm bg-[var(--theme-bg-secondary)]">
+                <summary className="px-4 py-3 font-bold text-sm text-[var(--theme-secondary)] cursor-pointer flex items-center justify-between list-none select-none">
+                    <span>:: {t('cordHub')}</span>
+                    <span className="text-[var(--theme-secondary)] text-xs">▼</span>
+                </summary>
+                <div className="px-4 pb-3 space-y-2">
+                    <button
+                        onClick={() => setIsCordModalOpen(true)}
+                        className="create-cord-btn w-full mb-3"
+                    >
+                        {t('createCord')}
+                    </button>
+                    {/* Trending Cordões — top 5 in mobile view */}
+                    <div className="border-t border-[var(--theme-border-primary)] pt-2">
+                        <p className="text-xs font-bold text-[var(--theme-text-light)] mb-2">{t('popularCords') || 'Populares'}</p>
+                        <div className="space-y-1 max-h-40 overflow-y-auto">
+                            {trendingCordoes.length > 0 ? (
+                                trendingCordoes.slice(0, 5).map(cord => (
+                                    <button
+                                        key={cord.tag}
+                                        onClick={() => onTagClick(cord.displayName)}
+                                        className="w-full text-left text-xs p-1 hover:bg-red-900/20 rounded-sm transition-colors border-l-2 border-red-500 bg-black/30"
+                                    >
+                                        <span className="text-red-500 font-bold">{cord.displayName}</span>
+                                        <span className="text-red-400 ml-1">📊 {cord.mentions.toLocaleString()}</span>
+                                    </button>
+                                ))
+                            ) : (
+                                <p className="text-[var(--theme-text-secondary)] text-xs italic">Nenhum em destaque</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </details>
         </div>
     );
 
