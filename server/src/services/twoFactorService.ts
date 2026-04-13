@@ -8,7 +8,7 @@ import {
 import * as QRCode from 'qrcode';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
-import { pool } from '../db/connection.js';
+import { queryWithRetry } from '../db/connection.js';
 
 const APP_NAME = 'Chrono';
 const RECOVERY_CODE_COUNT = 8;
@@ -18,28 +18,80 @@ const cryptoPlugin = new NobleCryptoPlugin();
 const base32Plugin = new ScureBase32Plugin();
 
 // AES-256 encryption for storing the TOTP secret
-const ENCRYPTION_KEY = process.env.TWO_FACTOR_ENCRYPTION_KEY || process.env.JWT_SECRET || '';
+const PRIMARY_ENCRYPTION_SECRET = String(
+  process.env.TWO_FACTOR_ENCRYPTION_KEY || process.env.JWT_SECRET || ''
+).trim();
 
-function getEncryptionKey(): Buffer {
-  // Derive a 32-byte key from the secret
-  return crypto.createHash('sha256').update(ENCRYPTION_KEY).digest();
+const LEGACY_ENCRYPTION_SECRETS = String(process.env.TWO_FACTOR_LEGACY_ENCRYPTION_KEYS || '')
+  .split(',')
+  .map((value) => value.trim())
+  .filter((value) => value.length > 0 && value !== PRIMARY_ENCRYPTION_SECRET);
+
+if (!String(process.env.TWO_FACTOR_ENCRYPTION_KEY || '').trim()) {
+  console.warn('[2FA] TWO_FACTOR_ENCRYPTION_KEY is not set. Falling back to JWT_SECRET for 2FA secret encryption.');
 }
 
-function encrypt(text: string): string {
+if (LEGACY_ENCRYPTION_SECRETS.length > 0) {
+  console.log(`[2FA] Loaded ${LEGACY_ENCRYPTION_SECRETS.length} legacy encryption key(s) for backward compatibility.`);
+}
+
+if (!PRIMARY_ENCRYPTION_SECRET) {
+  console.error('[2FA] Missing encryption key for 2FA service. Set TWO_FACTOR_ENCRYPTION_KEY or JWT_SECRET.');
+}
+
+function deriveEncryptionKey(secret: string): Buffer {
+  return crypto.createHash('sha256').update(secret).digest();
+}
+
+function encryptWithSecret(text: string, secret: string): string {
   const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv('aes-256-cbc', getEncryptionKey(), iv);
+  const cipher = crypto.createCipheriv('aes-256-cbc', deriveEncryptionKey(secret), iv);
   let encrypted = cipher.update(text, 'utf8', 'hex');
   encrypted += cipher.final('hex');
   return iv.toString('hex') + ':' + encrypted;
 }
 
-function decrypt(encryptedText: string): string {
+function decryptWithSecret(encryptedText: string, secret: string): string {
   const [ivHex, encrypted] = encryptedText.split(':');
   const iv = Buffer.from(ivHex, 'hex');
-  const decipher = crypto.createDecipheriv('aes-256-cbc', getEncryptionKey(), iv);
+  const decipher = crypto.createDecipheriv('aes-256-cbc', deriveEncryptionKey(secret), iv);
   let decrypted = decipher.update(encrypted, 'hex', 'utf8');
   decrypted += decipher.final('utf8');
   return decrypted;
+}
+
+function encrypt(text: string): string {
+  if (!PRIMARY_ENCRYPTION_SECRET) {
+    throw new Error('2FA encryption key is not configured');
+  }
+
+  return encryptWithSecret(text, PRIMARY_ENCRYPTION_SECRET);
+}
+
+function decryptWithFallback(encryptedText: string): { decrypted: string; usedLegacyKey: boolean } {
+  if (!PRIMARY_ENCRYPTION_SECRET) {
+    throw new Error('2FA encryption key is not configured');
+  }
+
+  try {
+    return {
+      decrypted: decryptWithSecret(encryptedText, PRIMARY_ENCRYPTION_SECRET),
+      usedLegacyKey: false,
+    };
+  } catch {
+    for (const legacySecret of LEGACY_ENCRYPTION_SECRETS) {
+      try {
+        return {
+          decrypted: decryptWithSecret(encryptedText, legacySecret),
+          usedLegacyKey: true,
+        };
+      } catch {
+        // Continue trying older keys.
+      }
+    }
+
+    throw new Error('Unable to decrypt 2FA secret with configured keys');
+  }
 }
 
 /**
@@ -98,7 +150,7 @@ export async function enable2FA(
     recoveryCodes.map(code => bcrypt.hash(code, 10))
   );
 
-  await pool.query(
+  await queryWithRetry(
     `UPDATE users 
      SET two_factor_secret = $1, 
          two_factor_enabled = TRUE, 
@@ -112,7 +164,7 @@ export async function enable2FA(
  * Disable 2FA for a user
  */
 export async function disable2FA(userId: string): Promise<void> {
-  await pool.query(
+  await queryWithRetry(
     `UPDATE users 
      SET two_factor_secret = NULL, 
          two_factor_enabled = FALSE, 
@@ -129,7 +181,7 @@ export async function get2FAStatus(userId: string): Promise<{
   enabled: boolean;
   secret: string | null;
 }> {
-  const result = await pool.query(
+  const result = await queryWithRetry(
     'SELECT two_factor_enabled, two_factor_secret FROM users WHERE id = $1',
     [userId]
   );
@@ -143,7 +195,17 @@ export async function get2FAStatus(userId: string): Promise<{
 
   if (row.two_factor_secret) {
     try {
-      decryptedSecret = decrypt(row.two_factor_secret);
+      const { decrypted, usedLegacyKey } = decryptWithFallback(row.two_factor_secret);
+      decryptedSecret = decrypted;
+
+      if (usedLegacyKey) {
+        const reencryptedSecret = encrypt(decryptedSecret);
+        await queryWithRetry(
+          'UPDATE users SET two_factor_secret = $1 WHERE id = $2',
+          [reencryptedSecret, userId]
+        );
+        console.log(`[2FA] Rotated legacy encrypted secret for user ${userId}.`);
+      }
     } catch {
       console.error(`[2FA] Failed to decrypt secret for user ${userId}`);
     }
@@ -159,7 +221,7 @@ export async function get2FAStatus(userId: string): Promise<{
  * Verify a recovery code and consume it (one-time use)
  */
 export async function verifyRecoveryCode(userId: string, code: string): Promise<boolean> {
-  const result = await pool.query(
+  const result = await queryWithRetry(
     'SELECT backup_codes FROM users WHERE id = $1',
     [userId]
   );
@@ -175,7 +237,7 @@ export async function verifyRecoveryCode(userId: string, code: string): Promise<
       const updatedCodes = [...hashedCodes];
       updatedCodes.splice(i, 1);
       
-      await pool.query(
+      await queryWithRetry(
         'UPDATE users SET backup_codes = $1 WHERE id = $2',
         [updatedCodes, userId]
       );

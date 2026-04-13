@@ -10,7 +10,7 @@ import { promisify } from 'util';
 
 import { validateNoEmojis } from '../utils/validation.js';
 import { SecurityService } from '../services/securityService.js';
-import { get2FAStatus, verify2FACode, verifyRecoveryCode } from '../services/twoFactorService.js';
+import { getTwoFactorService } from '../services/twoFactorServiceLoader.js';
 import { verifyHCaptcha } from '../services/hcaptchaService.js';
 
 // Validate JWT_SECRET - must match the one in middleware/auth.ts
@@ -23,6 +23,11 @@ const resolveMx = promisify(dns.resolveMx);
 const router = express.Router();
 const userService = new UserService();
 const securityService = new SecurityService();
+
+const TWO_FACTOR_UNAVAILABLE_RESPONSE = {
+  error: 'Servico 2FA temporariamente indisponivel. Tente novamente em instantes.',
+  code: 'TWO_FACTOR_SERVICE_UNAVAILABLE',
+};
 
 // Helper to check SMTP handshake (deep verification)
 const checkSmtp = async (domain: string, email: string): Promise<boolean> => {
@@ -463,7 +468,12 @@ router.post('/login', async (req, res) => {
     }
 
     // ─── 2FA check ───────────────────────────────────────────
-    const twoFAStatus = await get2FAStatus(user.id);
+    const twoFactorService = await getTwoFactorService();
+    if (!twoFactorService) {
+      return res.status(503).json(TWO_FACTOR_UNAVAILABLE_RESPONSE);
+    }
+
+    const twoFAStatus = await twoFactorService.get2FAStatus(user.id);
     if (twoFAStatus.enabled) {
       // If 2FA is enabled, don't issue the final JWT yet.
       // Issue a short-lived temp token that only permits /auth/verify-2fa
@@ -552,18 +562,31 @@ router.post('/verify-2fa', async (req, res) => {
     const userId = decoded.id;
     const username = decoded.username;
 
+    const twoFactorService = await getTwoFactorService();
+    if (!twoFactorService) {
+      return res.status(503).json(TWO_FACTOR_UNAVAILABLE_RESPONSE);
+    }
+
     let verified = false;
 
-    if (code) {
-      // Verify TOTP code
-      const twoFAStatus = await get2FAStatus(userId);
-      if (!twoFAStatus.secret) {
-        return res.status(500).json({ error: 'Erro interno: secret 2FA não encontrado' });
+    try {
+      if (code) {
+        // Verify TOTP code
+        const twoFAStatus = await twoFactorService.get2FAStatus(userId);
+        if (!twoFAStatus.secret) {
+          return res.status(503).json({
+            error: 'Servico 2FA indisponivel para esta conta no momento. Use codigo de recuperacao ou reconfigure o 2FA.',
+            code: 'TWO_FACTOR_SECRET_UNAVAILABLE',
+          });
+        }
+        verified = twoFactorService.verify2FACode(code, twoFAStatus.secret);
+      } else if (recovery_code) {
+        // Verify recovery code (one-time use)
+        verified = await twoFactorService.verifyRecoveryCode(userId, recovery_code);
       }
-      verified = verify2FACode(code, twoFAStatus.secret);
-    } else if (recovery_code) {
-      // Verify recovery code (one-time use)
-      verified = await verifyRecoveryCode(userId, recovery_code);
+    } catch (twoFactorError) {
+      console.error('[2FA] Verification dependency failure:', twoFactorError);
+      return res.status(503).json(TWO_FACTOR_UNAVAILABLE_RESPONSE);
     }
 
     if (!verified) {

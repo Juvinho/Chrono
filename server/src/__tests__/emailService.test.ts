@@ -12,7 +12,7 @@ describe('EmailService', () => {
     gmailUser: process.env.GMAIL_USER || 'test@gmail.com',
     gmailAppPassword: process.env.GMAIL_APP_PASSWORD || 'test-password',
     frontendUrl: 'http://localhost:3000',
-    fromEmail: 'noreply@chrono.com',
+    fromEmail: 'noreply@chronosocial.com.br',
     fromName: 'Chrono Test'
   };
 
@@ -124,7 +124,7 @@ describe('Email Verification Flow (Integration)', () => {
       gmailUser: process.env.GMAIL_USER || 'test@gmail.com',
       gmailAppPassword: process.env.GMAIL_APP_PASSWORD || 'test-password',
       frontendUrl: 'http://localhost:3000',
-      fromEmail: 'noreply@chrono.com',
+      fromEmail: 'noreply@chronosocial.com.br',
       fromName: 'Chrono Test'
     });
 
@@ -165,7 +165,7 @@ describe('Email Service Performance', () => {
       gmailUser: 'test@gmail.com',
       gmailAppPassword: 'test-password',
       frontendUrl: 'http://localhost:3000',
-      fromEmail: 'noreply@chrono.com',
+      fromEmail: 'noreply@chronosocial.com.br',
       fromName: 'Chrono'
     });
 
@@ -191,7 +191,7 @@ describe('Email Service Security', () => {
     gmailUser: 'test@gmail.com',
     gmailAppPassword: 'test-password',
     frontendUrl: 'http://localhost:3000',
-    fromEmail: 'noreply@chrono.com',
+    fromEmail: 'noreply@chronosocial.com.br',
     fromName: 'Chrono'
   });
 

@@ -715,7 +715,7 @@ const startServer = async () => {
             gmailUser: gmailUser!,
             gmailAppPassword: gmailPass!,
             frontendUrl: process.env.FRONTEND_URL || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : 'http://localhost:3000'),
-            fromEmail: process.env.SMTP_FROM_EMAIL || 'noreply@chrono.com',
+            fromEmail: process.env.SMTP_FROM_EMAIL || 'noreply@chronosocial.com.br',
             fromName: process.env.SMTP_FROM_NAME || 'Chrono'
           });
           

@@ -1,19 +1,16 @@
 import express from 'express';
 import { authenticateToken, AuthRequest } from '../middleware/auth.js';
 import { UserService } from '../services/userService.js';
-import {
-  generate2FASetup,
-  verify2FACode,
-  generateRecoveryCodes,
-  enable2FA,
-  disable2FA,
-  get2FAStatus,
-  verifyRecoveryCode,
-} from '../services/twoFactorService.js';
+import { getTwoFactorService } from '../services/twoFactorServiceLoader.js';
 import { pool } from '../db/connection.js';
 
 const router = express.Router();
 const userService = new UserService();
+
+const TWO_FACTOR_UNAVAILABLE_RESPONSE = {
+  error: 'Servico 2FA temporariamente indisponivel. Tente novamente em instantes.',
+  code: 'TWO_FACTOR_SERVICE_UNAVAILABLE',
+};
 
 /**
  * GET /api/auth/2fa/status
@@ -21,7 +18,12 @@ const userService = new UserService();
  */
 router.get('/status', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const status = await get2FAStatus(req.userId!);
+    const twoFactorService = await getTwoFactorService();
+    if (!twoFactorService) {
+      return res.status(503).json(TWO_FACTOR_UNAVAILABLE_RESPONSE);
+    }
+
+    const status = await twoFactorService.get2FAStatus(req.userId!);
     res.json({ enabled: status.enabled });
   } catch (error: any) {
     console.error('2FA status error:', error);
@@ -36,7 +38,12 @@ router.get('/status', authenticateToken, async (req: AuthRequest, res) => {
  */
 router.post('/setup', authenticateToken, async (req: AuthRequest, res) => {
   try {
-    const status = await get2FAStatus(req.userId!);
+    const twoFactorService = await getTwoFactorService();
+    if (!twoFactorService) {
+      return res.status(503).json(TWO_FACTOR_UNAVAILABLE_RESPONSE);
+    }
+
+    const status = await twoFactorService.get2FAStatus(req.userId!);
     if (status.enabled) {
       return res.status(400).json({ error: '2FA já está ativo. Desative primeiro para reconfigurar.' });
     }
@@ -46,7 +53,7 @@ router.post('/setup', authenticateToken, async (req: AuthRequest, res) => {
       return res.status(404).json({ error: 'Usuário não encontrado' });
     }
 
-    const setup = await generate2FASetup(req.userId!, user.username);
+    const setup = await twoFactorService.generate2FASetup(req.userId!, user.username);
 
     // Store the secret temporarily (unconfirmed) — we'll encrypt & confirm in /confirm
     // For security, store it encrypted even temporarily
@@ -68,6 +75,11 @@ router.post('/setup', authenticateToken, async (req: AuthRequest, res) => {
  */
 router.post('/confirm', authenticateToken, async (req: AuthRequest, res) => {
   try {
+    const twoFactorService = await getTwoFactorService();
+    if (!twoFactorService) {
+      return res.status(503).json(TWO_FACTOR_UNAVAILABLE_RESPONSE);
+    }
+
     const { secret, code } = req.body;
 
     if (!secret || !code) {
@@ -75,16 +87,16 @@ router.post('/confirm', authenticateToken, async (req: AuthRequest, res) => {
     }
 
     // Verify the code against the provided secret
-    const isValid = verify2FACode(code, secret);
+    const isValid = twoFactorService.verify2FACode(code, secret);
     if (!isValid) {
       return res.status(400).json({ error: 'Código inválido. Verifique seu aplicativo autenticador e tente novamente.' });
     }
 
     // Generate recovery codes
-    const recoveryCodes = generateRecoveryCodes();
+    const recoveryCodes = twoFactorService.generateRecoveryCodes();
 
     // Enable 2FA with encrypted secret and hashed recovery codes
-    await enable2FA(req.userId!, secret, recoveryCodes);
+    await twoFactorService.enable2FA(req.userId!, secret, recoveryCodes);
 
     console.log(`✅ 2FA enabled for user ${req.userId}`);
 
@@ -106,6 +118,11 @@ router.post('/confirm', authenticateToken, async (req: AuthRequest, res) => {
  */
 router.post('/disable', authenticateToken, async (req: AuthRequest, res) => {
   try {
+    const twoFactorService = await getTwoFactorService();
+    if (!twoFactorService) {
+      return res.status(503).json(TWO_FACTOR_UNAVAILABLE_RESPONSE);
+    }
+
     const { password } = req.body;
 
     if (!password) {
@@ -123,7 +140,7 @@ router.post('/disable', authenticateToken, async (req: AuthRequest, res) => {
       return res.status(401).json({ error: 'Senha incorreta' });
     }
 
-    await disable2FA(req.userId!);
+    await twoFactorService.disable2FA(req.userId!);
     console.log(`🔓 2FA disabled for user ${req.userId}`);
 
     res.json({ success: true, message: '2FA desativado com sucesso' });
