@@ -361,40 +361,37 @@ CREATE INDEX IF NOT EXISTS idx_push_subscriptions_user_id ON push_subscriptions(
 
 CREATE TABLE IF NOT EXISTS tag_definitions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    nome VARCHAR(50) UNIQUE NOT NULL,
-    icone VARCHAR(10) NOT NULL,
-    cor_hex VARCHAR(7) NOT NULL,
-    cor_border VARCHAR(7) NOT NULL,
-    prioridade_exibicao INTEGER NOT NULL CHECK (prioridade_exibicao BETWEEN 1 AND 10),
-    categoria VARCHAR(20) NOT NULL CHECK (categoria IN ('positive', 'moderation', 'time', 'style')),
-    visibilidade VARCHAR(20) NOT NULL CHECK (visibilidade IN ('public', 'private', 'admin_only')),
-    condicao_aquisicao JSONB NOT NULL,
-    condicao_remocao JSONB,
-    descricao_publica TEXT NOT NULL,
-    descricao_interna TEXT,
-    notificar_aquisicao BOOLEAN DEFAULT TRUE,
-    notificar_remocao BOOLEAN DEFAULT FALSE,
-    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    tag_key VARCHAR(50) NOT NULL UNIQUE,
+    display_name VARCHAR(100) NOT NULL,
+    description TEXT,
+    color VARCHAR(7) DEFAULT '#0084ff',
+    icon VARCHAR(50),
+    tag_type VARCHAR(50) NOT NULL DEFAULT 'achievement',
+    criteria JSONB,
+    display_order INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_tag_definitions_nome ON tag_definitions(nome);
-CREATE INDEX IF NOT EXISTS idx_tag_definitions_categoria ON tag_definitions(categoria);
+CREATE INDEX IF NOT EXISTS idx_tag_definitions_nome ON tag_definitions(display_name);
+CREATE INDEX IF NOT EXISTS idx_tag_definitions_categoria ON tag_definitions(tag_type);
 
 CREATE TABLE IF NOT EXISTS user_tags (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    tag_id UUID NOT NULL REFERENCES tag_definitions(id) ON DELETE CASCADE,
-    adquirida_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    removida_em TIMESTAMP,
-    motivo_remocao TEXT,
-    ativo BOOLEAN DEFAULT TRUE,
-    CONSTRAINT uk_user_tag UNIQUE (user_id, tag_id)
+    tag_key VARCHAR(50) NOT NULL REFERENCES tag_definitions(tag_key) ON DELETE CASCADE,
+    earned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    removed_at TIMESTAMP,
+    removal_reason TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    metadata JSONB,
+    CONSTRAINT uk_user_tag UNIQUE (user_id, tag_key)
 );
 
 CREATE INDEX IF NOT EXISTS idx_user_tags_user_id ON user_tags(user_id);
-CREATE INDEX IF NOT EXISTS idx_user_tags_tag_id ON user_tags(tag_id);
-CREATE INDEX IF NOT EXISTS idx_user_tags_ativo ON user_tags(ativo, user_id);
+CREATE INDEX IF NOT EXISTS idx_user_tags_tag_id ON user_tags(tag_key);
+CREATE INDEX IF NOT EXISTS idx_user_tags_ativo ON user_tags(is_active, user_id);
 
 -- ============================================================================
 -- STORED PROCEDURES & FUNCTIONS
