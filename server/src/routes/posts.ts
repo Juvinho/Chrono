@@ -507,8 +507,8 @@ router.get('/trending/cordoes', async (req: AuthRequest, res: Response) => {
         cordoes = await trendingService.getTrendingCordoesInTimeRange(startDate, now);
       }
     } else {
-      // Default: last 7 days (not just 24 hours)
-      cordoes = await trendingService.getTrendingCordoesForLast7Days();
+      // Default: last 24 hours
+      cordoes = await trendingService.getTrendingCordoesForToday();
     }
 
     res.json(cordoes);

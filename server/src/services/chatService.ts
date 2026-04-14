@@ -73,13 +73,32 @@ export class ChatService {
    */
   async getConversationById(conversationId: string) {
     try {
+      console.log('🔍 getConversationById query:', {
+        conversationId,
+        conversationIdType: typeof conversationId,
+        conversationIdIsUUID: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(conversationId || '')
+      });
+      
       const result = await pool.query(
         `SELECT id, user1_id, user2_id, created_at, updated_at FROM conversations WHERE id = $1::uuid`,
         [conversationId]
       );
+      
+      console.log('✅ getConversationById result:', {
+        found: result.rows.length > 0,
+        rowCount: result.rows.length,
+        conversationId
+      });
+      
       return result.rows[0] || null;
     } catch (error: any) {
-      console.error('getConversationById error:', error.message);
+      console.error('❌ getConversationById error:', {
+        message: error.message,
+        code: error.code,
+        conversationId,
+        conversationIdType: typeof conversationId,
+        stack: error.stack?.split('\n')[0]
+      });
       return null;
     }
   }
@@ -136,7 +155,15 @@ export class ChatService {
       console.log('📊 Raw query result:', {
         rowCount: result.rows.length,
         userId,
-        rows: result.rows.map(r => ({ id: r.id, u1: r.user1_id, u2: r.user2_id }))
+        rows: result.rows.map(r => ({ 
+          id: r.id,
+          idType: typeof r.id,
+          idIsString: typeof r.id === 'string',
+          u1: r.user1_id,
+          u1Type: typeof r.user1_id,
+          u2: r.user2_id,
+          u2Type: typeof r.user2_id,
+        }))
       });
 
       // Se não encontrou conversas no banco
@@ -151,8 +178,19 @@ export class ChatService {
 
       for (const row of result.rows) {
         try {
-          // Get the other user
-          const otherUserId = row.user1_id === userId ? row.user2_id : row.user1_id;
+          // Validate ID is a UUID string
+          if (typeof row.id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(row.id)) {
+            console.warn('⚠️ Invalid conversation ID format (non-UUID):', {
+              id: row.id,
+              type: typeof row.id,
+              fromDB: row
+            });
+            skippedCount++;
+            continue;
+          }
+          
+          // Get the other user (toString() guards against UUID buffer vs string mismatch)
+          const otherUserId = row.user1_id.toString() === userId.toString() ? row.user2_id : row.user1_id;
           
           console.log('👤 Processing conversation:', {
             conversationId: row.id,
@@ -327,7 +365,7 @@ export class ChatService {
       }
 
       const conv = convCheck.rows[0];
-      const isParticipant = conv.user1_id === senderId || conv.user2_id === senderId;
+      const isParticipant = conv.user1_id.toString() === senderId.toString() || conv.user2_id.toString() === senderId.toString();
       if (!isParticipant) {
         throw new Error('User is not a participant in this conversation');
       }

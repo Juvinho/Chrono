@@ -46,8 +46,8 @@ export const initConversation = async (req: AuthRequest, res: Response) => {
     // QC-09: Check if either user has blocked the other
     const blockCheck = await pool.query(
       `SELECT 1 FROM users
-       WHERE (id = $1::uuid AND $2::uuid = ANY(blocked_users))
-          OR (id = $2::uuid AND $1::uuid = ANY(blocked_users))
+       WHERE (id = $1::uuid AND $2::text = ANY(blocked_users))
+          OR (id = $2::uuid AND $1::text = ANY(blocked_users))
        LIMIT 1`,
       [userId, targetUserId]
     );
@@ -171,13 +171,34 @@ export const getMessages = async (req: AuthRequest, res: Response) => {
     const { conversationId } = req.params;
     const userId = req.userId!;
     
+    console.log('📨 getMessages called:', {
+      conversationId,
+      conversationIdType: typeof conversationId,
+      userId,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(conversationId)) {
+      console.warn('❌ Invalid conversationId format:', conversationId);
+      return res.status(400).json({ error: 'Invalid conversation ID format' });
+    }
+    
     // Verify user is a participant in this conversation
     const conversation = await chatService.getConversationById(conversationId);
+    
+    console.log('🔍 Conversation lookup:', {
+      found: !!conversation,
+      conversationId,
+      dbResult: conversation ? { id: conversation.id, u1: conversation.user1_id, u2: conversation.user2_id } : null
+    });
+    
     if (!conversation) {
       return res.status(404).json({ error: 'Conversation not found' });
     }
     
-    const isParticipant = conversation.user1_id === userId || conversation.user2_id === userId;
+    const isParticipant = conversation.user1_id.toString() === userId.toString() || conversation.user2_id.toString() === userId.toString();
     if (!isParticipant) {
       return res.status(403).json({ error: 'Not authorized to view this conversation' });
     }
@@ -203,11 +224,11 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
     );
     if (convRow.rows.length > 0) {
       const { user1_id, user2_id } = convRow.rows[0];
-      const otherUserId = user1_id === userId ? user2_id : user1_id;
+      const otherUserId = user1_id.toString() === userId.toString() ? user2_id : user1_id;
       const blockCheck = await pool.query(
         `SELECT 1 FROM users
-         WHERE (id = $1::uuid AND $2::uuid = ANY(blocked_users))
-            OR (id = $2::uuid AND $1::uuid = ANY(blocked_users))
+         WHERE (id = $1::uuid AND $2::text = ANY(blocked_users))
+            OR (id = $2::uuid AND $1::text = ANY(blocked_users))
          LIMIT 1`,
         [userId, otherUserId]
       );
@@ -232,7 +253,7 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
       // Emit conversation update (lastMessage, updatedAt) to both users
       const conversation = await chatService.getConversationById(conversationId);
       if (conversation) {
-        const otherUserId = conversation.user1_id === userId ? conversation.user2_id : conversation.user1_id;
+        const otherUserId = conversation.user1_id.toString() === userId.toString() ? conversation.user2_id : conversation.user1_id;
         
         const conversationUpdate = {
           id: conversationId,
@@ -267,7 +288,7 @@ export const markAsRead = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Conversation not found' });
     }
     
-    const isParticipant = conversation.user1_id === userId || conversation.user2_id === userId;
+    const isParticipant = conversation.user1_id.toString() === userId.toString() || conversation.user2_id.toString() === userId.toString();
     if (!isParticipant) {
       return res.status(403).json({ error: 'Not a participant in this conversation' });
     }

@@ -18,7 +18,7 @@ router.post('/:id/verify', async (req: Request, res: Response) => {
            verification_badge_label = $1,
            verification_badge_color = $2,
            updated_at = NOW()
-       WHERE id = $3
+       WHERE id = $3::uuid
        RETURNING id, username, is_verified`,
       [badge_label, badge_color, id]
     );
@@ -54,7 +54,7 @@ router.post('/:id/unverify', async (req: Request, res: Response) => {
            verification_badge_label = NULL,
            verification_badge_color = NULL,
            updated_at = NOW()
-       WHERE id = $1
+       WHERE id = $1::uuid
        RETURNING id, username, is_verified`,
       [id]
     );
@@ -85,12 +85,12 @@ router.get('/:id/blocks', async (req: Request, res: Response) => {
     const { id } = req.params;
 
     const result = await pool.query(
-      `SELECT 
+      `SELECT
         username,
         display_name
       FROM users
       WHERE id = ANY(
-        SELECT blocked_users FROM users WHERE id = $1
+        SELECT blocked_users FROM users WHERE id = $1::uuid
       )`,
       [id]
     );
@@ -131,7 +131,7 @@ router.post('/:id/subscription', async (req: Request, res: Response) => {
              ELSE NOW() + INTERVAL '30 days'
            END,
            updated_at = NOW()
-       WHERE id = $2
+       WHERE id = $2::uuid
        RETURNING id, username, subscription_tier, subscription_expires_at`,
       [tier, id]
     );

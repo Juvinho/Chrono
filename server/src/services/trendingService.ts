@@ -25,8 +25,8 @@ export class TrendingService {
    * Calcula cordões trending apenas das últimas 24 horas (não apenas do dia atual)
    * Ordenado por número de menções
    */
-  async getTrendingCordoesForToday(): Promise<TrendingCord[]> {
-    const now = new Date();
+  async getTrendingCordoesForToday(refDate?: Date): Promise<TrendingCord[]> {
+    const now = refDate ?? new Date();
     const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
     const result = await pool.query(

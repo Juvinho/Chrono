@@ -27,7 +27,7 @@ export function useMessages(conversationId: number | string | null) {
     // Evita múltiplas requisições simultâneas
     isFetchingRef.current = true;
     const now = Date.now();
-    
+
     // Mínimo de 2 segundos entre requisições
     if (now - lastFetchRef.current < 2000) {
       isFetchingRef.current = false;
@@ -35,10 +35,13 @@ export function useMessages(conversationId: number | string | null) {
     }
 
     lastFetchRef.current = now;
+    setIsLoading(true);
 
     try {
-      console.log(`📨 Buscando mensagens para conversa ID: ${conversationId}`);
-      const data = await getMessages(conversationId);
+      // Always coerce to string — the API route expects a UUID string
+      const idStr = String(conversationId);
+      console.log(`📨 Buscando mensagens para conversa ID: ${idStr}`);
+      const data = await getMessages(idStr);
       console.log(`✅ Mensagens carregadas:`, {
         total: data.length,
       });
@@ -68,6 +71,7 @@ export function useMessages(conversationId: number | string | null) {
       setError(errorMessage);
     } finally {
       isFetchingRef.current = false;
+      setIsLoading(false);
     }
   }, [conversationId, playSound, incrementUnread, isPageVisible]);
 

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, memo } from 'react';
 import { Post, User } from '../../../types/index';
 import { useTranslation } from '../../../hooks/useTranslation';
-import { CameraIcon, PollIcon, CalendarIcon, LockClosedIcon, MicrophoneIcon, ImageIcon, SparklesIcon, HourglassIcon } from '../../../components/ui/icons';
+import { CameraIcon, PollIcon, CalendarIcon, LockClosedIcon, LockOpenIcon, MicrophoneIcon, ImageIcon, SparklesIcon, HourglassIcon } from '../../../components/ui/icons';
 // Gemini API calls moved to backend for security (C-01)
 // Use POST /api/ai/generate-image instead of generateImage()
 // Use POST /api/ai/analyze-sentiment instead of analyzeSentiment()
@@ -485,7 +485,7 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
                     </span>
                  )}
                  <button onClick={() => setIsPrivate(p => !p)} title={isPrivate ? t('postPrivate') : t('postPublic')} className={`p-2 rounded-full transition-colors ${isPrivate ? 'text-[var(--theme-primary)] bg-[var(--theme-primary)]/20' : 'text-[var(--theme-text-secondary)] hover:bg-[var(--theme-bg-tertiary)]'}`}>
-                    <LockClosedIcon className="w-5 h-5"/>
+                    {isPrivate ? <LockClosedIcon className="w-5 h-5"/> : <LockOpenIcon className="w-5 h-5"/>}
                  </button>
                  <div className="relative w-8 h-8 hidden sm:block">
                     <svg className="w-full h-full" viewBox="0 0 36 36">

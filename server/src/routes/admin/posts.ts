@@ -72,7 +72,7 @@ router.get('/:id', async (req: Request, res: Response) => {
         (SELECT COUNT(*) FROM posts WHERE in_reply_to_id = p.id) as reply_count
       FROM posts p
       JOIN users u ON p.author_id = u.id
-      WHERE p.id = $1`,
+      WHERE p.id = $1::uuid`,
       [id]
     );
 
@@ -107,7 +107,7 @@ router.put('/:id', async (req: Request, res: Response) => {
     const result = await pool.query(
       `UPDATE posts 
        SET content = $1, updated_at = NOW()
-       WHERE id = $2
+       WHERE id = $2::uuid
        RETURNING id, content, updated_at, author_id`,
       [content, id]
     );
@@ -153,14 +153,14 @@ router.delete('/:id', async (req: Request, res: Response) => {
     const adminId = (req as any).user?.id;
     const reason = (req.body as any)?.reason || 'Administrative action';
 
-    const postCheck = await pool.query('SELECT author_id, content FROM posts WHERE id = $1', [id]);
+    const postCheck = await pool.query('SELECT author_id, content FROM posts WHERE id = $1::uuid', [id]);
     if (postCheck.rows.length === 0) {
       return res.status(404).json({ error: 'Post not found' });
     }
 
     const postData = postCheck.rows[0];
 
-    await pool.query('DELETE FROM posts WHERE id = $1', [id]);
+    await pool.query('DELETE FROM posts WHERE id = $1::uuid', [id]);
 
     // A-09: Log the delete action
     if (adminId) {
@@ -208,7 +208,7 @@ router.get('/search/by-user', async (req: Request, res: Response) => {
         p.created_at,
         (SELECT COUNT(*) FROM reactions WHERE post_id = p.id) as reaction_count
       FROM posts p
-      WHERE p.author_id = $1
+      WHERE p.author_id = $1::uuid
       ORDER BY p.created_at DESC
       LIMIT 100`,
       [userId]

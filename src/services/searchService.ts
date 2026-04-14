@@ -175,22 +175,26 @@ export class SearchService {
         .filter(p => !p.isThread && !this.hasCordaoTag(p))
         .sort((a, b) => this.getPopularity(b) - this.getPopularity(a));
     } else {
-      // Busca genérica
-      const resultados = this.searchPosts(term, allPosts);
-      console.log(`[Search] Post matches (${term}):`, resultados.length);
+      // Busca genérica — mínimo 2 caracteres para evitar resultados genéricos
+      // (uma letra única como "s" apareceria em quase todo post)
+      if (term.length >= 2) {
+        const resultados = this.searchPosts(term, allPosts);
+        console.log(`[Search] Post matches (${term}):`, resultados.length);
 
-      // Filtra cordões garantindo que o nome da tag contém o termo (case-insensitive)
-      cordoes = resultados
-        .filter(p => p.isThread || this.hasCordaoTag(p))
-        .filter(p => {
-          const tags = this.extractCordoes(p.content);
-          return tags.some(tag => tag.toLowerCase().includes(term.toLowerCase()));
-        })
-        .sort((a, b) => this.getPopularity(b) - this.getPopularity(a));
+        // Cordões: exige que o nome da tag comece com o termo (prefixo), não apenas contenha
+        cordoes = resultados
+          .filter(p => p.isThread || this.hasCordaoTag(p))
+          .filter(p => {
+            const tags = this.extractCordoes(p.content);
+            return tags.some(tag => tag.toLowerCase().startsWith(term.toLowerCase()));
+          })
+          .sort((a, b) => this.getPopularity(b) - this.getPopularity(a));
 
-      posts = resultados
-        .filter(p => !p.isThread && !this.hasCordaoTag(p))
-        .sort((a, b) => this.getPopularity(b) - this.getPopularity(a));
+        posts = resultados
+          .filter(p => !p.isThread && !this.hasCordaoTag(p))
+          .sort((a, b) => this.getPopularity(b) - this.getPopularity(a));
+      }
+      // term.length < 2 → cordoes and posts stay []
     }
 
     return {

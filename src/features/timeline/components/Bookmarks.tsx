@@ -6,6 +6,7 @@ import PostSkeleton from './PostSkeleton';
 import { BookmarkIcon } from '../../../components/ui/icons';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { postService } from '../../../api/post.service';
+import { mapApiPostToPost } from '../../../api/mappers';
 import { useToast } from '../../../contexts/ToastContext';
 import '../../../styles/post-glitch-animation.css';
 
@@ -71,11 +72,20 @@ export default function Bookmarks({
                 setIsLoading(true);
                 setError(null);
                 const response = await postService.getBookmarks({ limit: 100 });
-                if (response.data && Array.isArray(response.data)) {
-                    setBookmarkedPosts(response.data);
-                    setBookmarkedIds(new Set(response.data.map(p => p.id)));
+                if (response.data) {
+                    // Backend returns { bookmarks, limit, offset, hasMore }
+                    const bookmarksArray = response.data.bookmarks || response.data;
+                    if (Array.isArray(bookmarksArray)) {
+                        const mapped = bookmarksArray.map(mapApiPostToPost);
+                        setBookmarkedPosts(mapped);
+                        setBookmarkedIds(new Set(mapped.map((p: any) => p.id)));
+                    } else {
+                        throw new Error('Invalid bookmarks data format');
+                    }
                 } else if (response.error) {
                     throw new Error(response.error.message || 'Erro desconhecido ao carregar bookmarks');
+                } else {
+                    throw new Error('No data received from server');
                 }
             } catch (err: any) {
                 console.error('Failed to load bookmarks:', err);

@@ -76,7 +76,7 @@ export default function EchoFrame({
         try {
             const isToday = selectedDate.toDateString() === new Date().toDateString();
             const url = isToday
-                ? '/posts/trending/cordoes?days=7'
+                ? '/posts/trending/cordoes'
                 : `/posts/trending/cordoes?date=${selectedDate.toISOString().split('T')[0]}`;
             const response = await apiClient.get(url);
             if (response.data && Array.isArray(response.data)) {
@@ -502,7 +502,7 @@ export default function EchoFrame({
                                         </div>
                                     ))
                                 ) : (
-                                    <p className="text-[var(--theme-text-secondary)] text-sm italic">Nenhum cordão encontrado</p>
+                                    <p className="text-[var(--theme-text-secondary)] text-sm italic">Nenhum cordão em destaque neste período</p>
                                 )}
                             </div>
                         </div>
@@ -726,7 +726,7 @@ export default function EchoFrame({
                                      </button>
                                  ))
                              ) : (
-                                 <p className="text-[var(--theme-text-secondary)] text-xs italic">Nenhum cordão</p>
+                                 <p className="text-[var(--theme-text-secondary)] text-xs italic">Nenhum cordão em destaque neste período</p>
                              )}
                          </div>
                      </div>

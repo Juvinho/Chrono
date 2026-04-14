@@ -9,7 +9,7 @@ import { useTranslation } from '../../../hooks/useTranslation';
 import FramePreview, { getFrameShape } from '../../profile/components/FramePreview';
 
 // Each date cell width in px (content + right gap)
-const ITEM_WIDTH = 80;
+const ITEM_WIDTH = 110;
 // Visible height of the list inside the h-24 bar
 const LIST_HEIGHT = 80;
 
@@ -26,7 +26,9 @@ export default function Timeline({ selectedDate, setSelectedDate, onNavigate, al
     const listRef = useRef<FixedSizeList>(null);
     const outerRef = useRef<HTMLDivElement>(null);   // react-window outer container
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-    const [containerWidth, setContainerWidth] = useState(600);
+    const [containerWidth, setContainerWidth] = useState(() =>
+        typeof window !== 'undefined' ? Math.max(window.innerWidth - 200, 200) : 600
+    );
 
     // Measure available width (minus left-button area ~120px)
     const wrapperRef = useRef<HTMLDivElement>(null);
@@ -137,13 +139,13 @@ export default function Timeline({ selectedDate, setSelectedDate, onNavigate, al
                 }`}
             >
                 {/* Mini avatars */}
-                <div className="flex justify-center items-center h-6 mb-1" style={{ gap: '0px', marginRight: '0px' }}>
+                <div className="flex justify-center items-center h-6 mb-1" style={{ gap: '2px', marginRight: '4px' }}>
                     {authorsOnDate.slice(0, 3).map(author => {
                         const avatarShape = author.equippedFrame ? getFrameShape(author.equippedFrame.name) : 'rounded-full';
                         return (
                             <div
                                 key={author.username}
-                                className="relative w-6 h-6 flex-shrink-0 -ml-2 first:ml-0"
+                                className="relative w-6 h-6 flex-shrink-0 -ml-1 first:ml-0"
                                 onClick={e => { e.stopPropagation(); onNavigate(Page.Profile, author.username); }}
                                 title={`@${author.username}`}
                             >

@@ -61,8 +61,8 @@ router.get('/:id', async (req: Request, res: Response) => {
         created_at,
         updated_at,
         COALESCE(is_banned, false) as is_banned
-      FROM users 
-      WHERE id = $1`,
+      FROM users
+      WHERE id = $1::uuid`,
       [id]
     );
 
@@ -75,10 +75,10 @@ router.get('/:id', async (req: Request, res: Response) => {
     const user = result.rows[0];
 
     // Buscar relacionados
-    const posts = await pool.query('SELECT COUNT(*) FROM posts WHERE author_id = $1', [id]);
-    const followers = await pool.query('SELECT COUNT(*) FROM follows WHERE following_id = $1', [id]);
-    const following = await pool.query('SELECT COUNT(*) FROM follows WHERE follower_id = $1', [id]);
-    const conversations = await pool.query('SELECT COUNT(*) FROM conversations WHERE user1_id = $1 OR user2_id = $1', [id]);
+    const posts = await pool.query('SELECT COUNT(*) FROM posts WHERE author_id = $1::uuid', [id]);
+    const followers = await pool.query('SELECT COUNT(*) FROM follows WHERE following_id = $1::uuid', [id]);
+    const following = await pool.query('SELECT COUNT(*) FROM follows WHERE follower_id = $1::uuid', [id]);
+    const conversations = await pool.query('SELECT COUNT(*) FROM conversations WHERE user1_id = $1::uuid OR user2_id = $1::uuid', [id]);
 
     res.json({
       success: true,
@@ -109,7 +109,7 @@ router.put('/:id', async (req: Request, res: Response) => {
     const adminId = (req as any).user?.id;
 
     // Validar que o usuário existe
-    const userCheck = await pool.query('SELECT id, username, display_name, email, bio, is_banned FROM users WHERE id = $1', [id]);
+    const userCheck = await pool.query('SELECT id, username, display_name, email, bio, is_banned FROM users WHERE id = $1::uuid', [id]);
     if (userCheck.rows.length === 0) {
       return res.status(404).json({
         error: 'User not found',
@@ -217,7 +217,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
     const adminId = (req as any).user?.id;
 
     // Verificar que o usuário existe
-    const userCheck = await pool.query('SELECT id, username, display_name, email, bio FROM users WHERE id = $1', [id]);
+    const userCheck = await pool.query('SELECT id, username, display_name, email, bio FROM users WHERE id = $1::uuid', [id]);
     if (userCheck.rows.length === 0) {
       return res.status(404).json({
         error: 'User not found',
@@ -228,7 +228,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
     const userData = userCheck.rows[0];
 
     // Deletar usuário (isso vai em cascata conforme as constraints)
-    await pool.query('DELETE FROM users WHERE id = $1', [id]);
+    await pool.query('DELETE FROM users WHERE id = $1::uuid', [id]);
 
     // A-09: Log the delete action
     if (adminId) {
@@ -274,7 +274,7 @@ router.post('/:id/ban', async (req: Request, res: Response) => {
     const reason = (req.body as any)?.reason || 'Administrative action';
 
     const result = await pool.query(
-      'UPDATE users SET is_banned = true, updated_at = NOW() WHERE id = $1 RETURNING id, username, is_banned',
+      'UPDATE users SET is_banned = true, updated_at = NOW() WHERE id = $1::uuid RETURNING id, username, is_banned',
       [id]
     );
 
@@ -328,7 +328,7 @@ router.post('/:id/unban', async (req: Request, res: Response) => {
     const reason = (req.body as any)?.reason || 'Administrative action';
 
     const result = await pool.query(
-      'UPDATE users SET is_banned = false, updated_at = NOW() WHERE id = $1 RETURNING id, username, is_banned',
+      'UPDATE users SET is_banned = false, updated_at = NOW() WHERE id = $1::uuid RETURNING id, username, is_banned',
       [id]
     );
 
@@ -390,7 +390,7 @@ router.post('/:id/reset-password', async (req: Request, res: Response) => {
     const hashedPassword = await bcrypt.hash(new_password, 10);
 
     const result = await pool.query(
-      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2 RETURNING id, username',
+      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2::uuid RETURNING id, username',
       [hashedPassword, id]
     );
 

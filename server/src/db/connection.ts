@@ -25,8 +25,12 @@ console.log(`Connecting to database: ${sanitizedUrl}`);
 const isLocal = cleanDbUrl.includes('localhost') || cleanDbUrl.includes('127.0.0.1');
 
 // SEC-04: Respect DB_SSL_REJECT_UNAUTHORIZED env var.
-// Set to 'false' only if your provider uses self-signed certs (e.g. Railway).
-const rejectUnauthorized = process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false';
+// Railway uses self-signed certs — auto-detect and disable rejection.
+const isRailway = process.env.RAILWAY_ENVIRONMENT !== undefined
+  || !!(process.env.DATABASE_URL?.includes('railway'));
+const rejectUnauthorized = isRailway
+  ? false
+  : process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false';
 
 export const pool = new Pool({
   connectionString: cleanDbUrl,
