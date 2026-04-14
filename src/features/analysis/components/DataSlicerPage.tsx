@@ -115,8 +115,8 @@ export default function DataSlicerPage({
         onBack={onBack}
         lastViewedNotifications={lastViewedNotifications}
       />
-      <main className="flex-grow overflow-y-auto p-8">
-        <div className="max-w-4xl mx-auto">
+      <main className="flex-grow overflow-y-auto p-8 overflow-x-hidden" style={{ boxSizing: 'border-box' }}>
+        <div className="max-w-4xl mx-auto" style={{ boxSizing: 'border-box' }}>
           <div className="flex items-center mb-8">
             <FilmIcon className="w-10 h-10 text-[var(--theme-primary)] mr-4"/>
             <div>

@@ -806,8 +806,8 @@ export default function ProfilePage({
             </div>
           </div>
           
-          <div className="mt-4 px-4 md:px-8 pb-8 w-full mx-auto">
-            <div className="max-w-4xl mx-auto w-full overflow-hidden">
+          <div className="mt-4 px-4 md:px-8 pb-8 w-full mx-auto max-w-4xl overflow-x-hidden" style={{ boxSizing: 'border-box' }}>
+            <div className="max-w-4xl mx-auto w-full overflow-hidden" style={{ boxSizing: 'border-box' }}>
               <div className="grid grid-cols-1 lg:grid-cols-[35fr_65fr] gap-4 lg:gap-6 w-full overflow-hidden"  style={{ boxSizing: 'border-box' }}>
                 {/* Left Column: Melhores Posts */}
                 <div className="hidden lg:block space-y-4 w-full min-w-0">

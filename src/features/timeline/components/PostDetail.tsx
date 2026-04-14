@@ -169,7 +169,7 @@ export const PostDetail: React.FC<PostDetailProps> = ({
 
   if (error || !rootPost) {
     return (
-      <div className="min-h-screen bg-[var(--theme-bg-primary)] text-[var(--theme-text-primary)]">
+      <div className="min-h-screen bg-[var(--theme-bg-primary)] text-[var(--theme-text-primary)] overflow-x-hidden" style={{ boxSizing: 'border-box' }}>
         <div className="sticky top-0 z-40 bg-[var(--theme-bg-primary)] border-b-2 border-[var(--theme-primary)]">
           <div className="flex items-center justify-between gap-4 p-4 max-w-4xl mx-auto w-full">
             <button
@@ -222,7 +222,7 @@ export const PostDetail: React.FC<PostDetailProps> = ({
       </div>
 
       {/* Thread Content */}
-      <div className="max-w-4xl mx-auto p-4">
+      <div className="max-w-4xl mx-auto p-4" style={{ boxSizing: 'border-box' }}>
         <div className="space-y-0">
           {handleRenderReplies(rootPost)}
         </div>

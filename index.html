@@ -478,10 +478,11 @@
         .search-overlay {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 100;
             display: flex; flex-direction: column; padding-top: 5rem; align-items: center;
+            overflow-x: hidden; overflow-y: auto; box-sizing: border-box;
         }
         .theme-dark .search-overlay { background-color: rgba(0, 0, 0, 0.95); }
         .theme-light .search-overlay { background-color: rgba(247, 247, 247, 0.95); }
-        .search-overlay-content { animation: page-enter 0.3s ease; width: 100%; max-width: 56rem; }
+        .search-overlay-content { animation: page-enter 0.3s ease; width: 100%; max-width: 56rem; overflow-x: hidden; box-sizing: border-box; }
         .search-input {
             width: 100%; border-bottom-width: 2px; border-color: var(--theme-primary); padding: 0.75rem 1rem;
             font-size: 1.5rem; background-color: transparent; color: var(--theme-text-primary);

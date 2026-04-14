@@ -412,7 +412,7 @@ export default function SettingsPage({
         lastViewedNotifications={lastViewedNotifications}
       />
 
-      <main className="pt-20 pb-20 px-4 max-w-4xl mx-auto space-y-6">
+      <main className="pt-20 pb-20 px-4 max-w-4xl mx-auto space-y-6 overflow-x-hidden" style={{ boxSizing: 'border-box' }}>
         <div className="flex items-center gap-4 mb-8">
             <h1 className="text-3xl font-bold glitch-text" data-text={t('settings')}>{t('settings')}</h1>
         </div>

@@ -89,7 +89,7 @@ export const ThreadView: React.FC<ThreadViewProps> = ({
 
     if (error || !rootPost) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--theme-bg-primary)] text-[var(--theme-text-primary)]">
+            <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--theme-bg-primary)] text-[var(--theme-text-primary)] overflow-x-hidden" style={{ boxSizing: 'border-box' }}>
                 <h2 className="text-2xl font-bold mb-4 text-[var(--theme-primary)]">{t('threadNotFound')}</h2>
                 <p className="text-[var(--theme-text-secondary)] mb-6">{error || t('threadDoesNotExist')}</p>
                 <button
@@ -175,7 +175,7 @@ export const ThreadView: React.FC<ThreadViewProps> = ({
             </div>
 
             {/* Thread Content */}
-            <div className="max-w-4xl mx-auto p-4">
+            <div className="max-w-4xl mx-auto p-4 w-full" style={{ boxSizing: 'border-box' }}>
                 <div className="space-y-0">
                     {handleRenderReplies(rootPost)}
                 </div>
