@@ -107,6 +107,9 @@ function App() {
             case Page.Settings:
                 navigate('/settings');
                 break;
+            case Page.Bookmarks:
+                navigate('/bookmarks');
+                break;
             case Page.Messages:
                 if (data) {
                     const targetUser = users.find(u => u.username === data);

@@ -22,6 +22,7 @@ const VerifyEmailPage = React.lazy(() => import('../pages/VerifyEmailPage'));
 const ForgotPassword = React.lazy(() => import('../features/auth/components/ForgotPassword'));
 const ResetPassword = React.lazy(() => import('../features/auth/components/ResetPassword'));
 const DataSlicerPage = React.lazy(() => import('../features/analysis/components/DataSlicerPage'));
+const Bookmarks = React.lazy(() => import('../features/timeline/components/Bookmarks'));
 const MessagingLayout = React.lazy(() => import('../features/messaging/components/MessagingLayout').then(m => ({ default: m.MessagingLayout })));
 const Marketplace = React.lazy(() => import('../features/marketplace/components/Marketplace'));
 const EchoDetailModal = React.lazy(() => import('../features/timeline/components/EchoDetailModal'));
@@ -282,6 +283,26 @@ export default function AppRoutes(props: AppRoutesProps) {
                     onBack={handleBack}
                     lastViewedNotifications={lastViewedNotifications}
                     onOpenChat={handleOpenChat}
+                />
+            ) : <Navigate to="/welcome" />} />
+            
+            <Route path="/bookmarks" element={currentUser ? (
+                <Bookmarks
+                    currentUser={currentUser}
+                    allPosts={memoizedPosts}
+                    onViewProfile={(username) => handleNavigate(Page.Profile, username)}
+                    onTagClick={(tag) => {
+                        sessionStorage.setItem('chrono_search_query', tag);
+                        handleNavigate(Page.Dashboard);
+                    }}
+                    onUpdateReaction={handleUpdateReaction}
+                    onReply={handleReply}
+                    onEcho={handleEcho}
+                    onDeletePost={handleDeletePost}
+                    onEditPost={handleEditPost}
+                    onPollVote={handlePollVote}
+                    typingParentIds={typingParentIds}
+                    onNavigate={handleNavigate}
                 />
             ) : <Navigate to="/welcome" />} />
             

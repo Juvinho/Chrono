@@ -46,8 +46,8 @@ export const initConversation = async (req: AuthRequest, res: Response) => {
     // QC-09: Check if either user has blocked the other
     const blockCheck = await pool.query(
       `SELECT 1 FROM users
-       WHERE (id = $1 AND $2 = ANY(blocked_users))
-          OR (id = $2 AND $1 = ANY(blocked_users))
+       WHERE (id = $1::uuid AND $2::uuid = ANY(blocked_users))
+          OR (id = $2::uuid AND $1::uuid = ANY(blocked_users))
        LIMIT 1`,
       [userId, targetUserId]
     );
@@ -206,8 +206,8 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
       const otherUserId = user1_id === userId ? user2_id : user1_id;
       const blockCheck = await pool.query(
         `SELECT 1 FROM users
-         WHERE (id = $1 AND $2 = ANY(blocked_users))
-            OR (id = $2 AND $1 = ANY(blocked_users))
+         WHERE (id = $1::uuid AND $2::uuid = ANY(blocked_users))
+            OR (id = $2::uuid AND $1::uuid = ANY(blocked_users))
          LIMIT 1`,
         [userId, otherUserId]
       );

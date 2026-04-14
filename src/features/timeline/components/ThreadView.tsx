@@ -89,16 +89,21 @@ export const ThreadView: React.FC<ThreadViewProps> = ({
 
     if (error || !rootPost) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--theme-bg-primary)] text-[var(--theme-text-primary)] overflow-x-hidden" style={{ boxSizing: 'border-box' }}>
-                <h2 className="text-2xl font-bold mb-4 text-[var(--theme-primary)]">{t('threadNotFound')}</h2>
-                <p className="text-[var(--theme-text-secondary)] mb-6">{error || t('threadDoesNotExist')}</p>
-                <button
-                    onClick={onBack}
-                    className="flex items-center gap-2 px-4 py-2 bg-[var(--theme-bg-secondary)] border border-[var(--theme-primary)] rounded hover:bg-[var(--theme-bg-tertiary)] transition-colors"
-                >
-                    <ChevronLeftIcon className="w-4 h-4" />
-                    {t('goBack')}
-                </button>
+            <div className="min-h-screen flex items-center justify-center p-4" style={{
+                background: 'rgba(0, 0, 0, 0.75)',
+                backdropFilter: 'blur(4px)'
+            }}>
+                <div className="bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] rounded-lg p-6 max-w-600px text-center">
+                    <h2 className="text-2xl font-bold mb-4 text-[var(--theme-primary)]">{t('threadNotFound')}</h2>
+                    <p className="text-[var(--theme-text-secondary)] mb-6">{error || t('threadDoesNotExist')}</p>
+                    <button
+                        onClick={onBack}
+                        className="flex items-center justify-center gap-2 px-4 py-2 mx-auto bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] rounded-sm hover:bg-[var(--theme-bg-secondary)] transition-colors"
+                    >
+                        <ChevronLeftIcon className="w-4 h-4" />
+                        {t('goBack')}
+                    </button>
+                </div>
             </div>
         );
     }
@@ -108,12 +113,7 @@ export const ThreadView: React.FC<ThreadViewProps> = ({
 
         // Render current post
         result.push(
-            <div
-                key={`post-${post.id}`}
-                className={`${
-                    depth === 0 ? 'border-b-2 border-[var(--theme-primary)]' : ''
-                } pb-4 mb-4`}
-            >
+            <div key={`post-${post.id}`} className={depth === 0 ? '' : ''}>
                 <PostCard
                     post={post}
                     currentUser={currentUser}
@@ -136,7 +136,7 @@ export const ThreadView: React.FC<ThreadViewProps> = ({
         // Render replies
         if (post.replies && post.replies.length > 0) {
             result.push(
-                <div key={`replies-${post.id}`} className="ml-0 md:ml-4 border-l-2 border-[var(--theme-primary)] pl-4">
+                <div key={`replies-${post.id}`} className="mt-4 space-y-0 border-l-2 border-[var(--theme-border-primary)] pl-4 md:pl-6">
                     {post.replies.map((reply) => (
                         <div key={`reply-container-${reply.id}`}>
                             {handleRenderReplies(reply, depth + 1)}
@@ -150,34 +150,67 @@ export const ThreadView: React.FC<ThreadViewProps> = ({
     };
 
     return (
-        <div className="min-h-screen bg-[var(--theme-bg-primary)] text-[var(--theme-text-primary)]">
-            {/* Header */}
-            <div className="sticky top-0 z-40 bg-[var(--theme-bg-primary)] border-b-2 border-[var(--theme-primary)]">
-                <div className="flex items-center justify-between gap-4 p-4 max-w-4xl mx-auto w-full">
-                    <div className="flex items-center gap-4">
+        <div
+            className="min-h-screen flex items-flex-start justify-center p-4 md:p-8 overflow-y-auto"
+            style={{
+                background: 'rgba(0, 0, 0, 0.75)',
+                backdropFilter: 'blur(4px)',
+                paddingTop: '2rem',
+            }}
+        >
+            {/* Card Container */}
+            <div
+                className="w-full max-w-600px bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] rounded-lg shadow-lg overflow-hidden"
+                style={{ boxSizing: 'border-box' }}
+            >
+                {/* Header */}
+                <div className="flex items-center justify-between gap-4 p-6 border-b border-[var(--theme-border-primary)]">
+                    <div className="flex items-center gap-3">
                         <button
                             onClick={onBack}
-                            className="flex items-center justify-center w-10 h-10 rounded hover:bg-[var(--theme-bg-secondary)] transition-colors"
+                            className="flex items-center justify-center w-9 h-9 rounded-sm text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-light)] hover:bg-[var(--theme-bg-tertiary)] transition-colors"
                             title={t('goBack')}
                         >
                             <ChevronLeftIcon className="w-5 h-5" />
                         </button>
-                        <div>
-                            <h1 className="text-2xl font-bold">{t('thread')}</h1>
-                            {rootPost && rootPost.replies && rootPost.replies.length > 0 && (
-                                <p className="text-xs text-[var(--theme-text-secondary)] mt-1">
-                                    💬 {rootPost.replies.length} comentário{rootPost.replies.length !== 1 ? 's' : ''}
-                                </p>
-                            )}
-                        </div>
+                        <h1 className="text-lg font-bold text-[var(--theme-text-light)]">{t('thread') || 'THREAD'}</h1>
                     </div>
                 </div>
-            </div>
 
-            {/* Thread Content */}
-            <div className="max-w-4xl mx-auto p-4 w-full" style={{ boxSizing: 'border-box' }}>
-                <div className="space-y-0">
-                    {handleRenderReplies(rootPost)}
+                {/* Content */}
+                <div className="p-6 space-y-0 max-h-[70vh] overflow-y-auto">
+                    {/* Original Post */}
+                    <div className="pb-4 border-b border-[var(--theme-border-primary)]">
+                        {handleRenderReplies(rootPost)[0]}
+                    </div>
+
+                    {/* Replies Section */}
+                    {rootPost.replies && rootPost.replies.length > 0 ? (
+                        <div className="mt-4 space-y-0">
+                            <h3 className="text-xs font-semibold text-[var(--theme-text-secondary)] uppercase tracking-wider mb-4 px-2">
+                                {t('replies') || 'Respostas'} ({rootPost.replies.length})
+                            </h3>
+                            <div className="space-y-0">
+                                {handleRenderReplies(rootPost).slice(1)}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="mt-6 py-8 text-center">
+                            <p className="text-[var(--theme-text-secondary)] text-sm">
+                                {t('noReplies') || 'Nenhuma resposta ainda. Seja o primeiro!'}
+                            </p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Footer - Reply Button */}
+                <div className="p-6 border-t border-[var(--theme-border-primary)] bg-[var(--theme-bg-primary)]">
+                    <button
+                        onClick={() => onReply(rootPost.id, '', false)}
+                        className="w-full py-2 px-4 text-sm font-medium text-[var(--theme-primary)] bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] rounded-sm hover:bg-[var(--theme-bg-tertiary)] hover:border-[var(--theme-primary)] transition-colors"
+                    >
+                        + {t('reply') || 'Responder'}
+                    </button>
                 </div>
             </div>
         </div>

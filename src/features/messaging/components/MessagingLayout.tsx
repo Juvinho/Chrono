@@ -13,6 +13,7 @@ export const MessagingLayout: React.FC = () => {
   const { unreadCount, resetUnread } = useMessageNotification();
   const [selectedConversationId, setSelectedConversationId] = useState<number | string | null>(null);
   const [isReindexing, setIsReindexing] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
 
 
   // ✅ Limpa contador quando volta avisualizar a aba
@@ -42,14 +43,24 @@ export const MessagingLayout: React.FC = () => {
     } else if (state?.targetUserId) {
       // Se veio com targetUserId, cria/busca a conversa
       console.log('🔗 Iniciando conversa com:', state.targetUserId);
+      setInitError(null);
       initConversation(state.targetUserId)
         .then((conversation) => {
           console.log('✅ Conversa criada/encontrada:', conversation.id);
           setSelectedConversationId(conversation.id);
+          setInitError(null);
           refetch();
         })
-        .catch((error) => {
-          console.error('Erro ao iniciar conversa:', error);
+        .catch((error: any) => {
+          const errorMsg = error?.message || 'Erro ao abrir chat';
+          console.error('❌ Erro ao iniciar conversa:', error);
+          console.error('📋 Error details:', {
+            message: error?.message,
+            status: error?.statusCode,
+            response: error?.response,
+            stack: error?.stack
+          });
+          setInitError(errorMsg);
         });
     }
   }, [location.state, refetch]);
@@ -127,6 +138,37 @@ export const MessagingLayout: React.FC = () => {
           selectedId={selectedConversationId}
           onSelect={setSelectedConversationId}
         />
+        {initError && (
+          <div 
+            style={{
+              padding: '12px',
+              margin: '8px',
+              background: '#ff1744',
+              color: '#fff',
+              borderRadius: '4px',
+              fontSize: '12px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            <span>❌ {initError}</span>
+            <button
+              onClick={() => setInitError(null)}
+              style={{
+                background: 'rgba(255,255,255,0.2)',
+                border: 'none',
+                color: '#fff',
+                padding: '2px 6px',
+                borderRadius: '2px',
+                cursor: 'pointer'
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
       </div>
 
       {/* MAIN AREA - Chat */}

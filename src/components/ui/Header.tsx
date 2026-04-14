@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { User, Post, Page, Notification, Conversation } from '../../types/index';
 import GlitchText from './GlitchText';
-import { SearchIcon, LogoutIcon, BellIcon, SettingsIcon, MessageIcon, FilmIcon, ShoppingBagIcon, ChevronLeftIcon, PaperPlaneIcon } from './icons';
+import { SearchIcon, LogoutIcon, BellIcon, SettingsIcon, MessageIcon, FilmIcon, BookmarkIcon, ChevronLeftIcon, PaperPlaneIcon } from './icons';
 import SearchOverlay from './SearchOverlay';
 import NotificationsPanel from './NotificationsPanel';
 import ConfirmationModal from './ConfirmationModal';
@@ -134,11 +134,9 @@ export default function Header({ user, onLogout, onViewProfile, onNavigate, onNo
                     <FilmIcon className="w-5 h-5 md:w-6 md:h-6" />
                  </button>
 
-                 {onOpenMarketplace && (
-                    <button onClick={onOpenMarketplace} title={t('marketplace')} className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-secondary)] p-2 rounded-full hover:bg-[var(--theme-bg-tertiary)] transition-colors">
-                        <ShoppingBagIcon className="w-5 h-5 md:w-6 md:h-6" />
-                    </button>
-                 )}
+                 <button onClick={() => onNavigate(Page.Bookmarks)} title={t('bookmarks') || 'Posts Salvos'} className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-secondary)] p-2 rounded-full hover:bg-[var(--theme-bg-tertiary)] transition-colors">
+                    <BookmarkIcon className="w-5 h-5 md:w-6 md:h-6" />
+                 </button>
                  {/* Chat Icon */}
                  {onOpenChat && (
                     <button onClick={handleOpenChatSidebar} title={t('messages')} className={`relative text-[var(--theme-text-secondary)] hover:text-[var(--theme-secondary)] p-2 rounded-full hover:bg-[var(--theme-bg-tertiary)] transition-colors ${isSidebarOpen ? 'bg-[var(--theme-bg-tertiary)]' : ''}`}>

@@ -93,6 +93,9 @@ export default function ProfilePage({
   const [showReportUserModal, setShowReportUserModal] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [reportDescription, setReportDescription] = useState('');
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [isFollowLoading, setIsFollowLoading] = useState(false);
+  const [isHoveringFollow, setIsHoveringFollow] = useState(false);
   
   // Memoize foundUser to avoid unnecessary recalculations
   const foundUser = useMemo(() => {
@@ -197,6 +200,33 @@ export default function ProfilePage({
       .finally(() => { if (!cancelled) setIsLoadingPosts(false); });
     return () => { cancelled = true; };
   }, [profileUser?.id]);
+
+  // Load follow status from API (checks if current user follows this profile)
+  useEffect(() => {
+    if (isOwnProfile || !profileUsername) {
+      setIsFollowing(false);
+      return;
+    }
+
+    const loadFollowStatus = async () => {
+      try {
+        const response = await apiClient.getUser(profileUsername);
+        // Check if the fetched profile includes isFollowing from the API
+        if (response.data?.isFollowing !== undefined) {
+          setIsFollowing(response.data.isFollowing);
+        } else {
+          // Fallback to checking currentUser's followingList
+          setIsFollowing(currentUser.followingList?.includes(profileUsername) || false);
+        }
+      } catch (error) {
+        console.error('Error loading follow status:', error);
+        // Fallback to currentUser's followingList on error
+        setIsFollowing(currentUser.followingList?.includes(profileUsername) || false);
+      }
+    };
+
+    loadFollowStatus();
+  }, [profileUsername, isOwnProfile, currentUser.followingList]);
 
   // Force image reload when avatar or cover changes (cache buster)
   useEffect(() => {
@@ -312,8 +342,6 @@ export default function ProfilePage({
       // Fallback loading
       return <LoadingSpinner />;
   }
-  
-  const isFollowing = currentUser.followingList?.includes(profileUser.username) || false;
 
   const handleSearch = (query: string) => {
     sessionStorage.setItem('chrono_search_query', query);
@@ -330,34 +358,50 @@ export default function ProfilePage({
     navigate(`/post/${randomId}`);
   };
   
-  const handleFollowClick = () => {
-      if (!isFollowing) {
-          playSound('follow');
+  const handleFollowClick = async () => {
+    if (isFollowLoading || isOwnProfile) return; // Prevent double-click and self-follow
+    
+    setIsFollowLoading(true);
+    try {
+      if (isFollowing) {
+        // UNFOLLOW
+        await apiClient.unfollowUser(profileUser.username);
+        setIsFollowing(false);
+          playSound('success');
+        if (fetchedUser) {
+          setFetchedUser({
+            ...fetchedUser,
+            followers: Math.max(0, (fetchedUser.followers || 0) - 1)
+          });
+        }
+      } else {
+        // FOLLOW
+        await apiClient.followUser(profileUser.username);
+        setIsFollowing(true);
+          playSound('success');
+        if (fetchedUser) {
+          setFetchedUser({
+            ...fetchedUser,
+            followers: (fetchedUser.followers || 0) + 1
+          });
+        }
       }
-
-      // Optimistic update for fetchedUser (if viewing another user)
-      if (fetchedUser && fetchedUser.username === profileUser.username) {
-           const isNowFollowing = !isFollowing;
-           const newFollowerCount = isNowFollowing 
-               ? (fetchedUser.followers || 0) + 1 
-               : Math.max(0, (fetchedUser.followers || 0) - 1);
-           
-           const newFollowersList = isNowFollowing
-               ? [...(fetchedUser.followersList || []), currentUser.username]
-               : (fetchedUser.followersList || []).filter(u => u !== currentUser.username);
-
-           setFetchedUser({
-               ...fetchedUser,
-               followers: newFollowerCount,
-               followersList: newFollowersList
-           });
-      }
-
+      
+      // Trigger parent component update
       onFollowToggle(profileUser.username);
+      
+      // Add pulse animation
       if (followButtonRef.current) {
-          followButtonRef.current.classList.add('pulse-click');
-          setTimeout(() => followButtonRef.current?.classList.remove('pulse-click'), 400);
+        followButtonRef.current.classList.add('pulse-click');
+        setTimeout(() => followButtonRef.current?.classList.remove('pulse-click'), 400);
       }
+    } catch (error: any) {
+      console.error('❌ Erro ao atualizar follow:', error);
+      const errorMsg = error?.message || 'Erro ao atualizar follow';
+      showToast(errorMsg, 'error');
+    } finally {
+      setIsFollowLoading(false);
+    }
   };
 
   const handleSendMessage = async () => {
@@ -764,8 +808,28 @@ export default function ProfilePage({
                         <PaperPlaneIcon className="w-5 h-5"/>
                         <span className="hidden sm:inline">{t('messageButton') || 'Enviar Mensagem'}</span>
                       </button>
-                      <button ref={followButtonRef} onClick={handleFollowClick} className={`${isFollowing ? 'following-btn' : 'follow-btn'} px-4 py-1 rounded-sm transition-colors`}>
-                        {isFollowing ? t('profileFollowing') : t('profileFollow')}
+                      <button 
+                        ref={followButtonRef} 
+                        onClick={handleFollowClick}
+                        disabled={isFollowLoading}
+                        onMouseEnter={() => setIsHoveringFollow(true)}
+                        onMouseLeave={() => setIsHoveringFollow(false)}
+                        className={`px-4 py-1 rounded-sm transition-all duration-200 font-medium ${
+                          isFollowLoading ? 'opacity-60 cursor-not-allowed' : ''
+                        } ${
+                          isFollowing
+                            ? isHoveringFollow
+                              ? 'bg-red-400 bg-opacity-20 text-red-400 border border-red-400'
+                              : 'bg-transparent border border-[var(--theme-border-primary)] text-[var(--theme-text-primary)]'
+                            : 'bg-[var(--theme-primary)] text-white border border-[var(--theme-primary)]'
+                        }`}
+                      >
+                        {isFollowLoading 
+                          ? '...' 
+                          : isFollowing 
+                            ? (isHoveringFollow ? 'Deixar de Seguir' : 'Seguindo')
+                            : 'Seguir'
+                        }
                       </button>
                       <div className="relative" ref={profileMenuRef}>
                         <button 

@@ -225,6 +225,7 @@ export enum Page {
   Messages,
   VideoAnalysis,
   ChatTest,
+  Bookmarks,
 }
 
 // FIX: Add global type definitions for Web Speech API to fix TypeScript errors in PostComposer.tsx

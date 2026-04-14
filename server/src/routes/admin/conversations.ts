@@ -56,7 +56,7 @@ router.get('/:id/messages', async (req: Request, res: Response) => {
         u.display_name
       FROM messages m
       JOIN users u ON m.sender_id = u.id
-      WHERE m.conversation_id = $1
+      WHERE m.conversation_id = $1::uuid
       ORDER BY m.created_at DESC
       LIMIT $2`,
       [id, limit]
@@ -83,14 +83,14 @@ router.delete('/:id', async (req: Request, res: Response) => {
 
     // Get conversation details before deletion to notify participants
     const convCheck = await pool.query(
-      'SELECT user1_id, user2_id FROM conversations WHERE id = $1', 
+      'SELECT user1_id, user2_id FROM conversations WHERE id = $1::uuid', 
       [id]
     );
     if (convCheck.rows.length === 0) {
       return res.status(404).json({ error: 'Conversation not found' });
     }
 
-    await pool.query('DELETE FROM conversations WHERE id = $1', [id]);
+    await pool.query('DELETE FROM conversations WHERE id = $1::uuid', [id]);
 
     console.log(`🗑️ [ADMIN] Conversation deleted: ${id}`);
 
@@ -127,14 +127,14 @@ router.delete('/:convId/messages/:msgId', async (req: Request, res: Response) =>
     const { convId, msgId } = req.params;
 
     const msgCheck = await pool.query(
-      'SELECT id FROM messages WHERE id = $1 AND conversation_id = $2',
+      'SELECT id FROM messages WHERE id = $1::uuid AND conversation_id = $2::uuid',
       [msgId, convId]
     );
     if (msgCheck.rows.length === 0) {
       return res.status(404).json({ error: 'Message not found' });
     }
 
-    await pool.query('DELETE FROM messages WHERE id = $1', [msgId]);
+    await pool.query('DELETE FROM messages WHERE id = $1::uuid', [msgId]);
 
     console.log(`🗑️ [ADMIN] Message deleted: ${msgId}`);
 

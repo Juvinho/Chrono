@@ -223,6 +223,33 @@ router.put('/:username', authenticateToken, async (req: AuthRequest, res: Respon
   }
 });
 
+// Check if following a user (for ProfilePage state initialization)
+router.get('/:username/follow-status', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const { username } = req.params;
+
+    if (!req.userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const targetUser = await userService.getUserByUsername(username);
+    if (!targetUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Cannot follow yourself
+    if (targetUser.id === req.userId) {
+      return res.json({ isFollowing: false });
+    }
+
+    const isFollowing = await followService.isFollowing(req.userId, targetUser.id);
+    res.json({ isFollowing });
+  } catch (error: any) {
+    console.error('Follow status check error:', error);
+    res.status(500).json({ error: error.message || 'Failed to check follow status' });
+  }
+});
+
 // Follow user
 router.post('/:username/follow', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {

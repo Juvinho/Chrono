@@ -59,9 +59,13 @@ export function useMessages(conversationId: number | string | null) {
       previousMessagesLengthRef.current = data.length;
       setMessages(data);
       setError(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error('❌ Erro ao carregar mensagens:', err);
-      setError('Falha ao carregar mensagens');
+      // Show detailed error in development, generic message in production
+      const errorMessage = process.env.NODE_ENV === 'development' 
+        ? err?.message || 'Falha ao carregar mensagens'
+        : 'Falha ao carregar mensagens. Tente novamente.';
+      setError(errorMessage);
     } finally {
       isFetchingRef.current = false;
     }

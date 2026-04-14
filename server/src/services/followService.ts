@@ -8,42 +8,42 @@ export class FollowService {
 
     await pool.query(
       `INSERT INTO follows (follower_id, following_id)
-       VALUES ($1, $2)
+       VALUES ($1::uuid, $2::uuid)
        ON CONFLICT (follower_id, following_id) DO NOTHING`,
       [followerId, followingId]
     );
 
     // Update counts
     await pool.query(
-      'UPDATE users SET followers_count = (SELECT COUNT(*) FROM follows WHERE following_id = $1) WHERE id = $1',
+      'UPDATE users SET followers_count = (SELECT COUNT(*) FROM follows WHERE following_id = $1::uuid) WHERE id = $1::uuid',
       [followingId]
     );
     await pool.query(
-      'UPDATE users SET following_count = (SELECT COUNT(*) FROM follows WHERE follower_id = $1) WHERE id = $1',
+      'UPDATE users SET following_count = (SELECT COUNT(*) FROM follows WHERE follower_id = $1::uuid) WHERE id = $1::uuid',
       [followerId]
     );
   }
 
   async unfollow(followerId: string, followingId: string): Promise<void> {
     await pool.query(
-      'DELETE FROM follows WHERE follower_id = $1 AND following_id = $2',
+      'DELETE FROM follows WHERE follower_id = $1::uuid AND following_id = $2::uuid',
       [followerId, followingId]
     );
 
     // Update counts
     await pool.query(
-      'UPDATE users SET followers_count = (SELECT COUNT(*) FROM follows WHERE following_id = $1) WHERE id = $1',
+      'UPDATE users SET followers_count = (SELECT COUNT(*) FROM follows WHERE following_id = $1::uuid) WHERE id = $1::uuid',
       [followingId]
     );
     await pool.query(
-      'UPDATE users SET following_count = (SELECT COUNT(*) FROM follows WHERE follower_id = $1) WHERE id = $1',
+      'UPDATE users SET following_count = (SELECT COUNT(*) FROM follows WHERE follower_id = $1::uuid) WHERE id = $1::uuid',
       [followerId]
     );
   }
 
   async isFollowing(followerId: string, followingId: string): Promise<boolean> {
     const result = await pool.query(
-      'SELECT 1 FROM follows WHERE follower_id = $1 AND following_id = $2',
+      'SELECT 1 FROM follows WHERE follower_id = $1::uuid AND following_id = $2::uuid',
       [followerId, followingId]
     );
     return result.rows.length > 0;
@@ -51,7 +51,7 @@ export class FollowService {
 
   async getFollowingIds(userId: string): Promise<string[]> {
     const result = await pool.query(
-      'SELECT following_id FROM follows WHERE follower_id = $1',
+      'SELECT following_id FROM follows WHERE follower_id = $1::uuid',
       [userId]
     );
     return result.rows.map((row: any) => row.following_id);
@@ -62,7 +62,7 @@ export class FollowService {
       `SELECT u.username 
        FROM follows f 
        JOIN users u ON f.following_id = u.id 
-       WHERE f.follower_id = $1`,
+       WHERE f.follower_id = $1::uuid`,
       [userId]
     );
     return result.rows.map((row: any) => row.username);
@@ -70,7 +70,7 @@ export class FollowService {
 
   async getFollowersIds(userId: string): Promise<string[]> {
     const result = await pool.query(
-      'SELECT follower_id FROM follows WHERE following_id = $1',
+      'SELECT follower_id FROM follows WHERE following_id = $1::uuid',
       [userId]
     );
     return result.rows.map((row: any) => row.follower_id);
@@ -81,7 +81,7 @@ export class FollowService {
       `SELECT u.username 
        FROM follows f 
        JOIN users u ON f.follower_id = u.id 
-       WHERE f.following_id = $1`,
+       WHERE f.following_id = $1::uuid`,
       [userId]
     );
     return result.rows.map((row: any) => row.username);
@@ -102,7 +102,7 @@ export class FollowService {
        LEFT JOIN items i_frame ON ui_frame.item_id = i_frame.id AND i_frame.type = 'frame'
        LEFT JOIN user_items ui_effect ON u.id = ui_effect.user_id AND ui_effect.is_equipped = true
        LEFT JOIN items i_effect ON ui_effect.item_id = i_effect.id AND i_effect.type = 'effect'
-       WHERE f.following_id = $1
+       WHERE f.following_id = $1::uuid
        ORDER BY u.username ASC`,
       [userId]
     );
@@ -144,7 +144,7 @@ export class FollowService {
        LEFT JOIN items i_frame ON ui_frame.item_id = i_frame.id AND i_frame.type = 'frame'
        LEFT JOIN user_items ui_effect ON u.id = ui_effect.user_id AND ui_effect.is_equipped = true
        LEFT JOIN items i_effect ON ui_effect.item_id = i_effect.id AND i_effect.type = 'effect'
-       WHERE f.follower_id = $1
+       WHERE f.follower_id = $1::uuid
        ORDER BY u.username ASC`,
       [userId]
     );

@@ -24,6 +24,10 @@ export const userService = {
     });
   },
 
+  async checkFollowStatus(username: string) {
+    return baseClient.request<{ isFollowing: boolean }>(`/users/${username}/follow-status`);
+  },
+
   async unfollowUser(userId: string) {
     return baseClient.request<any>(`/users/${userId}/unfollow`, {
       method: 'POST',
