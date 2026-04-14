@@ -98,9 +98,15 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
         }
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSubmit = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
         if (isLoading) return;
+        
+        // If 2FA is required, handle 2FA verification instead
+        if (requiresTwoFactor && twoFactorTempToken) {
+            await handle2FAVerify();
+            return;
+        }
         
         // Retry health check if there was an error
         if (dbError) {
@@ -203,11 +209,17 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
         }
     };
 
-    const handle2FAVerify = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handle2FAVerify = async () => {
         if (!twoFactorTempToken || isLoading) return;
         setIsLoading(true);
         setError('');
+
+        // Validate that user provided an input
+        if (!twoFactorCode && !recoveryCode) {
+            setError('Por favor, insira o código de autenticador ou de recuperação.');
+            setIsLoading(false);
+            return;
+        }
 
         try {
             const response = await apiClient.request<{ user?: any; requires_2fa?: boolean }>('/auth/verify-2fa', {
@@ -245,7 +257,7 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
                     <GlitchText text="CHRONO" className="text-5xl font-bold text-[var(--theme-text-light)]" />
                     <p className="mt-2 text-[var(--theme-text-primary)]">{t('loginSubtitle')}</p>
                 </div>
-                <form className="space-y-6" onSubmit={handleSubmit}>
+                <form className="space-y-6" onSubmit={handleSubmit} onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}>
                     {dbError && (
                         <div className="p-3 text-sm font-bold text-red-500 bg-red-900/20 border border-red-500 rounded animate-pulse">
                             ⚠️ {dbError}
@@ -345,19 +357,10 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
 
                             <button
                                 type="button"
-                                onClick={handle2FAVerify}
-                                disabled={isLoading || (!twoFactorCode && !recoveryCode)}
-                                className="w-full py-2 px-4 bg-[var(--theme-primary)] text-white font-bold hover:bg-[var(--theme-secondary)] transition-colors border border-[var(--theme-secondary)] disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {isLoading ? '[ VERIFICANDO... ]' : '[ VERIFICAR ]'}
-                            </button>
-
-                            <button
-                                type="button"
                                 onClick={() => { setRequiresTwoFactor(false); setTwoFactorTempToken(null); setTwoFactorCode(''); setRecoveryCode(''); setError(''); }}
                                 className="text-xs text-[var(--theme-text-secondary)] hover:text-red-400 transition-colors w-full text-center"
                             >
-                                Cancelar e voltar ao login
+                                ← Cancelar e voltar ao login
                             </button>
                         </div>
                     )}
@@ -414,11 +417,12 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
                     </div>
 
                     <button
-                        type="submit"
-                        disabled={isLoading || !captchaToken}
+                        type="button"
+                        onClick={handleSubmit}
+                        disabled={isLoading || (!captchaToken && !requiresTwoFactor)}
                         className={`w-full py-2 px-4 bg-[var(--theme-primary)] text-white font-bold hover:bg-[var(--theme-secondary)] transition-colors duration-300 border border-[var(--theme-secondary)] focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
-                        {isLoading ? '[ CONNECTING... ]' : `[ ${t('loginConnectButton')} ]`}
+                        {isLoading ? '[ PROCESSANDO... ]' : `[ ${t('loginConnectButton')} ]`}
                     </button>
                 </form>
 

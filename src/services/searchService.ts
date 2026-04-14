@@ -228,6 +228,7 @@ export class SearchService {
 
   /**
    * Recomendações padrão (sem busca)
+   * Filtra apenas posts dos últimos 7 dias para cordões populares
    */
   static getRecommendations(
     allPosts: Post[],
@@ -235,13 +236,25 @@ export class SearchService {
     currentUser: User,
     limit = 5
   ) {
+    // Janela de tempo: últimos 7 dias
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    // Filtrar posts dos últimos 7 dias
+    const recentPosts = allPosts.filter(p => {
+      const postDate = new Date(p.timestamp);
+      return postDate >= sevenDaysAgo;
+    });
+
     return {
-      popularCordoes: allPosts
+      // Popular cordões baseados apenas em atividade recente (últimos 7 dias)
+      popularCordoes: recentPosts
         .filter(p => this.isCordao(p))
         .sort((a, b) => this.getPopularity(b) - this.getPopularity(a))
         .slice(0, limit),
 
-      popularPosts: allPosts
+      // Popular posts recentes (também filtrado)
+      popularPosts: recentPosts
         .filter(p => !this.isCordao(p))
         .sort((a, b) => this.getPopularity(b) - this.getPopularity(a))
         .slice(0, limit),
@@ -253,10 +266,17 @@ export class SearchService {
   }
 
   /**
-   * Conta menções de um cordão em todos os posts
+   * Conta menções de um cordão apenas nos últimos 7 dias
    */
   static countCordaoMentions(cordao: string, allPosts: Post[]): number {
+    // Janela de tempo: últimos 7 dias
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
     const pattern = new RegExp(`\\${cordao}\\b`, 'i');
-    return allPosts.filter(p => pattern.test(p.content)).length;
+    return allPosts.filter(p => {
+      const postDate = new Date(p.timestamp);
+      return postDate >= sevenDaysAgo && pattern.test(p.content);
+    }).length;
   }
 }
