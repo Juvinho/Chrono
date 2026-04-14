@@ -137,13 +137,13 @@ export default function Timeline({ selectedDate, setSelectedDate, onNavigate, al
                 }`}
             >
                 {/* Mini avatars */}
-                <div className="flex justify-center items-center h-6 mb-1" style={{ gap: '-8px' }}>
+                <div className="flex justify-center items-center h-6 mb-1" style={{ gap: '0px', marginRight: '0px' }}>
                     {authorsOnDate.slice(0, 3).map(author => {
                         const avatarShape = author.equippedFrame ? getFrameShape(author.equippedFrame.name) : 'rounded-full';
                         return (
                             <div
                                 key={author.username}
-                                className="relative w-6 h-6 flex-shrink-0 -ml-1 first:ml-0"
+                                className="relative w-6 h-6 flex-shrink-0 -ml-2 first:ml-0"
                                 onClick={e => { e.stopPropagation(); onNavigate(Page.Profile, author.username); }}
                                 title={`@${author.username}`}
                             >
@@ -168,7 +168,7 @@ export default function Timeline({ selectedDate, setSelectedDate, onNavigate, al
                         );
                     })}
                     {authorsOnDate.length > 3 && (
-                        <div className="w-6 h-6 rounded-full bg-[var(--theme-bg-tertiary)] text-[var(--theme-text-light)] text-xs flex items-center justify-center border-2 border-[var(--theme-bg-primary)] -ml-1">
+                        <div className="w-6 h-6 rounded-full bg-[var(--theme-bg-tertiary)] text-[var(--theme-text-light)] text-xs flex items-center justify-center border-2 border-[var(--theme-bg-primary)] -ml-2">
                             +{authorsOnDate.length - 3}
                         </div>
                     )}

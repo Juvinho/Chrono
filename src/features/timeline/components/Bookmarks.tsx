@@ -61,6 +61,7 @@ export default function Bookmarks({
     const { showToast } = useToast();
     const [bookmarkedPosts, setBookmarkedPosts] = useState<Post[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
 
     // Load bookmarks on mount
@@ -68,14 +69,21 @@ export default function Bookmarks({
         const loadBookmarks = async () => {
             try {
                 setIsLoading(true);
+                setError(null);
                 const response = await postService.getBookmarks({ limit: 100 });
-                if (response.data) {
+                if (response.data && Array.isArray(response.data)) {
                     setBookmarkedPosts(response.data);
                     setBookmarkedIds(new Set(response.data.map(p => p.id)));
+                } else if (response.error) {
+                    throw new Error(response.error.message || 'Erro desconhecido ao carregar bookmarks');
                 }
-            } catch (error) {
-                console.error('Failed to load bookmarks:', error);
-                showToast('Erro ao carregar bookmarks', 'error');
+            } catch (err: any) {
+                console.error('Failed to load bookmarks:', err);
+                const errorMessage = err?.message || 'Erro ao carregar bookmarks';
+                setError(errorMessage);
+                setBookmarkedPosts([]);
+                setBookmarkedIds(new Set());
+                showToast(errorMessage, 'error');
             } finally {
                 setIsLoading(false);
             }
@@ -159,7 +167,24 @@ export default function Bookmarks({
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto">
-                {isLoading ? (
+                {error ? (
+                    // Error state
+                    <div className="flex flex-col items-center justify-center py-20 text-center px-4">
+                        <div className="text-6xl mb-4 opacity-50">⚠️</div>
+                        <h2 className="text-2xl font-bold text-[var(--theme-text-light)] mb-2">
+                            Erro ao carregar bookmarks
+                        </h2>
+                        <p className="text-[var(--theme-text-secondary)] max-w-md mb-6">
+                            {error}
+                        </p>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="px-4 py-2 bg-[var(--theme-primary)] text-white rounded-sm hover:opacity-90 transition-opacity"
+                        >
+                            Tentar novamente
+                        </button>
+                    </div>
+                ) : isLoading ? (
                     // Loading state
                     <div className="divide-y divide-[var(--theme-border-primary)]">
                         {Array.from({ length: 5 }).map((_, i) => (

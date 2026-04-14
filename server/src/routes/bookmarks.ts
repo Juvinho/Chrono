@@ -31,7 +31,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
        FROM bookmarks b
        JOIN posts p ON b.post_id = p.id
        JOIN users u ON p.author_id = u.id
-       WHERE b.user_id = $1
+       WHERE b.user_id = $1::uuid
        ORDER BY b.created_at DESC
        LIMIT $2 OFFSET $3`,
       [req.userId, safeLimit, safeOffset]
@@ -87,7 +87,7 @@ router.get('/ids', authenticateToken, async (req: AuthRequest, res: Response) =>
     }
 
     const result = await pool.query(
-      'SELECT post_id FROM bookmarks WHERE user_id = $1',
+      'SELECT post_id FROM bookmarks WHERE user_id = $1::uuid',
       [req.userId]
     );
 
@@ -109,14 +109,14 @@ router.post('/:postId', authenticateToken, async (req: AuthRequest, res: Respons
     const { postId } = req.params;
 
     // Check if post exists
-    const postCheck = await pool.query('SELECT id FROM posts WHERE id = $1', [postId]);
+    const postCheck = await pool.query('SELECT id FROM posts WHERE id = $1::uuid', [postId]);
     if (postCheck.rows.length === 0) {
       return res.status(404).json({ error: 'Post not found' });
     }
 
     // Insert bookmark (ON CONFLICT to avoid duplicates)
     await pool.query(
-      'INSERT INTO bookmarks (user_id, post_id) VALUES ($1, $2) ON CONFLICT (user_id, post_id) DO NOTHING',
+      'INSERT INTO bookmarks (user_id, post_id) VALUES ($1::uuid, $2::uuid) ON CONFLICT (user_id, post_id) DO NOTHING',
       [req.userId, postId]
     );
 
@@ -137,7 +137,7 @@ router.delete('/:postId', authenticateToken, async (req: AuthRequest, res: Respo
     const { postId } = req.params;
 
     await pool.query(
-      'DELETE FROM bookmarks WHERE user_id = $1 AND post_id = $2',
+      'DELETE FROM bookmarks WHERE user_id = $1::uuid AND post_id = $2::uuid',
       [req.userId, postId]
     );
 
