@@ -414,7 +414,7 @@ export default function EchoFrame({
         };
 
         return (
-            <main className="py-8 max-w-7xl mx-auto px-4">
+            <main className="py-8 max-w-7xl mx-auto px-4 overflow-x-hidden">
                 {postToEdit && (
                     <PostComposer 
                         currentUser={currentUser}
@@ -652,7 +652,7 @@ export default function EchoFrame({
     }
 
     return (
-        <main className="py-4 lg:py-8 max-w-7xl mx-auto px-2 lg:px-4">
+        <main className="py-4 lg:py-8 max-w-7xl mx-auto px-2 lg:px-4 overflow-x-hidden">
             {isComposerOpen && (
                 <PostComposer 
                     currentUser={currentUser} 

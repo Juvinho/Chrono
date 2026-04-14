@@ -286,11 +286,11 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
   const isPostable = content.trim().length > 0 || generatedImageUrl || videoUrl;
 
   const containerClass = inline 
-      ? "w-full bg-[var(--theme-bg-primary)] border border-[var(--theme-border-primary)] p-4 rounded-lg mb-6" 
+      ? "w-full bg-[var(--theme-bg-primary)] border border-[var(--theme-border-primary)] p-4 rounded-lg mb-6 overflow-x-hidden" 
       : "modal-content w-full max-w-2xl";
 
   const contentElement = (
-      <div ref={inline ? null : composerRef} className={containerClass}>
+      <div ref={inline ? null : composerRef} className={containerClass} style={inline ? { boxSizing: 'border-box' } : undefined}>
         <div className={`flex justify-between items-center pb-2 border-b border-[var(--theme-border-primary)] ${inline ? 'mb-4' : ''}`}>
           <h2 className="text-lg font-bold text-[var(--theme-text-light)]">{postToEdit ? t('postEditTitle') : t('transmitNewEcho')}</h2>
           {!inline && <button onClick={onClose} className="text-2xl text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-light)]">&times;</button>}
@@ -434,8 +434,8 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
             )}
         </div>
         
-        <div className="flex justify-between items-center pt-2 border-t border-[var(--theme-border-primary)]">
-            <div className="flex items-center space-x-2 text-[var(--theme-text-secondary)]">
+        <div className="flex justify-between items-start pt-2 border-t border-[var(--theme-border-primary)] gap-2 flex-wrap">
+            <div className="flex items-center flex-wrap gap-1 text-[var(--theme-text-secondary)]">
                 <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" accept="image/*,video/*" />
                 <button onClick={() => fileInputRef.current?.click()} title={t('attachMedia')} className="p-2 hover:text-[var(--theme-primary)] transition-colors"><CameraIcon className="w-6 h-6"/></button>
                  <button onClick={() => setShowImageGenerator(p => !p)} title={t('generateImage')} className={`p-2 transition-colors ${showImageGenerator ? 'text-[var(--theme-primary)]' : 'hover:text-[var(--theme-primary)]'}`}><ImageIcon className="w-6 h-6"/></button>
@@ -443,11 +443,11 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
                 <button
                     onClick={handleMicClick}
                     title={t('transcribeAudio')} 
-                    className={`p-2 transition-colors rounded-full ${isListening ? 'text-red-500 bg-red-500/20 animate-pulse' : 'hover:text-[var(--theme-primary)]'}`}
+                    className={`p-2 transition-colors rounded-full hidden md:block ${isListening ? 'text-red-500 bg-red-500/20 animate-pulse' : 'hover:text-[var(--theme-primary)]'}`}
                 >
                     <MicrophoneIcon className="w-6 h-6"/>
                 </button>
-                <div className="relative group">
+                <div className="relative group hidden md:block">
                     <input 
                         type="datetime-local" 
                         value={new Date(postDate.getTime() - (postDate.getTimezoneOffset() * 60000)).toISOString().slice(0, 16)} 
@@ -472,12 +472,12 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
                             setUnlockAt(new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
                         }
                     }}
-                    className={`p-2 transition-colors ${unlockAt ? 'text-[var(--theme-primary)]' : 'hover:text-[var(--theme-primary)]'}`}
+                    className={`p-2 transition-colors hidden md:block ${unlockAt ? 'text-[var(--theme-primary)]' : 'hover:text-[var(--theme-primary)]'}`}
                 >
                     <HourglassIcon className="w-6 h-6"/>
                 </button>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center flex-wrap gap-2 w-full">
                  {isListening && <span className="text-sm text-red-500 animate-pulse">{t('listening')}</span>}
                  {postDate.getTime() !== initialDate?.getTime() && (
                     <span className="text-xs text-[var(--theme-secondary)]">
@@ -487,7 +487,7 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
                  <button onClick={() => setIsPrivate(p => !p)} title={isPrivate ? t('postPrivate') : t('postPublic')} className={`p-2 rounded-full transition-colors ${isPrivate ? 'text-[var(--theme-primary)] bg-[var(--theme-primary)]/20' : 'text-[var(--theme-text-secondary)] hover:bg-[var(--theme-bg-tertiary)]'}`}>
                     <LockClosedIcon className="w-5 h-5"/>
                  </button>
-                 <div className="relative w-8 h-8">
+                 <div className="relative w-8 h-8 hidden sm:block">
                     <svg className="w-full h-full" viewBox="0 0 36 36">
                         <path
                             d="M18 2.0845
@@ -514,7 +514,7 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
                 <button 
                     onClick={handleSubmit} 
                     disabled={!isPostable}
-                    className="bg-[var(--theme-primary)] text-white px-6 py-2 rounded-sm font-bold hover:bg-[var(--theme-secondary)] transition-colors disabled:bg-[var(--theme-bg-tertiary)] disabled:text-[var(--theme-text-secondary)] disabled:cursor-not-allowed"
+                    className="ml-auto flex-shrink-0 bg-[var(--theme-primary)] text-white px-6 py-2 rounded-sm font-bold hover:bg-[var(--theme-secondary)] transition-colors disabled:bg-[var(--theme-bg-tertiary)] disabled:text-[var(--theme-text-secondary)] disabled:cursor-not-allowed"
                 >
                     {postToEdit ? t('postSaveChanges') : t('postSubmitButton')}
                 </button>
