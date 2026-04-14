@@ -437,8 +437,8 @@ export default function EchoFrame({
                         &lt; {t('backToEchoFrame') || 'Voltar'}
                     </button>
                 </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
+                    <div className="min-w-0 overflow-hidden">
                         <h3 className="text-xl font-bold text-[var(--theme-text-light)] mb-4 border-b border-[var(--theme-border-primary)] pb-2">
                             {t('popularPosts') || 'Posts Populares'}
                         </h3>
@@ -466,8 +466,8 @@ export default function EchoFrame({
                             )}
                         </div>
                     </div>
-                    <div>
-                        <div className="mb-8">
+                    <div className="min-w-0 overflow-hidden w-full">
+                        <div className="mb-8 w-full min-w-0">
                             <h3 className="text-lg font-bold text-[var(--theme-text-light)] mb-2">{t('createCord') || 'Criar Cordão'}</h3>
                             <PostComposer 
                                 currentUser={currentUser}
@@ -479,11 +479,11 @@ export default function EchoFrame({
                         </div>
                         
                         {/* Trending Cordões Section */}
-                        <div className="mb-8">
+                        <div className="mb-8 w-full min-w-0">
                             <h3 className="text-lg font-bold text-[var(--theme-text-light)] mb-3 border-b border-[var(--theme-border-primary)] pb-2">
                                 {t('popularCords') || 'Cordões Populares'}
                             </h3>
-                            <div className="space-y-2 stagger-children">
+                            <div className="space-y-2 stagger-children w-full">
                                 {trendingCordoes.length > 0 ? (
                                     trendingCordoes.map(cord => (
                                         <div 
@@ -507,11 +507,11 @@ export default function EchoFrame({
                             </div>
                         </div>
                         
-                        <h3 className="text-xl font-bold text-[var(--theme-text-light)] mb-4 border-b border-[var(--theme-border-primary)] pb-2 flex justify-between items-center">
+                        <h3 className="text-xl font-bold text-[var(--theme-text-light)] mb-4 border-b border-[var(--theme-border-primary)] pb-2 flex justify-between items-center w-full">
                             <span>{t('recentPosts') || 'Posts Recentes'}</span>
                             <span className="text-xs text-[var(--theme-primary)] animate-pulse">● LIVE</span>
                         </h3>
-                        <div className="space-y-4">
+                        <div className="space-y-4 w-full min-w-0">
                             {cordRecent.map(post => (
                                 <div key={post.id}>
                                     <PostCard
