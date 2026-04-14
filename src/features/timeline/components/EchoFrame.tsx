@@ -76,7 +76,7 @@ export default function EchoFrame({
         try {
             const isToday = selectedDate.toDateString() === new Date().toDateString();
             const url = isToday
-                ? '/posts/trending/cordoes'
+                ? '/posts/trending/cordoes?days=7'
                 : `/posts/trending/cordoes?date=${selectedDate.toISOString().split('T')[0]}`;
             const response = await apiClient.get(url);
             if (response.data && Array.isArray(response.data)) {

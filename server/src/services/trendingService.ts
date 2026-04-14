@@ -104,6 +104,16 @@ export class TrendingService {
   }
 
   /**
+   * Calcula cordões trending dos últimos 7 dias
+   * Usado para o widget de Cordões Populares
+   */
+  async getTrendingCordoesForLast7Days(): Promise<TrendingCord[]> {
+    const now = new Date();
+    const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    return this.getTrendingCordoesInTimeRange(last7Days, now);
+  }
+
+  /**
    * Calcula trending de cordões dentro de um período customizado
    * Útil para trending por hora, week, etc.
    */

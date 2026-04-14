@@ -367,7 +367,8 @@ export default function ProfilePage({
         // UNFOLLOW
         await apiClient.unfollowUser(profileUser.username);
         setIsFollowing(false);
-          playSound('success');
+        playSound('notification');
+        showToast('Deixado de seguir', 'success');
         if (fetchedUser) {
           setFetchedUser({
             ...fetchedUser,
@@ -378,7 +379,8 @@ export default function ProfilePage({
         // FOLLOW
         await apiClient.followUser(profileUser.username);
         setIsFollowing(true);
-          playSound('success');
+        playSound('notification');
+        showToast('Seguindo', 'success');
         if (fetchedUser) {
           setFetchedUser({
             ...fetchedUser,

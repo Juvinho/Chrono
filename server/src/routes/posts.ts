@@ -478,6 +478,7 @@ router.get('/trending/cordoes', async (req: AuthRequest, res: Response) => {
     const { trendingService } = await import('../services/trendingService.js');
 
     const dateParam = req.query.date as string | undefined;
+    const daysParam = req.query.days as string | undefined;
     let cordoes;
 
     if (dateParam) {
@@ -491,8 +492,23 @@ router.get('/trending/cordoes', async (req: AuthRequest, res: Response) => {
       const windowEnd = new Date(Math.min(anchor.getTime(), Date.now()));
       const windowStart = new Date(windowEnd.getTime() - 24 * 60 * 60 * 1000);
       cordoes = await trendingService.getTrendingCordoesInTimeRange(windowStart, windowEnd);
+    } else if (daysParam) {
+      // Support ?days=N parameter
+      const days = parseInt(daysParam, 10);
+      if (isNaN(days) || days < 1 || days > 30) {
+        return res.status(400).json({ error: 'Invalid days parameter (1-30)' });
+      }
+      if (days === 7) {
+        cordoes = await trendingService.getTrendingCordoesForLast7Days();
+      } else {
+        // For other day ranges, use getTrendingCordoesInTimeRange
+        const now = new Date();
+        const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+        cordoes = await trendingService.getTrendingCordoesInTimeRange(startDate, now);
+      }
     } else {
-      cordoes = await trendingService.getTrendingCordoesForToday();
+      // Default: last 7 days (not just 24 hours)
+      cordoes = await trendingService.getTrendingCordoesForLast7Days();
     }
 
     res.json(cordoes);
