@@ -112,7 +112,7 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                 if (result.error) {
                     setMessage({ text: result.error, type: 'error' });
                 } else {
-                    setMessage({ text: `Purchased ${selectedItem.name}!`, type: 'success' });
+                    setMessage({ text: `Comprado: ${selectedItem.name}!`, type: 'success' });
                     setInventory(prev => new Set(prev).add(selectedItem.id));
                     setView('marketplace');
                 }
@@ -121,7 +121,7 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                 if (result.error) {
                     setMessage({ text: result.error, type: 'error' });
                 } else {
-                    setMessage({ text: `Subscribed to ${selectedSubscription === 'pro' ? 'Pro' : 'Pro+'}!`, type: 'success' });
+                    setMessage({ text: `Assinado: ${selectedSubscription === 'pro' ? 'Pro' : 'Pro+'}!`, type: 'success' });
                     if (result.data) {
                         onUserUpdate(result.data);
                     }
@@ -129,7 +129,7 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                 }
             }
         } catch (error) {
-            setMessage({ text: 'Purchase failed', type: 'error' });
+            setMessage({ text: 'Falha na compra', type: 'error' });
         } finally {
             setIsProcessingPayment(false);
         }
@@ -150,7 +150,7 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
             
             // If in preview mode, show success message but keep preview open
             if (previewItem && previewItem.id === item.id) {
-                 setMessage({ text: 'Item equipped!', type: 'success' });
+                 setMessage({ text: 'Item equipado!', type: 'success' });
             }
         } catch (error) {
             console.error('Failed to equip item', error);
@@ -172,7 +172,7 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
             
             // If in preview mode, show success message but keep preview open
             if (previewItem && previewItem.id === item.id) {
-                 setMessage({ text: 'Item unequipped!', type: 'success' });
+                 setMessage({ text: 'Item desequipado!', type: 'success' });
             }
         } catch (error) {
             console.error('Failed to unequip item', error);
@@ -196,14 +196,14 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
 
     if (view === 'checkout') {
         const price = selectedItem ? selectedItem.price : (selectedSubscription === 'pro' ? 5.99 : 12.99);
-        const title = selectedItem ? selectedItem.name : (selectedSubscription === 'pro' ? 'Pro Plan' : 'Pro+ Plan');
+        const title = selectedItem ? selectedItem.name : (selectedSubscription === 'pro' ? 'Plano Pro' : 'Plano Pro+');
         
         return (
              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
                 <div className="bg-[var(--theme-bg-secondary)] w-full max-w-md rounded-2xl border border-[var(--theme-border-primary)] shadow-2xl flex flex-col overflow-hidden relative animate-[fadeIn_0.3s_ease-out]">
                     
                     <div className="p-6 border-b border-[var(--theme-border-primary)] flex justify-between items-center bg-[var(--theme-bg-tertiary)]">
-                        <h2 className="text-xl font-bold text-[var(--theme-text-light)]">Secure Checkout</h2>
+                        <h2 className="text-xl font-bold text-[var(--theme-text-light)]">Pagamento Seguro</h2>
                         <button onClick={() => setView('marketplace')} className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-light)]">
                             <CloseIcon className="w-6 h-6" />
                         </button>
@@ -249,7 +249,7 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                                 <div className="w-32 h-32 bg-white mx-auto mb-4 flex items-center justify-center">
                                     <span className="text-black font-bold text-xs">QR CODE MOCK</span>
                                 </div>
-                                <p className="text-sm text-[var(--theme-text-secondary)]">Scan the QR code to pay instantly.</p>
+                                <p className="text-sm text-[var(--theme-text-secondary)]">Escaneie o QR code para pagar instantaneamente.</p>
                              </div>
                         )}
 
@@ -280,10 +280,10 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                             {isProcessingPayment ? (
                                 <div className="flex items-center justify-center gap-2">
                                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                    Processing...
+                                    Processando...
                                 </div>
                             ) : (
-                                `Pay R$ ${price.toFixed(2)}`
+                                `Pagar R$ ${price.toFixed(2)}`
                             )}
                         </button>
                     </div>
@@ -302,7 +302,7 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                         <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 tracking-wider uppercase glitch-text" data-text="Marketplace">
                             Marketplace
                         </h2>
-                        <p className="text-[var(--theme-text-secondary)]">Upgrade your cyber-identity</p>
+                        <p className="text-[var(--theme-text-secondary)]">Atualize sua identidade cibernética</p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-full transition-colors">
                         <CloseIcon className="w-6 h-6 text-[var(--theme-text-primary)]" />
@@ -311,7 +311,9 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
 
                 {/* Navigation */}
                 <div className="flex border-b border-[var(--theme-border-primary)] overflow-x-auto no-scrollbar">
-                    {(['subscriptions', 'frames', 'effects', 'badges'] as const).map(tab => (
+                    {(['subscriptions', 'frames', 'effects', 'badges'] as const).map(tab => {
+                        const tabLabels = { subscriptions: 'Assinaturas', frames: 'Molduras', effects: 'Efeitos', badges: 'Emblemas' };
+                        return (
                         <button
                             key={tab}
                             onClick={() => {
@@ -320,14 +322,15 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                                 setRarityFilter('all');
                             }}
                             className={`px-8 py-4 font-bold uppercase text-sm tracking-wider whitespace-nowrap transition-all ${
-                                activeTab === tab 
-                                    ? 'text-[var(--theme-primary)] border-b-2 border-[var(--theme-primary)] bg-[var(--theme-primary)]/5' 
+                                activeTab === tab
+                                    ? 'text-[var(--theme-primary)] border-b-2 border-[var(--theme-primary)] bg-[var(--theme-primary)]/5'
                                     : 'text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-primary)]'
                             }`}
                         >
-                            {tab}
+                            {tabLabels[tab]}
                         </button>
-                    ))}
+                        );
+                    })}
                 </div>
 
                 {/* Filters & Search Toolbar */}
@@ -337,7 +340,7 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                             <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--theme-text-secondary)]" />
                             <input 
                                 type="text" 
-                                placeholder="Search items..." 
+                                placeholder="Buscar itens..." 
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full pl-9 pr-3 py-2 bg-[var(--theme-bg-primary)] border border-[var(--theme-border-primary)] rounded text-sm text-[var(--theme-text-primary)] focus:border-[var(--theme-primary)] outline-none"
@@ -352,11 +355,11 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                                     onChange={(e) => setRarityFilter(e.target.value as any)}
                                     className="bg-transparent text-sm text-[var(--theme-text-primary)] outline-none border-none cursor-pointer"
                                 >
-                                    <option value="all">All Rarities</option>
-                                    <option value="common">Common</option>
-                                    <option value="rare">Rare</option>
-                                    <option value="epic">Epic</option>
-                                    <option value="legendary">Legendary</option>
+                                    <option value="all">Todas as Raridades</option>
+                                    <option value="common">Comum</option>
+                                    <option value="rare">Raro</option>
+                                    <option value="epic">Épico</option>
+                                    <option value="legendary">Lendário</option>
                                 </select>
                             </div>
 
@@ -367,9 +370,9 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                                     onChange={(e) => setSortBy(e.target.value as any)}
                                     className="bg-transparent text-sm text-[var(--theme-text-primary)] outline-none border-none cursor-pointer"
                                 >
-                                    <option value="price_asc">Price: Low to High</option>
-                                    <option value="price_desc">Price: High to Low</option>
-                                    <option value="name">Name</option>
+                                    <option value="price_asc">Preço: Menor ao Maior</option>
+                                    <option value="price_desc">Preço: Maior ao Menor</option>
+                                    <option value="name">Nome</option>
                                 </select>
                             </div>
                         </div>
@@ -395,7 +398,7 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                                     {/* Pro Plan */}
                                     <div className={`rounded-xl border-2 p-6 flex flex-col relative overflow-hidden transition-all hover:scale-105 ${currentUser.subscriptionTier === 'pro' ? 'border-purple-500 bg-purple-900/10' : 'border-[var(--theme-border-primary)] bg-[var(--theme-bg-secondary)]'}`}>
                                         <div className="absolute top-0 right-0 bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-bl-lg uppercase">
-                                            Most Popular
+                                            Mais Popular
                                         </div>
                                         <h3 className="text-2xl font-bold text-purple-400 mb-2">PRO</h3>
                                         <div className="text-4xl font-black text-[var(--theme-text-primary)] mb-6">
@@ -421,14 +424,14 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                                                     : 'bg-purple-600 hover:bg-purple-500 text-white shadow-[0_0_15px_rgba(147,51,234,0.5)]'
                                             }`}
                                         >
-                                            {currentUser.subscriptionTier === 'pro' ? 'Active' : 'Get Pro'}
+                                            {currentUser.subscriptionTier === 'pro' ? 'Ativo' : 'Assinar Pro'}
                                         </button>
                                     </div>
 
                                     {/* Pro+ Plan */}
                                     <div className={`rounded-xl border-2 p-6 flex flex-col relative overflow-hidden transition-all hover:scale-105 ${currentUser.subscriptionTier === 'pro_plus' ? 'border-blue-500 bg-blue-900/10' : 'border-[var(--theme-border-primary)] bg-[var(--theme-bg-secondary)]'}`}>
                                         <div className="absolute top-0 right-0 bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg uppercase">
-                                            Best Value
+                                            Melhor Custo-Benefício
                                         </div>
                                         <h3 className="text-2xl font-bold text-blue-400 mb-2">PRO+</h3>
                                         <div className="text-4xl font-black text-[var(--theme-text-primary)] mb-6">
@@ -457,7 +460,7 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                                                     : 'bg-blue-600 hover:bg-blue-500 text-white shadow-[0_0_15px_rgba(37,99,235,0.5)]'
                                             }`}
                                         >
-                                            {currentUser.subscriptionTier === 'pro_plus' ? 'Active' : 'Get Pro+'}
+                                            {currentUser.subscriptionTier === 'pro_plus' ? 'Ativo' : 'Assinar Pro+'}
                                         </button>
                                     </div>
                                 </div>
@@ -466,9 +469,9 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                                     {filteredItems.length === 0 ? (
                                         <div className="col-span-full flex flex-col items-center justify-center py-12 text-[var(--theme-text-secondary)]">
                                             <FilterIcon className="w-12 h-12 mb-4 opacity-20" />
-                                            <p>No items found matching your filters.</p>
+                                            <p>Nenhum item encontrado para os filtros aplicados.</p>
                                             <button onClick={() => { setSearchTerm(''); setRarityFilter('all'); }} className="mt-4 text-[var(--theme-primary)] hover:underline">
-                                                Clear filters
+                                                Limpar filtros
                                             </button>
                                         </div>
                                     ) : (
@@ -482,7 +485,7 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                                                     <button 
                                                         onClick={() => setPreviewItem(item)}
                                                         className="absolute top-2 left-2 z-30 p-2 bg-black/50 hover:bg-black/80 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
-                                                        title="Try On"
+                                                        title="Experimentar"
                                                     >
                                                         <EyeIcon className="w-4 h-4" />
                                                     </button>
@@ -551,7 +554,7 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                                                             <button 
                                                                 className="w-full py-2 bg-[var(--theme-bg-tertiary)] text-[var(--theme-text-secondary)] font-bold text-sm uppercase rounded cursor-default border border-[var(--theme-border-primary)]"
                                                             >
-                                                                Owned
+                                                                Possuído
                                                             </button>
                                                             <button
                                                                 onClick={() => equippedItems.has(item.id) ? handleUnequipItem(item) : handleEquipItem(item)}
@@ -561,7 +564,7 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                                                                     : 'bg-[var(--theme-primary)] text-white hover:bg-[var(--theme-secondary)]'
                                                                 }`}
                                                             >
-                                                                 {equippedItems.has(item.id) ? 'Unequip' : 'Equip'}
+                                                                 {equippedItems.has(item.id) ? 'Desequipar' : 'Equipar'}
                                                             </button>
                                                         </div>
                                                     ) : (
@@ -569,7 +572,7 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                                                             onClick={() => initiatePurchaseItem(item)}
                                                             className="w-full py-2 bg-[var(--theme-primary)] text-white font-bold text-sm uppercase rounded hover:bg-[var(--theme-secondary)] transition-colors shadow-lg hover:shadow-[var(--theme-primary)]/50"
                                                         >
-                                                            Buy R$ {item.price.toFixed(2)}
+                                                            Comprar R$ {item.price.toFixed(2)}
                                                         </button>
                                                     )}
                                                 </div>
@@ -586,7 +589,7 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                 {previewItem && (
                     <div className="absolute inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col animate-[fadeIn_0.2s_ease-out]">
                         <div className="p-4 flex justify-between items-center border-b border-[var(--theme-border-primary)]">
-                            <h3 className="text-xl font-bold text-[var(--theme-text-light)]">Try On Mode</h3>
+                            <h3 className="text-xl font-bold text-[var(--theme-text-light)]">Modo de Visualização</h3>
                             <button onClick={() => setPreviewItem(null)} className="p-2 hover:bg-[var(--theme-bg-tertiary)] rounded-full text-[var(--theme-text-secondary)]">
                                 <CloseIcon className="w-6 h-6" />
                             </button>
@@ -662,7 +665,7 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
 
                                 <div className="p-4 bg-[var(--theme-bg-tertiary)] rounded-lg border border-[var(--theme-border-primary)]">
                                     <div className="flex justify-between items-center mb-4">
-                                        <span className="text-[var(--theme-text-secondary)]">Price</span>
+                                        <span className="text-[var(--theme-text-secondary)]">Preço</span>
                                         <span className="text-2xl font-bold text-[var(--theme-primary)]">R$ {previewItem.price.toFixed(2)}</span>
                                     </div>
                                     
@@ -671,14 +674,14 @@ export default function Marketplace({ currentUser, onClose, onUserUpdate }: Mark
                                             onClick={() => handleEquipItem(previewItem)}
                                             className="w-full py-4 bg-green-600 hover:bg-green-500 text-white font-bold uppercase rounded transition-all shadow-lg hover:shadow-green-500/30"
                                         >
-                                            {equippedItems.has(previewItem.id) ? 'Equipped' : 'Equip Now'}
+                                            {equippedItems.has(previewItem.id) ? 'Equipado' : 'Equipar Agora'}
                                         </button>
                                     ) : (
                                         <button 
                                             onClick={() => initiatePurchaseItem(previewItem)}
                                             className="w-full py-4 bg-[var(--theme-primary)] hover:bg-[var(--theme-secondary)] text-white font-bold uppercase rounded transition-all shadow-lg hover:shadow-[var(--theme-primary)]/30"
                                         >
-                                            Purchase Now
+                                            Comprar Agora
                                         </button>
                                     )}
                                 </div>

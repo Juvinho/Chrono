@@ -219,9 +219,17 @@ export const translations = {
     settingsBlock: 'Block',
     settingsUnblock: 'Unblock',
     settingsReportingPolicy: 'View Reporting Policy',
+    settingsLocation: 'Location',
+    settingsWebsite: 'Website',
     settingsWardrobe: 'Wardrobe',
     settingsNoItems: 'No items in your wardrobe yet.',
     settingsGoToMarketplace: 'Go to Marketplace',
+    and: 'and',
+    others: 'others',
+    saving: 'Saving...',
+    loadingProfile: 'LOCATING TARGET...',
+    loadMore: 'LOAD MORE DATA',
+    comments: 'Comments',
 
     // Notifications
     notifReplied: 'replied to your post.',
@@ -644,5 +652,22 @@ export const translations = {
     tagCategoryModeration: 'Moderação',
     tagCategoryTime: 'Tempo e Engajamento',
     tagCategoryStyle: 'Estilo e Comportamento',
+
+    // Settings - missing from pt
+    settingsFeed: 'Feed',
+    settingsAutoRefresh: 'Atualização Automática',
+    settingsAutoRefreshDesc: 'Atualizar o feed automaticamente a cada intervalo definido.',
+    settingsRefreshInterval: 'Intervalo de Atualização',
+    settingsWardrobe: 'Guarda-Roupa',
+    settingsNoItems: 'Nenhum item no guarda-roupa ainda.',
+    settingsGoToMarketplace: 'Ir ao Marketplace',
+
+    // Missing UI keys
+    and: 'e',
+    others: 'outros',
+    saving: 'Salvando...',
+    loadingProfile: 'LOCALIZANDO ALVO...',
+    loadMore: 'CARREGAR MAIS',
+    comments: 'Comentários',
   }
 };

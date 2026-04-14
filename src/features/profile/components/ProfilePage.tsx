@@ -332,7 +332,7 @@ export default function ProfilePage({
           return (
               <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--theme-bg-primary)]">
                   <LoadingSpinner />
-                  <p className="mt-4 text-[var(--theme-primary)] font-mono animate-pulse">{t('loadingProfile') || 'LOCATING TARGET...'}</p>
+                  <p className="mt-4 text-[var(--theme-primary)] font-mono animate-pulse">{t('loadingProfile')}</p>
               </div>
           );
       }
@@ -798,7 +798,7 @@ export default function ProfilePage({
                           onClick={() => setIsEditProfileOpen(true)}
                           className="px-4 py-1 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] hover:border-[var(--theme-primary)] hover:text-[var(--theme-primary)] text-[var(--theme-text-primary)] rounded-sm transition-colors flex items-center"
                       >
-                          <span className="mr-2">✎</span> {t('editProfile') || 'Edit Profile'}
+                          <span className="mr-2">✎</span> {t('editProfile')}
                       </button>
                   ) : (
                     <>
@@ -1010,7 +1010,7 @@ export default function ProfilePage({
                                             onClick={() => setVisiblePostsCount(prev => prev + 10)}
                                             className="px-6 py-2 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-primary)] text-[var(--theme-primary)] hover:bg-[var(--theme-primary)] hover:text-white transition-colors font-mono tracking-wider rounded-sm"
                                         >
-                                            [ {t('loadMore') || 'LOAD MORE DATA'} ]
+                                            [ {t('loadMore')} ]
                                         </button>
                                     </div>
                                 )}

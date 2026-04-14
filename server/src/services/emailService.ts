@@ -157,6 +157,115 @@ export class EmailService {
   }
 
   /**
+   * Send a welcome email immediately after successful registration.
+   * Never throws — registration must not be blocked by email failure.
+   */
+  async sendWelcomeEmail(user: User): Promise<void> {
+    try {
+      const html = this.generateWelcomeTemplate(user.username, this.config.frontendUrl);
+      await this.transporter.sendMail({
+        from: `${this.config.fromName} <${this.config.fromEmail}>`,
+        to: user.email,
+        subject: `👋 Bem-vindo ao Chrono, @${user.username}!`,
+        html,
+      });
+      console.log(`✅ Welcome email sent to ${user.email}`);
+    } catch (error) {
+      console.error('⚠️ Failed to send welcome email (non-blocking):', error);
+    }
+  }
+
+  private generateWelcomeTemplate(username: string, frontendUrl: string): string {
+    return `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bem-vindo ao Chrono</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background-color: #f5f5f5;
+      color: #050505;
+      line-height: 1.6;
+    }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff; }
+    .header { text-align: center; padding: 30px 0 20px; border-bottom: 2px solid #0084ff; }
+    .logo { font-size: 28px; font-weight: bold; color: #0084ff; letter-spacing: -1px; }
+    .email-card {
+      background-color: #fafafa;
+      border: 1px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 30px;
+      margin: 30px 0;
+      text-align: center;
+    }
+    .greeting { font-size: 22px; font-weight: 700; color: #050505; margin-bottom: 12px; }
+    .description { font-size: 14px; color: #555; margin-bottom: 28px; line-height: 1.8; }
+    .cta-button {
+      display: inline-block;
+      background-color: #0084ff;
+      color: white;
+      padding: 14px 32px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 16px 0;
+    }
+    .features { padding: 20px 0; text-align: center; color: #555; font-size: 13px; }
+    .features p { margin: 10px 0; }
+    .footer {
+      text-align: center;
+      padding: 24px 0 16px;
+      border-top: 1px solid #e0e0e0;
+      font-size: 12px;
+      color: #999;
+    }
+    @media (prefers-color-scheme: dark) {
+      body, .container { background-color: #050505; color: #ffffff; }
+      .email-card { background-color: #1a1a1a; border-color: #333; }
+      .greeting { color: #ffffff; }
+      .footer { border-top-color: #333; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">⏱️ CHRONO</div>
+      <p style="margin-top: 8px; color: #666; font-size: 12px;">Rede Social Temporal</p>
+    </div>
+
+    <div class="email-card">
+      <p class="greeting">👋 Olá, @${username}!</p>
+      <p class="description">
+        Seja bem-vindo ao <strong>Chrono</strong> — a rede social temporal.<br>
+        Sua conta foi criada com sucesso. Agora você faz parte da comunidade!
+      </p>
+      <a href="${frontendUrl}" class="cta-button">🚀 Acessar o Chrono</a>
+    </div>
+
+    <div class="features">
+      <p>⏳ <strong>Explore</strong> — Navegue pela linha do tempo e descubra posts de qualquer data</p>
+      <p>🔗 <strong>Conecte</strong> — Siga pessoas e participe de conversas em tempo real</p>
+      <p>💬 <strong>Interaja</strong> — Poste, responda, reaja e entre em Cordões temáticos</p>
+    </div>
+
+    <div class="footer">
+      <p>© 2026 Chrono — Rede Social Temporal</p>
+      <p style="margin-top: 8px;">
+        Você está recebendo este email porque acabou de criar uma conta no Chrono.
+      </p>
+    </div>
+  </div>
+</body>
+</html>`;
+  }
+
+  /**
    * Verify token and mark email as verified
    */
   async verifyToken(token: string): Promise<User | null> {

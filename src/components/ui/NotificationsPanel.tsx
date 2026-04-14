@@ -141,7 +141,7 @@ export default function NotificationsPanel({ notifications, onClose, onNotificat
                         <button 
                             onClick={onMarkAllAsRead}
                             className="text-xs px-2 py-1 text-[var(--theme-primary)] hover:bg-[var(--theme-primary)]/10 border border-[var(--theme-primary)]/30 rounded transition-colors"
-                            title="Mark all notifications as read"
+                            title="Marcar todas como lidas"
                         >
                             Marcar tudo
                         </button>

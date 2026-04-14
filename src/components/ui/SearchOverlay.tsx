@@ -195,7 +195,7 @@ function SearchResultsSection({
     return (
         <div className="space-y-8">
             {results.users.length > 0 && (
-                <ResultSection title="Users" count={results.users.length}>
+                <ResultSection title="Usuários" count={results.users.length}>
                     {results.users.map(u => (
                         <div key={u.username}>
                             <UserCard user={u} onViewProfile={onViewProfile} />
@@ -225,7 +225,7 @@ function SearchResultsSection({
             )}
 
             {results.posts.length > 0 && (
-                <ResultSection title="Echoes" count={results.posts.length}>
+                <ResultSection title="Ecos" count={results.posts.length}>
                     {results.posts.map(p => (
                         <div key={p.id}>
                             <PostCard post={p} onSearch={onSearch} />

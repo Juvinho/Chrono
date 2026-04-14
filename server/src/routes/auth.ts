@@ -283,6 +283,17 @@ router.post('/register', async (req, res) => {
       // Don't block registration if email fails, but log it
     }
 
+    // Send welcome email (independent block — never blocks registration)
+    try {
+      const { getEmailService } = await import('../services/emailService.js');
+      const emailService = await getEmailService();
+      if (emailService) {
+        await emailService.sendWelcomeEmail(user);
+      }
+    } catch (welcomeEmailError) {
+      console.warn('⚠️ Failed to send welcome email:', welcomeEmailError);
+    }
+
     res.status(201).json({
       message: 'Registration successful! Please verify your email to continue.',
       user: {

@@ -175,7 +175,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
               disabled={isSending}
               className="control-button emoji-button"
-              title="Add emoji"
+              title="Adicionar emoji"
               type="button"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -210,7 +210,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             onClick={() => fileInputRef.current?.click()}
             disabled={isSending}
             className="control-button image-button"
-            title="Upload image"
+            title="Enviar imagem"
             type="button"
           >
             <CameraIcon className="control-icon" />

@@ -286,6 +286,25 @@
   justify-content: flex-start;
 }
 
+/* Message row with correct alignment */
+.message-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin-bottom: 12px;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+/* Message from other user: [avatar] [balão] [space] */
+.message-row--other {
+  justify-content: flex-start;
+}
+
+/* Message from me: [space] [balão] [avatar] */
+.message-row--own {
+  justify-content: flex-end;
+}
+
 .message-avatar {
   width: 32px;
   height: 32px;
@@ -387,12 +406,15 @@
 .message-bubble.theirs {
   background-color: var(--theme-bg-secondary);
   color: var(--theme-text-primary);
+  border-radius: 18px 18px 18px 4px;
+  /* Corner pointing to the left avatar */
 }
 
 .message-bubble.mine {
   background-color: var(--theme-primary);
   color: var(--theme-bg-primary);
-  margin-right: 8px;
+  border-radius: 18px 18px 4px 18px;
+  /* Corner pointing to the right avatar */
 }
 
 .message-content {

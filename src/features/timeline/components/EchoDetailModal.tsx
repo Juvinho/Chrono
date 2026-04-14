@@ -85,7 +85,7 @@ export default function EchoDetailModal({ postId, onClose, currentUser, onReply,
                             {post.replies && post.replies.length > 0 && (
                                 <div className="space-y-4 pl-4 border-l-2 border-[var(--theme-border-primary)]">
                                     <h3 className="text-sm font-bold text-[var(--theme-text-secondary)] uppercase tracking-wider mb-4">
-                                        {t('comments') || 'Comments'}
+                                        {t('comments')}
                                     </h3>
                                     {post.replies.map(reply => (
                                         <div key={reply.id} className="relative">

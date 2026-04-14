@@ -145,7 +145,7 @@ export default function EditProfileModal({ user, onClose, onSave }: EditProfileM
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-[var(--theme-border-primary)] bg-[var(--theme-bg-primary)]">
                     <h2 className="text-xl font-bold text-[var(--theme-text-light)] flex items-center">
-                        <span className="mr-2 text-[var(--theme-primary)]">✎</span> {t('editProfile') || 'EDIT PROFILE'}
+                        <span className="mr-2 text-[var(--theme-primary)]">✎</span> {t('editProfile')}
                     </h2>
                     <button 
                         onClick={onClose}
@@ -160,19 +160,19 @@ export default function EditProfileModal({ user, onClose, onSave }: EditProfileM
                         onClick={() => setActiveTab('basic')}
                         className={`px-4 py-2 text-xs font-bold transition-all border-b-2 ${activeTab === 'basic' ? 'border-[var(--theme-primary)] text-[var(--theme-primary)]' : 'border-transparent text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-light)]'}`}
                     >
-                        {t('tabBasic') || 'BÁSICO'}
+                        {t('tabBasic')}
                     </button>
                     <button 
                         onClick={() => setActiveTab('professional')}
                         className={`px-4 py-2 text-xs font-bold transition-all border-b-2 ${activeTab === 'professional' ? 'border-[var(--theme-primary)] text-[var(--theme-primary)]' : 'border-transparent text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-light)]'}`}
                     >
-                        {t('tabProfessional') || 'PROFISSIONAL'}
+                        {t('tabProfessional')}
                     </button>
                     <button 
                         onClick={() => setActiveTab('social')}
                         className={`px-4 py-2 text-xs font-bold transition-all border-b-2 ${activeTab === 'social' ? 'border-[var(--theme-primary)] text-[var(--theme-primary)]' : 'border-transparent text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-light)]'}`}
                     >
-                        {t('tabSocial') || 'SOCIAL'}
+                        {t('tabSocial')}
                     </button>
                 </div>
 
@@ -202,7 +202,7 @@ export default function EditProfileModal({ user, onClose, onSave }: EditProfileM
                             <div>
                                 <div className="flex justify-between items-center mb-1">
                                     <label className="block text-sm font-medium text-[var(--theme-text-secondary)]">
-                                        {t('bio') || 'Bio'}
+                                        {t('settingsBio')}
                                     </label>
                                     <button 
                                         type="button"
@@ -224,7 +224,7 @@ export default function EditProfileModal({ user, onClose, onSave }: EditProfileM
                                     maxLength={160}
                                     rows={4}
                                     className="w-full bg-[var(--theme-bg-primary)] border border-[var(--theme-border-primary)] rounded p-2 text-[var(--theme-text-primary)] focus:border-[var(--theme-primary)] focus:outline-none resize-none"
-                                    placeholder={t('bioPlaceholder') || "Tell us about yourself..."}
+                                    placeholder={t('bioPlaceholder')}
                                 />
                                 <div className="text-right text-xs text-[var(--theme-text-secondary)] mt-1">
                                     {formData.bio.length}/160
@@ -234,7 +234,7 @@ export default function EditProfileModal({ user, onClose, onSave }: EditProfileM
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-[var(--theme-text-secondary)] mb-1">
-                                        {t('pronouns') || 'Pronouns'}
+                                        {t('settingsPronouns')}
                                     </label>
                                     <input
                                         type="text"
@@ -248,7 +248,7 @@ export default function EditProfileModal({ user, onClose, onSave }: EditProfileM
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-[var(--theme-text-secondary)] mb-1">
-                                        {t('location') || 'Location'}
+                                        {t('settingsLocation')}
                                     </label>
                                     <input
                                         type="text"
@@ -257,7 +257,7 @@ export default function EditProfileModal({ user, onClose, onSave }: EditProfileM
                                         onChange={handleChange}
                                         maxLength={50}
                                         className="w-full bg-[var(--theme-bg-primary)] border border-[var(--theme-border-primary)] rounded p-2 text-sm text-[var(--theme-text-primary)] focus:border-[var(--theme-primary)]"
-                                        placeholder="City, Country"
+                                        placeholder="Cidade, País"
                                     />
                                 </div>
                             </div>
@@ -269,7 +269,7 @@ export default function EditProfileModal({ user, onClose, onSave }: EditProfileM
                             {/* Headline */}
                             <div>
                                 <label className="block text-sm font-medium text-[var(--theme-text-secondary)] mb-1">
-                                    {t('headline') || 'Headline Profissional'}
+                                    {t('headline')}
                                 </label>
                                 <input
                                     type="text"
@@ -278,14 +278,14 @@ export default function EditProfileModal({ user, onClose, onSave }: EditProfileM
                                     onChange={handleChange}
                                     maxLength={100}
                                     className="w-full bg-[var(--theme-bg-primary)] border border-[var(--theme-border-primary)] rounded p-2 text-[var(--theme-text-primary)] focus:border-[var(--theme-primary)] focus:outline-none"
-                                    placeholder="Ex: Senior Neural Architect | Web3 Developer"
+                                    placeholder="Ex: Desenvolvedor Sênior, Designer..."
                                 />
                             </div>
 
                             {/* Skills */}
                             <div>
                                 <label className="block text-sm font-medium text-[var(--theme-text-secondary)] mb-1">
-                                    {t('skills') || 'Habilidades (separadas por vírgula)'}
+                                    {t('skills')}
                                 </label>
                                 <input
                                     type="text"
@@ -325,7 +325,7 @@ export default function EditProfileModal({ user, onClose, onSave }: EditProfileM
                         <div className="space-y-6 animate-fade-in">
                             <div>
                                 <label className="block text-sm font-medium text-[var(--theme-text-secondary)] mb-1">
-                                    {t('website') || 'Website'}
+                                    {t('settingsWebsite')}
                                 </label>
                                 <input
                                     type="text"
@@ -339,7 +339,7 @@ export default function EditProfileModal({ user, onClose, onSave }: EditProfileM
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-[var(--theme-text-secondary)] mb-1">
-                                    {t('birthday') || 'Birthday'}
+                                    {t('settingsBirthday')}
                                 </label>
                                 <input
                                     type="date"
@@ -360,7 +360,7 @@ export default function EditProfileModal({ user, onClose, onSave }: EditProfileM
                             className="px-4 py-2 text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-light)] transition-colors"
                             disabled={isLoading}
                         >
-                            {t('cancel') || 'Cancel'}
+                            {t('cancel')}
                         </button>
                         <button
                             type="submit"
@@ -370,10 +370,10 @@ export default function EditProfileModal({ user, onClose, onSave }: EditProfileM
                             {isLoading ? (
                                 <>
                                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                                    {t('saving') || 'Saving...'}
+                                    {t('saving')}
                                 </>
                             ) : (
-                                t('saveChanges') || 'Save Changes'
+                                t('saveChanges')
                             )}
                         </button>
                     </div>
