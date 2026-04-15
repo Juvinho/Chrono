@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { Post, User, CyberpunkReaction } from '../../../types/index';
 import { apiClient } from '../../../api';
 import { mapApiPostToPost } from '../../../api/mappers';
 import PostCard from './PostCard';
+import { PostComposer } from './PostComposer';
 import { ChevronLeftIcon } from '../../../components/ui/icons';
 import { useTranslation } from '../../../hooks/useTranslation';
+import { useEffect } from 'react';
 
 interface ThreadViewProps {
     currentUser: User;
@@ -38,91 +40,61 @@ export const ThreadView: React.FC<ThreadViewProps> = ({
 }) => {
     const { t } = useTranslation();
     const { postId } = useParams<{ postId: string }>();
-    const navigate = useNavigate();
-    
-    // Try to find the post in allPosts first to avoid flicker
+
     const postFromAllPosts = allPosts.find(p => p.id === postId);
     const [rootPost, setRootPost] = useState<Post | null>(postFromAllPosts || null);
     const [loading, setLoading] = useState(!postFromAllPosts);
     const [error, setError] = useState<string | null>(null);
+    const [isComposerOpen, setIsComposerOpen] = useState(false);
+    const [replyingTo, setReplyingTo] = useState<Post | null>(null);
 
     useEffect(() => {
         const loadPost = async () => {
-            if (!postId) {
-                setError('Post ID not provided');
-                setLoading(false);
-                return;
-            }
-
-            // If we already have the post, don't fetch again
-            if (rootPost) {
-                setLoading(false);
-                return;
-            }
-
+            if (!postId) { setError('Post ID not provided'); setLoading(false); return; }
+            if (rootPost) { setLoading(false); return; }
             try {
                 setError(null);
-                
                 const response = await apiClient.getPost(postId);
-                if (response.error) {
-                    setError(response.error);
-                    setLoading(false);
-                    return;
-                }
-
-                const mappedPost = mapApiPostToPost(response.data || response);
-                setRootPost(mappedPost);
+                if (response.error) { setError(response.error); setLoading(false); return; }
+                setRootPost(mapApiPostToPost(response.data || response));
                 setLoading(false);
             } catch (err: any) {
-                console.error('Failed to load thread:', err);
                 setError(err.message || 'Failed to load thread');
                 setLoading(false);
             }
         };
-
         loadPost();
     }, [postId]);
 
-    if (loading) {
-        return null;
-    }
-
-    if (error || !rootPost) {
-        return (
-            <div className="min-h-screen flex items-center justify-center p-4" style={{
-                background: 'rgba(0, 0, 0, 0.75)',
-                backdropFilter: 'blur(4px)'
-            }}>
-                <div className="bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] rounded-lg p-6 max-w-600px text-center">
-                    <h2 className="text-2xl font-bold mb-4 text-[var(--theme-primary)]">{t('threadNotFound')}</h2>
-                    <p className="text-[var(--theme-text-secondary)] mb-6">{error || t('threadDoesNotExist')}</p>
-                    <button
-                        onClick={onBack}
-                        className="flex items-center justify-center gap-2 px-4 py-2 mx-auto bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] rounded-sm hover:bg-[var(--theme-bg-secondary)] transition-colors"
-                    >
-                        <ChevronLeftIcon className="w-4 h-4" />
-                        {t('goBack')}
-                    </button>
-                </div>
-            </div>
-        );
-    }
+    const handleReplySubmit = (content: string, isPrivate: boolean, media?: any) => {
+        const target = replyingTo || rootPost;
+        if (target) {
+            onReply(target.id, content, isPrivate, media);
+            setIsComposerOpen(false);
+            setReplyingTo(null);
+        }
+    };
 
     const handleRenderReplies = (post: Post, depth: number = 0): React.ReactNode[] => {
         const result: React.ReactNode[] = [];
 
-        // Render current post
         result.push(
-            <div key={`post-${post.id}`} className={depth === 0 ? '' : ''}>
+            <div
+                key={`post-${post.id}`}
+                className={`${depth === 0 ? 'border-b-2 border-[var(--theme-primary)]' : ''} pb-4 mb-4`}
+            >
                 <PostCard
                     post={post}
                     currentUser={currentUser}
                     onViewProfile={onViewProfile}
                     onUpdateReaction={onUpdateReaction}
-                    onReply={onReply}
+                    onReply={() => {
+                        setReplyingTo(post);
+                        setIsComposerOpen(true);
+                    }}
                     onEcho={onEcho}
                     onDelete={onDeletePost}
-                    onEdit={(post) => onEditPost(post.id, post)}
+                    onEdit={(p) => onEditPost(p.id, p)}
                     onTagClick={() => {}}
                     onPollVote={onPollVote}
                     typingParentIds={typingParentIds}
@@ -133,10 +105,9 @@ export const ThreadView: React.FC<ThreadViewProps> = ({
             </div>
         );
 
-        // Render replies
         if (post.replies && post.replies.length > 0) {
             result.push(
-                <div key={`replies-${post.id}`} className="mt-4 space-y-0 border-l-2 border-[var(--theme-border-primary)] pl-4 md:pl-6">
+                <div key={`replies-${post.id}`} className="ml-0 md:ml-4 border-l-2 border-[var(--theme-primary)] pl-4">
                     {post.replies.map((reply) => (
                         <div key={`reply-container-${reply.id}`}>
                             {handleRenderReplies(reply, depth + 1)}
@@ -149,69 +120,115 @@ export const ThreadView: React.FC<ThreadViewProps> = ({
         return result;
     };
 
+    if (loading) return null;
+
+    if (error || !rootPost) {
+        return (
+            <div className="min-h-screen bg-[var(--theme-bg-primary)] text-[var(--theme-text-primary)]">
+                <div className="sticky top-0 z-40 bg-[var(--theme-bg-primary)] border-b-2 border-[var(--theme-primary)]">
+                    <div className="flex items-center gap-4 p-4 max-w-4xl mx-auto w-full">
+                        <button onClick={onBack} className="flex items-center justify-center w-10 h-10 rounded hover:bg-[var(--theme-bg-secondary)] transition-colors">
+                            <ChevronLeftIcon className="w-5 h-5" />
+                        </button>
+                    </div>
+                </div>
+                <div className="flex flex-col items-center justify-center min-h-[60vh]">
+                    <h2 className="text-2xl font-bold mb-4 text-[var(--theme-primary)]">{t('threadNotFound')}</h2>
+                    <p className="text-[var(--theme-text-secondary)] mb-6">{error || t('threadDoesNotExist')}</p>
+                    <button onClick={onBack} className="flex items-center gap-2 px-4 py-2 bg-[var(--theme-bg-secondary)] border border-[var(--theme-primary)] rounded hover:bg-[var(--theme-bg-tertiary)] transition-colors">
+                        <ChevronLeftIcon className="w-4 h-4" />
+                        {t('goBack')}
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div
-            className="min-h-screen flex items-flex-start justify-center p-4 md:p-8 overflow-y-auto"
-            style={{
-                background: 'rgba(0, 0, 0, 0.75)',
-                backdropFilter: 'blur(4px)',
-                paddingTop: '2rem',
-            }}
-        >
-            {/* Card Container */}
-            <div
-                className="w-full max-w-600px bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] rounded-lg shadow-lg overflow-hidden"
-                style={{ boxSizing: 'border-box' }}
-            >
-                {/* Header */}
-                <div className="flex items-center justify-between gap-4 p-6 border-b border-[var(--theme-border-primary)]">
-                    <div className="flex items-center gap-3">
+        <div className="min-h-screen bg-[var(--theme-bg-primary)] text-[var(--theme-text-primary)]">
+
+            {/* Header — igual ao PostDetail */}
+            <div className="sticky top-0 z-40 bg-[var(--theme-bg-primary)] border-b-2 border-[var(--theme-primary)]">
+                <div className="flex items-center justify-between gap-4 p-4 max-w-4xl mx-auto w-full">
+                    <div className="flex items-center gap-4">
                         <button
                             onClick={onBack}
-                            className="flex items-center justify-center w-9 h-9 rounded-sm text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-light)] hover:bg-[var(--theme-bg-tertiary)] transition-colors"
+                            className="flex items-center justify-center w-10 h-10 rounded hover:bg-[var(--theme-bg-secondary)] transition-colors"
                             title={t('goBack')}
                         >
                             <ChevronLeftIcon className="w-5 h-5" />
                         </button>
-                        <h1 className="text-lg font-bold text-[var(--theme-text-light)]">{t('thread') || 'THREAD'}</h1>
+                        <div>
+                            <h1 className="text-2xl font-bold">{t('thread') || 'THREAD'}</h1>
+                            {rootPost.replies && rootPost.replies.length > 0 && (
+                                <p className="text-xs text-[var(--theme-text-secondary)] mt-1">
+                                    💬 {rootPost.replies.length} resposta{rootPost.replies.length !== 1 ? 's' : ''}
+                                </p>
+                            )}
+                        </div>
                     </div>
                 </div>
+            </div>
 
-                {/* Content */}
-                <div className="p-6 space-y-0 max-h-[70vh] overflow-y-auto">
-                    {/* Original Post */}
-                    <div className="pb-4 border-b border-[var(--theme-border-primary)]">
-                        {handleRenderReplies(rootPost)[0]}
-                    </div>
+            {/* Conteúdo — layout igual ao PostDetail */}
+            <div className="max-w-4xl mx-auto p-4" style={{ boxSizing: 'border-box' }}>
+                <div className="space-y-0">
+                    {handleRenderReplies(rootPost)}
+                </div>
 
-                    {/* Replies Section */}
-                    {rootPost.replies && rootPost.replies.length > 0 ? (
-                        <div className="mt-4 space-y-0">
-                            <h3 className="text-xs font-semibold text-[var(--theme-text-secondary)] uppercase tracking-wider mb-4 px-2">
-                                {t('replies') || 'Respostas'} ({rootPost.replies.length})
-                            </h3>
-                            <div className="space-y-0">
-                                {handleRenderReplies(rootPost).slice(1)}
+                {/* Compositor de resposta */}
+                {isComposerOpen && (
+                    <div className="mt-6 p-4 bg-[var(--theme-bg-secondary)] rounded-lg border border-[var(--theme-border-primary)]">
+                        <div className="flex items-start gap-3 mb-4">
+                            <img
+                                src={currentUser.avatar}
+                                alt={currentUser.username}
+                                className="w-12 h-12 rounded-full object-cover"
+                                width={48}
+                                height={48}
+                            />
+                            <div className="flex-1">
+                                <p className="font-semibold text-[var(--theme-text-primary)]">
+                                    Respondendo para {replyingTo?.author?.username || rootPost.author?.username || 'usuário'}
+                                </p>
+                                {replyingTo && (
+                                    <p className="text-sm text-[var(--theme-text-secondary)] truncate">
+                                        "{replyingTo.content}"
+                                    </p>
+                                )}
                             </div>
+                            <button
+                                onClick={() => { setIsComposerOpen(false); setReplyingTo(null); }}
+                                className="text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-primary)]"
+                            >
+                                ✕
+                            </button>
                         </div>
-                    ) : (
-                        <div className="mt-6 py-8 text-center">
-                            <p className="text-[var(--theme-text-secondary)] text-sm">
-                                {t('noReplies') || 'Nenhuma resposta ainda. Seja o primeiro!'}
-                            </p>
-                        </div>
-                    )}
-                </div>
+                        <PostComposer
+                            currentUser={currentUser}
+                            onClose={() => { setIsComposerOpen(false); setReplyingTo(null); }}
+                            onSubmit={(postData) =>
+                                handleReplySubmit(
+                                    postData.content,
+                                    postData.isPrivate ?? false,
+                                    postData.imageUrl ? { imageUrl: postData.imageUrl, videoUrl: postData.videoUrl } : undefined
+                                )
+                            }
+                            inline
+                            initialContent={`@${replyingTo?.author?.username || rootPost.author?.username || ''} `}
+                        />
+                    </div>
+                )}
 
-                {/* Footer - Reply Button */}
-                <div className="p-6 border-t border-[var(--theme-border-primary)] bg-[var(--theme-bg-primary)]">
+                {/* Botão para abrir compositor */}
+                {!isComposerOpen && (
                     <button
-                        onClick={() => onReply(rootPost.id, '', false)}
-                        className="w-full py-2 px-4 text-sm font-medium text-[var(--theme-primary)] bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] rounded-sm hover:bg-[var(--theme-bg-tertiary)] hover:border-[var(--theme-primary)] transition-colors"
+                        onClick={() => { setReplyingTo(null); setIsComposerOpen(true); }}
+                        className="mt-6 w-full py-3 bg-[var(--theme-primary)] text-white rounded-lg hover:bg-[var(--theme-secondary)] transition-colors font-semibold"
                     >
                         + {t('reply') || 'Responder'}
                     </button>
-                </div>
+                )}
             </div>
         </div>
     );

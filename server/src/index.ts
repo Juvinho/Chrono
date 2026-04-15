@@ -28,6 +28,7 @@ dotenv.config({ path: envPath });
 // NOW import modules that depend on environment variables
 import { initializeDatabase } from './db/initializeDatabase.js';
 import { runMigrations } from './db/migrations.js';
+import { fixLegacyConversationIds } from './db/migrations/fixLegacyConversationIds.js';
 import { pool } from './db/connection.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
@@ -632,6 +633,9 @@ const startServer = async () => {
     try {
       await runMigrations();
       console.log('Database migrations complete.');
+      
+      // Check for and warn about legacy conversation IDs
+      await fixLegacyConversationIds();
     } catch (err: any) {
       console.error('Migration error:', err.message);
     }

@@ -178,12 +178,16 @@ export class ChatService {
 
       for (const row of result.rows) {
         try {
-          // Validate ID is a UUID string
-          if (typeof row.id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(row.id)) {
-            console.warn('⚠️ Invalid conversation ID format (non-UUID):', {
+          // Handle numeric IDs from old data — convert to UUID
+          let conversationIdStr = String(row.id);
+          
+          // If ID is numeric or looks wrong, skip it (legacy data migration needed)
+          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          if (!uuidRegex.test(conversationIdStr)) {
+            console.warn('⚠️ Skipping conversation with non-UUID ID (legacy data):', {
               id: row.id,
               type: typeof row.id,
-              fromDB: row
+              note: 'Run migration fix_conversation_ids_to_uuid.sql to fix'
             });
             skippedCount++;
             continue;
