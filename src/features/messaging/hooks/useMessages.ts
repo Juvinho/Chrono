@@ -92,7 +92,7 @@ export function useMessages(conversationId: number | string | null) {
       setIsSending(true);
       
       const request: SendMessageRequest = {
-        conversationId,
+        conversationId: String(conversationId),
         content: content.trim(),
         ...(imageUrl && { imageUrl }),
       };

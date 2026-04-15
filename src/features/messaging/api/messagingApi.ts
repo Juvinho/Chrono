@@ -17,31 +17,12 @@ export async function getConversations(): Promise<Conversation[]> {
     throw err;
   }
   
-  // Debug: log what we received
-  console.log('🔍 getConversations raw response:', {
-    type: typeof response.data,
-    isArray: Array.isArray(response.data),
-    data: response.data
-  });
-  
-  // Handle both array and object responses
+  // Response is already typed as Conversation[]
   if (Array.isArray(response.data)) {
     return response.data;
   }
-  
-  // If backend returned an object with conversations property
-  if (response.data && typeof response.data === 'object') {
-    if (Array.isArray(response.data.conversations)) {
-      return response.data.conversations;
-    }
-    // If it's a wrapper object with conversation list, try to extract it
-    if (Object.keys(response.data).length > 0) {
-      console.warn('⚠️ Backend returned object instead of array:', response.data);
-      // Return empty array if unable to parse
-      return [];
-    }
-  }
-  
+
+  console.warn('⚠️ getConversations returned non-array:', response.data);
   return [];
 }
 
