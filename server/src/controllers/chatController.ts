@@ -178,14 +178,35 @@ export const getMessages = async (req: AuthRequest, res: Response) => {
       timestamp: new Date().toISOString()
     });
     
-    // Validate UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!conversationId) {
       return res.status(400).json({ error: 'Conversation ID is required' });
     }
     
     // Verify user is a participant in this conversation
-    const conversation = await chatService.getConversationById(conversationId);
+    // First try with the conversationId as-is
+    let conversation = await chatService.getConversationById(conversationId);
+    
+    // If not found and conversationId is numeric (legacy), search by offset
+    if (!conversation && /^\d+$/.test(conversationId)) {
+      console.log('⚠️ Conversation not found with UUID, trying legacy numeric ID:', conversationId);
+      
+      // Try to find by user's conversations and use offset
+      const userConvs = await pool.query(
+        `SELECT id FROM conversations 
+         WHERE user1_id = $1::uuid OR user2_id = $1::uuid
+         ORDER BY created_at ASC`,
+        [userId]
+      );
+      
+      const offset = parseInt(conversationId) - 1;
+      if (offset >= 0 && offset < userConvs.rows.length) {
+        conversation = await chatService.getConversationById(userConvs.rows[offset].id.toString());
+        console.log('✅ Found conversation via offset:', {
+          offset,
+          foundId: conversation?.id
+        });
+      }
+    }
     
     console.log('🔍 Conversation lookup:', {
       found: !!conversation,
@@ -204,7 +225,7 @@ export const getMessages = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ error: 'Not authorized to view this conversation' });
     }
     
-    const messages = await chatService.getMessages(conversationId, userId);
+    const messages = await chatService.getMessages(conversation.id.toString(), userId);
     res.json(messages);
   } catch (error: any) {
     console.error('Error getting messages:', error);
@@ -215,16 +236,32 @@ export const getMessages = async (req: AuthRequest, res: Response) => {
 export const sendMessage = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { conversationId } = req.params;
+    let { conversationId } = req.params;
     const { content, imageUrl } = req.body;
 
+    // Handle legacy numeric conversation IDs
+    if (/^\d+$/.test(conversationId)) {
+      console.log('⚠️ Legacy numeric conversation ID detected:', conversationId);
+      const userConvs = await pool.query(
+        `SELECT id FROM conversations 
+         WHERE user1_id = $1::uuid OR user2_id = $1::uuid
+         ORDER BY created_at ASC`,
+        [userId]
+      );
+      
+      const offset = parseInt(conversationId) - 1;
+      if (offset >= 0 && offset < userConvs.rows.length) {
+        conversationId = userConvs.rows[offset].id.toString();
+        console.log('✅ Resolved legacy ID to UUID:', conversationId);
+      } else {
+        return res.status(404).json({ error: 'Conversation not found' });
+      }
+    }
+
     // QC-09: Block message if either user has blocked the other
-    const convRow = await pool.query(
-      `SELECT user1_id, user2_id FROM conversations WHERE id = $1::uuid`,
-      [conversationId]
-    );
-    if (convRow.rows.length > 0) {
-      const { user1_id, user2_id } = convRow.rows[0];
+    const convo = await chatService.getConversationById(conversationId);
+    if (convo) {
+      const { user1_id, user2_id } = convo;
       const otherUserId = String(user1_id) === String(userId) ? user2_id : user1_id;
       const blockCheck = await pool.query(
         `SELECT 1 FROM users
@@ -236,6 +273,8 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
       if (blockCheck.rows.length > 0) {
         return res.status(403).json({ error: 'Cannot send message to this user' });
       }
+    } else {
+      return res.status(404).json({ error: 'Conversation not found' });
     }
 
     const message = await chatService.sendMessage(conversationId, userId, content, imageUrl);
@@ -281,7 +320,26 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
 export const markAsRead = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
-    const { conversationId } = req.params;
+    let { conversationId } = req.params;
+    
+    // Handle legacy numeric conversation IDs
+    if (/^\d+$/.test(conversationId)) {
+      console.log('⚠️ Legacy numeric conversation ID detected in markAsRead:', conversationId);
+      const userConvs = await pool.query(
+        `SELECT id FROM conversations 
+         WHERE user1_id = $1::uuid OR user2_id = $1::uuid
+         ORDER BY created_at ASC`,
+        [userId]
+      );
+      
+      const offset = parseInt(conversationId) - 1;
+      if (offset >= 0 && offset < userConvs.rows.length) {
+        conversationId = userConvs.rows[offset].id.toString();
+        console.log('✅ Resolved legacy ID to UUID in markAsRead:', conversationId);
+      } else {
+        return res.status(404).json({ error: 'Conversation not found' });
+      }
+    }
     
     // Verify user is a participant
     const conversation = await chatService.getConversationById(conversationId);

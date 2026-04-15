@@ -7,7 +7,7 @@ import { baseClient, API_BASE_URL } from './client';
 
 export const conversationService = {
   async getConversations() {
-    return baseClient.request<any[]>('/chat');
+    return baseClient.request<any[]>('/api/chat');
   },
 
   async getMessages(conversationId: string, opts?: { before?: string; limit?: number }) {
