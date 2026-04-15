@@ -1,0 +1,12 @@
+/* Cloudflare Pages routing para SPA (React Router) */
+/* Qualquer rota não encontrada é servida como index.html */
+/* com status 200 (rewrite internal) */
+
+/* Redireciona 404 para index.html mantendo o path */
+/*
+  path = /404.html
+  status = 404
+*/
+
+/* Redireciona tudo que não é arquivo estático para index.html */
+*  /index.html  200

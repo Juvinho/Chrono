@@ -1,0 +1,14 @@
+name = "chrono"
+type = "javascript"
+account_id = ""  # Preencher com sua ID da conta Cloudflare
+workers_dev = true
+routes = []
+zone_id = ""  # Preencher com seu Zone ID (chronosocial.com.br)
+
+[build]
+command = "npm run build"
+watch_paths = ["src/**/*.{ts,tsx,js,jsx}", "vite.config.ts"]
+cwd = "./"
+
+[build.upload]
+format = "service-worker"
