@@ -1,34 +1,28 @@
-/// <reference types="vitest" />
-import path from 'path';
-import { defineConfig, loadEnv } from 'vite';
-import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 
-export default defineConfig(({ mode }) => {
-    const env = loadEnv(mode, '.', '');
-    return {
-      server: {
-        port: 3000,
-        // host: '0.0.0.0', // Commented out to fix WebSocket/HMR issues on localhost
+export default defineConfig({
+  plugins: [
+    react(),
+    tailwindcss(),  // ← adicionar isso
+  ],
+  base: '/',  // ← CRÍTICO: deve ser '/' para Cloudflare Pages
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: false,
+  },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000', // seu backend local
+        changeOrigin: true,
       },
-      plugins: [react()],
-      test: {
-        globals: true,
-        environment: 'jsdom',
-        setupFiles: './setupTests.ts',
-      },
-      define: {
-        // REMOVED: Gemini API key is now handled server-side only for security
-      },
-      resolve: {
-        alias: {
-          '@': path.resolve(__dirname, './src'),
-        }
-      },
-      build: {
-        outDir: 'dist',
-        sourcemap: true,
-        emptyOutDir: true,
-        chunkSizeWarningLimit: 1000
+      '/chat': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
       }
-    };
-});
+    }
+  }
+})
