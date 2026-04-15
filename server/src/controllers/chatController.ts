@@ -198,7 +198,9 @@ export const getMessages = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Conversation not found' });
     }
     
-    const isParticipant = conversation.user1_id.toString() === userId.toString() || conversation.user2_id.toString() === userId.toString();
+    const isParticipant =
+      String(conversation.user1_id) === String(userId) ||
+      String(conversation.user2_id) === String(userId);
     if (!isParticipant) {
       return res.status(403).json({ error: 'Not authorized to view this conversation' });
     }
@@ -224,7 +226,7 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
     );
     if (convRow.rows.length > 0) {
       const { user1_id, user2_id } = convRow.rows[0];
-      const otherUserId = user1_id.toString() === userId.toString() ? user2_id : user1_id;
+      const otherUserId = String(user1_id) === String(userId) ? user2_id : user1_id;
       const blockCheck = await pool.query(
         `SELECT 1 FROM users
          WHERE (id = $1::uuid AND $2::text = ANY(blocked_users))
@@ -253,7 +255,7 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
       // Emit conversation update (lastMessage, updatedAt) to both users
       const conversation = await chatService.getConversationById(conversationId);
       if (conversation) {
-        const otherUserId = conversation.user1_id.toString() === userId.toString() ? conversation.user2_id : conversation.user1_id;
+        const otherUserId = String(conversation.user1_id) === String(userId) ? conversation.user2_id : conversation.user1_id;
         
         const conversationUpdate = {
           id: conversationId,
@@ -288,7 +290,9 @@ export const markAsRead = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Conversation not found' });
     }
     
-    const isParticipant = conversation.user1_id.toString() === userId.toString() || conversation.user2_id.toString() === userId.toString();
+    const isParticipant =
+      String(conversation.user1_id) === String(userId) ||
+      String(conversation.user2_id) === String(userId);
     if (!isParticipant) {
       return res.status(403).json({ error: 'Not a participant in this conversation' });
     }

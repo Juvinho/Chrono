@@ -132,6 +132,14 @@ export function useMessages(conversationId: number | string | null) {
       return;
     }
 
+    // Reset state when switching conversations
+    setMessages([]);
+    setError(null);
+    setIsLoading(true);
+    lastFetchRef.current = 0;        // Reset debounce timer
+    isFetchingRef.current = false;   // Reset fetch lock
+    previousMessagesLengthRef.current = 0;  // Reset message count tracking
+
     // Carrega mensagens ao iniciar
     fetchMessages();
 
