@@ -23,15 +23,32 @@ Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS
 Access-Control-Allow-Headers: Content-Type, Authorization
 Access-Control-Allow-Credentials: true
 
-/* Cache busting para assets */
-/assets/*
+/* Cache busting para assets com content-type correto */
+/assets/*.js
+  Content-Type: application/javascript; charset=utf-8
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*.css
+  Content-Type: text/css; charset=utf-8
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*.svg
+  Content-Type: image/svg+xml
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*.woff2
+  Content-Type: font/woff2
   Cache-Control: public, max-age=31536000, immutable
 
 /* HTML sempre fresh */
-/*.html
+/index.html
   Cache-Control: no-cache, no-store, must-revalidate
 
 /* SPA routing - redireciona 404 para index.html */
+/* Aplicado globalmente */
+/api/*
+  Cache-Control: no-cache
+
 /*
   status = 404
   rewrite = /index.html
