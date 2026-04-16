@@ -1,18 +1,31 @@
-import { Pool, QueryResult } from 'pg';
+﻿import { Pool, QueryResult } from 'pg';
 
 /**
  * A-09: Admin Audit Logging Service
- * Manages logging of all administrative actions for compliance tracking
+ * Manages logging of all administrative actions for compliance tracking.
  */
 
 export interface AuditLogEntry {
   id?: number;
-  admin_id: number;
-  action_type: 'ban_user' | 'unban_user' | 'delete_post' | 'delete_comment' | 
-               'remove_media' | 'update_tags' | 'update_settings' | 
-               'verify_user' | 'unverify_user' | 'set_admin' | 'revoke_admin' |
-               'suspend_account' | 'restore_account' | 'edit_post_content' |
-               'create_announcement' | 'update_announcement' | 'delete_announcement';
+  admin_id: string | number;
+  action_type:
+    | 'ban_user'
+    | 'unban_user'
+    | 'delete_post'
+    | 'delete_comment'
+    | 'remove_media'
+    | 'update_tags'
+    | 'update_settings'
+    | 'verify_user'
+    | 'unverify_user'
+    | 'set_admin'
+    | 'revoke_admin'
+    | 'suspend_account'
+    | 'restore_account'
+    | 'edit_post_content'
+    | 'create_announcement'
+    | 'update_announcement'
+    | 'delete_announcement';
   resource_type: string;
   resource_id?: string;
   resource_name?: string;
@@ -25,6 +38,18 @@ export interface AuditLogEntry {
   error_message?: string;
   metadata?: any;
 }
+
+const parseJsonField = (value: any) => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
+  }
+  return value;
+};
 
 export class AdminAuditService {
   constructor(private pool: Pool) {}
@@ -44,7 +69,7 @@ export class AdminAuditService {
     `;
 
     const values = [
-      entry.admin_id,
+      String(entry.admin_id),
       entry.action_type,
       entry.resource_type,
       entry.resource_id || null,
@@ -56,7 +81,7 @@ export class AdminAuditService {
       entry.user_agent || null,
       entry.status,
       entry.error_message || null,
-      entry.metadata ? JSON.stringify(entry.metadata) : null
+      entry.metadata ? JSON.stringify(entry.metadata) : null,
     ];
 
     try {
@@ -72,7 +97,7 @@ export class AdminAuditService {
    * Retrieve audit logs with filtering and pagination
    */
   async getAuditLogs(filters: {
-    admin_id?: number;
+    admin_id?: string;
     action_type?: string;
     resource_type?: string;
     status?: 'success' | 'failed';
@@ -90,7 +115,7 @@ export class AdminAuditService {
     const limit = filters.limit || 50;
     const offset = filters.offset || 0;
 
-    let whereConditions: string[] = [];
+    const whereConditions: string[] = [];
     const values: any[] = [];
     let paramIndex = 1;
 
@@ -130,22 +155,18 @@ export class AdminAuditService {
       paramIndex++;
     }
 
-    const whereClause = whereConditions.length > 0 
-      ? `WHERE ${whereConditions.join(' AND ')}`
-      : '';
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
 
-    // Get total count
     const countQuery = `SELECT COUNT(*) as total FROM admin_audit_log ${whereClause}`;
     const countResult: QueryResult = await this.pool.query(countQuery, values);
     const total = parseInt(countResult.rows[0].total, 10);
 
-    // Get paginated results
     const query = `
-      SELECT 
+      SELECT
         aal.id,
         aal.admin_id,
         admin.username as admin_username,
-        admin.displayName as admin_display_name,
+        admin.display_name as admin_display_name,
         aal.action_type,
         aal.resource_type,
         aal.resource_id,
@@ -159,7 +180,7 @@ export class AdminAuditService {
         aal.metadata,
         aal.created_at
       FROM admin_audit_log aal
-      LEFT JOIN users admin ON aal.admin_id = admin.id
+      LEFT JOIN users admin ON admin.id::text = aal.admin_id
       ${whereClause}
       ORDER BY aal.created_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
@@ -169,13 +190,11 @@ export class AdminAuditService {
 
     try {
       const result: QueryResult = await this.pool.query(query, values);
-      
-      // Parse JSON fields
-      const logs = result.rows.map(row => ({
+      const logs = result.rows.map((row) => ({
         ...row,
-        old_value: row.old_value ? JSON.parse(row.old_value) : null,
-        new_value: row.new_value ? JSON.parse(row.new_value) : null,
-        metadata: row.metadata ? JSON.parse(row.metadata) : null
+        old_value: parseJsonField(row.old_value),
+        new_value: parseJsonField(row.new_value),
+        metadata: parseJsonField(row.metadata),
       }));
 
       return {
@@ -183,7 +202,7 @@ export class AdminAuditService {
         total,
         limit,
         offset,
-        hasMore: offset + limit < total
+        hasMore: offset + limit < total,
       };
     } catch (error) {
       console.error('[AuditService] Failed to retrieve logs:', error);
@@ -195,7 +214,7 @@ export class AdminAuditService {
    * Get statistics about admin actions
    */
   async getAuditStats(filters: {
-    admin_id?: number;
+    admin_id?: string;
     start_date?: Date;
     end_date?: Date;
   } = {}): Promise<{
@@ -204,7 +223,7 @@ export class AdminAuditService {
     success_rate: number;
     by_admin: Record<string, number>;
   }> {
-    let whereConditions: string[] = [];
+    const whereConditions: string[] = [];
     const values: any[] = [];
     let paramIndex = 1;
 
@@ -226,12 +245,10 @@ export class AdminAuditService {
       paramIndex++;
     }
 
-    const whereClause = whereConditions.length > 0 
-      ? `WHERE ${whereConditions.join(' AND ')}`
-      : '';
+    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
 
     const query = `
-      SELECT 
+      SELECT
         COUNT(*) as total,
         action_type,
         admin_id,
@@ -243,21 +260,25 @@ export class AdminAuditService {
 
     try {
       const result: QueryResult = await this.pool.query(query, values);
-      
+
       const stats = {
         total_actions: 0,
         by_type: {} as Record<string, number>,
         by_admin: {} as Record<string, number>,
         success_count: 0,
-        total_count: 0
+        total_count: 0,
       };
 
-      result.rows.forEach(row => {
-        stats.total_count++;
-        if (row.is_success) stats.success_count++;
-        
-        stats.by_type[row.action_type] = (stats.by_type[row.action_type] || 0) + 1;
-        stats.by_admin[row.admin_id] = (stats.by_admin[row.admin_id] || 0) + 1;
+      result.rows.forEach((row) => {
+        const count = Number(row.total) || 0;
+        const adminId = String(row.admin_id);
+        const isSuccess = Number(row.is_success) === 1;
+
+        stats.total_count += count;
+        if (isSuccess) stats.success_count += count;
+
+        stats.by_type[row.action_type] = (stats.by_type[row.action_type] || 0) + count;
+        stats.by_admin[adminId] = (stats.by_admin[adminId] || 0) + count;
       });
 
       stats.total_actions = stats.total_count;
@@ -266,7 +287,7 @@ export class AdminAuditService {
         total_actions: stats.total_actions,
         by_type: stats.by_type,
         success_rate: stats.total_count > 0 ? (stats.success_count / stats.total_count) * 100 : 0,
-        by_admin: stats.by_admin
+        by_admin: stats.by_admin,
       };
     } catch (error) {
       console.error('[AuditService] Failed to get stats:', error);

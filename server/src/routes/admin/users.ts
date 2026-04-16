@@ -106,7 +106,7 @@ router.put('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { display_name, email, bio, is_banned } = req.body;
-    const adminId = (req as any).user?.id;
+    const adminId = req.adminUser?.id;
 
     // Validar que o usuário existe
     const userCheck = await pool.query('SELECT id, username, display_name, email, bio, is_banned FROM users WHERE id = $1::uuid', [id]);
@@ -214,7 +214,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const adminId = (req as any).user?.id;
+    const adminId = req.adminUser?.id;
 
     // Verificar que o usuário existe
     const userCheck = await pool.query('SELECT id, username, display_name, email, bio FROM users WHERE id = $1::uuid', [id]);
@@ -270,7 +270,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
 router.post('/:id/ban', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const adminId = (req as any).user?.id;
+    const adminId = req.adminUser?.id;
     const reason = (req.body as any)?.reason || 'Administrative action';
 
     const result = await pool.query(
@@ -324,7 +324,7 @@ router.post('/:id/ban', async (req: Request, res: Response) => {
 router.post('/:id/unban', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const adminId = (req as any).user?.id;
+    const adminId = req.adminUser?.id;
     const reason = (req.body as any)?.reason || 'Administrative action';
 
     const result = await pool.query(

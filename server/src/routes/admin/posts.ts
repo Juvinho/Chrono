@@ -98,7 +98,7 @@ router.put('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { content } = req.body;
-    const adminId = (req as any).user?.id;
+    const adminId = req.adminUser?.id;
 
     if (!content || content.trim().length === 0) {
       return res.status(400).json({ error: 'Content cannot be empty' });
@@ -150,7 +150,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const adminId = (req as any).user?.id;
+    const adminId = req.adminUser?.id;
     const reason = (req.body as any)?.reason || 'Administrative action';
 
     const postCheck = await pool.query('SELECT author_id, content FROM posts WHERE id = $1::uuid', [id]);

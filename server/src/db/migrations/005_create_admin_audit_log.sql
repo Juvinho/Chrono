@@ -3,7 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS admin_audit_log (
   id SERIAL PRIMARY KEY,
-  admin_id INT NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+  admin_id VARCHAR(64) NOT NULL,
   action_type VARCHAR(50) NOT NULL,
   resource_type VARCHAR(50) NOT NULL,
   resource_id VARCHAR(255),
@@ -29,10 +29,10 @@ CREATE TABLE IF NOT EXISTS admin_audit_log (
 );
 
 -- Performance indexes
-CREATE INDEX idx_admin_audit_admin_id ON admin_audit_log(admin_id);
-CREATE INDEX idx_admin_audit_created_at ON admin_audit_log(created_at DESC);
-CREATE INDEX idx_admin_audit_action_type ON admin_audit_log(action_type);
-CREATE INDEX idx_admin_audit_resource ON admin_audit_log(resource_type, resource_id);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_admin_id ON admin_audit_log(admin_id);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_created_at ON admin_audit_log(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_action_type ON admin_audit_log(action_type);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_resource ON admin_audit_log(resource_type, resource_id);
 
 -- Audit log retention policy (keep 2 years of logs)
 -- Optional: enable pg_cron for automatic cleanup

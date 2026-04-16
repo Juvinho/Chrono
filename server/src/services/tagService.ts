@@ -1,5 +1,9 @@
 import { pool } from '../db/connection.js';
 
+const NEWCOMER_TAG_KEY = 'newcomer';
+const POPULAR_TAG_KEY = 'popular';
+const WARNED_TAG_KEY = 'warned';
+
 /**
  * Verificação automática de aquisição/remoção de tags
  * Executada periodicamente por cron job
@@ -29,34 +33,30 @@ async function ensureTagDefinitions() {
 // ==================== ATUALIZAR TAG: RECÉM-CHEGADO ====================
 export async function updateNewcommerTag() {
   try {
-    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-
     // Adicionar tag para usuários com conta < 7 dias
     const addResult = await pool.query(
       `INSERT INTO user_tags (user_id, tag_key, earned_at)
-       SELECT u.id, $1, NOW()
+       SELECT u.id, $1::varchar, NOW()
        FROM users u
-       WHERE
-         EXTRACT(EPOCH FROM (NOW() - u.created_at)) * 1000 < $2
+       WHERE u.created_at > NOW() - INTERVAL '7 days'
          AND NOT EXISTS (
            SELECT 1 FROM user_tags ut
-           WHERE ut.user_id = u.id AND ut.tag_key = $1
+           WHERE ut.user_id = u.id AND ut.tag_key = $2::varchar
          )
        ON CONFLICT (user_id, tag_key) DO NOTHING`,
-      ['newcomer', SEVEN_DAYS_MS]
+      [NEWCOMER_TAG_KEY, NEWCOMER_TAG_KEY]
     );
 
     console.log(`✅ Updated Recém-chegado tag: ${addResult.rowCount} users added`);
 
     // Remover tag para usuários com conta > 7 dias
     const removeResult = await pool.query(
-      `DELETE FROM user_tags
-       WHERE tag_key = $1
-         AND user_id IN (
-           SELECT u.id FROM users u
-           WHERE EXTRACT(EPOCH FROM (NOW() - u.created_at)) * 1000 >= $2
-         )`,
-      ['newcomer', SEVEN_DAYS_MS]
+      `DELETE FROM user_tags ut
+       USING users u
+       WHERE ut.user_id = u.id
+         AND ut.tag_key = $1::varchar
+         AND u.created_at <= NOW() - INTERVAL '7 days'`,
+      [NEWCOMER_TAG_KEY]
     );
 
     console.log(`✅ Removed Recém-chegado tag: ${removeResult.rowCount} users removed`);
@@ -70,32 +70,40 @@ export async function updatePopularTag() {
   try {
     const REACTION_THRESHOLD = 5000;
 
-    // Conta total de reações recebidas pelo usuário em todos os seus posts
+    // Conta total de reações recebidas via tabela reactions (schema atual)
     const addResult = await pool.query(
-      `INSERT INTO user_tags (user_id, tag_key, earned_at)
-       SELECT u.id, $1, NOW()
-       FROM users u
-       WHERE (
-         SELECT COALESCE(SUM(
-           CASE WHEN jsonb_typeof(p.reactions) = 'object'
-             THEN (SELECT COALESCE(SUM(val::text::integer), 0)
-                   FROM jsonb_each_text(p.reactions) AS kv(key, val)
-                   WHERE val ~ '^\d+$')
-             ELSE 0
-           END
-         ), 0)
+      `WITH popular_users AS (
+         SELECT p.author_id AS user_id
          FROM posts p
-         WHERE p.author_id = u.id
-       ) >= $2
-       AND NOT EXISTS (
+         JOIN reactions r ON r.post_id = p.id
+         GROUP BY p.author_id
+         HAVING COUNT(r.id) >= $1
+       )
+       INSERT INTO user_tags (user_id, tag_key, earned_at)
+       SELECT pu.user_id, $2::varchar, NOW()
+       FROM popular_users pu
+       WHERE NOT EXISTS (
          SELECT 1 FROM user_tags ut
-         WHERE ut.user_id = u.id AND ut.tag_key = $1
+         WHERE ut.user_id = pu.user_id AND ut.tag_key = $3::varchar
        )
        ON CONFLICT (user_id, tag_key) DO NOTHING`,
-      ['popular', REACTION_THRESHOLD]
+      [REACTION_THRESHOLD, POPULAR_TAG_KEY, POPULAR_TAG_KEY]
     );
 
-    console.log(`✅ Updated Popular tag: ${addResult.rowCount} users affected`);
+    const removeResult = await pool.query(
+      `DELETE FROM user_tags ut
+       WHERE ut.tag_key = $1::varchar
+         AND ut.user_id NOT IN (
+           SELECT p.author_id
+           FROM posts p
+           JOIN reactions r ON r.post_id = p.id
+           GROUP BY p.author_id
+           HAVING COUNT(r.id) >= $2
+         )`,
+      [POPULAR_TAG_KEY, REACTION_THRESHOLD]
+    );
+
+    console.log(`✅ Updated Popular tag: ${addResult.rowCount} users added, ${removeResult.rowCount} users removed`);
   } catch (error) {
     console.error('Error updating popular tag:', error);
   }
@@ -109,7 +117,7 @@ export async function updateAdvertidoTag() {
       `DELETE FROM user_tags
        WHERE tag_key = $1
          AND earned_at < NOW() - INTERVAL '60 days'`,
-      ['warned']
+      [WARNED_TAG_KEY]
     );
 
     console.log(`✅ Removed Advertido tag (expired): ${removeResult.rowCount} users affected`);

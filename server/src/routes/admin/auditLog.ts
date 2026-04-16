@@ -42,7 +42,7 @@ router.get('/', async (req: Request, res: Response) => {
     const filters: any = { limit, offset };
 
     if (admin_id) {
-      filters.admin_id = parseInt(admin_id as string);
+      filters.admin_id = String(admin_id);
     }
 
     if (action_type) {
@@ -108,7 +108,7 @@ router.get('/stats', async (req: Request, res: Response) => {
     const filters: any = {};
 
     if (admin_id) {
-      filters.admin_id = parseInt(admin_id as string);
+      filters.admin_id = String(admin_id);
     }
 
     if (start_date) {
