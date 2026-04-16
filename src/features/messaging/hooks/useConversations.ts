@@ -3,7 +3,12 @@ import { Conversation } from '../types';
 import { getConversations } from '../api/messagingApi';
 import { useSocketConversations } from './useSocketConversations';
 
-export function useConversations() {
+interface UseConversationsOptions {
+  enabled?: boolean;
+}
+
+export function useConversations(options: UseConversationsOptions = {}) {
+  const enabled = options.enabled ?? true;
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -15,6 +20,11 @@ export function useConversations() {
   const { setOnConversationUpdate, setOnNewConversation, setOnConversationDelete } = useSocketConversations();
 
   const fetchConversations = async (isRetry = false) => {
+    if (!enabled) {
+      setIsLoading(false);
+      return;
+    }
+
     try {
       if (!isRetry) {
         setIsLoading(true);
@@ -86,6 +96,12 @@ export function useConversations() {
   };
 
   useEffect(() => {
+    if (!enabled) {
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
+
     // Carrega conversas ao iniciar
     fetchConversations(false);
 
@@ -134,12 +150,12 @@ export function useConversations() {
     return () => {
       // Cleanup handled by useSocketConversations hook
     };
-  }, [setOnConversationUpdate, setOnNewConversation, setOnConversationDelete]);
+  }, [enabled, setOnConversationUpdate, setOnNewConversation, setOnConversationDelete]);
 
   return {
     conversations,
     isLoading,
     error,
-    refetch: () => fetchConversations(false),
+    refetch: () => enabled ? fetchConversations(false) : Promise.resolve(),
   };
 }

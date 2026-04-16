@@ -2,20 +2,20 @@ import { createContext, useContext, useState, ReactNode } from 'react';
 
 interface MessagesSidebarContextType {
   isOpen: boolean;
-  selectedConversationId: number | null;
-  openSidebar: (conversationId?: number) => void;
+  selectedConversationId: number | string | null;
+  openSidebar: (conversationId?: number | string) => void;
   closeSidebar: () => void;
   toggleSidebar: () => void;
-  setSelectedConversation: (id: number | null) => void;
+  setSelectedConversation: (id: number | string | null) => void;
 }
 
 const MessagesSidebarContext = createContext<MessagesSidebarContextType | undefined>(undefined);
 
 export function MessagesSidebarProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
+  const [selectedConversationId, setSelectedConversationId] = useState<number | string | null>(null);
 
-  const openSidebar = (conversationId?: number) => {
+  const openSidebar = (conversationId?: number | string) => {
     setIsOpen(true);
     if (conversationId !== undefined) {
       setSelectedConversationId(conversationId);
@@ -31,7 +31,7 @@ export function MessagesSidebarProvider({ children }: { children: ReactNode }) {
     setIsOpen(!isOpen);
   };
 
-  const setSelectedConversation = (id: number | null) => {
+  const setSelectedConversation = (id: number | string | null) => {
     setSelectedConversationId(id);
   };
 

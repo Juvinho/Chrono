@@ -5,6 +5,7 @@ import { ChatArea } from './ChatArea';
 import { CloseIcon, ChevronLeftIcon } from '../../../components/ui/icons';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useConversations } from '../hooks/useConversations';
+import { useAuth } from '../../../contexts/AuthContext';
 import '../styles/messaging.css';
 
 export function MessagesSidebar() {
@@ -15,7 +16,8 @@ export function MessagesSidebar() {
     setSelectedConversation 
   } = useMessagesSidebar();
 
-  const { conversations, isLoading, error } = useConversations();
+  const { isAuthenticated } = useAuth();
+  const { conversations, isLoading, error } = useConversations({ enabled: isOpen && isAuthenticated });
   const { t } = useTranslation();
 
   const [showChatArea, setShowChatArea] = useState(false);
@@ -27,7 +29,7 @@ export function MessagesSidebar() {
   }, [selectedConversationId]);
 
   const handleSelectConversation = (id: number | string) => {
-    setSelectedConversation(typeof id === 'string' ? parseInt(id, 10) : id);
+    setSelectedConversation(id);
     setShowChatArea(true);
   };
 

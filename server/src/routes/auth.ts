@@ -1,7 +1,7 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import { UserService } from '../services/userService.js';
-import { authenticateToken, AuthRequest } from '../middleware/auth.js';
+import { authenticateToken, optionalAuthenticateToken, AuthRequest } from '../middleware/auth.js';
 import { pool } from '../db/connection.js';
 import crypto from 'crypto';
 import dns from 'dns';
@@ -770,9 +770,14 @@ router.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'auth', timestamp: new Date().toISOString() });
 });
 
-// Get current user
-router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
+// Get current user (guest-friendly)
+router.get('/me', optionalAuthenticateToken, async (req: AuthRequest, res) => {
   try {
+    if (!req.userId) {
+      // Return 200 for guests to avoid noisy 401s on public pages.
+      return res.json(null);
+    }
+
     const user = await userService.getUserById(req.userId!, true);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
