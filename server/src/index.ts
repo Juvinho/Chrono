@@ -120,9 +120,47 @@ if (process.env.NODE_ENV === 'production' && !process.env.CORS_ORIGIN) {
   process.exit(1);
 }
 
-const allowedOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
-  : ['http://localhost:3000', 'http://localhost:5173'];
+const normalizeOrigin = (origin: string): string => origin.trim().replace(/\/+$/, '');
+
+const configuredOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim()).filter(Boolean)
+  : [];
+
+const defaultOrigins = [
+  'https://chronosocial.com.br',
+  'https://www.chronosocial.com.br',
+  process.env.FRONTEND_URL,
+  process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : undefined,
+  'http://localhost:3000',
+  'http://localhost:5173',
+].filter((value): value is string => Boolean(value));
+
+const allowedOrigins = Array.from(
+  new Set([...configuredOrigins, ...defaultOrigins].map(normalizeOrigin))
+);
+
+const isOriginAllowed = (origin?: string): boolean => {
+  if (!origin) return true;
+
+  const normalizedOrigin = normalizeOrigin(origin);
+
+  if (allowedOrigins.includes(normalizedOrigin)) {
+    return true;
+  }
+
+  // Allow Render and Railway domains and subdomains
+  if (normalizedOrigin.endsWith('.onrender.com') || normalizedOrigin.endsWith('.railway.app')) {
+    return true;
+  }
+
+  // Allow localhost and local IP addresses (for development)
+  const isLocalhost = normalizedOrigin.includes('localhost') || normalizedOrigin.includes('127.0.0.1');
+  const isLocalNetwork = /^http:\/\/10\.\d+\.\d+\.\d+:\d+$/.test(normalizedOrigin) ||
+                        /^http:\/\/192\.168\.\d+\.\d+:\d+$/.test(normalizedOrigin) ||
+                        /^http:\/\/172\.(1[6-9]|2\d|3[01])\.\d+\.\d+:\d+$/.test(normalizedOrigin);
+
+  return isLocalhost || isLocalNetwork;
+};
 
 // Get host IP from environment or detect automatically
 const HOST = process.env.HOST || '0.0.0.0'; // 0.0.0.0 allows connections from any IP
@@ -161,32 +199,13 @@ app.use(helmet({
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    // Check if origin is in allowed list
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    if (isOriginAllowed(origin)) {
       return callback(null, true);
     }
-    
-    // Allow Render and Railway domains and subdomains
-    if (origin.endsWith('.onrender.com') || origin.endsWith('.railway.app')) {
-      return callback(null, true);
-    }
-    
-    // Allow localhost and local IP addresses (for development)
-    const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1');
-    const isLocalNetwork = /^http:\/\/10\.\d+\.\d+\.\d+:\d+$/.test(origin) || 
-                          /^http:\/\/192\.168\.\d+\.\d+:\d+$/.test(origin) ||
-                          /^http:\/\/172\.(1[6-9]|2\d|3[01])\.\d+\.\d+:\d+$/.test(origin);
-    
-    if (isLocalhost || isLocalNetwork) {
-      console.log(`✅ Allowing CORS from: ${origin}`);
-      return callback(null, true);
-    }
-    
+
     console.log(`❌ Blocked CORS from: ${origin}`);
-    callback(new Error('Not allowed by CORS'));
+    // Never throw here; returning an error causes HTTP 500 (breaks CSS/JS requests).
+    callback(null, false);
   },
   credentials: true,
 }));
@@ -203,18 +222,7 @@ app.use('/api', csrfProtection);  // Validates CSRF on mutation requests (POST/P
 const io = new Server(httpServer, {
   cors: {
     origin: (origin, callback) => {
-      // Permitir todos em desenvolvimento, ser específico em produção
-      if (process.env.NODE_ENV === 'production') {
-        if (allowedOrigins.includes(origin || '') || 
-            (origin && (origin.endsWith('.railway.app') || origin.endsWith('.onrender.com')))) {
-          callback(null, true);
-        } else {
-          callback(new Error('CORS error'));
-        }
-      } else {
-        // Desenvolvimento: permitir tudo
-        callback(null, true);
-      }
+      callback(null, isOriginAllowed(origin));
     },
     credentials: true,
     methods: ["GET", "POST"],
@@ -565,6 +573,11 @@ app.get('*', (req: express.Request, res: express.Response) => {
   // Skip API routes
   if (req.url.startsWith('/api')) {
     return res.status(404).json({ error: 'API route not found' });
+  }
+
+  // Do not fallback assets to index.html; return proper 404 to avoid MIME errors.
+  if (req.url.startsWith('/assets/')) {
+    return res.status(404).send('Asset not found');
   }
 
   const indexPath = path.join(clientBuildPath, 'index.html');
