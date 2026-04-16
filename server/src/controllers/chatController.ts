@@ -135,25 +135,21 @@ export const getConversations = async (req: AuthRequest, res: Response) => {
     if (conversations.length === 0) {
       console.warn('⚠️ User has no conversations - checking database directly...');
       
-      try {
-        // Use imported pool directly (not dynamic require)
-        const checkResult = await pool.query(
-          `SELECT COUNT(*) as count FROM conversations WHERE user1_id = $1::uuid OR user2_id = $1::uuid`,
-          [userId]
-        );
-        
-        const dbCount = checkResult.rows[0]?.count || 0;
-        console.warn('🔍 Database check:', {
-          userId,
-          totalConversationsInDB: dbCount,
-          timestamp: new Date().toISOString()
-        });
-        
-        if (dbCount > 0) {
-          console.error('❌ CRITICAL: Found conversations in DB but getUserConversations returned empty!');
-        }
-      } catch (dbErr: any) {
-        console.error('❌ Error during diagnostic query:', dbErr.message);
+      // Check if user exists and has any conversations raw
+      const checkResult = await require('../db/connection').pool.query(
+        `SELECT COUNT(*) as count FROM conversations WHERE user1_id = $1::uuid OR user2_id = $1::uuid`,
+        [userId]
+      );
+      
+      const dbCount = checkResult.rows[0]?.count || 0;
+      console.warn('🔍 Database check:', {
+        userId,
+        totalConversationsInDB: dbCount,
+        timestamp: new Date().toISOString()
+      });
+      
+      if (dbCount > 0) {
+        console.error('❌ CRITICAL: Found conversations in DB but getUserConversations returned empty!');
       }
     }
     
