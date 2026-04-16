@@ -16,6 +16,14 @@ import { getSocket } from '../../../services/socketService';
  * const { onNewMessage } = useSocketMessages(conversationId);
  * // Call onNewMessage callback when setting up listeners
  */
+
+// SECURITY FIX C-14: Validate conversation IDs to prevent accessing legacy numeric IDs
+const isLegacyId = (id: unknown): boolean => {
+  const idStr = String(id);
+  // Legacy IDs are numeric (like "900", "2", etc.) not UUIDs
+  return /^\d+$/.test(idStr);
+};
+
 export const useSocketMessages = (conversationId: number | string | null) => {
   const socketRef = useRef<ReturnType<typeof getSocket> | null>(null);
   const callbackRef = useRef<((message: Message) => void) | null>(null);
@@ -26,7 +34,13 @@ export const useSocketMessages = (conversationId: number | string | null) => {
   }, []);
 
   useEffect(() => {
-    if (!conversationId) return;
+    // SECURITY FIX C-14: Prevent connecting to socket rooms with legacy numeric IDs
+    if (!conversationId || isLegacyId(conversationId)) {
+      if (conversationId && isLegacyId(conversationId)) {
+        console.warn(`⚠️ Skipping Socket.io connection for legacy conversation ID: ${conversationId}`);
+      }
+      return;
+    }
 
     try {
       const socket = getSocket();

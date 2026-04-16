@@ -38,8 +38,21 @@ export const MessagingLayout: React.FC = () => {
     console.log('📍 location.state:', state);
     
     if (state?.selectedConversationId) {
-      console.log('✅ Selecionando conversa:', state.selectedConversationId);
-      setSelectedConversationId(state.selectedConversationId);
+      // SECURITY FIX: Validate that conversation ID exists (C-14: prevent accessing legacy IDs like "900")
+      const conversationExists = conversations.some(c => c.id === state.selectedConversationId);
+      
+      if (conversationExists) {
+        console.log('✅ Selecionando conversa:', state.selectedConversationId);
+        setSelectedConversationId(state.selectedConversationId);
+      } else {
+        console.warn('⚠️ Conversa ID não encontrada:', state.selectedConversationId);
+        console.warn('📋 Conversas disponíveis:', conversations.map(c => c.id));
+        // Seleciona primeira conversa disponível ou null
+        const firstConversationId = conversations.length > 0 ? conversations[0].id : null;
+        console.log('🔄 Selecionando primeira conversa ou nenhuma:', firstConversationId);
+        setSelectedConversationId(firstConversationId);
+        setInitError('Conversa não encontrada. Se você tem uma recente, ela aparecerá aqui.');
+      }
     } else if (state?.targetUserId) {
       // Se veio com targetUserId, cria/busca a conversa
       console.log('🔗 Iniciando conversa com:', state.targetUserId);
@@ -63,7 +76,7 @@ export const MessagingLayout: React.FC = () => {
           setInitError(errorMsg);
         });
     }
-  }, [location.state, refetch]);
+  }, [location.state, conversations, refetch]);
 
   const handleReindex = async () => {
     setIsReindexing(true);

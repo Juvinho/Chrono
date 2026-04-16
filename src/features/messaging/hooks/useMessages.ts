@@ -5,6 +5,18 @@ import { useSound } from '../../../contexts/SoundContext';
 import { useMessageNotification } from '../../../contexts/MessageNotificationContext';
 import { useSocketMessages } from './useSocketMessages';
 
+// SECURITY FIX C-14: Validate conversation IDs to prevent accessing legacy numeric IDs
+const isValidUUID = (id: string): boolean => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(id);
+};
+
+const isLegacyId = (id: unknown): boolean => {
+  const idStr = String(id);
+  // Legacy IDs are numeric (like "900", "2", etc.) not UUIDs
+  return /^\d+$/.test(idStr);
+};
+
 export function useMessages(conversationId: number | string | null) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -21,6 +33,15 @@ export function useMessages(conversationId: number | string | null) {
   // Carrega mensagens com debounce
   const fetchMessages = useCallback(async () => {
     if (!conversationId || isFetchingRef.current) {
+      return;
+    }
+
+    // SECURITY FIX C-14: Reject legacy numeric conversation IDs
+    const idStr = String(conversationId);
+    if (isLegacyId(idStr)) {
+      console.error(`❌ Legacy conversation ID detected: ${idStr}. Refusing to load messages.`);
+      setError(`ID de conversa inválido: ${idStr}. Por favor, selecione uma conversa válida.`);
+      isFetchingRef.current = false;
       return;
     }
 
