@@ -309,7 +309,9 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
         const conversationUpdate = {
           id: conversationId,
           lastMessage: {
-            content: message.content,
+            content: (typeof message.content === 'string' && message.content.trim().length > 0)
+              ? message.content
+              : (message.imageUrl ? '[Imagem]' : ''),
             sentAt: message.sentAt,
             isRead: false,
           },

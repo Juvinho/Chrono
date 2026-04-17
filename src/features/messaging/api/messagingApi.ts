@@ -61,11 +61,14 @@ export async function getMessages(conversationId: number | string): Promise<Mess
 
 // Envia nova mensagem
 export async function sendMessage(request: SendMessageRequest): Promise<Message> {
+  const normalizedContent = typeof request.content === 'string' ? request.content : '';
+  const trimmedContent = normalizedContent.trim();
+
   // Validate input - allow if has content OR has image
-  if ((!request.content || request.content.trim().length === 0) && !request.imageUrl) {
+  if (trimmedContent.length === 0 && !request.imageUrl) {
     throw new Error('Mensagem ou imagem é obrigatória');
   }
-  if (request.content.length > 1000) {
+  if (normalizedContent.length > 1000) {
     throw new Error('Mensagem não pode exceder 1000 caracteres');
   }
   if (!request.conversationId) {
@@ -75,14 +78,14 @@ export async function sendMessage(request: SendMessageRequest): Promise<Message>
   const endpoint = `${API_BASE}/${request.conversationId}/messages`;
   
   const payload = {
-    content: request.content.trim(),
+    content: trimmedContent,
     ...(request.imageUrl && { imageUrl: request.imageUrl }),
   };
   
   console.log('📤 sendMessage API:', {
     conversationId: request.conversationId,
     conversationIdType: typeof request.conversationId,
-    contentLength: request.content.trim().length,
+    contentLength: trimmedContent.length,
     hasImageUrl: !!request.imageUrl,
     imageUrlType: typeof request.imageUrl,
     imageUrlLength: request.imageUrl ? request.imageUrl.length : 0,

@@ -72,6 +72,8 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
 }) => {
   const { otherUser, lastMessage, unreadCount } = conversation;
   const { t } = useTranslation();
+  const rawPreview = typeof lastMessage?.content === 'string' ? lastMessage.content.trim() : '';
+  const previewText = rawPreview.length > 0 ? rawPreview : '[Imagem]';
 
   return (
     <div
@@ -104,9 +106,9 @@ const ConversationItem: React.FC<ConversationItemProps> = ({
         <div className="conversation-preview">
           {lastMessage ? (
             <span className={!lastMessage.isRead ? 'unread' : ''}>
-              {lastMessage.content.length > 50
-                ? `${lastMessage.content.substring(0, 50)}...`
-                : lastMessage.content}
+              {previewText.length > 50
+                ? `${previewText.substring(0, 50)}...`
+                : previewText}
             </span>
           ) : (
             <span className="no-messages">{t('startConversation')}</span>

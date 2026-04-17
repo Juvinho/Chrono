@@ -108,6 +108,16 @@ export function useConversations(options: UseConversationsOptions = {}) {
     // Setup Socket.io listener for real-time conversation updates (I-10: replaces 3-second polling)
     setOnConversationUpdate((data: any) => {
       console.log(`📍 Atualizando conversa via Socket.io: ${data.id}`);
+
+      const normalizedLastMessage = data?.lastMessage
+        ? {
+            ...data.lastMessage,
+            content:
+              typeof data.lastMessage.content === 'string' && data.lastMessage.content.trim().length > 0
+                ? data.lastMessage.content
+                : '[Imagem]',
+          }
+        : data?.lastMessage;
       
       // Atualiza conversa existente ou adiciona nova
       setConversations((prev) => {
@@ -118,6 +128,7 @@ export function useConversations(options: UseConversationsOptions = {}) {
           updated[existingIndex] = {
             ...updated[existingIndex],
             ...data,
+            ...(normalizedLastMessage ? { lastMessage: normalizedLastMessage } : {}),
           };
           return updated;
         } else {
