@@ -20,6 +20,12 @@ export function MessagesSidebar() {
   const { conversations, isLoading, error } = useConversations({ enabled: isOpen && isAuthenticated });
   const { t } = useTranslation();
 
+  const tr = (key: string, fallback: string) => {
+    const value = t(key);
+    if (!value || value === key || value.includes('${')) return fallback;
+    return value;
+  };
+
   const [searchQuery, setSearchQuery] = useState('');
   const [pendingConversationId, setPendingConversationId] = useState<number | string | null>(null);
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
@@ -30,7 +36,7 @@ export function MessagesSidebar() {
     setSearchQuery('');
     setPendingConversationId(selectedConversationId ?? null);
     setMobileView(selectedConversationId ? 'chat' : 'list');
-  }, [isOpen, selectedConversationId]);
+  }, [isOpen]);
 
   const filteredConversations = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -60,6 +66,8 @@ export function MessagesSidebar() {
 
   const handleSelectConversation = (id: number | string) => {
     setPendingConversationId(id);
+    setSelectedConversation(id);
+    setMobileView('chat');
   };
 
   const handleOpenConversation = () => {
@@ -87,17 +95,17 @@ export function MessagesSidebar() {
 
   return (
     <>
-      <aside className="messages-window" role="dialog" aria-modal="false" aria-label={t('messages') || 'Mensagens'}>
+      <aside className="messages-window" role="dialog" aria-modal="false" aria-label={tr('messages', 'Mensagens')}>
         <div className="messages-window-header">
           <div className="messages-window-title-group">
-            <h2>{t('messages') || 'Mensagens'}</h2>
-            <p>{t('selectConversationToStart') || 'Selecione um usuario e clique em Ver conversa.'}</p>
+            <h2>{tr('messages', 'Mensagens')}</h2>
+            <p>{tr('selectConversationToStart', 'Selecione um usuario e clique em Ver conversa.')}</p>
           </div>
 
           <button
             onClick={handleCloseWindow}
             className="messages-window-close-btn"
-            aria-label={t('close') || 'Fechar mensagens'}
+            aria-label={tr('close', 'Fechar mensagens')}
           >
             <CloseIcon className="w-5 h-5" />
           </button>
@@ -110,8 +118,8 @@ export function MessagesSidebar() {
               type="text"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder={t('searchPlaceholder') || 'Pesquisar conversa...'}
-              aria-label={t('searchPlaceholder') || 'Pesquisar conversa'}
+              placeholder="Buscar conversa..."
+              aria-label="Buscar conversa"
             />
           </label>
 
@@ -121,7 +129,7 @@ export function MessagesSidebar() {
             className="messages-window-open-btn"
             disabled={!canOpenConversation}
           >
-            {t('open') || 'Ver conversa'}
+            {tr('open', 'Ver conversa')}
           </button>
         </div>
 
@@ -148,8 +156,8 @@ export function MessagesSidebar() {
             ) : (
               <div className="messaging-empty-state">
                 <div className="empty-state-icon">💬</div>
-                <h3>{t('yourMessages') || 'Suas Mensagens'}</h3>
-                <p>{t('selectConversationToStart') || 'Selecione uma conversa para comecar'}</p>
+                <h3>{tr('yourMessages', 'Suas Mensagens')}</h3>
+                <p>{tr('selectConversationToStart', 'Selecione uma conversa para comecar')}</p>
               </div>
             )}
           </div>
@@ -162,7 +170,7 @@ export function MessagesSidebar() {
                   className="messages-window-mobile-back-btn"
                 >
                   <ChevronLeftIcon className="w-4 h-4" />
-                  <span>{t('back') || 'Voltar'}</span>
+                  <span>{tr('back', 'Voltar')}</span>
                 </button>
 
                 {selectedConversationId && (
@@ -194,12 +202,13 @@ export function MessagesSidebar() {
       <style>{`
         .messages-window {
           position: fixed;
+          top: 82px;
           right: 20px;
-          bottom: 20px;
+          bottom: auto;
           width: min(960px, calc(100vw - 40px));
-          height: min(76vh, 760px);
+          height: min(74vh, 760px);
           min-height: 460px;
-          max-height: calc(100vh - 40px);
+          max-height: calc(100vh - 98px);
           background: var(--theme-bg-primary);
           border: 1px solid var(--theme-border-primary);
           border-radius: 18px;
@@ -371,6 +380,17 @@ export function MessagesSidebar() {
           width: 100%;
         }
 
+        .messages-window-chat-panel .messaging-empty-state {
+          width: 100%;
+          min-height: 100%;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          padding: 24px;
+        }
+
         .messages-window-empty-search {
           margin: 0;
           padding: 10px 14px 14px;
@@ -410,9 +430,10 @@ export function MessagesSidebar() {
 
         @media (max-width: 980px) {
           .messages-window {
+            top: 76px;
             width: min(860px, calc(100vw - 24px));
             right: 12px;
-            bottom: 12px;
+            max-height: calc(100vh - 88px);
           }
 
           .messages-window-list-panel {
@@ -422,6 +443,7 @@ export function MessagesSidebar() {
 
         @media (max-width: 768px) {
           .messages-window {
+            top: auto;
             right: 8px;
             left: 8px;
             bottom: 8px;

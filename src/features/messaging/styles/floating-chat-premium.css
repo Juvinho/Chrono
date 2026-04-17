@@ -414,6 +414,15 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
+/* Keep text contrast high even if generic message styles are loaded later. */
+.floating-chat-box .message-item.mine .message-bubble {
+  color: #ffffff;
+}
+
+.floating-chat-box .message-item.theirs .message-bubble {
+  color: var(--theme-text-light);
+}
+
 /* Message meta row: time + read ticks */
 .message-meta {
   display: flex;
@@ -437,6 +446,14 @@
   color: var(--theme-text-secondary);
 }
 
+.floating-chat-box .message-item.mine .message-time {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.floating-chat-box .message-item.theirs .message-time {
+  color: #c2c9dc;
+}
+
 .message-item:hover .message-time {
   opacity: 0.9;
 }
@@ -451,6 +468,18 @@
 }
 .read-tick.read {
   color: rgba(255, 255, 255, 0.95);
+}
+
+body.theme-dark .floating-chat-box .icon-btn-floating,
+body.skin-midnight-city .floating-chat-box .icon-btn-floating {
+  color: #d3daea;
+}
+
+body.theme-dark .floating-chat-box .empty-state,
+body.skin-midnight-city .floating-chat-box .empty-state,
+body.theme-dark .floating-chat-box .loading-state,
+body.skin-midnight-city .floating-chat-box .loading-state {
+  color: #c7cede;
 }
 
 /* Date separator */

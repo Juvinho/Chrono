@@ -412,7 +412,7 @@
 
 .message-bubble.mine {
   background-color: var(--theme-primary);
-  color: var(--theme-bg-primary);
+  color: #ffffff;
   border-radius: 18px 18px 4px 18px;
   /* Corner pointing to the right avatar */
 }
@@ -421,6 +421,7 @@
   font-size: 15px;
   line-height: 1.4;
   white-space: pre-wrap;
+  font-weight: 500;
 }
 
 .message-time {
@@ -434,7 +435,7 @@
 }
 
 .message-bubble.mine .message-time {
-  color: inherit;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .read-indicator {
@@ -454,10 +455,11 @@
 .read-tick {
   font-size: 11px;
   margin-left: 2px;
-  opacity: 0.7;
+  opacity: 0.85;
+  color: rgba(255, 255, 255, 0.75);
 }
 .read-tick.read {
-  color: var(--theme-primary);
+  color: rgba(255, 255, 255, 0.98);
   opacity: 1;
 }
 
@@ -754,6 +756,34 @@
 .spinner {
   font-size: 14px;
   color: var(--theme-text-secondary);
+}
+
+/* ============================================
+   CONTRAST BOOST FOR DARK THEMES
+   ============================================ */
+
+body.theme-dark .conversation-time,
+body.theme-dark .conversation-preview,
+body.skin-midnight-city .conversation-time,
+body.skin-midnight-city .conversation-preview {
+  color: #c9cfde;
+}
+
+body.theme-dark .message-bubble.theirs,
+body.skin-midnight-city .message-bubble.theirs {
+  color: #f1f4ff;
+}
+
+body.theme-dark .message-bubble.theirs .message-time,
+body.skin-midnight-city .message-bubble.theirs .message-time,
+body.theme-dark .message-date-separator span,
+body.skin-midnight-city .message-date-separator span {
+  color: #c2c9dc;
+}
+
+body.theme-dark .message-textarea::placeholder,
+body.skin-midnight-city .message-textarea::placeholder {
+  color: #b2b9cb;
 }
 
 /* ============================================

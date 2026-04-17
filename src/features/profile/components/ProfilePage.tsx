@@ -11,6 +11,7 @@ import { useSound } from '../../../contexts/SoundContext';
 import { useToast } from '../../../contexts/ToastContext';
 import { useChatStore } from '../../messaging/components/FloatingChatManager';
 import { initConversation } from '../../messaging/api/messagingApi';
+import type { Conversation as MessagingConversation } from '../../messaging/types';
 import UserListModal from '../../../components/ui/UserListModal';
 import { VerifiedIcon, MessageIcon, PaperPlaneIcon } from '../../../components/ui/icons';
 import FramePreview, { getFrameShape } from './FramePreview';
@@ -61,6 +62,8 @@ export default function ProfilePage({
   const { showToast } = useToast();
   const navigate = useNavigate();
   const openChat = useChatStore((state) => state.openChat);
+  const closeChat = useChatStore((state) => state.closeChat);
+  const openChats = useChatStore((state) => state.openChats);
   const { username: routeUsername } = useParams<{ username: string }>();
   
   // Determine the profile username to display:
@@ -93,6 +96,7 @@ export default function ProfilePage({
   const [showReportUserModal, setShowReportUserModal] = useState(false);
   const [reportReason, setReportReason] = useState('');
   const [reportDescription, setReportDescription] = useState('');
+  const [cachedDirectConversations, setCachedDirectConversations] = useState<Record<string, MessagingConversation>>({});
   const [isFollowing, setIsFollowing] = useState(false);
   const [isFollowLoading, setIsFollowLoading] = useState(false);
   const [isHoveringFollow, setIsHoveringFollow] = useState(false);
@@ -411,6 +415,29 @@ export default function ProfilePage({
       console.error('❌ Missing profileUser or currentUser');
       return;
     }
+
+    const profileUserKey = String(profileUser.username || '').toLowerCase();
+    const profileUserId = String(profileUser.id || '').trim();
+
+    // Toggle behavior: if this user's chat is already open, close it.
+    const existingOpenChat = openChats.find((chat) => {
+      const chatUsername = String(chat.otherUser?.username || '').toLowerCase();
+      const chatUserId = String(chat.otherUser?.id || '').trim();
+
+      return chatUsername === profileUserKey || (!!profileUserId && chatUserId === profileUserId);
+    });
+
+    if (existingOpenChat) {
+      closeChat(existingOpenChat.id);
+      return;
+    }
+
+    // Reopen from cache to avoid unnecessary init requests on repeated toggles.
+    const cachedConversation = cachedDirectConversations[profileUserKey];
+    if (cachedConversation) {
+      openChat(cachedConversation);
+      return;
+    }
     
     try {
       console.log('📨 Abrindo mini-chat para:', {
@@ -453,8 +480,7 @@ export default function ProfilePage({
         throw new Error('Conversa não tem ID');
       }
       
-      // Convert to FloatingChatBox format
-      const floatingConversation: any = {
+      const floatingConversation: MessagingConversation = {
         id: conversation.id,
         otherUser: conversation.otherUser || {
           id: profileUser.id,
@@ -468,6 +494,11 @@ export default function ProfilePage({
       };
       
       console.log('✅ Estrutura final do chat:', floatingConversation);
+
+      setCachedDirectConversations((prev) => ({
+        ...prev,
+        [profileUserKey]: floatingConversation,
+      }));
       
       // Open floating chat
       openChat(floatingConversation);

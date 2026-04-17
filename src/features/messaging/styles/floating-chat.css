@@ -381,7 +381,14 @@
 }
 
 .message-item.mine .message-time {
-  color: var(--theme-text-secondary);
+  color: rgba(255, 255, 255, 0.88);
+}
+
+body.theme-dark .floating-chat-window .floating-message-content,
+body.skin-midnight-city .floating-chat-window .floating-message-content,
+body.theme-dark .floating-chat-window .floating-message-time,
+body.skin-midnight-city .floating-chat-window .floating-message-time {
+  color: #e9ecf7;
 }
 
 /* ============================================
