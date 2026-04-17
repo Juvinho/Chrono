@@ -40,6 +40,8 @@ export interface ApiResponse<T> {
   retryAfter?: number;
   /** HTTP status code, present only on error responses */
   status?: number;
+  /** Raw error payload returned by API for contextual handling */
+  errorData?: unknown;
 }
 
 let globalRateLimitUntil = 0;
@@ -119,7 +121,7 @@ export class ApiClient {
         const errorMessage = errBody.error || errBody.details || errBody.message || `Request failed with status ${response.status}`;
         // Never populate `data` on error responses — callers checking `result.data`
         // must not mistake an error payload for valid data (avoids auth loops on 401).
-        return { error: errorMessage, status: response.status };
+        return { error: errorMessage, status: response.status, errorData: errBody };
       }
 
       const text = await response.text();

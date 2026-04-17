@@ -19,6 +19,8 @@ export function MessagesSidebarProvider({ children }: { children: ReactNode }) {
     setIsOpen(true);
     if (conversationId !== undefined) {
       setSelectedConversationId(conversationId);
+    } else {
+      setSelectedConversationId(null);
     }
   };
 

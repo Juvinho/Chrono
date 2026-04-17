@@ -418,10 +418,30 @@ export default function ProfilePage({
         profileUserId: profileUser.id,
         currentUserId: currentUser.id
       });
+
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      let targetUserId = String(profileUser.id ?? '').trim();
+
+      // Some cached profiles can carry stale/non-UUID ids; fetch canonical id before init.
+      if (!uuidRegex.test(targetUserId)) {
+        console.warn('⚠️ profileUser.id inválido para chat init, buscando ID canônico:', targetUserId);
+        const canonicalRes = await apiClient.getUser(profileUser.username);
+        const canonicalId = String((canonicalRes.data as any)?.id ?? '').trim();
+
+        if (!canonicalId || !uuidRegex.test(canonicalId)) {
+          throw new Error('Não foi possível identificar o usuário para iniciar o chat.');
+        }
+
+        targetUserId = canonicalId;
+      }
+
+      if (String(currentUser.id).trim() === targetUserId) {
+        throw new Error('Não é possível iniciar chat com o próprio usuário.');
+      }
       
       // Call messagingApi to init/get conversation
       console.log('🔄 Chamando initConversation...');
-      const conversation = await initConversation(profileUser.id);
+      const conversation = await initConversation(targetUserId);
       
       console.log('✅ Conversa obtida:', {
         conversationId: conversation.id,
@@ -505,9 +525,13 @@ export default function ProfilePage({
     setReportDescription('');
   };
 
-    const handlePostSubmit = (postData: Omit<Post, 'id' | 'author' | 'timestamp' | 'replies' | 'repostOf'>, existingPostId?: string) => {
+    const handlePostSubmit = (postData: Omit<Post, 'id' | 'author' | 'timestamp' | 'replies' | 'repostOf' | 'likes' | 'likedBy'>, existingPostId?: string) => {
         if (existingPostId) {
-            onEditPost(existingPostId, postData);
+        onEditPost(existingPostId, {
+          ...postData,
+          likes: postToEdit?.likes ?? 0,
+          likedBy: postToEdit?.likedBy ?? [],
+        });
         }
         setPostToEdit(null);
     };

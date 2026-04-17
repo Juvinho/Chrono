@@ -45,10 +45,18 @@ export const useSocketMessages = (conversationId: number | string | null) => {
     try {
       const socket = getSocket();
       socketRef.current = socket;
+      const roomId = String(conversationId);
+
+      const joinConversationRoom = () => {
+        socket.emit('join_conversation', roomId);
+        console.log(`✅ Joined conversation room: ${roomId}`);
+      };
 
       // Join conversation room for this specific conversation
-      socket.emit('join_conversation', { conversationId });
-      console.log(`✅ Joined conversation room: ${conversationId}`);
+      joinConversationRoom();
+
+      // Rejoin room after reconnection (rooms are server-memory only).
+      socket.on('connect', joinConversationRoom);
 
       // Handler for new messages
       const handleNewMessage = (message: Message) => {
@@ -76,10 +84,11 @@ export const useSocketMessages = (conversationId: number | string | null) => {
       socket.on('conversation_updated', handleConversationUpdated);
 
       return () => {
+        socket.off('connect', joinConversationRoom);
         socket.off('new_message', handleNewMessage);
         socket.off('conversation_updated', handleConversationUpdated);
-        socket.emit('leave_conversation', { conversationId });
-        console.log(`✅ Left conversation room: ${conversationId}`);
+        socket.emit('leave_conversation', roomId);
+        console.log(`✅ Left conversation room: ${roomId}`);
       };
     } catch (error) {
       console.error('❌ Error setting up Socket.io listeners:', error);

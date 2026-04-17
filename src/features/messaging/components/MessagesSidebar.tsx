@@ -1,228 +1,470 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useMessagesSidebar } from '../../../contexts/MessagesSidebarContext';
 import { ConversationList } from './ConversationList';
 import { ChatArea } from './ChatArea';
-import { CloseIcon, ChevronLeftIcon } from '../../../components/ui/icons';
+import { CloseIcon, ChevronLeftIcon, SearchIcon } from '../../../components/ui/icons';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useConversations } from '../hooks/useConversations';
 import { useAuth } from '../../../contexts/AuthContext';
 import '../styles/messaging.css';
 
 export function MessagesSidebar() {
-  const { 
-    isOpen, 
-    closeSidebar, 
+  const {
+    isOpen,
+    closeSidebar,
     selectedConversationId,
-    setSelectedConversation 
+    setSelectedConversation,
   } = useMessagesSidebar();
 
   const { isAuthenticated } = useAuth();
   const { conversations, isLoading, error } = useConversations({ enabled: isOpen && isAuthenticated });
   const { t } = useTranslation();
 
-  const [showChatArea, setShowChatArea] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [pendingConversationId, setPendingConversationId] = useState<number | string | null>(null);
+  const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
 
   useEffect(() => {
-    if (selectedConversationId) {
-      setShowChatArea(true);
+    if (!isOpen) return;
+
+    setSearchQuery('');
+    setPendingConversationId(selectedConversationId ?? null);
+    setMobileView(selectedConversationId ? 'chat' : 'list');
+  }, [isOpen, selectedConversationId]);
+
+  const filteredConversations = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    if (!normalizedQuery) return conversations;
+
+    return conversations.filter((conversation) => {
+      const displayName = (conversation.otherUser.displayName || '').toLowerCase();
+      const username = (conversation.otherUser.username || '').toLowerCase();
+      const preview = (conversation.lastMessage?.content || '').toLowerCase();
+
+      return (
+        displayName.includes(normalizedQuery) ||
+        username.includes(normalizedQuery) ||
+        preview.includes(normalizedQuery)
+      );
+    });
+  }, [conversations, searchQuery]);
+
+  useEffect(() => {
+    if (!pendingConversationId) return;
+
+    const isStillVisible = filteredConversations.some((conversation) => conversation.id === pendingConversationId);
+    if (!isStillVisible) {
+      setPendingConversationId(null);
     }
-  }, [selectedConversationId]);
+  }, [filteredConversations, pendingConversationId]);
 
   const handleSelectConversation = (id: number | string) => {
-    setSelectedConversation(id);
-    setShowChatArea(true);
+    setPendingConversationId(id);
+  };
+
+  const handleOpenConversation = () => {
+    if (!pendingConversationId) return;
+
+    setSelectedConversation(pendingConversationId);
+    setMobileView('chat');
   };
 
   const handleBackToList = () => {
-    setShowChatArea(false);
-    setSelectedConversation(null);
+    setMobileView('list');
+  };
+
+  const handleCloseWindow = () => {
+    closeSidebar();
+    setSearchQuery('');
+    setPendingConversationId(null);
+    setMobileView('list');
   };
 
   if (!isOpen) return null;
 
+  const canOpenConversation = pendingConversationId !== null;
+  const showMobileChatView = mobileView === 'chat' && selectedConversationId;
+
   return (
     <>
-      {/* OVERLAY */}
-      <div 
-        className="messages-sidebar-overlay"
-        onClick={closeSidebar}
-        aria-label="Fechar mensagens"
-      />
-
-      {/* PAINEL LATERAL */}
-      <aside className={`messages-sidebar-panel ${isOpen ? 'open' : ''}`}>
-        {/* HEADER */}
-        <div className="messaging-sidebar-header">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <aside className="messages-window" role="dialog" aria-modal="false" aria-label={t('messages') || 'Mensagens'}>
+        <div className="messages-window-header">
+          <div className="messages-window-title-group">
             <h2>{t('messages') || 'Mensagens'}</h2>
-            {/* BOTÃO FECHAR */}
-            <button 
-              onClick={closeSidebar}
-              className="close-button"
-              aria-label="Fechar mensagens"
-              style={{ 
-                background: 'none', 
-                border: 'none', 
-                padding: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--theme-text-secondary)',
-                transition: 'all 0.2s ease',
-                borderRadius: '50%'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(0, 0, 0, 0.05)';
-                e.currentTarget.style.transform = 'rotate(90deg)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'none';
-                e.currentTarget.style.transform = 'rotate(0deg)';
-              }}
-            >
-              <CloseIcon className="w-6 h-6" />
-            </button>
+            <p>{t('selectConversationToStart') || 'Selecione um usuario e clique em Ver conversa.'}</p>
           </div>
+
+          <button
+            onClick={handleCloseWindow}
+            className="messages-window-close-btn"
+            aria-label={t('close') || 'Fechar mensagens'}
+          >
+            <CloseIcon className="w-5 h-5" />
+          </button>
         </div>
 
-        {/* CONTEÚDO */}
-        <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
-          {/* DESKTOP: Lista + Chat */}
-          <div className="messages-sidebar-desktop" style={{ width: '100%', height: '100%', display: 'flex' }}>
-            {/* Lista */}
-            <div style={{ width: '360px', borderRight: '1px solid var(--theme-border-primary)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <ConversationList
-                conversations={conversations}
-                isLoading={isLoading}
-                error={error}
-                selectedId={selectedConversationId}
-                onSelect={handleSelectConversation}
-              />
-            </div>
+        <div className="messages-window-toolbar">
+          <label className="messages-window-search">
+            <SearchIcon className="w-4 h-4" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder={t('searchPlaceholder') || 'Pesquisar conversa...'}
+              aria-label={t('searchPlaceholder') || 'Pesquisar conversa'}
+            />
+          </label>
 
-            {/* Chat */}
-            <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              {selectedConversationId ? (
-                <ChatArea conversationId={selectedConversationId} />
-              ) : (
-                <div className="messaging-empty-state">
-                  <div className="empty-state-icon">💬</div>
-                  <h3>{t('yourMessages') || 'Suas Mensagens'}</h3>
-                  <p>{t('selectConversationToStart') || 'Selecione uma conversa para começar'}</p>
-                </div>
-              )}
-            </div>
+          <button
+            type="button"
+            onClick={handleOpenConversation}
+            className="messages-window-open-btn"
+            disabled={!canOpenConversation}
+          >
+            {t('open') || 'Ver conversa'}
+          </button>
+        </div>
+
+        <div className="messages-window-content">
+          <div className="messages-window-list-panel">
+            <ConversationList
+              conversations={filteredConversations}
+              isLoading={isLoading}
+              error={error}
+              selectedId={pendingConversationId}
+              onSelect={handleSelectConversation}
+            />
+
+            {!isLoading && !error && filteredConversations.length === 0 && searchQuery.trim().length > 0 && (
+              <p className="messages-window-empty-search">
+                Nenhuma conversa encontrada para "{searchQuery.trim()}".
+              </p>
+            )}
           </div>
 
-          {/* MOBILE: Lista OU Chat */}
-          <div className="messages-sidebar-mobile" style={{ width: '100%', height: '100%', display: 'none', flexDirection: 'column' }}>
-            {!showChatArea ? (
-              <ConversationList
-                conversations={conversations}
-                isLoading={isLoading}
-                error={error}
-                selectedId={selectedConversationId}
-                onSelect={handleSelectConversation}
-              />
+          <div className="messages-window-chat-panel">
+            {selectedConversationId ? (
+              <ChatArea conversationId={selectedConversationId} />
             ) : (
+              <div className="messaging-empty-state">
+                <div className="empty-state-icon">💬</div>
+                <h3>{t('yourMessages') || 'Suas Mensagens'}</h3>
+                <p>{t('selectConversationToStart') || 'Selecione uma conversa para comecar'}</p>
+              </div>
+            )}
+          </div>
+
+          <div className="messages-window-mobile-panel">
+            {showMobileChatView ? (
               <>
-                <button 
+                <button
                   onClick={handleBackToList}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '12px 16px',
-                    background: 'none',
-                    border: 'none',
-                    borderBottom: '1px solid var(--theme-border-primary)',
-                    width: '100%',
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                    color: 'var(--theme-text-primary)',
-                    transition: 'background-color 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(0, 0, 0, 0.05)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'none';
-                  }}
+                  className="messages-window-mobile-back-btn"
                 >
-                  <ChevronLeftIcon className="w-5 h-5" />
+                  <ChevronLeftIcon className="w-4 h-4" />
                   <span>{t('back') || 'Voltar'}</span>
                 </button>
 
                 {selectedConversationId && (
-                  <ChatArea conversationId={selectedConversationId} />
+                  <div className="messages-window-mobile-chat-body">
+                    <ChatArea conversationId={selectedConversationId} />
+                  </div>
                 )}
               </>
+            ) : (
+              <div className="messages-window-mobile-list-body">
+                <ConversationList
+                  conversations={filteredConversations}
+                  isLoading={isLoading}
+                  error={error}
+                  selectedId={pendingConversationId}
+                  onSelect={handleSelectConversation}
+                />
+                {!isLoading && !error && filteredConversations.length === 0 && searchQuery.trim().length > 0 && (
+                  <p className="messages-window-empty-search">
+                    Nenhuma conversa encontrada para "{searchQuery.trim()}".
+                  </p>
+                )}
+              </div>
             )}
           </div>
         </div>
       </aside>
 
       <style>{`
-        .messages-sidebar-overlay {
+        .messages-window {
           position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.4);
-          backdrop-filter: blur(2px);
-          z-index: 9998;
-          animation: fadeIn 0.2s ease-out;
-        }
-
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-
-        .messages-sidebar-panel {
-          position: fixed;
-          top: 0;
-          right: 0;
-          width: 50%;
-          height: 100vh;
+          right: 20px;
+          bottom: 20px;
+          width: min(960px, calc(100vw - 40px));
+          height: min(76vh, 760px);
+          min-height: 460px;
+          max-height: calc(100vh - 40px);
           background: var(--theme-bg-primary);
-          box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
-          z-index: 9999;
+          border: 1px solid var(--theme-border-primary);
+          border-radius: 18px;
+          box-shadow: 0 22px 56px rgba(0, 0, 0, 0.45);
           display: flex;
           flex-direction: column;
-          transform: translateX(100%);
-          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          overflow: hidden;
+          resize: vertical;
+          z-index: 9999;
+          animation: messagesWindowPopIn 0.2s ease-out;
         }
 
-        .messages-sidebar-panel.open {
-          transform: translateX(0);
-        }
+        @keyframes messagesWindowPopIn {
+          from {
+            opacity: 0;
+            transform: translateY(14px) scale(0.98);
+          }
 
-        @media (prefers-color-scheme: dark) {
-          .messages-sidebar-panel {
-            box-shadow: -4px 0 24px rgba(0, 0, 0, 0.5);
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
           }
         }
 
-        @media (max-width: 1024px) {
-          .messages-sidebar-panel {
-            width: 60%;
+        .messages-window-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 14px 16px 10px;
+          border-bottom: 1px solid var(--theme-border-primary);
+          background: var(--theme-bg-primary);
+          gap: 12px;
+          flex-shrink: 0;
+        }
+
+        .messages-window-title-group {
+          min-width: 0;
+        }
+
+        .messages-window-title-group h2 {
+          margin: 0;
+          font-size: 20px;
+          line-height: 1.2;
+          color: var(--theme-text-light);
+          font-weight: 700;
+        }
+
+        .messages-window-title-group p {
+          margin: 2px 0 0;
+          font-size: 12px;
+          color: var(--theme-text-secondary);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .messages-window-close-btn {
+          border: none;
+          border-radius: 10px;
+          width: 34px;
+          height: 34px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          background: var(--theme-bg-secondary);
+          color: var(--theme-text-secondary);
+          transition: all 0.2s ease;
+          flex-shrink: 0;
+        }
+
+        .messages-window-close-btn:hover {
+          color: var(--theme-text-light);
+          background: var(--theme-bg-tertiary);
+        }
+
+        .messages-window-toolbar {
+          display: flex;
+          gap: 10px;
+          padding: 10px 14px;
+          border-bottom: 1px solid var(--theme-border-primary);
+          background: var(--theme-bg-primary);
+          flex-shrink: 0;
+        }
+
+        .messages-window-search {
+          flex: 1;
+          min-width: 0;
+          border: 1px solid var(--theme-border-primary);
+          background: var(--theme-bg-secondary);
+          border-radius: 10px;
+          height: 38px;
+          display: flex;
+          align-items: center;
+          padding: 0 10px;
+          gap: 8px;
+          color: var(--theme-text-secondary);
+        }
+
+        .messages-window-search:focus-within {
+          border-color: var(--theme-primary);
+        }
+
+        .messages-window-search input {
+          width: 100%;
+          border: none;
+          background: transparent;
+          outline: none;
+          color: var(--theme-text-light);
+          font-size: 14px;
+        }
+
+        .messages-window-search input::placeholder {
+          color: var(--theme-text-secondary);
+        }
+
+        .messages-window-open-btn {
+          border: none;
+          border-radius: 10px;
+          height: 38px;
+          padding: 0 14px;
+          background: linear-gradient(135deg, var(--theme-primary), #ff4040);
+          color: #fff;
+          font-weight: 700;
+          font-size: 13px;
+          white-space: nowrap;
+          transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+
+        .messages-window-open-btn:hover:not(:disabled) {
+          opacity: 0.92;
+          transform: translateY(-1px);
+        }
+
+        .messages-window-open-btn:disabled {
+          opacity: 0.45;
+          cursor: not-allowed;
+        }
+
+        .messages-window-content {
+          flex: 1;
+          min-height: 0;
+          display: flex;
+          overflow: hidden;
+        }
+
+        .messages-window-list-panel {
+          width: 360px;
+          min-width: 290px;
+          border-right: 1px solid var(--theme-border-primary);
+          display: flex;
+          flex-direction: column;
+          min-height: 0;
+          overflow: hidden;
+        }
+
+        .messages-window-list-panel .conversation-list {
+          flex: 1;
+          min-height: 0;
+        }
+
+        .messages-window-chat-panel {
+          flex: 1;
+          min-width: 0;
+          display: flex;
+          min-height: 0;
+        }
+
+        .messages-window-chat-panel .chat-area {
+          width: 100%;
+        }
+
+        .messages-window-empty-search {
+          margin: 0;
+          padding: 10px 14px 14px;
+          color: var(--theme-text-secondary);
+          font-size: 12px;
+        }
+
+        .messages-window-mobile-panel {
+          display: none;
+        }
+
+        .messages-window-mobile-back-btn {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          width: 100%;
+          border: none;
+          border-bottom: 1px solid var(--theme-border-primary);
+          background: var(--theme-bg-primary);
+          color: var(--theme-text-light);
+          font-weight: 600;
+          padding: 12px 14px;
+        }
+
+        .messages-window-mobile-chat-body,
+        .messages-window-mobile-list-body {
+          flex: 1;
+          min-height: 0;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .messages-window-mobile-chat-body .chat-area {
+          width: 100%;
+        }
+
+        @media (max-width: 980px) {
+          .messages-window {
+            width: min(860px, calc(100vw - 24px));
+            right: 12px;
+            bottom: 12px;
+          }
+
+          .messages-window-list-panel {
+            width: 320px;
           }
         }
 
         @media (max-width: 768px) {
-          .messages-sidebar-panel {
+          .messages-window {
+            right: 8px;
+            left: 8px;
+            bottom: 8px;
+            width: auto;
+            min-height: 70vh;
+            max-height: calc(100vh - 16px);
+            border-radius: 14px;
+            resize: none;
+          }
+
+          .messages-window-title-group p {
+            display: none;
+          }
+
+          .messages-window-list-panel,
+          .messages-window-chat-panel {
+            display: none;
+          }
+
+          .messages-window-mobile-panel {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+          }
+
+          .messages-window-toolbar {
+            flex-direction: column;
+          }
+
+          .messages-window-open-btn {
             width: 100%;
           }
+        }
 
-          .messages-sidebar-desktop {
-            display: none !important;
-          }
-
-          .messages-sidebar-mobile {
-            display: flex !important;
+        @media (max-width: 480px) {
+          .messages-window {
+            right: 0;
+            left: 0;
+            bottom: 0;
+            border-radius: 12px 12px 0 0;
+            min-height: 78vh;
+            max-height: 95vh;
           }
         }
       `}</style>

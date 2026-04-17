@@ -9,6 +9,13 @@ import { User } from '../types/index.js';
 export class MockEmailService {
   private readonly TOKEN_EXPIRY_HOURS = 24;
 
+  private normalizeUserId(userId: number | string): number | string {
+    if (typeof userId === 'string') {
+      return userId.trim();
+    }
+    return userId;
+  }
+
   /**
    * Generate a secure verification token
    */
@@ -33,7 +40,7 @@ export class MockEmailService {
       const hashedToken = this.hashToken(token);
       const expiresAt = new Date(Date.now() + this.TOKEN_EXPIRY_HOURS * 60 * 60 * 1000);
 
-      const userId = typeof user.id === 'string' ? parseInt(user.id, 10) : user.id;
+      const userId = this.normalizeUserId(user.id);
 
       // Store token in database
       await pool.query(
@@ -129,7 +136,7 @@ export class MockEmailService {
    */
   async resendVerificationEmail(userId: number | string, ipAddress?: string, userAgent?: string): Promise<void> {
     try {
-      const id = typeof userId === 'string' ? parseInt(userId, 10) : userId;
+      const id = this.normalizeUserId(userId);
 
       // Get user
       const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
@@ -152,7 +159,7 @@ export class MockEmailService {
    */
   async isEmailVerified(userId: number | string): Promise<boolean> {
     try {
-      const id = typeof userId === 'string' ? parseInt(userId, 10) : userId;
+      const id = this.normalizeUserId(userId);
       const result = await pool.query('SELECT email_verified FROM users WHERE id = $1', [id]);
       return result.rows.length > 0 && result.rows[0].email_verified;
     } catch (error) {
@@ -170,7 +177,7 @@ export class MockEmailService {
     attemptsRemaining: number;
   }> {
     try {
-      const id = typeof userId === 'string' ? parseInt(userId, 10) : userId;
+      const id = this.normalizeUserId(userId);
       const result = await pool.query(
         `SELECT email_verified, verification_token_expires_at, verification_attempts FROM users WHERE id = $1`,
         [id]

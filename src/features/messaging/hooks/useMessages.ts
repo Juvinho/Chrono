@@ -4,6 +4,7 @@ import { getMessages, sendMessage } from '../api/messagingApi';
 import { useSound } from '../../../contexts/SoundContext';
 import { useMessageNotification } from '../../../contexts/MessageNotificationContext';
 import { useSocketMessages } from './useSocketMessages';
+import { useAuth } from '../../../contexts/AuthContext';
 
 // SECURITY FIX C-14: Validate conversation IDs to prevent accessing legacy numeric IDs
 const isValidUUID = (id: string): boolean => {
@@ -29,6 +30,7 @@ export function useMessages(conversationId: number | string | null) {
   const { playSound } = useSound();
   const { incrementUnread, isPageVisible } = useMessageNotification();
   const { setOnNewMessage } = useSocketMessages(conversationId);
+  const { user } = useAuth();
 
   // Carrega mensagens com debounce
   const fetchMessages = useCallback(async () => {
@@ -131,8 +133,14 @@ export function useMessages(conversationId: number | string | null) {
       playSound('message_send');
       
       // Adiciona mensagem à lista
-      setMessages((prev) => [...prev, newMessage]);
-      previousMessagesLengthRef.current += 1;
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === newMessage.id)) {
+          return prev;
+        }
+        const next = [...prev, newMessage];
+        previousMessagesLengthRef.current = next.length;
+        return next;
+      });
       
       console.log('✅ Mensagem enviada:', newMessage.id);
     } catch (err: any) {
@@ -166,14 +174,28 @@ export function useMessages(conversationId: number | string | null) {
 
     // Setup Socket.io listener for new messages (I-10: replaces polling)
     setOnNewMessage((newMessage: Message) => {
+      if (String(newMessage.conversationId) !== String(conversationId)) {
+        return;
+      }
+
+      if (user && String(newMessage.sender?.id) === String(user.id)) {
+        return;
+      }
+
       console.log(`🔊 Nova mensagem recebida via Socket.io: ${newMessage.id}`);
       
-      // Toca som if not sent by current user
+      // Toca som apenas para mensagens de outros usuários
       playSound('message_receive');
       
-      // Adiciona à lista
-      setMessages((prev) => [...prev, newMessage]);
-      previousMessagesLengthRef.current += 1;
+      // Adiciona à lista sem duplicar
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === newMessage.id)) {
+          return prev;
+        }
+        const next = [...prev, newMessage];
+        previousMessagesLengthRef.current = next.length;
+        return next;
+      });
       
       // Incrementa unread if page not visible
       if (!isPageVisible) {
@@ -185,7 +207,7 @@ export function useMessages(conversationId: number | string | null) {
     return () => {
       // Cleanup handled by useSocketMessages hook
     };
-  }, [conversationId, setOnNewMessage]); // Remover fetchMessages das dependências
+  }, [conversationId, setOnNewMessage, user, playSound, incrementUnread, isPageVisible]);
 
   return {
     messages,

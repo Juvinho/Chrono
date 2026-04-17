@@ -42,8 +42,8 @@ export const useAppSession = ({
         }
     }, [_setCurrentUserRaw]);
 
-    // Don't block rendering if we already have a user in local storage
-    const [isSessionLoading, setIsSessionLoading] = useState(!currentUser);
+    // Always validate session on startup before rendering protected views.
+    const [isSessionLoading, setIsSessionLoading] = useState(true);
 
     // Refs
     const knownNotificationIds = useRef<Set<string>>(new Set());

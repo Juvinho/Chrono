@@ -45,7 +45,7 @@ export default function Verify({ email, onNavigate }: VerifyProps) {
                 setMessage(response.error);
             } else {
                 setStatus('success');
-                setMessage('Email verificado com sucesso! Você já pode fazer login.');
+                setMessage('Email verificado com sucesso! Agora você já pode entrar com o mesmo email e senha.');
             }
         } catch (err) {
             setStatus('error');
@@ -91,8 +91,8 @@ export default function Verify({ email, onNavigate }: VerifyProps) {
                         </p>
                         <div className="p-4 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)] rounded space-y-3">
                             <p className="text-sm text-[var(--theme-text-secondary)]">
-                                Enviamos um link de confirmação para <strong className="text-[var(--theme-primary)]">{email || 'seu email'}</strong>. 
-                                Por favor, clique no link para ativar sua conta.
+                                Enviamos um token de acesso por email para <strong className="text-[var(--theme-primary)]">{email || 'seu email'}</strong>. 
+                                Abra a mensagem e clique no link para ativar sua conta.
                             </p>
                             <p className="text-xs text-[var(--theme-text-secondary)] opacity-70">
                                 💡 Verifique sua pasta de spam se não encontrar o email.

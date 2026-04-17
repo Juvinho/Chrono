@@ -80,7 +80,7 @@ export class ChatService {
       });
       
       const result = await pool.query(
-        `SELECT id, user1_id, user2_id, created_at, updated_at FROM conversations WHERE id = $1::uuid`,
+        `SELECT id, user1_id, user2_id, created_at, updated_at FROM conversations WHERE id::text = $1::text`,
         [conversationId]
       );
       
@@ -113,7 +113,9 @@ export class ChatService {
       // Explicit ::uuid casting to ensure PostgreSQL knows these are UUIDs
       const result = await pool.query(
         `INSERT INTO conversations (user1_id, user2_id, created_at, updated_at) 
-         VALUES (LEAST($1::uuid, $2::uuid), GREATEST($1::uuid, $2::uuid), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) 
+         VALUES (LEAST($1::uuid, $2::uuid), GREATEST($1::uuid, $2::uuid), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+         ON CONFLICT (user1_id, user2_id)
+         DO UPDATE SET updated_at = GREATEST(conversations.updated_at, EXCLUDED.updated_at)
          RETURNING id`,
         [user1Id, user2Id]
       );
@@ -181,18 +183,6 @@ export class ChatService {
           // Handle numeric IDs from old data — convert to UUID
           let conversationIdStr = String(row.id);
           
-          // If ID is numeric or looks wrong, skip it (legacy data migration needed)
-          const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-          if (!uuidRegex.test(conversationIdStr)) {
-            console.warn('⚠️ Skipping conversation with non-UUID ID (legacy data):', {
-              id: row.id,
-              type: typeof row.id,
-              note: 'Run migration fix_conversation_ids_to_uuid.sql to fix'
-            });
-            skippedCount++;
-            continue;
-          }
-          
           // Get the other user (toString() guards against UUID buffer vs string mismatch)
           const otherUserId = row.user1_id.toString() === userId.toString() ? row.user2_id : row.user1_id;
           
@@ -220,7 +210,7 @@ export class ChatService {
           try {
             const msgResult = await pool.query(
               `SELECT content, created_at, is_read FROM messages 
-               WHERE conversation_id = $1::uuid
+               WHERE conversation_id::text = $1::text
                ORDER BY created_at DESC LIMIT 1`,
               [row.id]
             );
@@ -301,7 +291,7 @@ export class ChatService {
           m.is_read
         FROM messages m
         JOIN users u ON m.sender_id = u.id
-        WHERE m.conversation_id = $1::uuid
+        WHERE m.conversation_id::text = $1::text
         ORDER BY m.created_at ASC
         LIMIT 100`,
         [conversationId]
@@ -354,7 +344,7 @@ export class ChatService {
 
       // Verify conversation exists and user is participant
       const convCheck = await pool.query(
-        `SELECT id, user1_id, user2_id FROM conversations WHERE id = $1::uuid`,
+        `SELECT id, user1_id, user2_id FROM conversations WHERE id::text = $1::text`,
         [conversationId]
       );
 
@@ -387,7 +377,7 @@ export class ChatService {
       // Insert message with imageUrl if provided
       const result = await pool.query(
         `INSERT INTO messages (conversation_id, sender_id, content, image_url, is_read, created_at)
-         VALUES ($1::uuid, $2::uuid, NULLIF(TRIM($3), ''), $4, false, CURRENT_TIMESTAMP)
+         VALUES ($1::text, $2::text, NULLIF(TRIM($3), ''), $4, false, CURRENT_TIMESTAMP)
          RETURNING id, sender_id, content, image_url, created_at, is_read`,
         [conversationId, senderId, content || '', imageUrl || null]
       );
@@ -401,13 +391,13 @@ export class ChatService {
 
       // Update conversation updated_at
       await pool.query(
-        `UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = $1::uuid`,
+        `UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id::text = $1::text`,
         [conversationId]
       );
 
       // Get sender info
       const senderResult = await pool.query(
-        `SELECT id, username, COALESCE(display_name, '') as display_name, avatar FROM users WHERE id = $1::uuid`,
+        `SELECT id, username, COALESCE(display_name, '') as display_name, avatar FROM users WHERE id::text = $1::text`,
         [senderId]
       );
 
@@ -446,7 +436,7 @@ export class ChatService {
       await pool.query(
         `UPDATE messages
          SET is_read = true
-         WHERE conversation_id = $1::uuid AND sender_id != $2::uuid`,
+         WHERE conversation_id::text = $1::text AND sender_id::text != $2::text`,
         [conversationId, userId]
       );
     } catch (error: any) {

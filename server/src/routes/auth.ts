@@ -11,7 +11,7 @@ import { promisify } from 'util';
 import { validateNoEmojis } from '../utils/validation.js';
 import { SecurityService } from '../services/securityService.js';
 import { get2FAStatus, verify2FACode, verifyRecoveryCode } from '../services/twoFactorService.js';
-import { validateHCaptcha } from '../services/hcaptchaService.js';
+import { verifyHCaptcha } from '../services/hcaptchaService.js';
 
 // Validate JWT_SECRET - must match the one in middleware/auth.ts
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -239,9 +239,28 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'hCaptcha token is required' });
     }
 
-    const hcaptchaValid = await validateHCaptcha(captchaToken);
-    if (!hcaptchaValid) {
-      return res.status(400).json({ error: 'hCaptcha verification failed. Please try again.' });
+    try {
+      const hcaptchaResult = await verifyHCaptcha(captchaToken);
+      if (!hcaptchaResult.success) {
+        return res.status(400).json({
+          error: 'hCaptcha verification failed. Please complete captcha again.',
+          errorCode: 'hcaptcha_verification_failed',
+          details: hcaptchaResult.error_codes || [],
+        });
+      }
+    } catch (captchaError: any) {
+      console.error('Register hCaptcha validation error:', captchaError);
+      const message = String(captchaError?.message || 'hCaptcha validation error');
+      if (message.includes('configuration')) {
+        return res.status(503).json({
+          error: 'hCaptcha server configuration is missing. Please contact support.',
+          errorCode: 'hcaptcha_server_misconfigured',
+        });
+      }
+      return res.status(503).json({
+        error: 'hCaptcha validation service is temporarily unavailable. Please try again.',
+        errorCode: 'hcaptcha_service_unavailable',
+      });
     }
 
     // Validation: Prevent registration of system protected usernames
@@ -324,9 +343,28 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'hCaptcha token is required' });
     }
 
-    const hcaptchaValid = await validateHCaptcha(captchaToken);
-    if (!hcaptchaValid) {
-      return res.status(400).json({ error: 'hCaptcha verification failed. Please try again.' });
+    try {
+      const hcaptchaResult = await verifyHCaptcha(captchaToken);
+      if (!hcaptchaResult.success) {
+        return res.status(400).json({
+          error: 'hCaptcha verification failed. Please complete captcha again.',
+          errorCode: 'hcaptcha_verification_failed',
+          details: hcaptchaResult.error_codes || [],
+        });
+      }
+    } catch (captchaError: any) {
+      console.error('Login hCaptcha validation error:', captchaError);
+      const message = String(captchaError?.message || 'hCaptcha validation error');
+      if (message.includes('configuration')) {
+        return res.status(503).json({
+          error: 'hCaptcha server configuration is missing. Please contact support.',
+          errorCode: 'hcaptcha_server_misconfigured',
+        });
+      }
+      return res.status(503).json({
+        error: 'hCaptcha validation service is temporarily unavailable. Please try again.',
+        errorCode: 'hcaptcha_service_unavailable',
+      });
     }
 
     const emojiValidation = validateNoEmojis(username, 'Nome de usuário');
@@ -346,7 +384,7 @@ router.post('/login', async (req, res) => {
          await securityService.logAction(user.id, 'login', 'user', user.id, 'failure', { username, reason: 'email_not_verified' }, req);
          return res.status(403).json({ 
            error: 'email_not_verified',
-           message: 'Seu email ainda não foi verificado. Verifique sua caixa de entrada.',
+           message: 'Seu email ainda não foi verificado. Um token de acesso foi enviado para seu email. Confirme o link para liberar o login.',
            email: verificationCheck.rows[0].email
          });
     }
@@ -635,20 +673,25 @@ router.post('/forgot-password', async (req, res) => {
 // Reset password — requires a valid one-time token
 router.post('/reset-password', async (req, res) => {
   try {
-    const { token, newPassword } = req.body;
+    const { token, username, newPassword } = req.body;
 
-    if (!token || !newPassword) {
-      return res.status(400).json({ error: 'Token and new password are required' });
+    if (!token || !username || !newPassword) {
+      return res.status(400).json({ error: 'Token, username and new password are required' });
     }
 
     if (newPassword.length < 6) {
       return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
 
+    const normalizedUsername = String(username).trim().toLowerCase();
+    if (!normalizedUsername) {
+      return res.status(400).json({ error: 'Username is required' });
+    }
+
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
 
     const result = await pool.query(
-      `SELECT id FROM users
+      `SELECT id, username FROM users
        WHERE password_reset_token = $1
          AND password_reset_expires > NOW()`,
       [hashedToken]
@@ -659,6 +702,11 @@ router.post('/reset-password', async (req, res) => {
     }
 
     const userId = result.rows[0].id;
+    const expectedUsername = String(result.rows[0].username || '').trim().toLowerCase();
+
+    if (expectedUsername !== normalizedUsername) {
+      return res.status(400).json({ error: 'Username does not match the reset request' });
+    }
 
     await userService.updatePassword(userId, newPassword);
 

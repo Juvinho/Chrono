@@ -223,6 +223,19 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
             });
             
             if (response.error) {
+                if (response.error.toLowerCase().includes('hcaptcha')) {
+                    const details = ((response.errorData as any)?.details || []) as string[];
+                    const errorCode = String((response.errorData as any)?.errorCode || '');
+                    setCaptchaToken(null);
+                    captchaRef.current?.resetCaptcha();
+                    if (errorCode === 'hcaptcha_server_misconfigured') {
+                        setCaptchaError('Captcha indisponível por configuração do servidor. Tente novamente em instantes.');
+                    } else if (details.length > 0) {
+                        setCaptchaError(`Captcha inválido (${details.join(', ')}). Complete o captcha novamente.`);
+                    } else {
+                        setCaptchaError('Captcha inválido/expirado. Complete o captcha novamente.');
+                    }
+                }
                 setError(response.error);
                 return;
             }

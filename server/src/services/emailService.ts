@@ -18,6 +18,13 @@ export class EmailService {
   private readonly VERIFICATION_RATE_LIMIT_MINUTES = 60; // Max 1 email per hour
   private readonly MAX_VERIFICATION_ATTEMPTS = 3;
 
+  private normalizeUserId(userId: number | string): number | string {
+    if (typeof userId === 'string') {
+      return userId.trim();
+    }
+    return userId;
+  }
+
   constructor(config: EmailServiceConfig) {
     this.config = config;
     
@@ -49,7 +56,7 @@ export class EmailService {
    * Check if user has already exceeded rate limit for email sends
    */
   async canResendEmail(userId: number | string): Promise<boolean> {
-    const id = typeof userId === 'string' ? parseInt(userId, 10) : userId;
+    const id = this.normalizeUserId(userId);
     const result = await pool.query(
       `SELECT last_verification_email_sent_at, verification_attempts 
        FROM users 
@@ -323,7 +330,7 @@ export class EmailService {
    */
   async resendVerificationEmail(userId: number | string, ipAddress?: string, userAgent?: string): Promise<void> {
     try {
-      const id = typeof userId === 'string' ? parseInt(userId, 10) : userId;
+      const id = this.normalizeUserId(userId);
       // Get user
       const userResult = await pool.query(
         'SELECT id, username, email, email_verified FROM users WHERE id = $1',
@@ -353,7 +360,7 @@ export class EmailService {
    * Check if email is verified
    */
   async isEmailVerified(userId: number | string): Promise<boolean> {
-    const id = typeof userId === 'string' ? parseInt(userId, 10) : userId;
+    const id = this.normalizeUserId(userId);
     const result = await pool.query(
       'SELECT email_verified FROM users WHERE id = $1',
       [id]
@@ -370,7 +377,7 @@ export class EmailService {
     tokenExpiration?: Date;
     attemptsRemaining: number;
   }> {
-    const id = typeof userId === 'string' ? parseInt(userId, 10) : userId;
+    const id = this.normalizeUserId(userId);
     const result = await pool.query(
       `SELECT email_verified, verification_token_expires_at, verification_attempts 
        FROM users 
@@ -593,7 +600,7 @@ export class EmailService {
     errorMessage?: string
   ): Promise<void> {
     try {
-      const id = typeof userId === 'string' ? parseInt(userId, 10) : userId;
+      const id = this.normalizeUserId(userId);
       await pool.query(
         `INSERT INTO email_verification_logs 
          (user_id, email, token, verified_at, status, ip_address, user_agent, error_message)

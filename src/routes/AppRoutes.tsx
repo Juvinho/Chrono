@@ -1,10 +1,11 @@
 import React, { Suspense } from 'react';
-import { Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { User, Page, Post, Conversation, Notification, MediaObject, PostUpdateData, ReactionData, CyberpunkReaction } from '../types';
 import { SplitLayout } from '../layouts/SplitLayout';
 import { FeedContent } from '../components/FeedContent';
 import { Error404, Error500, Error403, Error429, Error503, ErrorTimeout } from '../components/ErrorPages';
 import { ErrorTestPage } from '../components/ErrorTestPage';
+import Header from '../components/ui/Header';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { AdminLogin } from '../pages/AdminLogin';
 import { AdminDashboard } from '../pages/AdminDashboard';
@@ -84,6 +85,7 @@ interface AppRoutesProps {
 }
 
 export default function AppRoutes(props: AppRoutesProps) {
+    const location = useLocation();
     const {
         currentUser, users, setUsers, combinedUsers, memoizedPosts, memoizedAllPosts, memoizedUsers,
         pendingPosts, newPostIds, conversations, selectedDate, setSelectedDate,
@@ -95,16 +97,56 @@ export default function AppRoutes(props: AppRoutesProps) {
         setIsMarketplaceOpen, handleBack, handleFollowToggle, handleSendGlitchi, handlePasswordReset, handleOpenThreadView, handleOpenChat
     } = props;
 
+    const navigationState = location.state as { email?: string } | null;
+    const emailFromRouteState = navigationState?.email || null;
+
+    const handleGlobalHeaderSearch = (query: string) => {
+        const trimmedQuery = query.trim();
+        if (!trimmedQuery) return;
+
+        sessionStorage.setItem('chrono_search_query', trimmedQuery);
+        handleNavigate(Page.Dashboard);
+    };
+
+    const renderWithGlobalHeader = (
+        user: User,
+        content: React.ReactNode,
+        options?: { showBackButton?: boolean }
+    ) => (
+        <div className="min-h-screen bg-[var(--theme-bg-primary)] text-[var(--theme-text-primary)] flex flex-col">
+            <Header
+                user={user}
+                onLogout={handleLogout}
+                onViewProfile={(username) => handleNavigate(Page.Profile, username)}
+                onNavigate={handleNavigate}
+                onNotificationClick={handleNotificationClick}
+                onViewNotifications={onViewNotifications}
+                onSearch={handleGlobalHeaderSearch}
+                onOpenMarketplace={() => setIsMarketplaceOpen(true)}
+                onOpenChat={handleOpenChat}
+                onBack={options?.showBackButton ? handleBack : undefined}
+                allUsers={combinedUsers}
+                allPosts={memoizedAllPosts}
+                conversations={conversations}
+                lastViewedNotifications={lastViewedNotifications}
+            />
+            <div className="flex-1 min-h-0">
+                {content}
+            </div>
+        </div>
+    );
+
     return (
         <Routes>
             {/* Public Routes */}
             <Route path="/welcome" element={!currentUser ? <Welcome onNavigate={handleNavigate} /> : <Navigate to="/echoframe" />} />
             <Route path="/login" element={!currentUser ? <LoginScreen onNavigate={handleNavigate} onLogin={handleLogin} /> : <Navigate to="/echoframe" />} />
             <Route path="/register" element={!currentUser ? <Register users={users} setUsers={setUsers} onNavigate={handleNavigate} onLogin={handleLogin} /> : <Navigate to="/echoframe" />} />
-            <Route path="/verify" element={<Verify users={users} setUsers={setUsers} onNavigate={handleNavigate} email={users.find(u => u.username === userToVerify)?.email || null} />} />
+            <Route path="/verify" element={<Verify users={users} setUsers={setUsers} onNavigate={handleNavigate} email={emailFromRouteState || users.find(u => u.username === userToVerify)?.email || null} />} />
             <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
-            <Route path="/forgot-password" element={<ForgotPassword users={users} onNavigate={handleNavigate} />} />
-            <Route path="/reset-password" element={<ResetPassword emailToReset={emailToReset} onPasswordReset={handlePasswordReset} onNavigate={handleNavigate} />} />
+            <Route path="/forgot-password" element={<ForgotPassword onNavigate={handleNavigate} />} />
+            <Route path="/reset-password" element={<ResetPassword onNavigate={handleNavigate} />} />
+            <Route path="/reset-password/:token" element={<ResetPassword onNavigate={handleNavigate} />} />
             
             {/* Protected Routes */}
             <Route path="/echoframe" element={
@@ -287,23 +329,26 @@ export default function AppRoutes(props: AppRoutesProps) {
             ) : <Navigate to="/welcome" />} />
             
             <Route path="/bookmarks" element={currentUser ? (
-                <Bookmarks
-                    currentUser={currentUser}
-                    allPosts={memoizedPosts}
-                    onViewProfile={(username) => handleNavigate(Page.Profile, username)}
-                    onTagClick={(tag) => {
-                        sessionStorage.setItem('chrono_search_query', tag);
-                        handleNavigate(Page.Dashboard);
-                    }}
-                    onUpdateReaction={handleUpdateReaction}
-                    onReply={handleReply}
-                    onEcho={handleEcho}
-                    onDeletePost={handleDeletePost}
-                    onEditPost={handleEditPost}
-                    onPollVote={handlePollVote}
-                    typingParentIds={typingParentIds}
-                    onNavigate={handleNavigate}
-                />
+                renderWithGlobalHeader(
+                    currentUser,
+                    <Bookmarks
+                        currentUser={currentUser}
+                        allPosts={memoizedPosts}
+                        onViewProfile={(username) => handleNavigate(Page.Profile, username)}
+                        onTagClick={(tag) => {
+                            sessionStorage.setItem('chrono_search_query', tag);
+                            handleNavigate(Page.Dashboard);
+                        }}
+                        onUpdateReaction={handleUpdateReaction}
+                        onReply={handleReply}
+                        onEcho={handleEcho}
+                        onDeletePost={handleDeletePost}
+                        onEditPost={handleEditPost}
+                        onPollVote={handlePollVote}
+                        typingParentIds={typingParentIds}
+                        onNavigate={handleNavigate}
+                    />
+                )
             ) : <Navigate to="/welcome" />} />
             
             {/* Chat test route removed */}
@@ -385,42 +430,48 @@ export default function AppRoutes(props: AppRoutesProps) {
             ) : <Navigate to="/welcome" />} />
 
             <Route path="/thread/:postId" element={currentUser ? (
-                <Suspense fallback={<LoadingSpinner />}>
-                    <ThreadView 
-                        currentUser={currentUser}
-                        allUsers={combinedUsers}
-                        allPosts={memoizedAllPosts}
-                        onReply={handleReply}
-                        onUpdateReaction={handleUpdateReaction}
-                        onEcho={handleEcho}
-                        onDeletePost={handleDeletePost}
-                        onEditPost={handleEditPost}
-                        onPollVote={handlePollVote}
-                        onViewProfile={(username: string) => handleNavigate(Page.Profile, username)}
-                        onBack={handleBack}
-                        typingParentIds={typingParentIds}
-                    />
-                </Suspense>
+                renderWithGlobalHeader(
+                    currentUser,
+                    <Suspense fallback={<LoadingSpinner />}>
+                        <ThreadView 
+                            currentUser={currentUser}
+                            allUsers={combinedUsers}
+                            allPosts={memoizedAllPosts}
+                            onReply={handleReply}
+                            onUpdateReaction={handleUpdateReaction}
+                            onEcho={handleEcho}
+                            onDeletePost={handleDeletePost}
+                            onEditPost={handleEditPost}
+                            onPollVote={handlePollVote}
+                            onViewProfile={(username: string) => handleNavigate(Page.Profile, username)}
+                            onBack={handleBack}
+                            typingParentIds={typingParentIds}
+                        />
+                    </Suspense>
+                )
             ) : <Navigate to="/welcome" />} />
 
             {/* Post Detail with shareable random ID (7 digits) */}
             <Route path="/post/:randomId" element={currentUser ? (
-                <Suspense fallback={<LoadingSpinner />}>
-                    <PostDetail 
-                        currentUser={currentUser}
-                        allUsers={combinedUsers}
-                        allPosts={memoizedAllPosts}
-                        onReply={handleReply}
-                        onUpdateReaction={handleUpdateReaction}
-                        onEcho={handleEcho}
-                        onDeletePost={handleDeletePost}
-                        onEditPost={handleEditPost}
-                        onPollVote={handlePollVote}
-                        onViewProfile={(username: string) => handleNavigate(Page.Profile, username)}
-                        onBack={handleBack}
-                        typingParentIds={typingParentIds}
-                    />
-                </Suspense>
+                renderWithGlobalHeader(
+                    currentUser,
+                    <Suspense fallback={<LoadingSpinner />}>
+                        <PostDetail 
+                            currentUser={currentUser}
+                            allUsers={combinedUsers}
+                            allPosts={memoizedAllPosts}
+                            onReply={handleReply}
+                            onUpdateReaction={handleUpdateReaction}
+                            onEcho={handleEcho}
+                            onDeletePost={handleDeletePost}
+                            onEditPost={handleEditPost}
+                            onPollVote={handlePollVote}
+                            onViewProfile={(username: string) => handleNavigate(Page.Profile, username)}
+                            onBack={handleBack}
+                            typingParentIds={typingParentIds}
+                        />
+                    </Suspense>
+                )
             ) : <Navigate to="/welcome" />} />
 
             {/* Error Test Pages */}

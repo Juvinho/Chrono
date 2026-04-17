@@ -132,7 +132,9 @@ function App() {
                 navigate('/register');
                 break;
             case Page.Verify:
-                navigate('/verify');
+                navigate('/verify', {
+                    state: data ? { email: data } : undefined,
+                });
                 break;
             case Page.ForgotPassword:
                 navigate('/forgot-password');
@@ -626,7 +628,7 @@ function App() {
         return Array.from(map.values());
     }, [memoizedUsers, memoizedPosts]);
 
-    if (isSessionLoading && !currentUser) {
+    if (isSessionLoading) {
         return (
             <div className="fixed inset-0 bg-black flex flex-col items-center justify-center z-50">
                     <div className="w-16 h-16 border-4 border-[var(--theme-primary)] border-t-transparent rounded-full animate-spin mb-4"></div>

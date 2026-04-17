@@ -1,3 +1,22 @@
 @import "tailwindcss";
 
 /* resto dos seus estilos abaixo... */
+
+button,
+a,
+[role='button'],
+summary,
+input[type='button'],
+input[type='submit'],
+input[type='reset'],
+label[for],
+select {
+	cursor: pointer;
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+[aria-disabled='true'] {
+	cursor: not-allowed;
+}

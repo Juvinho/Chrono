@@ -188,6 +188,8 @@ app.use(helmet({
         "https://cdn.tailwindcss.com",
         // hCaptcha
         "https://js.hcaptcha.com", "https://hcaptcha.com",
+        // hCaptcha internally loads Cloudflare Insights beacon script
+        "https://static.cloudflareinsights.com",
       ],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
@@ -299,6 +301,12 @@ const onlineUsers = new Set<string>();
 io.on('connection', (socket) => {
   console.log(`✅ [Socket.io] User ${socket.data.userId} (${socket.data.username}) connected. Total: ${io.engine.clientsCount}`);
 
+  // Join a personal room so direct user events (conversation updates/new conversation)
+  // can be delivered even when the user is not inside a specific conversation room.
+  const personalRoom = String(socket.data.userId);
+  socket.join(personalRoom);
+  console.log(`✅ User ${socket.data.userId} joined personal room ${personalRoom}`);
+
   // ========== PRESENCE: Announce user as online (C-07) ==========
   if (socket.data.userId) {
     onlineUsers.add(String(socket.data.userId));
@@ -317,12 +325,22 @@ io.on('connection', (socket) => {
     // Pong received
   });
 
-  socket.on('join_conversation', async (conversationId) => {
+  socket.on('join_conversation', async (payload) => {
     try {
+      const conversationId =
+        typeof payload === 'string' || typeof payload === 'number'
+          ? String(payload)
+          : String((payload as any)?.conversationId || '');
+
+      if (!conversationId) {
+        socket.emit('error', { code: 'INVALID_CONVERSATION', message: 'conversationId is required' });
+        return;
+      }
+
       // Verify user is a participant in this conversation
       const result = await pool.query(
         `SELECT id FROM conversations 
-         WHERE id = $1 AND (user1_id = $2 OR user2_id = $2)`,
+         WHERE id::text = $1::text AND (user1_id = $2::uuid OR user2_id = $2::uuid)`,
         [conversationId, socket.data.userId]
       );
 
@@ -339,7 +357,14 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('leave_conversation', (conversationId) => {
+  socket.on('leave_conversation', (payload) => {
+    const conversationId =
+      typeof payload === 'string' || typeof payload === 'number'
+        ? String(payload)
+        : String((payload as any)?.conversationId || '');
+
+    if (!conversationId) return;
+
     socket.leave(conversationId);
     console.log(`User ${socket.data.userId} left conversation ${conversationId}`);
   });

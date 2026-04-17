@@ -70,6 +70,16 @@ export interface UpdateProfileRequest {
   [key: string]: any;
 }
 
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  username: string;
+  newPassword: string;
+}
+
 export const authService = {
   async login(credentials: LoginRequest) {
     return baseClient.request<LoginResponse>('/auth/login', {
@@ -131,6 +141,20 @@ export const authService = {
     return baseClient.request<{ success: boolean; message: string }>('/auth/resend-verification', {
       method: 'POST',
       body: JSON.stringify({ email }),
+    });
+  },
+
+  async forgotPassword(data: ForgotPasswordRequest) {
+    return baseClient.request<{ message: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async resetPassword(data: ResetPasswordRequest) {
+    return baseClient.request<{ message: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify(data),
     });
   },
 

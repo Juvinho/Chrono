@@ -6,27 +6,34 @@ import { pool } from '../db/connection.js';
 
 const chatService = new ChatService();
 const userService = new UserService();
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const initConversation = async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.userId!;
     const { targetUserId } = req.body;
+    const normalizedTargetUserId = String(targetUserId ?? '').trim();
     
     console.log('🔗 initConversation called:', {
       userId,
       userId_type: typeof userId,
-      targetUserId,
+      targetUserId: normalizedTargetUserId,
       targetUserId_type: typeof targetUserId,
       bodyKeys: Object.keys(req.body)
     });
     
-    if (!targetUserId) {
+    if (!normalizedTargetUserId) {
       console.error('❌ No targetUserId provided');
       return res.status(400).json({ error: 'Target user required' });
     }
+
+    if (!UUID_REGEX.test(normalizedTargetUserId)) {
+      console.error('❌ Invalid targetUserId format:', normalizedTargetUserId);
+      return res.status(400).json({ error: 'Invalid target user id format' });
+    }
     
     // Prevent self-messaging
-    if (userId === targetUserId) {
+    if (String(userId) === normalizedTargetUserId) {
       console.error('❌ User trying to message themselves:', userId);
       return res.status(400).json({ error: 'Cannot message yourself' });
     }
@@ -34,10 +41,10 @@ export const initConversation = async (req: AuthRequest, res: Response) => {
     // Verify target user exists
     const targetUserResult = await pool.query(
       `SELECT id FROM users WHERE id = $1::uuid`,
-      [targetUserId]
+      [normalizedTargetUserId]
     );
     if (targetUserResult.rows.length === 0) {
-      console.error('❌ Target user not found:', targetUserId);
+      console.error('❌ Target user not found:', normalizedTargetUserId);
       return res.status(404).json({ error: 'Target user not found' });
     }
 
@@ -49,18 +56,18 @@ export const initConversation = async (req: AuthRequest, res: Response) => {
        WHERE (id = $1::uuid AND $2::text = ANY(blocked_users))
           OR (id = $2::uuid AND $1::text = ANY(blocked_users))
        LIMIT 1`,
-      [userId, targetUserId]
+      [userId, normalizedTargetUserId]
     );
     if (blockCheck.rows.length > 0) {
       return res.status(403).json({ error: 'Cannot message this user' });
     }
 
-    let conversation = await chatService.getConversation(userId, targetUserId);
+    let conversation = await chatService.getConversation(userId, normalizedTargetUserId);
     console.log('🔍 Existing conversation lookup:', conversation?.id || 'none found');
     
     if (!conversation) {
       console.log('📝 Creating new conversation...');
-      conversation = await chatService.createConversation(userId, targetUserId);
+      conversation = await chatService.createConversation(userId, normalizedTargetUserId);
       console.log('✅ Created:', conversation.id);
     }
     
@@ -89,11 +96,11 @@ export const initConversation = async (req: AuthRequest, res: Response) => {
     // Emit socket event if new conversation was created (I-10: notify user in real-time)
     const io = req.app.get('io');
     const wasNewConversation = !conversation.id || conversation.created_at === new Date();
-    if (io && conversation && targetUserId) {
+    if (io && conversation && normalizedTargetUserId) {
       try {
         // Emit new_conversation event to both users
         io.to(userId).emit('new_conversation', responseData);
-        io.to(targetUserId).emit('new_conversation', responseData);
+        io.to(normalizedTargetUserId).emit('new_conversation', responseData);
         console.log(`✅ Emitted new_conversation event to both users`);
       } catch (err) {
         console.error('⚠️ Failed to emit new_conversation event:', err);

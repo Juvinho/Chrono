@@ -43,7 +43,7 @@ const VerifyEmailPage: React.FC = () => {
 
       if (data?.success) {
         setStatus('success');
-        setMessage(data.message || 'Seu email foi verificado com sucesso!');
+        setMessage(data.message || 'Seu email foi verificado com sucesso! Agora você pode entrar com o mesmo email e senha.');
         setUser(data.user);
       } else {
         setStatus('error');
@@ -107,6 +107,9 @@ const VerifyEmailPage: React.FC = () => {
               </h2>
               <p className="text-xl text-green-400 font-bold mb-6">
                 Bem-vindo ao Chrono! 🎉
+              </p>
+              <p className="text-[#9aa] text-sm mb-6">
+                {message}
               </p>
 
               {user && (

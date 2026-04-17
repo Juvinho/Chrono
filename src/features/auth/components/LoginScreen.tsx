@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import HCaptcha from '@hcaptcha/react-hcaptcha';
+import { useLocation } from 'react-router-dom';
 import GlitchText from '../../../components/ui/GlitchText';
 import { User, Page } from '../../../types/index';
 import { useTranslation } from '../../../hooks/useTranslation';
@@ -12,11 +13,12 @@ import { useFormNavigation } from '../../../hooks/useFormNavigation';
 
 interface LoginScreenProps {
     onLogin: (user: User) => void;
-    onNavigate: (page: Page) => void;
+    onNavigate: (page: Page, email?: string) => void;
 }
 
 export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
     const { t } = useTranslation();
+    const location = useLocation();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [twoFactorCode, setTwoFactorCode] = useState('');
@@ -32,6 +34,7 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
     const captchaRef = useRef<HCaptcha>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+    const [requiresEmailVerification, setRequiresEmailVerification] = useState(false);
     const [isResending, setIsResending] = useState(false);
     const [resendSuccess, setResendSuccess] = useState(false);
 
@@ -46,9 +49,17 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
             sessionStorage.removeItem('chrono_login_message');
         }
 
+        const routeState = location.state as { message?: string; email?: string } | null;
+        if (routeState?.message) {
+            setMessage(routeState.message);
+        }
+        if (routeState?.email) {
+            setUsername(routeState.email);
+        }
+
         // Check backend health
         checkBackendHealth();
-    }, []);
+    }, [location.state]);
 
     // Form navigation: Allow Enter key to move between fields
     useFormNavigation(
@@ -117,6 +128,9 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
         console.log('Login attempt starting...', { username, captchaToken });
         setError('');
         setMessage('');
+        setRequiresEmailVerification(false);
+        setUnverifiedEmail(null);
+        setResendSuccess(false);
 
         // Client-side emoji validation
         const usernameValidation = validateNoEmojis(username, 'Nome de usuário');
@@ -144,11 +158,36 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
             
             if (response.error) {
                 if (response.error === 'email_not_verified') {
-                    setUnverifiedEmail((response as any).data?.email || null);
-                    setError('Seu email ainda não foi verificado. Verifique sua caixa de entrada.');
+                    const payload = (response.errorData || {}) as { email?: string; message?: string };
+                    const loginValueLooksLikeEmail = username.includes('@') ? username : null;
+                    const emailForResend = payload.email || loginValueLooksLikeEmail;
+
+                    setRequiresEmailVerification(true);
+                    setUnverifiedEmail(emailForResend);
+                    setError('');
+                    setMessage(
+                        payload.message ||
+                        'Seu email ainda não foi verificado. Um token de acesso foi enviado para seu email. Confirme o link e entre com o mesmo email e senha.'
+                    );
                     setIsLoading(false);
                     return;
                 }
+
+                if (response.error.toLowerCase().includes('hcaptcha')) {
+                    const details = ((response.errorData as any)?.details || []) as string[];
+                    const errorCode = String((response.errorData as any)?.errorCode || '');
+                    setCaptchaToken(null);
+                    captchaRef.current?.resetCaptcha();
+                    if (errorCode === 'hcaptcha_server_misconfigured') {
+                        setCaptchaError('Captcha indisponível por configuração do servidor. Tente novamente em instantes.');
+                    } else if (details.length > 0) {
+                        setCaptchaError(`Captcha inválido (${details.join(', ')}). Complete o captcha novamente.`);
+                    } else {
+                        setCaptchaError('Captcha inválido/expirado. Complete o captcha novamente.');
+                    }
+                }
+
+                setRequiresEmailVerification(false);
                 setUnverifiedEmail(null);
                 setError(response.error);
                 setIsLoading(false);
@@ -157,6 +196,7 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
 
             // Check if 2FA is required
             if (response.data?.requires_2fa && response.data?.temp_token) {
+                setRequiresEmailVerification(false);
                 setRequiresTwoFactor(true);
                 setTwoFactorTempToken(response.data.temp_token);
                 setIsLoading(false);
@@ -164,6 +204,7 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
             }
 
             if (response.data?.user) {
+                setRequiresEmailVerification(false);
                 console.log('Login successful (httpOnly cookie set by server)');
                 const user = mapApiUserToUser(response.data.user);
                 
@@ -187,7 +228,11 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
     };
 
     const handleResendVerification = async () => {
-        if (!unverifiedEmail || isResending) return;
+        if (isResending) return;
+        if (!unverifiedEmail) {
+            setError('Não foi possível identificar seu email para reenvio. Tente fazer login informando seu email.');
+            return;
+        }
         setIsResending(true);
         setResendSuccess(false);
         try {
@@ -200,7 +245,7 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
             } else {
                 setResendSuccess(true);
                 setError('');
-                setMessage('📨 Email de verificação reenviado! Verifique sua caixa de entrada.');
+                setMessage('📨 Token de acesso reenviado por email. Confirme o link e faça login com o mesmo email e senha.');
             }
         } catch (err: any) {
             setError(err.message || 'Erro ao reenviar email');
@@ -365,30 +410,41 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
                         </div>
                     )}
 
-                    {error && !unverifiedEmail && <p className="text-red-500 text-sm text-center glitch-effect" data-text={error}>{error}</p>}
+                    {error && !requiresEmailVerification && <p className="text-red-500 text-sm text-center glitch-effect" data-text={error}>{error}</p>}
                     
-                    {unverifiedEmail && (
+                    {requiresEmailVerification && (
                         <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg space-y-3">
                             <p className="text-amber-400 text-sm font-medium">
                                 ⚠️ Seu email ainda não foi verificado.
                             </p>
                             <p className="text-amber-400/70 text-xs">
-                                Verifique sua caixa de entrada ({unverifiedEmail}) e clique no link de ativação. 
-                                Verifique também a pasta de spam.
+                                {unverifiedEmail
+                                    ? `Um token de acesso foi enviado para ${unverifiedEmail}. Abra o email e clique no link de ativação.`
+                                    : 'Um token de acesso foi enviado para seu email cadastrado. Abra o email e clique no link de ativação.'}
+                                {' '}Verifique também a pasta de spam.
                             </p>
                             <button
                                 type="button"
                                 onClick={handleResendVerification}
-                                disabled={isResending || resendSuccess}
+                                disabled={isResending || resendSuccess || !unverifiedEmail}
                                 className={`w-full py-2 text-sm rounded transition-colors ${
                                     resendSuccess 
                                         ? 'bg-green-500/20 text-green-400 cursor-default'
                                         : isResending
                                         ? 'bg-amber-500/10 text-amber-400/50 cursor-wait'
+                                        : !unverifiedEmail
+                                        ? 'bg-amber-500/10 text-amber-400/50 cursor-not-allowed'
                                         : 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 cursor-pointer'
                                 }`}
                             >
                                 {isResending ? '⌛ Reenviando...' : resendSuccess ? '✅ Email reenviado!' : '📨 Reenviar email de verificação'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => onNavigate(Page.Verify, unverifiedEmail || undefined)}
+                                className="w-full py-2 text-sm rounded border border-amber-500/40 text-amber-300 hover:bg-amber-500/10 transition-colors"
+                            >
+                                📄 Abrir página de verificação
                             </button>
                         </div>
                     )}
