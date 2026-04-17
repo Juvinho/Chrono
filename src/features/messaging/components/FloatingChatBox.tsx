@@ -15,7 +15,9 @@ interface FloatingChatBoxProps {
 export const FloatingChatBox: React.FC<FloatingChatBoxProps> = ({ conversation, onClose }) => {
   const { t } = useTranslation();
   const [isMinimized, setIsMinimized] = useState(false);
-  const { messages, isLoading, isSending, sendMessage } = useMessages(conversation.id);
+  const { messages, isLoading, isSending, sendMessage } = useMessages(conversation.id, {
+    targetUserId: conversation.otherUser.id,
+  });
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll para última mensagem

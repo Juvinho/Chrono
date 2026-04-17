@@ -24,7 +24,9 @@ export const FloatingChatWindow: React.FC<FloatingChatWindowProps> = ({
   currentUserId,
   onClose,
 }) => {
-  const { messages, isLoading, isSending: isSendingMessage, error, sendMessage } = useMessages(conversationId);
+  const { messages, isLoading, isSending: isSendingMessage, error, sendMessage } = useMessages(conversationId, {
+    targetUserId: otherUser.id,
+  });
   const [messageText, setMessageText] = useState('');
   const [isMinimized, setIsMinimized] = useState(false);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);

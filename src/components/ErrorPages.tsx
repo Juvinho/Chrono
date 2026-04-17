@@ -4,6 +4,19 @@ interface ErrorPageProps {
   onNavigate?: () => void;
 }
 
+const ECHO_SPAM_TIMEOUT_KEY = 'chrono_echo_spam_timeout_until_v1';
+
+const formatRemaining = (remainingMs: number): string => {
+  const totalSeconds = Math.max(0, Math.floor(remainingMs / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
+};
+
 export const Error404: React.FC<ErrorPageProps> = ({ onNavigate }) => (
   <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--theme-bg-primary)] text-[var(--theme-text-primary)] p-4">
     <div className="text-center space-y-6 max-w-md">
@@ -111,3 +124,50 @@ export const ErrorTimeout: React.FC<ErrorPageProps> = ({ onNavigate }) => (
     </div>
   </div>
 );
+
+export const Error504Echo: React.FC<ErrorPageProps> = ({ onNavigate }) => {
+  const [remainingMs, setRemainingMs] = React.useState(0);
+
+  React.useEffect(() => {
+    const updateRemaining = () => {
+      try {
+        const raw = localStorage.getItem(ECHO_SPAM_TIMEOUT_KEY);
+        const until = raw ? parseInt(raw, 10) : 0;
+        if (!until || Number.isNaN(until)) {
+          setRemainingMs(0);
+          return;
+        }
+        const remaining = Math.max(0, until - Date.now());
+        setRemainingMs(remaining);
+      } catch {
+        setRemainingMs(0);
+      }
+    };
+
+    updateRemaining();
+    const timer = window.setInterval(updateRemaining, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const isLocked = remainingMs > 0;
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--theme-bg-primary)] text-[var(--theme-text-primary)] p-4">
+      <div className="text-center space-y-6 max-w-2xl">
+        <h1 className="text-8xl font-bold text-red-500">504</h1>
+        <h2 className="text-3xl md:text-4xl font-bold text-red-400">Erro 504: Eu te falei que não era para clicar muitas vezes</h2>
+        <p className="text-lg text-[var(--theme-text-secondary)]">
+          {isLocked
+            ? `Timeout ativo por 1 hora. Tempo restante: ${formatRemaining(remainingMs)}`
+            : 'Timeout encerrado. Você já pode voltar ao EchoFrame.'}
+        </p>
+        <button
+          onClick={onNavigate}
+          className="px-8 py-3 bg-red-600 text-white rounded font-bold hover:brightness-110 transition-all text-lg"
+        >
+          {isLocked ? 'VOLTAR E REFLETIR' : 'VOLTAR AO ECHOFRAME'}
+        </button>
+      </div>
+    </div>
+  );
+};

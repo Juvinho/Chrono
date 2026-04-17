@@ -60,9 +60,13 @@ export function MessagesSidebar() {
 
     const isStillVisible = filteredConversations.some((conversation) => conversation.id === pendingConversationId);
     if (!isStillVisible) {
+      if (selectedConversationId === pendingConversationId) {
+        setSelectedConversation(null);
+        setMobileView('list');
+      }
       setPendingConversationId(null);
     }
-  }, [filteredConversations, pendingConversationId]);
+  }, [filteredConversations, pendingConversationId, selectedConversationId, setSelectedConversation]);
 
   const handleSelectConversation = (id: number | string) => {
     setPendingConversationId(id);

@@ -14,6 +14,8 @@ interface ChatAreaProps {
 const ChatArea: React.FC<ChatAreaProps> = ({ conversationId }) => {
   const { t } = useTranslation();
   const { isOnline } = usePresence();
+  const { conversations } = useConversations();
+  const currentConversation = conversations.find(c => c.id === conversationId);
   
   const {
     messages,
@@ -21,15 +23,12 @@ const ChatArea: React.FC<ChatAreaProps> = ({ conversationId }) => {
     isSending,
     error,
     sendMessage,
-  } = useMessages(conversationId);
-  
-  const { conversations } = useConversations();
+  } = useMessages(conversationId, {
+    targetUserId: currentConversation?.otherUser?.id,
+  });
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const previousLengthRef = useRef<number>(0);
-
-  // Find current conversation
-  const currentConversation = conversations.find(c => c.id === conversationId);
 
   // Auto-scroll only when NEW messages arrive (not on load)
   const scrollToBottom = () => {

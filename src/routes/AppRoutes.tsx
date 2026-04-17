@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-do
 import { User, Page, Post, Conversation, Notification, MediaObject, PostUpdateData, ReactionData, CyberpunkReaction } from '../types';
 import { SplitLayout } from '../layouts/SplitLayout';
 import { FeedContent } from '../components/FeedContent';
-import { Error404, Error500, Error403, Error429, Error503, ErrorTimeout } from '../components/ErrorPages';
+import { Error404, Error500, Error403, Error429, Error503, ErrorTimeout, Error504Echo } from '../components/ErrorPages';
 import { ErrorTestPage } from '../components/ErrorTestPage';
 import Header from '../components/ui/Header';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
@@ -480,6 +480,7 @@ export default function AppRoutes(props: AppRoutesProps) {
             <Route path="/error/500" element={<Error500 onNavigate={() => handleNavigate(Page.Dashboard)} />} />
             <Route path="/error/403" element={<Error403 onNavigate={() => handleNavigate(Page.Dashboard)} />} />
             <Route path="/error/429" element={<Error429 onNavigate={() => handleNavigate(Page.Dashboard)} />} />
+            <Route path="/error/504" element={<Error504Echo onNavigate={() => handleNavigate(Page.Dashboard)} />} />
             <Route path="/error/503" element={<Error503 onNavigate={() => handleNavigate(Page.Dashboard)} />} />
             <Route path="/error/timeout" element={<ErrorTimeout onNavigate={() => handleNavigate(Page.Dashboard)} />} />
 

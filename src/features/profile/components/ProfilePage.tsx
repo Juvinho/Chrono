@@ -435,8 +435,21 @@ export default function ProfilePage({
     // Reopen from cache to avoid unnecessary init requests on repeated toggles.
     const cachedConversation = cachedDirectConversations[profileUserKey];
     if (cachedConversation) {
-      openChat(cachedConversation);
-      return;
+      const stillExists = conversations.some((conversation) => String(conversation.id) === String(cachedConversation.id));
+      if (!stillExists) {
+        console.warn('⚠️ Conversa em cache está desatualizada. Recriando conversa...', {
+          cachedId: cachedConversation.id,
+          profileUser: profileUser.username,
+        });
+        setCachedDirectConversations((prev) => {
+          const next = { ...prev };
+          delete next[profileUserKey];
+          return next;
+        });
+      } else {
+        openChat(cachedConversation);
+        return;
+      }
     }
     
     try {

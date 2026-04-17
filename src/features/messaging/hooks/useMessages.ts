@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Message, SendMessageRequest } from '../types';
-import { getMessages, sendMessage } from '../api/messagingApi';
+import { getMessages, sendMessage, initConversation } from '../api/messagingApi';
 import { useSound } from '../../../contexts/SoundContext';
 import { useMessageNotification } from '../../../contexts/MessageNotificationContext';
 import { useSocketMessages } from './useSocketMessages';
@@ -18,7 +18,18 @@ const isLegacyId = (id: unknown): boolean => {
   return /^\d+$/.test(idStr);
 };
 
-export function useMessages(conversationId: number | string | null) {
+const isConversationNotFoundError = (err: unknown): boolean => {
+  const msg = String((err as any)?.message || (err as any)?.error || '').toLowerCase();
+  return msg.includes('conversation not found') || msg.includes('conversa não encontrada');
+};
+
+interface UseMessagesOptions {
+  targetUserId?: string;
+}
+
+export function useMessages(conversationId: number | string | null, options: UseMessagesOptions = {}) {
+  const { targetUserId } = options;
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(conversationId ? String(conversationId) : null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -29,17 +40,21 @@ export function useMessages(conversationId: number | string | null) {
   
   const { playSound } = useSound();
   const { incrementUnread, isPageVisible } = useMessageNotification();
-  const { setOnNewMessage } = useSocketMessages(conversationId);
+  const { setOnNewMessage } = useSocketMessages(activeConversationId);
   const { user } = useAuth();
+
+  useEffect(() => {
+    setActiveConversationId(conversationId ? String(conversationId) : null);
+  }, [conversationId]);
 
   // Carrega mensagens com debounce
   const fetchMessages = useCallback(async () => {
-    if (!conversationId || isFetchingRef.current) {
+    if (!activeConversationId || isFetchingRef.current) {
       return;
     }
 
     // SECURITY FIX C-14: Reject legacy numeric conversation IDs
-    const idStr = String(conversationId);
+    const idStr = String(activeConversationId);
     if (isLegacyId(idStr)) {
       console.error(`❌ Legacy conversation ID detected: ${idStr}. Refusing to load messages.`);
       setError(`ID de conversa inválido: ${idStr}. Por favor, selecione uma conversa válida.`);
@@ -62,7 +77,7 @@ export function useMessages(conversationId: number | string | null) {
 
     try {
       // Always coerce to string — the API route expects a UUID string
-      const idStr = String(conversationId);
+      const idStr = String(activeConversationId);
       console.log(`📨 Buscando mensagens para conversa ID: ${idStr}`);
       const data = await getMessages(idStr);
       console.log(`✅ Mensagens carregadas:`, {
@@ -86,6 +101,23 @@ export function useMessages(conversationId: number | string | null) {
       setMessages(data);
       setError(null);
     } catch (err: any) {
+      if (isConversationNotFoundError(err) && targetUserId && isValidUUID(targetUserId)) {
+        try {
+          console.warn('⚠️ Conversation not found on fetch. Recovering conversation via initConversation...', {
+            activeConversationId,
+            targetUserId,
+          });
+          const recovered = await initConversation(targetUserId);
+          if (recovered?.id && isValidUUID(String(recovered.id))) {
+            setActiveConversationId(String(recovered.id));
+            setError(null);
+            return;
+          }
+        } catch (recoveryError) {
+          console.error('❌ Failed to recover conversation on fetch:', recoveryError);
+        }
+      }
+
       console.error('❌ Erro ao carregar mensagens:', err);
       // Show detailed error in development, generic message in production
       const errorMessage = process.env.NODE_ENV === 'development' 
@@ -96,33 +128,36 @@ export function useMessages(conversationId: number | string | null) {
       isFetchingRef.current = false;
       setIsLoading(false);
     }
-  }, [conversationId, playSound, incrementUnread, isPageVisible]);
+  }, [activeConversationId, targetUserId, playSound, incrementUnread, isPageVisible]);
 
   // Envia mensagem
   const handleSendMessage = async (content: string, imageUrl?: string) => {
+    const normalizedContent = typeof content === 'string' ? content : '';
+    const trimmedContent = normalizedContent.trim();
+
     // Permite enviar se tem conteúdo OU imagem
-    if (!conversationId || (!content.trim() && !imageUrl)) {
+    if (!activeConversationId || (!trimmedContent && !imageUrl)) {
       console.warn('⚠️ Cannot send message:', {
-        hasConversationId: !!conversationId,
-        conversationId,
-        contentValid: content.trim().length > 0,
+        hasConversationId: !!activeConversationId,
+        conversationId: activeConversationId,
+        contentValid: trimmedContent.length > 0,
         hasImage: !!imageUrl
       });
       return;
     }
 
+    const request: SendMessageRequest = {
+      conversationId: String(activeConversationId),
+      content: trimmedContent,
+      ...(imageUrl && { imageUrl }),
+    };
+
     try {
       setIsSending(true);
       
-      const request: SendMessageRequest = {
-        conversationId: String(conversationId),
-        content: content.trim(),
-        ...(imageUrl && { imageUrl }),
-      };
-      
       console.log('📤 Sending message:', {
-        conversationId,
-        contentLength: content.trim().length,
+        conversationId: activeConversationId,
+        contentLength: trimmedContent.length,
         hasImage: !!imageUrl,
         request
       });
@@ -141,13 +176,52 @@ export function useMessages(conversationId: number | string | null) {
         previousMessagesLengthRef.current = next.length;
         return next;
       });
+
+      setError(null);
       
       console.log('✅ Mensagem enviada:', newMessage.id);
     } catch (err: any) {
+      if (isConversationNotFoundError(err) && targetUserId && isValidUUID(targetUserId)) {
+        try {
+          console.warn('⚠️ Conversation not found on send. Recovering and retrying...', {
+            activeConversationId,
+            targetUserId,
+          });
+
+          const recovered = await initConversation(targetUserId);
+          const recoveredId = recovered?.id ? String(recovered.id) : '';
+          if (isValidUUID(recoveredId)) {
+            setActiveConversationId(recoveredId);
+
+            const retriedMessage = await sendMessage({
+              ...request,
+              conversationId: recoveredId,
+            });
+
+            playSound('message_send');
+
+            setMessages((prev) => {
+              if (prev.some((m) => m.id === retriedMessage.id)) {
+                return prev;
+              }
+              const next = [...prev, retriedMessage];
+              previousMessagesLengthRef.current = next.length;
+              return next;
+            });
+
+            setError(null);
+            console.log('✅ Mensagem enviada após recuperar conversa:', retriedMessage.id);
+            return;
+          }
+        } catch (recoveryError) {
+          console.error('❌ Failed to recover conversation on send:', recoveryError);
+        }
+      }
+
       console.error('❌ Erro ao enviar mensagem:', {
         message: err?.message,
         error: err,
-        conversationId
+        conversationId: activeConversationId
       });
       throw err;
     } finally {
@@ -157,7 +231,7 @@ export function useMessages(conversationId: number | string | null) {
 
   // Inicia carregamento inicial e listeners Socket.io
   useEffect(() => {
-    if (!conversationId) {
+    if (!activeConversationId) {
       return;
     }
 
@@ -174,7 +248,7 @@ export function useMessages(conversationId: number | string | null) {
 
     // Setup Socket.io listener for new messages (I-10: replaces polling)
     setOnNewMessage((newMessage: Message) => {
-      if (String(newMessage.conversationId) !== String(conversationId)) {
+      if (String(newMessage.conversationId) !== String(activeConversationId)) {
         return;
       }
 
@@ -207,7 +281,7 @@ export function useMessages(conversationId: number | string | null) {
     return () => {
       // Cleanup handled by useSocketMessages hook
     };
-  }, [conversationId, setOnNewMessage, user, playSound, incrementUnread, isPageVisible]);
+  }, [activeConversationId, setOnNewMessage, user, playSound, incrementUnread, isPageVisible]);
 
   return {
     messages,

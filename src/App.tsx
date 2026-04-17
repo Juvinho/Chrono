@@ -28,6 +28,94 @@ const Marketplace = React.lazy(() => import('./features/marketplace/components/M
 // Chat system removed
 const GlitchiOverlay = React.lazy(() => import('./features/companion/components/GlitchiOverlay'));
 
+const ECHO_SPAM_COUNTER_KEY = 'chrono_echo_spam_counter_v1';
+const ECHO_SPAM_TIMEOUT_KEY = 'chrono_echo_spam_timeout_until_v1';
+const ECHO_SPAM_RESET_WINDOW_MS = 10 * 60 * 1000;
+const ECHO_SPAM_TIMEOUT_MS = 60 * 60 * 1000;
+
+type EchoSpamState = {
+    postId: string;
+    count: number;
+    lastAttemptAt: number;
+};
+
+const readEchoSpamState = (): EchoSpamState | null => {
+    try {
+        const raw = localStorage.getItem(ECHO_SPAM_COUNTER_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw) as EchoSpamState;
+        if (!parsed || !parsed.postId || typeof parsed.count !== 'number' || typeof parsed.lastAttemptAt !== 'number') {
+            localStorage.removeItem(ECHO_SPAM_COUNTER_KEY);
+            return null;
+        }
+        return parsed;
+    } catch {
+        localStorage.removeItem(ECHO_SPAM_COUNTER_KEY);
+        return null;
+    }
+};
+
+const writeEchoSpamState = (state: EchoSpamState): void => {
+    try {
+        localStorage.setItem(ECHO_SPAM_COUNTER_KEY, JSON.stringify(state));
+    } catch {
+        // Ignore storage errors
+    }
+};
+
+const clearEchoSpamState = (): void => {
+    try {
+        localStorage.removeItem(ECHO_SPAM_COUNTER_KEY);
+    } catch {
+        // Ignore storage errors
+    }
+};
+
+const getEchoSpamTimeoutUntil = (): number => {
+    try {
+        const raw = localStorage.getItem(ECHO_SPAM_TIMEOUT_KEY);
+        const until = raw ? parseInt(raw, 10) : 0;
+        if (!until || Number.isNaN(until)) return 0;
+        if (until <= Date.now()) {
+            localStorage.removeItem(ECHO_SPAM_TIMEOUT_KEY);
+            return 0;
+        }
+        return until;
+    } catch {
+        return 0;
+    }
+};
+
+const setEchoSpamTimeout = (): number => {
+    const until = Date.now() + ECHO_SPAM_TIMEOUT_MS;
+    try {
+        localStorage.setItem(ECHO_SPAM_TIMEOUT_KEY, String(until));
+        localStorage.removeItem(ECHO_SPAM_COUNTER_KEY);
+    } catch {
+        // Ignore storage errors
+    }
+    return until;
+};
+
+const registerEchoSpamAttempt = (postId: string): number => {
+    const now = Date.now();
+    const current = readEchoSpamState();
+
+    if (!current || current.postId !== postId || (now - current.lastAttemptAt) > ECHO_SPAM_RESET_WINDOW_MS) {
+        const next: EchoSpamState = { postId, count: 1, lastAttemptAt: now };
+        writeEchoSpamState(next);
+        return next.count;
+    }
+
+    const next: EchoSpamState = {
+        ...current,
+        count: current.count + 1,
+        lastAttemptAt: now,
+    };
+    writeEchoSpamState(next);
+    return next.count;
+};
+
 function App() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -386,7 +474,8 @@ function App() {
     };
 
     const handleNewPost = async (post: Post) => {
-        console.log('[handleNewPost] 📬 Novo post:', post.id, post.content.substring(0, 50));
+        const postPreview = typeof post.content === 'string' ? post.content.substring(0, 50) : '[sem texto]';
+        console.log('[handleNewPost] 📬 Novo post:', post.id, postPreview);
         
         if (post.author.username === currentUser?.username) {
             playSound('post');
@@ -450,14 +539,59 @@ function App() {
         if (!echoer) return;
         if (postToEcho.repostOf) return; 
 
+        const isCurrentUserEcho = echoer.username === currentUser?.username;
+
+        if (isCurrentUserEcho) {
+            const timeoutUntil = getEchoSpamTimeoutUntil();
+            if (timeoutUntil > Date.now()) {
+                showToast('Timeout ativo: você não pode ecoar por 1 hora.', 'error');
+                navigate('/error/504');
+                return;
+            }
+        }
+
         try {
             const result = await apiClient.echoPost(postToEcho.id);
             if (result.error) {
-                if (echoer.username === currentUser?.username) showToast(result.error, 'error');
+                if (isCurrentUserEcho) {
+                    const normalizedError = String(result.error).toLowerCase();
+                    const isRepeatedEchoError =
+                        normalizedError.includes('já ecoou') ||
+                        normalizedError.includes('limite') ||
+                        normalizedError.includes('ratelimit') ||
+                        normalizedError.includes('muito rápido');
+
+                    if (isRepeatedEchoError) {
+                        const attemptCount = registerEchoSpamAttempt(postToEcho.id);
+
+                        if (attemptCount >= 11) {
+                            setEchoSpamTimeout();
+                            showToast('Erro 504: Eu te falei que não era para clicar muitas vezes.', 'error');
+                            navigate('/error/504');
+                            return;
+                        }
+
+                        if (attemptCount >= 10) {
+                            showToast('Se você ecoar de novo, você vai ver.', 'error');
+                            return;
+                        }
+
+                        if (attemptCount >= 5) {
+                            showToast('Eu já te disse, você ecoou demais esse post.', 'error');
+                            return;
+                        }
+
+                        showToast('Você já ecoou isso.', 'error');
+                        return;
+                    }
+
+                    showToast(result.error, 'error');
+                }
                 return;
             }
             
-            if (echoer.username === currentUser.username) {
+            if (echoer.username === currentUser?.username) {
+                clearEchoSpamState();
                 playSound('notification');
                 showToast('Post ecoado! 🔊', 'success');
             }
