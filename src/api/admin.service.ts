@@ -1,5 +1,5 @@
 import { API_BASE_URL } from './client.js';
-import { AdminUser, AdminOverallStats } from '../types/admin.js';
+import { AdminUser, AdminOverallStats, AdminReport, AdminReportStats, ReportStatus } from '../types/admin.js';
 
 export const adminUserService = {
   async getAllUsers(token: string): Promise<AdminUser[]> {
@@ -132,5 +132,59 @@ export const adminUserService = {
 
     const data = await response.json();
     return data.stats;
+  },
+};
+
+export const adminReportService = {
+  async getReports(token: string, status: ReportStatus | 'all' = 'all'): Promise<AdminReport[]> {
+    const query = status && status !== 'all' ? `?status=${encodeURIComponent(status)}` : '';
+    const response = await fetch(`${API_BASE_URL}/admin/reports${query}`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch reports');
+    }
+
+    const data = await response.json();
+    return Array.isArray(data.reports) ? data.reports : [];
+  },
+
+  async getStats(token: string): Promise<AdminReportStats> {
+    const response = await fetch(`${API_BASE_URL}/admin/reports/stats`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch report stats');
+    }
+
+    const data = await response.json();
+    return data.stats as AdminReportStats;
+  },
+
+  async updateStatus(reportId: string, status: ReportStatus, token: string) {
+    const response = await fetch(`${API_BASE_URL}/admin/reports/${reportId}/status`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update report status');
+    }
+
+    return await response.json();
   },
 };

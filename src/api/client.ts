@@ -44,7 +44,141 @@ export interface ApiResponse<T> {
   errorData?: unknown;
 }
 
-let globalRateLimitUntil = 0;
+const CLIENT_ID_STORAGE_KEY = 'chrono_client_id_v1';
+const RATE_LIMIT_STORAGE_KEY = 'chrono_rate_limit_v1';
+const DEFAULT_RATE_LIMIT_MS = 5000;
+
+type RateLimitMap = Record<string, number>;
+
+const getRateLimitBucket = (method: string, endpoint: string): string => {
+  const normalizedEndpoint = endpoint.split('?')[0].toLowerCase();
+
+  if (method === 'POST' && normalizedEndpoint === '/auth/login') {
+    return 'auth:login';
+  }
+
+  if (method === 'POST' && normalizedEndpoint === '/auth/register') {
+    return 'auth:register';
+  }
+
+  if (method === 'POST' && normalizedEndpoint === '/auth/resend-verification') {
+    return 'auth:resend-verification';
+  }
+
+  return 'global';
+};
+
+const parseRetryAfterMs = (retryAfterHeader: string | null): number => {
+  if (!retryAfterHeader) {
+    return DEFAULT_RATE_LIMIT_MS;
+  }
+
+  const seconds = Number.parseInt(retryAfterHeader, 10);
+  if (Number.isFinite(seconds) && seconds > 0) {
+    return seconds * 1000;
+  }
+
+  const retryAt = Date.parse(retryAfterHeader);
+  if (!Number.isNaN(retryAt)) {
+    return Math.max(retryAt - Date.now(), DEFAULT_RATE_LIMIT_MS);
+  }
+
+  return DEFAULT_RATE_LIMIT_MS;
+};
+
+const readRateLimitMap = (): RateLimitMap => {
+  if (typeof window === 'undefined') {
+    return {};
+  }
+
+  try {
+    const raw = localStorage.getItem(RATE_LIMIT_STORAGE_KEY);
+    if (!raw) {
+      return {};
+    }
+
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object') {
+      return parsed as RateLimitMap;
+    }
+  } catch (_error) {
+    // Ignore malformed storage values and reset cache in memory.
+  }
+
+  return {};
+};
+
+const persistRateLimitMap = (map: RateLimitMap) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    localStorage.setItem(RATE_LIMIT_STORAGE_KEY, JSON.stringify(map));
+  } catch (_error) {
+    // Ignore storage write failures (private mode/quota limits).
+  }
+};
+
+let rateLimitUntilByBucket: RateLimitMap = readRateLimitMap();
+let cachedClientId: string | null = null;
+
+const getOrCreateClientId = (): string => {
+  if (cachedClientId) {
+    return cachedClientId;
+  }
+
+  if (typeof window === 'undefined') {
+    cachedClientId = 'server-runtime';
+    return cachedClientId;
+  }
+
+  try {
+    const existing = localStorage.getItem(CLIENT_ID_STORAGE_KEY);
+    if (existing && existing.trim().length > 0) {
+      cachedClientId = existing.trim();
+      return cachedClientId;
+    }
+  } catch (_error) {
+    // Ignore storage read errors and generate a runtime id.
+  }
+
+  const generated =
+    window.crypto?.randomUUID?.() ||
+    `cid-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+  cachedClientId = generated;
+
+  try {
+    localStorage.setItem(CLIENT_ID_STORAGE_KEY, generated);
+  } catch (_error) {
+    // Ignore storage write failures.
+  }
+
+  return generated;
+};
+
+const getRemainingCooldownMs = (bucket: string): number => {
+  const now = Date.now();
+  const bucketUntil = rateLimitUntilByBucket[bucket] || 0;
+  const globalUntil = rateLimitUntilByBucket.global || 0;
+  const effectiveUntil = Math.max(bucketUntil, globalUntil);
+  return effectiveUntil > now ? effectiveUntil - now : 0;
+};
+
+const storeCooldown = (bucket: string, retryAfterMs: number) => {
+  const until = Date.now() + retryAfterMs;
+  rateLimitUntilByBucket[bucket] = until;
+
+  const now = Date.now();
+  Object.keys(rateLimitUntilByBucket).forEach((key) => {
+    if (rateLimitUntilByBucket[key] <= now) {
+      delete rateLimitUntilByBucket[key];
+    }
+  });
+
+  persistRateLimitMap(rateLimitUntilByBucket);
+};
 
 export class ApiClient {
   /**
@@ -71,19 +205,28 @@ export class ApiClient {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
-    const now = Date.now();
-    if (now < globalRateLimitUntil) {
-      return { error: 'rateLimitError', retryAfter: globalRateLimitUntil - now };
+    const method = (options.method || 'GET').toUpperCase();
+    const rateLimitBucket = getRateLimitBucket(method, endpoint);
+    const remainingCooldownMs = getRemainingCooldownMs(rateLimitBucket);
+
+    if (remainingCooldownMs > 0) {
+      return {
+        error: 'rateLimitError',
+        retryAfter: remainingCooldownMs,
+        status: 429,
+      };
     }
+
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...options.headers,
     };
 
+    headers['X-Client-Id'] = getOrCreateClientId();
+
     // No Authorization header needed — httpOnly cookie is sent automatically via credentials: 'include'
 
     // CSRF Protection: attach token from cookie to header on mutation requests
-    const method = (options.method || 'GET').toUpperCase();
     if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
       const csrfToken = getCookie('csrf_token');
       if (csrfToken) {
@@ -111,10 +254,9 @@ export class ApiClient {
 
       if (!response.ok) {
         if (response.status === 429) {
-          const retryAfter = response.headers.get('Retry-After');
-          const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 5000;
+          const waitTime = parseRetryAfterMs(response.headers.get('Retry-After'));
           console.warn(`Rate limited (429). Server suggests waiting ${waitTime}ms`);
-          globalRateLimitUntil = Date.now() + waitTime;
+          storeCooldown(rateLimitBucket, waitTime);
           return { error: 'rateLimitError', retryAfter: waitTime, status: 429 };
         }
         const errBody = await response.json().catch(() => ({}));

@@ -16,10 +16,26 @@ router.post('/login', async (req: Request, res: Response) => {
     });
   }
 
+  if (!adminConfig.hasConfiguredIdentity()) {
+    return res.status(503).json({
+      error: 'Admin identity is not configured',
+      code: 'ADMIN_IDENTITY_NOT_CONFIGURED',
+    });
+  }
+
   try {
-    const { password, userId } = req.body;
+    const { username, password } = req.body;
+
+    const normalizedUsername = String(username || '').trim().toLowerCase();
 
     // Validação básica
+    if (!normalizedUsername) {
+      return res.status(400).json({
+        error: 'Username required',
+        code: 'USERNAME_REQUIRED',
+      });
+    }
+
     if (!password) {
       return res.status(400).json({
         error: 'Password required',
@@ -44,22 +60,25 @@ router.post('/login', async (req: Request, res: Response) => {
       });
     }
 
-    // Busca dados do usuário admin no DB
-    // Se houver userId, usa especificamente; senão pega o @Juvinho ou @Chrono
-    const userIdToUse = userId;
-    
-    let result;
-    if (userIdToUse) {
-      result = await pool.query(
-        'SELECT id, username, display_name FROM users WHERE id::text = $1',
-        [userIdToUse.toString()]
-      );
-    } else {
-      // Busca primeiro usuário (criador do sistema)
-      result = await pool.query(
-        'SELECT id, username, display_name FROM users ORDER BY created_at ASC LIMIT 1'
-      );
+    // If username is configured for admin account, enforce it strictly
+    if (adminConfig.adminUsername && normalizedUsername !== adminConfig.adminUsername) {
+      console.warn('🚨 [SECURITY] Invalid admin username attempt', {
+        attemptedUsername: normalizedUsername,
+        timestamp: new Date().toISOString(),
+        ip: req.ip,
+      });
+
+      return res.status(401).json({
+        error: 'Invalid admin credentials',
+        code: 'INVALID_ADMIN_CREDENTIALS',
+      });
     }
+
+    // Busca dados do usuário admin dedicado no DB
+    const result = await pool.query(
+      'SELECT id, username, display_name, email, avatar FROM users WHERE LOWER(username) = LOWER($1) LIMIT 1',
+      [normalizedUsername]
+    );
 
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -70,6 +89,27 @@ router.post('/login', async (req: Request, res: Response) => {
 
     const user = result.rows[0];
 
+    const expectedIdentity = adminConfig.isExpectedAdminIdentity({
+      userId: user.id,
+      username: user.username,
+      email: user.email,
+    });
+
+    if (!expectedIdentity) {
+      console.warn('🚨 [SECURITY] Admin identity mismatch', {
+        configuredIdentity: adminConfig.getAdminIdentityLabel(),
+        attemptedUserId: user.id,
+        attemptedUsername: user.username,
+        timestamp: new Date().toISOString(),
+        ip: req.ip,
+      });
+
+      return res.status(403).json({
+        error: 'Admin identity mismatch',
+        code: 'ADMIN_IDENTITY_MISMATCH',
+      });
+    }
+
     // Gera token JWT especial para admin
     const sessionId = crypto.randomUUID();
     
@@ -77,6 +117,7 @@ router.post('/login', async (req: Request, res: Response) => {
       {
         userId: user.id,
         username: user.username,
+        email: user.email,
         isAdmin: true,
         sessionId,
       },
@@ -103,7 +144,7 @@ router.post('/login', async (req: Request, res: Response) => {
         id: user.id,
         username: user.username,
         displayName: user.display_name,
-        avatarUrl: user.avatar_url,
+        avatarUrl: user.avatar,
         sessionId,
       },
       expiresIn: adminConfig.sessionDuration * 3600, // Em segundos
@@ -139,12 +180,21 @@ router.get('/verify', (req: Request, res: Response) => {
 
     const token = authHeader.substring(7);
     const decoded = jwt.verify(token, adminConfig.jwtSecret) as {
-      userId: number;
+      userId: string;
       username: string;
+      email?: string;
       isAdmin: boolean;
     };
 
     if (!decoded.isAdmin) {
+      return res.status(403).json({ valid: false });
+    }
+
+    if (!adminConfig.isExpectedAdminIdentity({
+      userId: decoded.userId,
+      username: decoded.username,
+      email: decoded.email,
+    })) {
       return res.status(403).json({ valid: false });
     }
 

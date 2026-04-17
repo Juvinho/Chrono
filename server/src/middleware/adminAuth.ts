@@ -7,7 +7,7 @@ declare global {
   namespace Express {
     interface Request {
       adminUser?: {
-        id: number;
+        id: string;
         username: string;
         isAdmin: true;
         sessionId: string;
@@ -41,8 +41,9 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
 
     // Verifica token
     const decoded = jwt.verify(token, adminConfig.jwtSecret) as {
-      userId: number;
+      userId: string;
       username: string;
+      email?: string;
       isAdmin: boolean;
       sessionId: string;
     };
@@ -55,9 +56,20 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction) {
       });
     }
 
+    if (!adminConfig.isExpectedAdminIdentity({
+      userId: decoded.userId,
+      username: decoded.username,
+      email: decoded.email,
+    })) {
+      return res.status(403).json({
+        error: 'Admin identity mismatch',
+        code: 'ADMIN_IDENTITY_MISMATCH',
+      });
+    }
+
     // Adiciona dados admin na request
     req.adminUser = {
-      id: decoded.userId,
+      id: String(decoded.userId),
       username: decoded.username,
       isAdmin: true,
       sessionId: decoded.sessionId,

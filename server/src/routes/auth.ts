@@ -108,6 +108,23 @@ const DISPOSABLE_DOMAINS = new Set([
   'temp-mail.org', 'temp-mail.io', 'maildrop.cc'
 ]);
 
+const USERNAME_REGEX = /^[a-zA-Z0-9_-]+$/;
+
+const getUniqueConflictField = (error: any): 'username' | 'email' | null => {
+  const detail = String(error?.detail || '').toLowerCase();
+  const constraint = String(error?.constraint || '').toLowerCase();
+
+  if (detail.includes('(username)') || constraint.includes('username')) {
+    return 'username';
+  }
+
+  if (detail.includes('(email)') || constraint.includes('email')) {
+    return 'email';
+  }
+
+  return null;
+};
+
 // Shared validation helpers
 const validateEmail = async (email: string) => {
     if (!email) return { valid: false, error: 'Email required' };
@@ -150,28 +167,28 @@ const validateEmail = async (email: string) => {
 router.post('/check-username', async (req, res) => {
   try {
     const { username } = req.body;
+  const normalizedUsername = String(username || '').trim();
     
-    if (!username) return res.status(400).json({ error: 'Username required' });
+  if (!normalizedUsername) return res.status(400).json({ error: 'Username required' });
 
     // Explicit Emoji Validation (as requested)
-    const emojiValidation = validateNoEmojis(username, 'Nome de usuário');
+  const emojiValidation = validateNoEmojis(normalizedUsername, 'Nome de usuário');
     if (!emojiValidation.valid) {
         return res.json({ available: false, error: emojiValidation.error });
     }
     
     // Regex validation: Letters, numbers, underscores, hyphens only
-    const usernameRegex = /^[a-zA-Z0-9_-]+$/;
-    if (!usernameRegex.test(username)) {
+  if (!USERNAME_REGEX.test(normalizedUsername)) {
        return res.json({ available: false, error: 'Username can only contain letters, numbers, underscores, and hyphens.' });
     }
 
-    const user = await userService.getUserByUsername(username);
+  const user = await userService.getUserByUsername(normalizedUsername);
     if (user) {
         // Suggest alternatives
         const suggestions = [
-            `${username}_${Math.floor(Math.random() * 100)}`,
-            `${username}${new Date().getFullYear()}`,
-            `real_${username}`
+      `${normalizedUsername}_${Math.floor(Math.random() * 100)}`,
+      `${normalizedUsername}${new Date().getFullYear()}`,
+      `real_${normalizedUsername}`
         ];
         return res.json({ available: false, error: 'Username already taken', suggestions });
     }
@@ -186,14 +203,15 @@ router.post('/check-username', async (req, res) => {
 router.post('/check-email', async (req, res) => {
   try {
     const { email } = req.body;
-    const validation = await validateEmail(email);
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  const validation = await validateEmail(normalizedEmail);
     
     if (!validation.valid) {
         return res.json(validation);
     }
 
     // Check if email is already registered
-    const existingEmail = await userService.getUserByEmail(email);
+  const existingEmail = await userService.getUserByEmail(normalizedEmail);
     if (existingEmail) {
         return res.json({ valid: false, error: 'Email already registered' });
     }
@@ -208,28 +226,35 @@ router.post('/check-email', async (req, res) => {
 router.post('/register', async (req, res) => {
   try {
     const { username, email, password, avatar, captchaToken } = req.body;
+    const normalizedUsername = String(username || '').trim();
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const normalizedPassword = typeof password === 'string' ? password : '';
 
-    if (!username || !email || !password) {
+    if (!normalizedUsername || !normalizedEmail || !normalizedPassword) {
       return res.status(400).json({ error: 'Username, email, and password are required' });
     }
 
-    if (password.length < 6) {
+    if (normalizedPassword.length < 6) {
       return res.status(400).json({ error: 'Password must be at least 6 characters' });
     }
 
     // Validation: Username cannot contain spaces
-    if (username.includes(' ')) {
+    if (normalizedUsername.includes(' ')) {
       return res.status(400).json({ error: 'Username cannot contain spaces' });
     }
 
     // Validation: No emojis in username
-    const usernameEmojiValidation = validateNoEmojis(username, 'Nome de usuário');
+    const usernameEmojiValidation = validateNoEmojis(normalizedUsername, 'Nome de usuário');
     if (!usernameEmojiValidation.valid) {
       return res.status(400).json({ error: usernameEmojiValidation.error });
     }
+
+    if (!USERNAME_REGEX.test(normalizedUsername)) {
+      return res.status(400).json({ error: 'Username can only contain letters, numbers, underscores, and hyphens.' });
+    }
     
     // Rigorous Email Validation
-    const emailValidation = await validateEmail(email);
+    const emailValidation = await validateEmail(normalizedEmail);
     if (!emailValidation.valid) {
         return res.status(400).json({ error: emailValidation.error });
     }
@@ -265,23 +290,23 @@ router.post('/register', async (req, res) => {
 
     // Validation: Prevent registration of system protected usernames
     const systemUsernames = ['juvinho', 'chrono', 'chronobot', 'system', 'admin'];
-    if (systemUsernames.includes(username.toLowerCase())) {
+    if (systemUsernames.includes(normalizedUsername.toLowerCase())) {
       return res.status(400).json({ error: 'This username is reserved by the system.' });
     }
 
     // Check if user already exists
-    const existingUser = await userService.getUserByUsername(username);
+    const existingUser = await userService.getUserByUsername(normalizedUsername);
     if (existingUser) {
-      return res.status(400).json({ error: 'Username already taken' });
+      return res.status(409).json({ error: 'Username already taken', field: 'username' });
     }
 
-    const existingEmail = await userService.getUserByEmail(email);
+    const existingEmail = await userService.getUserByEmail(normalizedEmail);
     if (existingEmail) {
-      return res.status(400).json({ error: 'Email already registered' });
+      return res.status(409).json({ error: 'Email already registered', field: 'email' });
     }
 
     // Create user (email_verified = false by default)
-    const user = await userService.createUser(username, email, password, avatar);
+    const user = await userService.createUser(normalizedUsername, normalizedEmail, normalizedPassword, avatar);
 
     // Send verification email
     try {
@@ -293,9 +318,9 @@ router.post('/register', async (req, res) => {
         const userAgent = req.get('user-agent');
         
         await emailService.sendVerificationEmail(user, ipAddress, userAgent);
-        console.log(`✅ Verification email sent to ${email}`);
+        console.log(`✅ Verification email sent to ${normalizedEmail}`);
       } else {
-        console.warn(`⚠️ Email service not available. User ${email} needs manual verification.`);
+        console.warn(`⚠️ Email service not available. User ${normalizedEmail} needs manual verification.`);
       }
     } catch (emailError) {
       console.error('⚠️ Failed to send verification email:', emailError);
@@ -325,6 +350,19 @@ router.post('/register', async (req, res) => {
     });
   } catch (error: any) {
     console.error('Register error:', error);
+    if (error?.code === '23505') {
+      const conflictField = getUniqueConflictField(error);
+      if (conflictField === 'username') {
+        return res.status(409).json({ error: 'Username already taken', field: 'username' });
+      }
+
+      if (conflictField === 'email') {
+        return res.status(409).json({ error: 'Email already registered', field: 'email' });
+      }
+
+      return res.status(409).json({ error: 'Username or email already in use' });
+    }
+
     res.status(500).json({ error: error.message || 'Registration failed' });
   }
 });

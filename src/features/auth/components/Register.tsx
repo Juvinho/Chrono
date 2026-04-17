@@ -47,6 +47,8 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
     const [isCheckingEmail, setIsCheckingEmail] = useState(false);
     const [isCustomAvatar, setIsCustomAvatar] = useState(false);
     const avatarInputRef = useRef<HTMLInputElement>(null);
+    const latestUsernameCheckRef = useRef(0);
+    const latestEmailCheckRef = useRef(0);
 
     // Form navigation refs (for Enter key navigation)
     const emailRef = useRef<HTMLInputElement>(null);
@@ -57,6 +59,19 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
     // Mock initial frame for preview (optional, or null if new users start with no frame)
     // For now, we assume new users have no frame, but we use the helper to be safe/consistent
     const avatarShape = 'rounded-full'; // Default for new users without frame
+
+    const formatRetryAfterMessage = (retryAfterMs?: number) => {
+        const retryMs = typeof retryAfterMs === 'number' ? retryAfterMs : 0;
+        const totalSeconds = Math.max(1, Math.ceil(retryMs / 1000));
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+
+        if (minutes > 0) {
+            return `Muitas tentativas. Aguarde ${minutes}m ${seconds}s para tentar novamente.`;
+        }
+
+        return `Muitas tentativas. Aguarde ${seconds}s para tentar novamente.`;
+    };
 
     // Generate avatar from initials if not custom
     useEffect(() => {
@@ -93,43 +108,59 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
 
     useEffect(() => {
         const checkUsername = async () => {
-            if (username.length < 3) {
-                if (username.length > 0) setUsernameError(t('errorUsernameTooShort'));
+            const normalizedUsername = username.trim();
+
+            if (normalizedUsername.length < 3) {
+                if (normalizedUsername.length > 0) setUsernameError(t('errorUsernameTooShort'));
                 return;
             }
 
-            const emojiValidation = validateNoEmojis(username, t('registerUsername'));
+            const emojiValidation = validateNoEmojis(normalizedUsername, t('registerUsername'));
             if (!emojiValidation.valid) {
                 setUsernameError(emojiValidation.error);
                 return;
             }
+
+            const checkId = ++latestUsernameCheckRef.current;
 
             setIsCheckingUsername(true);
             setUsernameError('');
             setUsernameSuggestions([]);
             
             try {
-                const response = await apiClient.checkUsername(username);
+                const response = await apiClient.checkUsername(normalizedUsername);
+                if (checkId !== latestUsernameCheckRef.current) {
+                    return;
+                }
+
                 if (response.data && !response.data.available) {
                     setUsernameError(response.data.error || 'Nome de usuário indisponível');
                     if (response.data.suggestions) {
                         setUsernameSuggestions(response.data.suggestions);
                     }
                 } else if (response.error) {
-                     setUsernameError(response.error);
+                    if (response.error === 'rateLimitError') {
+                        setUsernameError(formatRetryAfterMessage(response.retryAfter));
+                    } else {
+                        setUsernameError(response.error);
+                    }
                 }
             } catch (err) {
                 console.error(err);
             } finally {
-                setIsCheckingUsername(false);
+                if (checkId === latestUsernameCheckRef.current) {
+                    setIsCheckingUsername(false);
+                }
             }
         };
 
         const timeoutId = setTimeout(() => {
-            if (username) checkUsername();
+            if (username.trim()) checkUsername();
             else {
+                latestUsernameCheckRef.current += 1;
                 setUsernameError('');
                 setUsernameSuggestions([]);
+                setIsCheckingUsername(false);
             }
         }, 500);
 
@@ -138,31 +169,47 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
 
     useEffect(() => {
         const checkEmail = async () => {
-            if (!email) {
+            const normalizedEmail = email.trim().toLowerCase();
+
+            if (!normalizedEmail) {
+                latestEmailCheckRef.current += 1;
                 setEmailError('');
                 return;
             }
+
             // Basic regex for quick check before API to reduce load
             // RFC 5322 simplified for common emails
-            if (!/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(email)) {
+            if (!/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(normalizedEmail)) {
                 setEmailError(t('errorInvalidEmail') || 'Invalid email format.');
                 return;
             }
+
+            const checkId = ++latestEmailCheckRef.current;
 
             setIsCheckingEmail(true);
             setEmailError('');
             
             try {
-                const response = await apiClient.checkEmail(email);
+                const response = await apiClient.checkEmail(normalizedEmail);
+                if (checkId !== latestEmailCheckRef.current) {
+                    return;
+                }
+
                 if (response.data && !response.data.valid) {
                     setEmailError(response.data.error || t('errorEmailInvalid') || 'Invalid email');
                 } else if (response.error) {
-                    setEmailError(response.error);
+                    if (response.error === 'rateLimitError') {
+                        setEmailError(formatRetryAfterMessage(response.retryAfter));
+                    } else {
+                        setEmailError(response.error);
+                    }
                 }
             } catch (err) {
                 console.error(err);
             } finally {
-                setIsCheckingEmail(false);
+                if (checkId === latestEmailCheckRef.current) {
+                    setIsCheckingEmail(false);
+                }
             }
         };
 
@@ -213,19 +260,85 @@ export default function Register({ users, setUsers, onNavigate, onLogin }: Regis
             return;
         }
 
+        const normalizedUsername = username.trim();
+        const normalizedEmail = email.trim().toLowerCase();
+
+        setIsCheckingUsername(true);
+        setIsCheckingEmail(true);
+
+        try {
+            const [usernameCheck, emailCheck] = await Promise.all([
+                apiClient.checkUsername(normalizedUsername),
+                apiClient.checkEmail(normalizedEmail),
+            ]);
+
+            if (usernameCheck.error) {
+                setError(
+                    usernameCheck.error === 'rateLimitError'
+                        ? formatRetryAfterMessage(usernameCheck.retryAfter)
+                        : usernameCheck.error
+                );
+                return;
+            }
+
+            if (!usernameCheck.data?.available) {
+                setUsernameError(usernameCheck.data?.error || 'Nome de usuário indisponível');
+                setUsernameSuggestions(usernameCheck.data?.suggestions || []);
+                setError('Este nome de usuário já está em uso. Escolha outro para continuar.');
+                return;
+            }
+
+            if (emailCheck.error) {
+                setError(
+                    emailCheck.error === 'rateLimitError'
+                        ? formatRetryAfterMessage(emailCheck.retryAfter)
+                        : emailCheck.error
+                );
+                return;
+            }
+
+            if (!emailCheck.data?.valid) {
+                setEmailError(emailCheck.data?.error || 'Email inválido');
+                setError('Este email não pode ser usado. Corrija para continuar.');
+                return;
+            }
+
+            setUsernameError('');
+            setEmailError('');
+        } finally {
+            setIsCheckingUsername(false);
+            setIsCheckingEmail(false);
+        }
+
         try {
             const response = await apiClient.register({ 
-                username, 
-                email, 
+                username: normalizedUsername, 
+                email: normalizedEmail,
                 password, 
                 avatar: avatar || undefined, 
                 captchaToken
             });
             
             if (response.error) {
+                if (response.error === 'rateLimitError') {
+                    setError(formatRetryAfterMessage(response.retryAfter));
+                    return;
+                }
+
+                const errorData = (response.errorData || {}) as { field?: string; details?: string[]; errorCode?: string };
+
+                if (response.status === 409) {
+                    if (errorData.field === 'username') {
+                        setUsernameError(response.error);
+                    }
+                    if (errorData.field === 'email') {
+                        setEmailError(response.error);
+                    }
+                }
+
                 if (response.error.toLowerCase().includes('hcaptcha')) {
-                    const details = ((response.errorData as any)?.details || []) as string[];
-                    const errorCode = String((response.errorData as any)?.errorCode || '');
+                    const details = (errorData.details || []) as string[];
+                    const errorCode = String(errorData.errorCode || '');
                     setCaptchaToken(null);
                     captchaRef.current?.resetCaptcha();
                     if (errorCode === 'hcaptcha_server_misconfigured') {

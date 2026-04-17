@@ -46,6 +46,85 @@ const reactionIcons: { [key in CyberpunkReaction]: ReactNode } = {
     Static: <StaticIcon className="w-5 h-5" />,
 };
 
+const LINK_COPY_SPAM_COUNTER_KEY = 'chrono_link_copy_spam_counter_v1';
+const LINK_COPY_SPAM_TIMEOUT_KEY = 'chrono_link_copy_spam_timeout_until_v1';
+const LINK_COPY_RESET_WINDOW_MS = 40 * 1000;
+const LINK_COPY_TIMEOUT_MS = 60 * 60 * 1000;
+
+type LinkCopySpamState = {
+    count: number;
+    lastAttemptAt: number;
+};
+
+const readLinkCopySpamState = (): LinkCopySpamState | null => {
+    try {
+        const raw = localStorage.getItem(LINK_COPY_SPAM_COUNTER_KEY);
+        if (!raw) return null;
+
+        const parsed = JSON.parse(raw) as LinkCopySpamState;
+        if (!parsed || typeof parsed.count !== 'number' || typeof parsed.lastAttemptAt !== 'number') {
+            localStorage.removeItem(LINK_COPY_SPAM_COUNTER_KEY);
+            return null;
+        }
+
+        return parsed;
+    } catch {
+        localStorage.removeItem(LINK_COPY_SPAM_COUNTER_KEY);
+        return null;
+    }
+};
+
+const writeLinkCopySpamState = (state: LinkCopySpamState): void => {
+    try {
+        localStorage.setItem(LINK_COPY_SPAM_COUNTER_KEY, JSON.stringify(state));
+    } catch {
+        // Ignore local storage errors.
+    }
+};
+
+const getLinkCopyTimeoutUntil = (): number => {
+    try {
+        const raw = localStorage.getItem(LINK_COPY_SPAM_TIMEOUT_KEY);
+        const until = raw ? parseInt(raw, 10) : 0;
+        if (!until || Number.isNaN(until)) return 0;
+        if (until <= Date.now()) {
+            localStorage.removeItem(LINK_COPY_SPAM_TIMEOUT_KEY);
+            return 0;
+        }
+        return until;
+    } catch {
+        return 0;
+    }
+};
+
+const setLinkCopySpamTimeout = (): void => {
+    const until = Date.now() + LINK_COPY_TIMEOUT_MS;
+    try {
+        localStorage.setItem(LINK_COPY_SPAM_TIMEOUT_KEY, String(until));
+        localStorage.removeItem(LINK_COPY_SPAM_COUNTER_KEY);
+    } catch {
+        // Ignore local storage errors.
+    }
+};
+
+const registerLinkCopyAttempt = (): number => {
+    const now = Date.now();
+    const current = readLinkCopySpamState();
+
+    if (!current || (now - current.lastAttemptAt) > LINK_COPY_RESET_WINDOW_MS) {
+        const next: LinkCopySpamState = { count: 1, lastAttemptAt: now };
+        writeLinkCopySpamState(next);
+        return next.count;
+    }
+
+    const next: LinkCopySpamState = {
+        count: current.count + 1,
+        lastAttemptAt: now,
+    };
+    writeLinkCopySpamState(next);
+    return next.count;
+};
+
 // Função para formatar timestamps relativos
 const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, onUpdateReaction, onReply, onEcho, onDelete, onEdit, onTagClick, onPollVote, onBookmark, onReport, isBookmarked = false, typingParentIds, compact = false, nestingLevel = 0, isThreadedReply = false, isContextualView = false, onPostClick, isNew = false }) => {
     const { t } = useTranslation();
@@ -185,6 +264,42 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
         }
         setShowMenu(false);
     }
+
+    const handleCopyPostLink = async () => {
+        const timeoutUntil = getLinkCopyTimeoutUntil();
+        if (timeoutUntil > Date.now()) {
+            showToast('Erro 505 - Eu já falei que tava copiado, né?', 'error');
+            navigate('/error/505');
+            return;
+        }
+
+        const attemptCount = registerLinkCopyAttempt();
+
+        if (attemptCount >= 11) {
+            setLinkCopySpamTimeout();
+            showToast('Erro 505 - Eu já falei que tava copiado, né?', 'error');
+            navigate('/error/505');
+            return;
+        }
+
+        if (attemptCount === 10) {
+            showToast('Você está querendo o que? Compartilha lá, pô', 'error');
+            return;
+        }
+
+        if (attemptCount >= 5) {
+            showToast('Link já foi copiado... compartilha lá', 'info');
+            return;
+        }
+
+        const url = `${window.location.origin}/post/${postIdMapper.getRandomId(post.id)}`;
+        try {
+            await navigator.clipboard.writeText(url);
+            showToast('Link Copiado com Sucesso', 'success');
+        } catch {
+            showToast('Erro ao copiar link', 'error');
+        }
+    };
     
     const renderContentWithTags = (content: string) => {
         // Regex to match $tags and @mentions, respecting punctuation and word boundaries
@@ -693,14 +808,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, currentUser, onViewProfile, o
                         )}
                     </div>
                     <button 
-                        onClick={() => {
-                            const url = `${window.location.origin}/post/${postIdMapper.getRandomId(post.id)}`;
-                            navigator.clipboard.writeText(url).then(() => {
-                                showToast('Link copiado!', 'success');
-                            }).catch(() => {
-                                showToast('Erro ao copiar link', 'error');
-                            });
-                        }}
+                        onClick={handleCopyPostLink}
                         className="flex items-center space-x-1 hover:text-[var(--theme-secondary)] transition-colors"
                         title="Compartilhar"
                         aria-label="Compartilhar post"

@@ -54,9 +54,11 @@ import adminVerificationRoutes from './routes/admin/verification.js';
 import adminTagsAdminRoutes from './routes/admin/tags-admin.js';
 import adminDashboardRoutes from './routes/admin/dashboard.js';
 import adminAuditLogRoutes from './routes/admin/auditLog.js';
+import adminReportsRoutes from './routes/admin/reports.js';
 import { NotificationService } from './services/notificationService.js';
 import { scheduleTagUpdates } from './services/tagService.js';
 import { scheduleTagUpdateJob } from './jobs/updateUserTags.js';
+import { ensureSecretAdminAccount } from './services/adminBootstrapService.js';
 
 // ============================================================================
 // JWT_SECRET VALIDATION - CRITICAL FOR SECURITY
@@ -394,6 +396,19 @@ const getClientIp = (req: any) => {
   return req.socket.remoteAddress || req.connection.remoteAddress || 'unknown';
 };
 
+const getAuthRateLimitKey = (req: any) => {
+  const ip = getClientIp(req);
+  const rawClientId = req.get('x-client-id');
+  const clientId = typeof rawClientId === 'string' ? rawClientId.trim().slice(0, 128) : '';
+
+  if (clientId) {
+    return `${ip}:${clientId}`;
+  }
+
+  const userAgent = String(req.get('user-agent') || 'unknown').toLowerCase().slice(0, 120);
+  return `${ip}:${userAgent}`;
+};
+
 // QC-04: Sane rate limits — prevent abuse without blocking legitimate users
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,  // 1 minute
@@ -408,7 +423,7 @@ const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10,                   // 10 attempts per 15 min — brute force protection
   message: { error: 'Too many login attempts. Please try again later.' },
-  keyGenerator: getClientIp,
+  keyGenerator: getAuthRateLimitKey,
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -509,6 +524,7 @@ app.use('/api/admin/verification', adminRateLimit, adminVerificationRoutes);
 app.use('/api/admin/tags-admin', adminStrictRateLimit, adminTagsAdminRoutes);
 app.use('/api/admin/dashboard', adminRateLimit, adminDashboardRoutes);
 app.use('/api/admin/audit-log', adminRateLimit, adminAuditLogRoutes);
+app.use('/api/admin/reports', adminRateLimit, adminReportsRoutes);
 
 // Health check
 app.get('/health', async (_req: express.Request, res: express.Response) => {
@@ -674,6 +690,9 @@ const startServer = async () => {
       
       // Check for and warn about legacy conversation IDs
       await fixLegacyConversationIds();
+
+      // Ensure exclusive secret admin account exists and bind admin identity to it
+      await ensureSecretAdminAccount();
     } catch (err: any) {
       console.error('Migration error:', err.message);
     }

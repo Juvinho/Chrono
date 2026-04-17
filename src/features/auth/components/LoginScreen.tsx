@@ -38,6 +38,19 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
     const [isResending, setIsResending] = useState(false);
     const [resendSuccess, setResendSuccess] = useState(false);
 
+    const formatRetryAfterMessage = (retryAfterMs?: number) => {
+        const retryMs = typeof retryAfterMs === 'number' ? retryAfterMs : 0;
+        const totalSeconds = Math.max(1, Math.ceil(retryMs / 1000));
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+
+        if (minutes > 0) {
+            return `Muitas tentativas. Aguarde ${minutes}m ${seconds}s para tentar novamente.`;
+        }
+
+        return `Muitas tentativas. Aguarde ${seconds}s para tentar novamente.`;
+    };
+
     // Form navigation refs (for Enter key navigation)
     const usernameRef = useRef<HTMLInputElement>(null);
     const passwordRef = useRef<HTMLInputElement>(null);
@@ -157,6 +170,14 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
             console.log('API response:', response);
             
             if (response.error) {
+                if (response.error === 'rateLimitError') {
+                    setRequiresEmailVerification(false);
+                    setUnverifiedEmail(null);
+                    setError(formatRetryAfterMessage(response.retryAfter));
+                    setIsLoading(false);
+                    return;
+                }
+
                 if (response.error === 'email_not_verified') {
                     const payload = (response.errorData || {}) as { email?: string; message?: string };
                     const loginValueLooksLikeEmail = username.includes('@') ? username : null;
@@ -241,7 +262,11 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
                 body: JSON.stringify({ email: unverifiedEmail }),
             });
             if (response.error) {
-                setError(response.error);
+                if (response.error === 'rateLimitError') {
+                    setError(formatRetryAfterMessage(response.retryAfter));
+                } else {
+                    setError(response.error);
+                }
             } else {
                 setResendSuccess(true);
                 setError('');
