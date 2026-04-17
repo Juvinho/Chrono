@@ -294,12 +294,16 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
       }).format(postDate)
       : null;
 
-  const containerClass = inline 
-      ? "w-full bg-[var(--theme-bg-primary)] border border-[var(--theme-border-primary)] p-4 rounded-lg mb-6 overflow-x-hidden" 
-      : "modal-content w-full max-w-2xl";
+  const containerClass = inline
+      ? "w-full bg-[var(--theme-bg-primary)] border border-[var(--theme-border-primary)] p-4 rounded-lg mb-6 overflow-x-hidden"
+      : "bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] p-4 animate-[page-enter_0.3s_ease] overflow-x-hidden";
+
+  const composerStyle: React.CSSProperties = inline
+      ? { boxSizing: 'border-box' }
+      : { boxSizing: 'border-box', width: 'min(94vw, 56rem)' };
 
   const contentElement = (
-      <div ref={inline ? null : composerRef} className={containerClass} style={inline ? { boxSizing: 'border-box' } : undefined}>
+    <div ref={inline ? null : composerRef} className={containerClass} style={composerStyle}>
         <div className={`flex justify-between items-center pb-2 border-b border-[var(--theme-border-primary)] ${inline ? 'mb-4' : ''}`}>
           <h2 className="text-lg font-bold text-[var(--theme-text-light)]">{postToEdit ? t('postEditTitle') : t('transmitNewEcho')}</h2>
           {!inline && <button onClick={onClose} className="text-2xl text-[var(--theme-text-secondary)] hover:text-[var(--theme-text-light)]">&times;</button>}
@@ -444,8 +448,8 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
         </div>
         
         <div className="pt-2 border-t border-[var(--theme-border-primary)]">
-            <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
-            <div className="flex items-center gap-1 text-[var(--theme-text-secondary)] min-w-max">
+            <div className="flex items-center justify-between gap-3 max-sm:flex-wrap">
+            <div className="flex items-center gap-1 text-[var(--theme-text-secondary)] flex-nowrap max-sm:w-full overflow-x-auto no-scrollbar">
                 <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" accept="image/*,video/*" />
                 <button onClick={() => fileInputRef.current?.click()} title={t('attachMedia')} className="p-2 hover:text-[var(--theme-primary)] transition-colors"><CameraIcon className="w-6 h-6"/></button>
                  <button onClick={() => setShowImageGenerator(p => !p)} title={t('generateImage')} className={`p-2 transition-colors ${showImageGenerator ? 'text-[var(--theme-primary)]' : 'hover:text-[var(--theme-primary)]'}`}><ImageIcon className="w-6 h-6"/></button>
@@ -487,7 +491,7 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
                     <HourglassIcon className="w-6 h-6"/>
                 </button>
             </div>
-            <div className="ml-auto flex items-center gap-2 min-w-max">
+            <div className="flex items-center gap-2 flex-nowrap max-sm:ml-auto">
                  {isListening && <span className="text-sm text-red-500 animate-pulse hidden md:inline">{t('listening')}</span>}
                  {scheduledAtLabel && (
                     <span className="text-xs text-[var(--theme-secondary)] hidden lg:inline">
