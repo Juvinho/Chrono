@@ -377,7 +377,7 @@ export class ChatService {
       // Insert message with imageUrl if provided
       const result = await pool.query(
         `INSERT INTO messages (conversation_id, sender_id, content, image_url, is_read, created_at)
-         VALUES ($1::text, $2::text, NULLIF(TRIM($3), ''), $4, false, CURRENT_TIMESTAMP)
+         VALUES ($1::uuid, $2::uuid, NULLIF(TRIM($3), ''), $4, false, CURRENT_TIMESTAMP)
          RETURNING id, sender_id, content, image_url, created_at, is_read`,
         [conversationId, senderId, content || '', imageUrl || null]
       );

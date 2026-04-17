@@ -61,7 +61,6 @@ export default function EchoFrame({
     const [activeFilter, setActiveFilter] = useState<'All' | 'Following' | 'Media' | 'Polls'>('All');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [trendingCordoes, setTrendingCordoes] = useState<Array<{ tag: string; mentions: number; displayName: string }>>([]);
-    const [currentDay, setCurrentDay] = useState(new Date().getDate());
     // Bookmark state
     const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
     // Report modal state
@@ -71,26 +70,25 @@ export default function EchoFrame({
     // Removed local timeToRefresh state to prevent re-renders
     // Direct Chat removed from EchoFrame to avoid duplication with Messages module
 
-    // Load trending cordões - re-fetches when selectedDate changes
+    // Load trending cordões of the current UTC-3 day.
     const loadTrendingCordoes = useCallback(async () => {
         try {
-            const isToday = selectedDate.toDateString() === new Date().toDateString();
-            const url = isToday
-                ? '/posts/trending/cordoes'
-                : `/posts/trending/cordoes?date=${selectedDate.toISOString().split('T')[0]}`;
+            const url = '/posts/trending/cordoes';
             const response = await apiClient.get(url);
             if (response.data && Array.isArray(response.data)) {
                 console.log('✅ Trending cordões loaded:', response.data);
                 setTrendingCordoes(response.data.slice(0, 10)); // Limit to 10
             } else {
                 console.warn('⚠️ No trending data:', response.data);
+                setTrendingCordoes([]);
             }
         } catch (error) {
             console.error("Failed to load trending cordões:", error);
+            setTrendingCordoes([]);
         }
-    }, [selectedDate]);
+    }, []);
 
-    // Reload trending cordões when selectedDate changes
+    // Load once on mount
     useEffect(() => {
         loadTrendingCordoes();
     }, [loadTrendingCordoes]);
@@ -99,8 +97,10 @@ export default function EchoFrame({
     useHourlyRefresh({
         onNewDay: () => {
             console.log('📅 New day detected! Reloading trending cordões...');
-            setCurrentDay(new Date().getDate());
             loadTrendingCordoes(); // Reload trending when day changes
+        },
+        onHourChange: () => {
+            loadTrendingCordoes();
         },
     });
 
@@ -338,18 +338,6 @@ export default function EchoFrame({
 
     const isToday = isSameDay(selectedDate, new Date());
     
-    const cordTopics = useMemo(() => {
-        const topics = new Map<string, number>();
-        allPosts.forEach(post => {
-            // Count cords in ALL posts, not just threads
-            const tags = post.content.match(/\$[A-Za-z0-9_]+/g) || [];
-            tags.forEach(tag => {
-                topics.set(tag, (topics.get(tag) || 0) + 1);
-            });
-        });
-        return Array.from(topics.entries()).sort((a, b) => b[1] - a[1]);
-    }, [allPosts]);
-
     const relatedCords = useMemo(() => {
         if (!activePostId) return [];
         const activePost = allPosts.find(p => p.id === activePostId);
@@ -718,15 +706,8 @@ export default function EchoFrame({
                                          <p className="text-xs text-red-400 mt-0.5">📊 {cord.mentions.toLocaleString()} mentions</p>
                                      </div>
                                  ))
-                             ) : cordTopics.length > 0 ? (
-                                 cordTopics.map(([tag, count]) => (
-                                     <button key={tag} onClick={() => onTagClick(tag)} className="cord-topic-btn w-full text-left">
-                                         <span className="font-bold text-[var(--theme-text-primary)]">{tag}</span>
-                                         <span className="cord-topic-count">[{count}]</span>
-                                     </button>
-                                 ))
                              ) : (
-                                 <p className="text-[var(--theme-text-secondary)] text-xs italic">Nenhum cordão em destaque neste período</p>
+                                 <p className="text-[var(--theme-text-secondary)] text-xs italic">Nenhum cordão em destaque hoje (UTC-3)</p>
                              )}
                          </div>
                      </div>

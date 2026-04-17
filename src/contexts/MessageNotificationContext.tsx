@@ -35,7 +35,13 @@ export const MessageNotificationProvider: React.FC<{ children: React.ReactNode }
   // Detectar visibilidade da página (background/foreground)
   useEffect(() => {
     const handleVisibilityChange = () => {
-      setIsPageVisible(!document.hidden);
+      const isVisible = !document.hidden;
+      setIsPageVisible(isVisible);
+
+      // Clear stale unread badge/title when user returns to the app.
+      if (isVisible) {
+        setUnreadCount(0);
+      }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -47,7 +53,8 @@ export const MessageNotificationProvider: React.FC<{ children: React.ReactNode }
   // Atualizar title da página com contador
   useEffect(() => {
     if (unreadCount > 0) {
-      document.title = `💬 (${unreadCount}) Chrono - Temporal Social Network`;
+      const displayCount = unreadCount > 99 ? '99+' : String(unreadCount);
+      document.title = `💬 (${displayCount}) Chrono - Temporal Social Network`;
       setHasNewMessage(true);
       
       // Enviar notificação do browser se permitido

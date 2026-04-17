@@ -472,7 +472,37 @@ router.post('/admin/cleanup-blank/:username', authenticateToken, async (req: Aut
   }
 });
 
-// Get trending cordões — last 24 h relative to optional ?date= param (defaults to now)
+const UTC_MINUS_3_OFFSET_MS = 3 * 60 * 60 * 1000;
+
+function getUtcMinus3DayWindow(referenceDate: Date): { startUtc: Date; endUtcExclusive: Date } {
+  // Shift by -3h to project into UTC-3 local day, compute day bounds, then shift back to UTC.
+  const shifted = new Date(referenceDate.getTime() - UTC_MINUS_3_OFFSET_MS);
+  const startUtc = new Date(Date.UTC(
+    shifted.getUTCFullYear(),
+    shifted.getUTCMonth(),
+    shifted.getUTCDate(),
+    3, 0, 0, 0
+  ));
+  const endUtcExclusive = new Date(startUtc.getTime() + 24 * 60 * 60 * 1000);
+  return { startUtc, endUtcExclusive };
+}
+
+function parseUtcMinus3DateToWindowStart(dateParam: string): Date | null {
+  const match = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(dateParam);
+  if (match) {
+    const year = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1;
+    const day = parseInt(match[3], 10);
+    return new Date(Date.UTC(year, month, day, 3, 0, 0, 0));
+  }
+
+  const parsed = new Date(dateParam);
+  if (isNaN(parsed.getTime())) return null;
+
+  return getUtcMinus3DayWindow(parsed).startUtc;
+}
+
+// Get trending cordões — current UTC-3 day by default (resets at 00:00 UTC-3)
 router.get('/trending/cordoes', async (req: AuthRequest, res: Response) => {
   try {
     const { trendingService } = await import('../services/trendingService.js');
@@ -482,16 +512,21 @@ router.get('/trending/cordoes', async (req: AuthRequest, res: Response) => {
     let cordoes;
 
     if (dateParam) {
-      // Parse date and build a 24-h window ending at 23:59:59 of that day,
-      // capped at now so future dates don't return empty results
-      const anchor = new Date(dateParam);
-      if (isNaN(anchor.getTime())) {
+      // For ?date=YYYY-MM-DD, use that full UTC-3 calendar day.
+      const dayStartUtc = parseUtcMinus3DateToWindowStart(dateParam);
+      if (!dayStartUtc) {
         return res.status(400).json({ error: 'Invalid date parameter' });
       }
-      anchor.setHours(23, 59, 59, 999);
-      const windowEnd = new Date(Math.min(anchor.getTime(), Date.now()));
-      const windowStart = new Date(windowEnd.getTime() - 24 * 60 * 60 * 1000);
-      cordoes = await trendingService.getTrendingCordoesInTimeRange(windowStart, windowEnd);
+
+      const dayEndUtcExclusive = new Date(dayStartUtc.getTime() + 24 * 60 * 60 * 1000);
+      const now = new Date();
+      const { startUtc: todayStartUtc } = getUtcMinus3DayWindow(now);
+
+      // If querying current UTC-3 day, cap at now. Otherwise, return full day.
+      const isCurrentUtcMinus3Day = dayStartUtc.getTime() === todayStartUtc.getTime();
+      const windowEnd = isCurrentUtcMinus3Day ? now : new Date(dayEndUtcExclusive.getTime() - 1);
+
+      cordoes = await trendingService.getTrendingCordoesInTimeRange(dayStartUtc, windowEnd);
     } else if (daysParam) {
       // Support ?days=N parameter
       const days = parseInt(daysParam, 10);
@@ -507,8 +542,10 @@ router.get('/trending/cordoes', async (req: AuthRequest, res: Response) => {
         cordoes = await trendingService.getTrendingCordoesInTimeRange(startDate, now);
       }
     } else {
-      // Default: last 24 hours
-      cordoes = await trendingService.getTrendingCordoesForToday();
+      // Default: from 00:00 (UTC-3) until now.
+      const now = new Date();
+      const { startUtc } = getUtcMinus3DayWindow(now);
+      cordoes = await trendingService.getTrendingCordoesInTimeRange(startUtc, now);
     }
 
     res.json(cordoes);

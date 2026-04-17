@@ -7,7 +7,7 @@ export const notificationService = {
 
   async markNotificationRead(notificationId: string) {
     return baseClient.request<any>(`/notifications/${notificationId}/read`, {
-      method: 'POST',
+      method: 'PUT',
     });
   },
 

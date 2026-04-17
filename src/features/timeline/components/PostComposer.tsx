@@ -284,6 +284,15 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
 
   const charPercentage = (content.length / MAX_CHARACTERS) * 100;
   const isPostable = content.trim().length > 0 || generatedImageUrl || videoUrl;
+  const hasCustomSchedule = postDate.getTime() !== (initialDate?.getTime() ?? postDate.getTime());
+  const scheduledAtLabel = hasCustomSchedule
+      ? new Intl.DateTimeFormat(language === 'pt' ? 'pt-BR' : 'en-US', {
+          day: '2-digit',
+          month: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+      }).format(postDate)
+      : null;
 
   const containerClass = inline 
       ? "w-full bg-[var(--theme-bg-primary)] border border-[var(--theme-border-primary)] p-4 rounded-lg mb-6 overflow-x-hidden" 
@@ -434,8 +443,9 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
             )}
         </div>
         
-        <div className="flex justify-between items-start pt-2 border-t border-[var(--theme-border-primary)] gap-2 flex-wrap">
-            <div className="flex items-center flex-wrap gap-1 text-[var(--theme-text-secondary)]">
+        <div className="pt-2 border-t border-[var(--theme-border-primary)]">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
+            <div className="flex items-center gap-1 text-[var(--theme-text-secondary)] min-w-max">
                 <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" accept="image/*,video/*" />
                 <button onClick={() => fileInputRef.current?.click()} title={t('attachMedia')} className="p-2 hover:text-[var(--theme-primary)] transition-colors"><CameraIcon className="w-6 h-6"/></button>
                  <button onClick={() => setShowImageGenerator(p => !p)} title={t('generateImage')} className={`p-2 transition-colors ${showImageGenerator ? 'text-[var(--theme-primary)]' : 'hover:text-[var(--theme-primary)]'}`}><ImageIcon className="w-6 h-6"/></button>
@@ -477,11 +487,11 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
                     <HourglassIcon className="w-6 h-6"/>
                 </button>
             </div>
-            <div className="flex items-center flex-wrap gap-2 w-full">
-                 {isListening && <span className="text-sm text-red-500 animate-pulse">{t('listening')}</span>}
-                 {postDate.getTime() !== initialDate?.getTime() && (
-                    <span className="text-xs text-[var(--theme-secondary)]">
-                        {postDate.toLocaleString()}
+            <div className="ml-auto flex items-center gap-2 min-w-max">
+                 {isListening && <span className="text-sm text-red-500 animate-pulse hidden md:inline">{t('listening')}</span>}
+                 {scheduledAtLabel && (
+                    <span className="text-xs text-[var(--theme-secondary)] hidden lg:inline">
+                        {scheduledAtLabel}
                     </span>
                  )}
                  <button onClick={() => setIsPrivate(p => !p)} title={isPrivate ? t('postPrivate') : t('postPublic')} className={`p-2 rounded-full transition-colors ${isPrivate ? 'text-[var(--theme-primary)] bg-[var(--theme-primary)]/20' : 'text-[var(--theme-text-secondary)] hover:bg-[var(--theme-bg-tertiary)]'}`}>
@@ -514,10 +524,11 @@ function PostComposerInner({ currentUser, onClose, onSubmit, postToEdit, isSubmi
                 <button 
                     onClick={handleSubmit} 
                     disabled={!isPostable}
-                    className="ml-auto flex-shrink-0 bg-[var(--theme-primary)] text-white px-6 py-2 rounded-sm font-bold hover:bg-[var(--theme-secondary)] transition-colors disabled:bg-[var(--theme-bg-tertiary)] disabled:text-[var(--theme-text-secondary)] disabled:cursor-not-allowed"
+                    className="flex-shrink-0 bg-[var(--theme-primary)] text-white px-5 py-2 rounded-sm font-bold hover:bg-[var(--theme-secondary)] transition-colors disabled:bg-[var(--theme-bg-tertiary)] disabled:text-[var(--theme-text-secondary)] disabled:cursor-not-allowed"
                 >
                     {postToEdit ? t('postSaveChanges') : t('postSubmitButton')}
                 </button>
+            </div>
             </div>
         </div>
       </div>

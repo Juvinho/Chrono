@@ -10,6 +10,17 @@ const notificationService = new NotificationService();
 const userService = new UserService();
 const postService = new PostService();
 
+const markNotificationReadHandler = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    await notificationService.markAsRead(id, req.userId!);
+    res.json({ message: 'Notification marked as read' });
+  } catch (error: any) {
+    console.error('Mark notification read error:', error);
+    res.status(500).json({ error: error.message || 'Failed to mark notification as read' });
+  }
+};
+
 // Get notifications
 router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
@@ -63,16 +74,8 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 });
 
 // Mark notification as read
-router.put('/:id/read', authenticateToken, async (req: AuthRequest, res: Response) => {
-  try {
-    const { id } = req.params;
-    await notificationService.markAsRead(id, req.userId!);
-    res.json({ message: 'Notification marked as read' });
-  } catch (error: any) {
-    console.error('Mark notification read error:', error);
-    res.status(500).json({ error: error.message || 'Failed to mark notification as read' });
-  }
-});
+router.put('/:id/read', authenticateToken, markNotificationReadHandler);
+router.post('/:id/read', authenticateToken, markNotificationReadHandler);
 
 // Mark all notifications as read
 router.post('/read-all', authenticateToken, async (req: AuthRequest, res: Response) => {

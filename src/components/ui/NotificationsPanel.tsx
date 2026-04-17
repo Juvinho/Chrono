@@ -15,11 +15,26 @@ interface AggregatedNotification {
     id: string;
     key: string;
     notificationType: NotificationType;
-    actors: any[];
+    actors: Array<{ username: string }>;
     post?: any;
     timestamp: Date;
     read: boolean;
 }
+
+const normalizeTimestamp = (value: unknown): Date => {
+    if (value instanceof Date) {
+        return Number.isNaN(value.getTime()) ? new Date(0) : value;
+    }
+    const parsed = new Date(value as string | number | Date);
+    return Number.isNaN(parsed.getTime()) ? new Date(0) : parsed;
+};
+
+const normalizeActor = (actor: any): { username: string } => {
+    const username = typeof actor?.username === 'string' && actor.username.trim().length > 0
+        ? actor.username.trim()
+        : 'sistema';
+    return { username };
+};
 
 const NotificationItem: React.FC<{ 
     notification: AggregatedNotification, 
@@ -37,7 +52,9 @@ const NotificationItem: React.FC<{
     };
     
     const renderText = () => {
-        const actorNames = notification.actors.map(a => a.username);
+        const actorNames = notification.actors
+            .map(a => a.username)
+            .filter((name) => !!name);
         let actorText: React.ReactNode;
         
         if (actorNames.length === 1) {
@@ -93,6 +110,11 @@ export default function NotificationsPanel({ notifications, onClose, onNotificat
         const groups: { [key: string]: AggregatedNotification } = {};
         
         notifications.forEach(n => {
+            if (!n || !n.id) return;
+
+            const safeActor = normalizeActor(n.actor);
+            const safeTimestamp = normalizeTimestamp((n as any).timestamp);
+
             // Group by type and post, but only for certain types
             let key = n.notificationType;
             if (n.post?.id) {
@@ -108,19 +130,19 @@ export default function NotificationsPanel({ notifications, onClose, onNotificat
                     id: n.id,
                     key,
                     notificationType: n.notificationType,
-                    actors: [n.actor],
+                    actors: [safeActor],
                     post: n.post,
-                    timestamp: n.timestamp,
+                    timestamp: safeTimestamp,
                     read: n.read
                 };
             } else {
                 // Only add actor if not already in the list
-                if (!groups[key].actors.some(a => a.username === n.actor.username)) {
-                    groups[key].actors.push(n.actor);
+                if (!groups[key].actors.some(a => a.username === safeActor.username)) {
+                    groups[key].actors.push(safeActor);
                 }
                 // Keep the most recent timestamp
-                if (n.timestamp > groups[key].timestamp) {
-                    groups[key].timestamp = n.timestamp;
+                if (safeTimestamp.getTime() > groups[key].timestamp.getTime()) {
+                    groups[key].timestamp = safeTimestamp;
                 }
                 // If any in group is unread, the whole group is unread
                 if (!n.read) {

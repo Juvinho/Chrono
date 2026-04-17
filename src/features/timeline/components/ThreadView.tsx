@@ -171,7 +171,7 @@ export const ThreadView: React.FC<ThreadViewProps> = ({
             </div>
 
             {/* Conteúdo — layout igual ao PostDetail */}
-            <div className="max-w-4xl mx-auto p-4" style={{ boxSizing: 'border-box' }}>
+            <div className="max-w-3xl mx-auto p-4" style={{ boxSizing: 'border-box' }}>
                 <div className="space-y-0">
                     {handleRenderReplies(rootPost)}
                 </div>
@@ -224,7 +224,7 @@ export const ThreadView: React.FC<ThreadViewProps> = ({
                 {!isComposerOpen && (
                     <button
                         onClick={() => { setReplyingTo(null); setIsComposerOpen(true); }}
-                        className="mt-6 w-full py-3 bg-[var(--theme-primary)] text-white rounded-lg hover:bg-[var(--theme-secondary)] transition-colors font-semibold"
+                        className="mt-6 w-full py-3 bg-[var(--theme-bg-secondary)] border border-[var(--theme-border-primary)] text-[var(--theme-text-light)] rounded-lg hover:border-[var(--theme-primary)] hover:text-[var(--theme-primary)] transition-colors font-semibold"
                     >
                         + {t('reply') || 'Responder'}
                     </button>
