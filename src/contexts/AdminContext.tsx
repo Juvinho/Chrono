@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../api/client';
 
 interface AdminUser {
-  id: number;
+  id: string;
   username: string;
   displayName: string;
   avatarUrl: string | null;
@@ -14,7 +14,7 @@ interface AdminContextType {
   isAuthenticated: boolean;
   admin: AdminUser | null;
   token: string | null;
-  login: (password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
 }
@@ -65,12 +65,12 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const login = async (password: string) => {
+  const login = async (username: string, password: string) => {
     try {
       const response = await fetch(`${API_BASE_URL}/admin/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ username, password }),
       });
 
       if (!response.ok) {

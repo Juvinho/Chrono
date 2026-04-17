@@ -4,6 +4,7 @@ import { API_BASE_URL } from '../api/client';
 import { AdminUsers } from './AdminUsers';
 import { AdminPosts } from './AdminPosts';
 import { AdminVerification } from './AdminVerification';
+import { AdminReports } from './AdminReports';
 import './admin-dashboard.css';
 
 const LogOutIcon = () => (
@@ -51,6 +52,14 @@ const VerifyIcon = () => (
   </svg>
 );
 
+const ReportsIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+    <line x1="8" y1="9" x2="16" y2="9"></line>
+    <line x1="8" y1="13" x2="14" y2="13"></line>
+  </svg>
+);
+
 const SettingsIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <circle cx="12" cy="12" r="3"></circle>
@@ -71,6 +80,18 @@ export function AdminDashboard() {
   const [tags, setTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  if (!token) {
+    return (
+      <div className="admin-dashboard">
+        <main className="admin-main">
+          <div className="admin-content">
+            <div className="error-message">Sessão admin inválida. Faça login novamente.</div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   // Fetch tags
   useEffect(() => {
@@ -164,6 +185,14 @@ export function AdminDashboard() {
           </button>
 
           <button
+            className={`admin-nav-item ${activeTab === 'reports' ? 'active' : ''}`}
+            onClick={() => setActiveTab('reports')}
+          >
+            <ReportsIcon />
+            <span>Denúncias</span>
+          </button>
+
+          <button
             className={`admin-nav-item ${activeTab === 'settings' ? 'active' : ''}`}
             onClick={() => setActiveTab('settings')}
           >
@@ -187,6 +216,7 @@ export function AdminDashboard() {
             {activeTab === 'users' && '👥 Gerenciar Usuários'}
             {activeTab === 'posts' && '📝 Gerenciar Posts'}
             {activeTab === 'verification' && '✅ Verificação de Usuários'}
+            {activeTab === 'reports' && '🚩 Moderação de Denúncias'}
             {activeTab === 'settings' && '⚙️ Configurações'}
           </h1>
         </div>
@@ -271,6 +301,9 @@ export function AdminDashboard() {
 
           {/* Verification Tab */}
           {activeTab === 'verification' && <AdminVerification token={token} />}
+
+          {/* Reports Tab */}
+          {activeTab === 'reports' && <AdminReports token={token} />}
 
           {/* Settings Tab */}
           {activeTab === 'settings' && (

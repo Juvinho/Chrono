@@ -16,6 +16,25 @@ import '../../../styles/post-glitch-animation.css';
 
 import FramePreview, { getFrameShape } from '../../profile/components/FramePreview';
 
+const POST_SPAM_LAST_POST_KEY = 'chrono_post_spam_last_post_at_v1';
+const POST_SPAM_ATTEMPTS_KEY = 'chrono_post_spam_attempts_v1';
+const POST_SPAM_TIMEOUT_KEY = 'chrono_post_spam_timeout_until_v1';
+const POST_SPAM_TIMEOUT_LEVEL_KEY = 'chrono_post_spam_timeout_level_v1';
+const POST_MIN_INTERVAL_MS = 60 * 1000;
+const POST_TIMEOUT_STEPS_MS = [
+    60 * 60 * 1000,
+    2 * 60 * 60 * 1000,
+    6 * 60 * 60 * 1000,
+    12 * 60 * 60 * 1000,
+    24 * 60 * 60 * 1000,
+];
+
+const readStoredNumber = (key: string, fallback: number) => {
+    const raw = localStorage.getItem(key);
+    const parsed = raw ? parseInt(raw, 10) : Number.NaN;
+    return Number.isNaN(parsed) ? fallback : parsed;
+};
+
 interface EchoFrameProps {
     selectedDate: Date;
     currentUser: User;
@@ -256,11 +275,99 @@ export default function EchoFrame({
         setIsComposerOpen(true);
     }, []);
 
+    const redirectToPostTimeoutError = useCallback(() => {
+        if (navigate) {
+            navigate('/error/507');
+            return;
+        }
+        window.location.href = '/error/507';
+    }, [navigate]);
+
+    const canCreatePostNow = useCallback(() => {
+        try {
+            const now = Date.now();
+            const maxLevel = POST_TIMEOUT_STEPS_MS.length - 1;
+            const timeoutUntil = readStoredNumber(POST_SPAM_TIMEOUT_KEY, 0);
+            const timeoutLevel = readStoredNumber(POST_SPAM_TIMEOUT_LEVEL_KEY, -1);
+
+            if (timeoutUntil > now) {
+                const message = timeoutLevel >= maxLevel
+                    ? 'Erro 507-2: Quer saber, passa amanhã, porque hoje você vai ficar quietinho.'
+                    : 'Erro 507, Pronto, te censurei, satisfeito?';
+                showToast(message, 'error');
+                redirectToPostTimeoutError();
+                return false;
+            }
+
+            if (timeoutUntil > 0 && timeoutUntil <= now) {
+                localStorage.removeItem(POST_SPAM_TIMEOUT_KEY);
+            }
+
+            const lastPostAt = readStoredNumber(POST_SPAM_LAST_POST_KEY, 0);
+            if (!lastPostAt || (now - lastPostAt) >= POST_MIN_INTERVAL_MS) {
+                localStorage.setItem(POST_SPAM_ATTEMPTS_KEY, '0');
+                return true;
+            }
+
+            const remainingMs = POST_MIN_INTERVAL_MS - (now - lastPostAt);
+            const remainingSeconds = Math.max(1, Math.ceil(remainingMs / 1000));
+            const attempt = readStoredNumber(POST_SPAM_ATTEMPTS_KEY, 0) + 1;
+            localStorage.setItem(POST_SPAM_ATTEMPTS_KEY, String(attempt));
+
+            if (attempt <= 3) {
+                showToast(`Calma, faltam ${remainingSeconds} segundos para postar de novo`, 'warning');
+                return false;
+            }
+
+            if (attempt <= 6) {
+                showToast('Calma lá, que pressa é essa?', 'warning');
+                return false;
+            }
+
+            if (attempt === 7) {
+                showToast('Eu vou te censurar!', 'warning');
+                return false;
+            }
+
+            const nextTimeoutLevel = Math.min(timeoutLevel + 1, maxLevel);
+            const timeoutMs = POST_TIMEOUT_STEPS_MS[nextTimeoutLevel];
+            const nextTimeoutUntil = now + timeoutMs;
+
+            localStorage.setItem(POST_SPAM_TIMEOUT_KEY, String(nextTimeoutUntil));
+            localStorage.setItem(POST_SPAM_TIMEOUT_LEVEL_KEY, String(nextTimeoutLevel));
+            localStorage.setItem(POST_SPAM_ATTEMPTS_KEY, '0');
+
+            const timeoutMessage = nextTimeoutLevel >= maxLevel
+                ? 'Erro 507-2: Quer saber, passa amanhã, porque hoje você vai ficar quietinho.'
+                : 'Erro 507, Pronto, te censurei, satisfeito?';
+
+            showToast(timeoutMessage, 'error');
+            redirectToPostTimeoutError();
+            return false;
+        } catch {
+            return true;
+        }
+    }, [redirectToPostTimeoutError, showToast]);
+
+    const registerSuccessfulPost = useCallback(() => {
+        try {
+            localStorage.setItem(POST_SPAM_LAST_POST_KEY, String(Date.now()));
+            localStorage.setItem(POST_SPAM_ATTEMPTS_KEY, '0');
+            localStorage.removeItem(POST_SPAM_TIMEOUT_KEY);
+        } catch {
+            // Ignore localStorage failures and keep posting flow working.
+        }
+    }, []);
+
     const handlePostSubmit = useCallback(async (postData: Omit<Post, 'id' | 'author' | 'timestamp' | 'replies' | 'repostOf' | 'likes' | 'likedBy'>, existingPostId?: string) => {
         if (existingPostId) {
             onEditPost(existingPostId, postData);
             setIsComposerOpen(false);
             setPostToEdit(null);
+            return;
+        }
+
+        if (!canCreatePostNow()) {
             return;
         }
 
@@ -291,6 +398,7 @@ export default function EchoFrame({
             // The post was created successfully, notify parent to reload data
             if (result.data) {
                 const mappedPost = mapApiPostToPost(result.data);
+                registerSuccessfulPost();
                 onNewPost(mappedPost);
             }
             
@@ -301,10 +409,14 @@ export default function EchoFrame({
             setIsSubmitting(false);
             setPostToEdit(null);
         }
-    }, [onEditPost, onNewPost, currentUser]);
+    }, [canCreatePostNow, onEditPost, onNewPost, registerSuccessfulPost]);
 
     const handleCordSubmit = useCallback(async () => {
         if (!cordContent.trim()) return;
+
+        if (!canCreatePostNow()) {
+            return;
+        }
 
         // MIGRATION: Sending cord to Backend
         setIsSubmitting(true);
@@ -324,6 +436,7 @@ export default function EchoFrame({
             
             if (result.data) {
                 const mappedPost = mapApiPostToPost(result.data);
+                registerSuccessfulPost();
                 onNewPost(mappedPost);
             }
             
@@ -334,7 +447,7 @@ export default function EchoFrame({
         } finally {
             setIsSubmitting(false);
         }
-    }, [cordContent, onNewPost, currentUser]);
+    }, [canCreatePostNow, cordContent, onNewPost, registerSuccessfulPost]);
 
     const isToday = isSameDay(selectedDate, new Date());
     

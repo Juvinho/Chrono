@@ -26,6 +26,7 @@ const AlertIcon = () => (
 );
 
 export function AdminLogin() {
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -36,6 +37,11 @@ export function AdminLogin() {
     e.preventDefault();
     setError('');
 
+    if (!username.trim()) {
+      setError('Usuário admin é obrigatório');
+      return;
+    }
+
     if (!password) {
       setError('Senha é obrigatória');
       return;
@@ -44,7 +50,7 @@ export function AdminLogin() {
     setIsLoading(true);
 
     try {
-      await login(password);
+      await login(username.trim(), password);
       // Navegação automática via context
     } catch (err: any) {
       setError(err.message || 'Senha incorreta');
@@ -75,6 +81,23 @@ export function AdminLogin() {
           )}
 
           <div className="form-group">
+            <label htmlFor="username">
+              <LockIcon />
+              Usuário Admin
+            </label>
+            <input
+              id="username"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="@usuario_admin"
+              autoFocus
+              disabled={isLoading}
+              className="admin-password-input"
+            />
+          </div>
+
+          <div className="form-group">
             <label htmlFor="password">
               <LockIcon />
               Senha Master
@@ -85,7 +108,6 @@ export function AdminLogin() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Digite a senha master"
-              autoFocus
               disabled={isLoading}
               className="admin-password-input"
             />
