@@ -63,3 +63,7 @@ test-results/
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
+
+#Prompts exclusivos
+Projeto-refatorar/
+Prompts/
