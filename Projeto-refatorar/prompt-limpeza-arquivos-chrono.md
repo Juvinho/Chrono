@@ -267,3 +267,5 @@ Antes de colar no Claude Code, preencha os `# TODO`:
 | Rota de API morta | Nenhum `fetch` ou `axios` aponta para aquele endpoint |
 
 > 💡 **Dica:** Rode a **Etapa 1** primeiro e cole o output do `find` aqui antes de prosseguir — isso dá ao modelo o mapa completo do projeto sem precisar explorar às cegas.
+
+** REMOVA TUDO QUE TEM NO BANCO DE DADOS, PORÉM, MANTENHA AS TABELAS **

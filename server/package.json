@@ -9,14 +9,14 @@
     "build": "tsc && node copy-assets.js",
     "build:full": "cd .. && npm install && npm run build",
     "start": "node dist/index.js",
-    "db:migrate": "tsx src/db/migrate.ts",
-    "db:migrate-data": "tsx src/scripts/migrate-data.ts",
-    "db:sync-follows": "tsx src/sync_follows.ts",
-    "db:seed": "tsx src/db/seed.ts",
-    "db:clear": "tsx src/db/clear.ts",
-    "db:backup": "tsx src/scripts/backup.ts",
-    "db:fix-encrypted": "tsx src/scripts/fix_encrypted_schema.ts",
-    "update-user-tags": "tsx src/scripts/updateAllUserBios.ts"
+    "db:migrate": "tsx --import dotenv/config src/db/migrate.ts",
+    "db:migrate-data": "tsx --import dotenv/config src/scripts/migrate-data.ts",
+    "db:sync-follows": "tsx --import dotenv/config src/sync_follows.ts",
+    "db:seed": "tsx --import dotenv/config src/db/seed.ts",
+    "db:clear": "tsx --import dotenv/config src/db/clear.ts",
+    "db:backup": "tsx --import dotenv/config src/scripts/backup.ts",
+    "db:fix-encrypted": "tsx --import dotenv/config src/scripts/fix_encrypted_schema.ts",
+    "update-user-tags": "tsx --import dotenv/config src/scripts/updateAllUserBios.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
