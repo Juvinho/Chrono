@@ -16,7 +16,8 @@
     "db:clear": "tsx --import dotenv/config src/db/clear.ts",
     "db:backup": "tsx --import dotenv/config src/scripts/backup.ts",
     "db:fix-encrypted": "tsx --import dotenv/config src/scripts/fix_encrypted_schema.ts",
-    "update-user-tags": "tsx --import dotenv/config src/scripts/updateAllUserBios.ts"
+    "update-user-tags": "tsx --import dotenv/config src/scripts/updateAllUserBios.ts",
+    "db:init-schema": "tsx --import dotenv/config src/scripts/init-schema.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

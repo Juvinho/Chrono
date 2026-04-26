@@ -318,6 +318,57 @@ async function seed() {
   }
 
   // -------------------------------------------------------------------------
+  // 3.5. FIX tag_definitions SCHEMA (INTEGER id → UUID, English cols → Portuguese)
+  // -------------------------------------------------------------------------
+  const tagColCheck = await pool.query(`
+    SELECT data_type FROM information_schema.columns
+    WHERE table_name = 'tag_definitions' AND column_name = 'id'
+  `);
+  const tagIdType = tagColCheck.rows[0]?.data_type || '';
+  if (tagIdType !== 'uuid') {
+    console.log('🔧 Rebuilding tag_definitions with UUID schema...');
+    await pool.query('DROP TABLE IF EXISTS user_tags_backup CASCADE');
+    await pool.query('DROP TABLE IF EXISTS user_tags CASCADE');
+    await pool.query('DROP TABLE IF EXISTS tag_definitions CASCADE');
+    await pool.query(`
+      CREATE TABLE tag_definitions (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        nome VARCHAR(100) NOT NULL,
+        icone VARCHAR(50),
+        cor_hex VARCHAR(7),
+        cor_border VARCHAR(7),
+        prioridade_exibicao INTEGER DEFAULT 0,
+        categoria VARCHAR(50),
+        visibilidade VARCHAR(20) DEFAULT 'public',
+        condicao_aquisicao JSONB,
+        condicao_remocao JSONB,
+        descricao_publica TEXT,
+        descricao_interna TEXT,
+        notificar_aquisicao BOOLEAN DEFAULT true,
+        notificar_remocao BOOLEAN DEFAULT false,
+        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await pool.query(`
+      CREATE TABLE user_tags (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        tag_id UUID NOT NULL REFERENCES tag_definitions(id) ON DELETE CASCADE,
+        earned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        removed_at TIMESTAMP,
+        removal_reason TEXT,
+        is_active BOOLEAN DEFAULT TRUE,
+        metadata JSONB,
+        CONSTRAINT uk_user_tag UNIQUE (user_id, tag_id)
+      )
+    `);
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_user_tags_user_id ON user_tags(user_id)');
+    await pool.query('CREATE INDEX IF NOT EXISTS idx_user_tags_tag_id ON user_tags(tag_id)');
+    console.log('✅ tag_definitions e user_tags recriadas com UUID schema');
+  }
+
+  // -------------------------------------------------------------------------
   // 4. SEED TAGS / BADGES
   // -------------------------------------------------------------------------
   console.log('Seeding tag definitions...');

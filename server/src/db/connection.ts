@@ -68,9 +68,13 @@ export function isTransientDbError(error: any): boolean {
   return TRANSIENT_DB_MESSAGE_SNIPPETS.some((snippet) => message.includes(snippet));
 }
 
+// SSL_OP_LEGACY_SERVER_CONNECT — needed for Node.js v22+/OpenSSL 3 compat with older PostgreSQL TLS
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const SSL_OP_LEGACY = (() => { try { return require('node:constants').SSL_OP_LEGACY_SERVER_CONNECT; } catch { return 0; } })();
+
 export const pool = new Pool({
   connectionString: cleanDbUrl,
-  ssl: isLocal ? false : { rejectUnauthorized },
+  ssl: isLocal ? false : { rejectUnauthorized, secureOptions: SSL_OP_LEGACY },
   connectionTimeoutMillis: 30000,
   idleTimeoutMillis: 15000,
   max: 20,
