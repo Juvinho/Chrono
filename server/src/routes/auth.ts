@@ -283,7 +283,8 @@ router.post('/register', async (req, res) => {
         return res.status(400).json({ error: emailValidation.error });
     }
 
-    // Verify hCaptcha token
+    // [DISABLED - DEV MODE] hCaptcha verification
+    /*
     if (!captchaToken) {
       return res.status(400).json({ error: 'hCaptcha token is required' });
     }
@@ -311,6 +312,7 @@ router.post('/register', async (req, res) => {
         errorCode: 'hcaptcha_service_unavailable',
       });
     }
+    */
 
     // Validation: Prevent registration of system protected usernames
     const systemUsernames = ['juvinho', 'chrono', 'chronobot', 'system', 'admin'];
@@ -400,7 +402,8 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Username and password are required' });
     }
 
-    // Verify hCaptcha token
+    // [DISABLED - DEV MODE] hCaptcha verification
+    /*
     if (!captchaToken) {
       return res.status(400).json({ error: 'hCaptcha token is required' });
     }
@@ -428,6 +431,7 @@ router.post('/login', async (req, res) => {
         errorCode: 'hcaptcha_service_unavailable',
       });
     }
+    */
 
     const emojiValidation = validateNoEmojis(username, 'Nome de usuário');
     if (!emojiValidation.valid) {
@@ -440,16 +444,18 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Check verification status (use email_verified as canonical column)
+    // [DISABLED - DEV MODE] Email verification check
+    /*
     const verificationCheck = await pool.query('SELECT email_verified, email FROM users WHERE id = $1', [user.id]);
     if (verificationCheck.rows.length > 0 && !verificationCheck.rows[0].email_verified) {
          await securityService.logAction(user.id, 'login', 'user', user.id, 'failure', { username, reason: 'email_not_verified' }, req);
-         return res.status(403).json({ 
+         return res.status(403).json({
            error: 'email_not_verified',
            message: 'Seu email ainda não foi verificado. Um token de acesso foi enviado para seu email. Confirme o link para liberar o login.',
            email: verificationCheck.rows[0].email
          });
     }
+    */
 
     // Get password hash from database
     const dbUser = await pool.query('SELECT password_hash FROM users WHERE id = $1', [user.id]);
@@ -467,6 +473,8 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    // [DISABLED - DEV MODE] 2FA check
+    /*
     // ─── 2FA check ───────────────────────────────────────────
     const twoFactorService = await getTwoFactorService();
     if (!twoFactorService) {
@@ -475,12 +483,10 @@ router.post('/login', async (req, res) => {
 
     const twoFAStatus = await twoFactorService.get2FAStatus(user.id);
     if (twoFAStatus.enabled) {
-      // If 2FA is enabled, don't issue the final JWT yet.
-      // Issue a short-lived temp token that only permits /auth/verify-2fa
       const tempToken = jwt.sign(
         { id: user.id, username: user.username, purpose: '2fa_pending' },
         JWT_SECRET,
-        { expiresIn: '5m' } // 5 minutes to enter 2FA code
+        { expiresIn: '5m' }
       );
 
       return res.json({
@@ -489,6 +495,7 @@ router.post('/login', async (req, res) => {
       });
     }
     // ─── End 2FA check ───────────────────────────────────────
+    */
 
     await securityService.logAction(user.id, 'login', 'user', user.id, 'success', { username }, req);
 

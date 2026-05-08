@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import HCaptcha from '@hcaptcha/react-hcaptcha';
+// [DISABLED - DEV MODE] import HCaptcha from '@hcaptcha/react-hcaptcha';
 import { useLocation } from 'react-router-dom';
 import GlitchText from '../../../components/ui/GlitchText';
 import { User, Page } from '../../../types/index';
@@ -29,9 +29,10 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
     const [error, setError] = useState('');
     const [dbError, setDbError] = useState('');
     const [message, setMessage] = useState('');
-    const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-    const [captchaError, setCaptchaError] = useState('');
-    const captchaRef = useRef<HCaptcha>(null);
+    // [DISABLED - DEV MODE]
+    // const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+    // const [captchaError, setCaptchaError] = useState('');
+    // const captchaRef = useRef<HCaptcha>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
     const [requiresEmailVerification, setRequiresEmailVerification] = useState(false);
@@ -138,7 +139,7 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
              // If error persists, we still let them try, but it will likely fail
         }
 
-        console.log('Login attempt starting...', { username, captchaToken });
+        console.log('Login attempt starting...', { username });
         setError('');
         setMessage('');
         setRequiresEmailVerification(false);
@@ -152,20 +153,15 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
             return;
         }
 
-        if (!captchaToken) {
-            console.log('Captcha token not verified');
-            setCaptchaError('Please complete the captcha verification.');
-            return;
-        }
+        // [DISABLED - DEV MODE] captcha check removed
 
         setIsLoading(true);
 
         try {
             console.log('Calling API login...');
-            const response = await apiClient.login({ 
-                username, 
+            const response = await apiClient.login({
+                username,
                 password,
-                captchaToken,
             });
             console.log('API response:', response);
             
@@ -194,19 +190,7 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
                     return;
                 }
 
-                if (response.error.toLowerCase().includes('hcaptcha')) {
-                    const details = ((response.errorData as any)?.details || []) as string[];
-                    const errorCode = String((response.errorData as any)?.errorCode || '');
-                    setCaptchaToken(null);
-                    captchaRef.current?.resetCaptcha();
-                    if (errorCode === 'hcaptcha_server_misconfigured') {
-                        setCaptchaError('Captcha indisponível por configuração do servidor. Tente novamente em instantes.');
-                    } else if (details.length > 0) {
-                        setCaptchaError(`Captcha inválido (${details.join(', ')}). Complete o captcha novamente.`);
-                    } else {
-                        setCaptchaError('Captcha inválido/expirado. Complete o captcha novamente.');
-                    }
-                }
+                // [DISABLED - DEV MODE] hcaptcha error handler removed
 
                 setRequiresEmailVerification(false);
                 setUnverifiedEmail(null);
@@ -476,31 +460,12 @@ export default function LoginScreen({ onLogin, onNavigate }: LoginScreenProps) {
 
                     {message && <p className="text-green-400 text-sm text-center">{message}</p>}
                     
-                    <div className="p-3 bg-[var(--theme-bg-tertiary)] border border-[var(--theme-border-primary)]">
-                        <HCaptcha
-                            ref={captchaRef}
-                            sitekey={import.meta.env.VITE_HCAPTCHA_SITEKEY ?? 'e8f869b0-7b7a-41b2-95f4-a5b013e4e6dc'}
-                            onVerify={(token) => {
-                                setCaptchaToken(token);
-                                setCaptchaError('');
-                            }}
-                            onExpire={() => {
-                                setCaptchaToken(null);
-                                setCaptchaError('Captcha expired. Please verify again.');
-                            }}
-                            onError={() => {
-                                setCaptchaToken(null);
-                                setCaptchaError('Captcha failed. Please try again.');
-                            }}
-                            theme="dark"
-                        />
-                        {captchaError && <p className="text-red-500 text-sm mt-2">{captchaError}</p>}
-                    </div>
+                    {/* [DISABLED - DEV MODE] HCaptcha component removed */}
 
                     <button
                         type="button"
                         onClick={handleSubmit}
-                        disabled={isLoading || (!captchaToken && !requiresTwoFactor)}
+                        disabled={isLoading}
                         className={`w-full py-2 px-4 bg-[var(--theme-primary)] text-white font-bold hover:bg-[var(--theme-secondary)] transition-colors duration-300 border border-[var(--theme-secondary)] focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                         {isLoading ? '[ PROCESSANDO... ]' : `[ ${t('loginConnectButton')} ]`}

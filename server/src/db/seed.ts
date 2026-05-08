@@ -287,6 +287,18 @@ async function seed() {
 
   console.log('✅ Contas @Juvinho e @Chrono configuradas.');
 
+  // Dev user for local testing — email_verified = true, no 2FA
+  const devPassword = await bcrypt.hash('chrono123', 12);
+  await pool.query(`
+    INSERT INTO users (username, email, password_hash, is_verified, email_verified, bio)
+    VALUES ($1, $2, $3, $4, $5, $6)
+    ON CONFLICT (email) DO UPDATE SET
+      password_hash = EXCLUDED.password_hash,
+      is_verified = EXCLUDED.is_verified,
+      email_verified = EXCLUDED.email_verified
+  `, ['dev', 'dev@chrono.test', devPassword, true, true, 'Dev user for local testing.']);
+  console.log('✅ Dev user dev@chrono.test / chrono123 configurado.');
+
   // -------------------------------------------------------------------------
   // 3. SEED ITEMS
   // -------------------------------------------------------------------------
